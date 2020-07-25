@@ -31,11 +31,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// GromitAuth abstracts away the auth method
-type GromitAuth interface {
-	GetClient() (http.Client, error)
-}
-
 type mtlsAuth struct {
 	CA   string
 	Cert string
@@ -67,14 +62,6 @@ func (auth *mtlsAuth) GetClient() (http.Client, error) {
 	}, nil
 }
 
-type tokenAuth struct{}
-
-func (auth *tokenAuth) GetClient() (http.Client, error) {
-	return http.Client{
-		Timeout: time.Duration(10 * time.Second),
-	}, nil
-}
-
 // clientCmd represents the client command
 var clientCmd = &cobra.Command{
 	Use:   "client",
@@ -86,8 +73,9 @@ var clientCmd = &cobra.Command{
 		certPath, _ := cmd.Flags().GetString("certpath")
 		mtls, _ := cmd.Flags().GetBool("mtls")
 
-		var client http.Client
-		var err error
+		client := http.Client{
+			Timeout: time.Duration(10 * time.Second),
+		}
 
 		if mtls {
 			auth := mtlsAuth{
@@ -95,13 +83,11 @@ var clientCmd = &cobra.Command{
 				filepath.Join(certPath, "client.pem"),
 				filepath.Join(certPath, "client-key.pem"),
 			}
+			var err error
 			client, err = auth.GetClient()
-		} else {
-			auth := tokenAuth{}
-			client, err = auth.GetClient()
-		}
-		if err != nil {
-			log.Fatal().Err(err).Msg("could not construct client")
+			if err != nil {
+				log.Fatal().Err(err).Msg("could not construct client for mtls auth")
+			}
 		}
 		host, _ := cmd.Flags().GetString("server")
 		healthcheck(client, fmt.Sprintf("https://%s/healthcheck", host))
@@ -133,7 +119,7 @@ var authToken string
 func init() {
 	rootCmd.AddCommand(clientCmd)
 	clientCmd.PersistentFlags().StringP("server", "s", "gromit.dev.tyk.technology", "Server hostname, will use https always")
-	clientCmd.PersistentFlags().BoolP("mtls", "m", true, "Use mTLS")
+	clientCmd.PersistentFlags().BoolP("mtls", "m", false, "Use mTLS")
 	clientCmd.PersistentFlags().StringVarP(&authToken, "auth", "a", viper.GetString("GROMIT_AUTHTOKEN"), "Auth token")
 	clientCmd.PersistentFlags().StringP("certpath", "c", os.Getenv("GROMIT_CLIENTCERTPATH"), "Path to client key pair")
 }

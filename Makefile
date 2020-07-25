@@ -1,8 +1,5 @@
-client: gromit
-	./gromit client -s localhost -m --certpath /home/alok/work/tyk/src/tyk-ci/certs/gromit/client/
-
-start: gromit
-	GROMIT_TABLENAME=DeveloperEnvironments GROMIT_REPOS=tyk,tyk-analytics,tyk-pump GROMIT_REGISTRYID=046805072452 ./gromit serve --certpath certs
+# start: gromit
+# 	GROMIT_TABLENAME=DeveloperEnvironments GROMIT_REPOS=tyk,tyk-analytics,tyk-pump GROMIT_REGISTRYID=046805072452 ./gromit serve --certpath certs
 
 gromit: *.go cmd/*.go devenv/*.go
 	go build
