@@ -1,0 +1,18 @@
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+    - go mod download
+      
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^utils:'
+    - (?i)typo
+    - (?i)fixup
