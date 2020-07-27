@@ -96,7 +96,7 @@ func updateClusterIPs(cluster string) {
 		log.Fatal().Err(err).Msg("unable to load SDK config,")
 	}
 	region, flag, err := external.GetRegion(external.Configs{cfg})
-	log.Debug().Msgf("getting region flag: %s", flag)
+	log.Debug().Msgf("getting region flag: %t", flag)
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to find region,")
 	}
