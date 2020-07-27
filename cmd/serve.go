@@ -17,17 +17,9 @@ limitations under the License.
 */
 
 import (
-	"encoding/json"
-	"io"
-	"net/http"
 	"path/filepath"
-	"strings"
 
-	"github.com/TykTechnologies/gromit/devenv"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/ecr"
-	"github.com/rs/zerolog/log"
+	"github.com/TykTechnologies/gromit/server"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +36,7 @@ This endpoint is notified by the int-image workflows in the various repos when t
 		ca := filepath.Join(certPath, "ca.pem")
 		sCert := filepath.Join(certPath, "server.pem")
 		sKey := filepath.Join(certPath, "server-key.pem")
-		server.serve(ca, sCert, sKey)
+		server.Serve(ca, sCert, sKey)
 	},
 }
 
@@ -54,62 +46,35 @@ func init() {
 	serveCmd.Flags().StringVar(&certPath, "certpath", "certs", "path to rootca and key pair. Expects files named ca.pem, server(-key).pem")
 }
 
-// A closure to hold aws.Config
-// Calls readHandler to do the actual work
-func handleAWSRequest(cfg *aws.Config, realHandler func(*aws.Config, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
-	if cfg == nil {
-		log.Fatal().Msg("nil AWS config")
-	}
-	return func(w http.ResponseWriter, r *http.Request) {
-		realHandler(cfg, w, r)
-	}
-}
+// TODO: Implement newbuild ahndler in new mux code
+// func newBuild(cfg *aws.Config, w http.ResponseWriter, r *http.Request) {
+// 	var req Build
+// 	err := json.NewDecoder(r.Body).Decode(&req)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusBadRequest)
+// 		return
+// 	}
+// 	log.Trace().Interface("req", req).Msg("parsed from github")
 
-// Real handlers
+// 	// Github sends a path like refs/.../integration/<ref that we want>
+// 	ss := strings.Split(req.Ref, "/")
+// 	req.Ref = ss[len(ss)-1]
 
-func newBuild(cfg *aws.Config, w http.ResponseWriter, r *http.Request) {
-	var req Build
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	log.Trace().Interface("req", req).Msg("parsed from github")
+// 	state, err := devenv.GetEnvState(ecr.New(*cfg), e.RegistryID, req.Ref, e.Repos)
+// 	if err != nil {
+// 		log.Warn().Err(err).Msg("could not unmarhsal state")
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	log.Trace().Interface("state", state).Msg("initial")
+// 	state[req.Repo] = req.Sha
+// 	log.Trace().Interface("state", state).Msg("final")
 
-	// Github sends a path like refs/.../integration/<ref that we want>
-	ss := strings.Split(req.Ref, "/")
-	req.Ref = ss[len(ss)-1]
-
-	state, err := devenv.GetEnvState(ecr.New(*cfg), e.RegistryID, req.Ref, e.Repos)
-	if err != nil {
-		log.Warn().Err(err).Msg("could not unmarhsal state")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	log.Trace().Interface("state", state).Msg("initial")
-	state[req.Repo] = req.Sha
-	log.Trace().Interface("state", state).Msg("final")
-
-	err = devenv.UpsertNewBuild(dynamodb.New(*cfg), e.TableName, req.Ref, state)
-	if err != nil {
-		log.Warn().Err(err).Msg("could not add new build")
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	io.WriteString(w, "OK New build "+req.Ref)
-}
-
-// XXX: listEnvs only lists master, make this a rest endpoint
-func listEnvs(cfg *aws.Config, w http.ResponseWriter, r *http.Request) {
-	state, err := devenv.GetEnvState(ecr.New(*cfg), e.RegistryID, "master", e.Repos)
-	log.Trace().Interface("state", state).Msg("listEnvs")
-
-	envs, err := json.Marshal(state)
-	if err != nil {
-		log.Warn().Err(err).Msg("could not unmarhsal state")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(envs)
-}
+// 	err = devenv.UpsertNewBuild(dynamodb.New(*cfg), e.TableName, req.Ref, state)
+// 	if err != nil {
+// 		log.Warn().Err(err).Msg("could not add new build")
+// 		http.Error(w, err.Error(), http.StatusBadRequest)
+// 		return
+// 	}
+// 	io.WriteString(w, "OK New build "+req.Ref)
+// }

@@ -196,7 +196,7 @@ func (a *App) updateEnv(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Info().Interface("env", newEnv).Msgf("%s env updated", env)
 
-	respondWithJSON(w, http.StatusCreated, newEnv)
+	respondWithJSON(w, http.StatusOK, newEnv)
 }
 
 func (a *App) getEnv(w http.ResponseWriter, r *http.Request) {
@@ -204,7 +204,7 @@ func (a *App) getEnv(w http.ResponseWriter, r *http.Request) {
 	name := vars["name"]
 	log.Debug().Interface("vars", vars).Msgf("get for %s received", name)
 
-	env, err := devenv.GetEnv(a.DB, a.Env.TableName, vars["name"], a.Env.Repos)
+	env, err := devenv.GetEnv(a.DB, a.Env.TableName, vars["name"])
 	if err != nil {
 		if ierr, ok := err.(devenv.NotFoundError); ok {
 			respondWithError(w, http.StatusNotFound, ierr.Error())
@@ -217,7 +217,18 @@ func (a *App) getEnv(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) deleteEnv(w http.ResponseWriter, r *http.Request) {
-	return
+	vars := mux.Vars(r)
+	name := vars["name"]
+	log.Debug().Interface("vars", vars).Msgf("delete for %s received", name)
+
+	err := devenv.DeleteEnv(a.DB, a.Env.TableName, name)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	log.Info().Msgf("env %s deleted", name)
+	w.WriteHeader(http.StatusAccepted)
+	io.WriteString(w, "ok")
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {

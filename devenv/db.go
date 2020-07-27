@@ -2,7 +2,6 @@ package devenv
 
 import (
 	"context"
-	"errors"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
@@ -48,6 +47,45 @@ func EnsureTableExists(db dynamodbiface.ClientAPI, table string) error {
 	return nil
 }
 
+// DeleteTable unconditionally deletes the table
+func DeleteTable(db dynamodbiface.ClientAPI, table string) error {
+	input := &dynamodb.DeleteTableInput{
+		TableName: aws.String(table),
+	}
+
+	req := db.DeleteTableRequest(input)
+	result, err := req.Send(context.Background())
+	log.Trace().Interface("result", result).Msgf("result from delete")
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeResourceInUseException:
+				log.Error().
+					Err(aerr).
+					Msgf("cannot delete table %s as it is in use", table)
+			case dynamodb.ErrCodeResourceNotFoundException:
+				log.Error().
+					Err(aerr).
+					Msgf("delete called for non-existent table %s", table)
+			case dynamodb.ErrCodeRequestLimitExceeded:
+				log.Error().
+					Err(aerr).
+					Msgf("request limit exceeded for table %s", table)
+			case dynamodb.ErrCodeInternalServerError:
+				log.Error().
+					Err(aerr).
+					Msg("ISE from AWS, please implement retry if appropriate")
+			default:
+				log.Error().
+					Err(aerr).
+					Msgf("error deleting table %s", table)
+			}
+		}
+		return err
+	}
+	return nil
+}
+
 func createTable(db dynamodbiface.ClientAPI, table string) error {
 	req := db.CreateTableRequest(&dynamodb.CreateTableInput{
 		AttributeDefinitions: []dynamodb.AttributeDefinition{
@@ -55,19 +93,11 @@ func createTable(db dynamodbiface.ClientAPI, table string) error {
 				AttributeName: aws.String(NAME),
 				AttributeType: dynamodb.ScalarAttributeTypeS,
 			},
-			{
-				AttributeName: aws.String(STATE),
-				AttributeType: dynamodb.ScalarAttributeTypeS,
-			},
 		},
 		KeySchema: []dynamodb.KeySchemaElement{
 			{
 				AttributeName: aws.String(NAME),
 				KeyType:       dynamodb.KeyTypeHash,
-			},
-			{
-				AttributeName: aws.String(STATE),
-				KeyType:       dynamodb.KeyTypeRange,
 			},
 		},
 		BillingMode: "PAY_PER_REQUEST",
@@ -90,33 +120,19 @@ func createTable(db dynamodbiface.ClientAPI, table string) error {
 // GetEnv will get the named env using the supplied list of repos to
 // construct the projection expression. This method returns *DevEnv,
 // not a dynamodb return type
-func GetEnv(db dynamodbiface.ClientAPI, table string, env string, repos []string) (*DevEnv, error) {
-	keyCond := expression.Key(NAME).Equal(expression.Value(env))
-	proj := expression.NamesList(expression.Name(STATE))
-	for _, repo := range repos {
-		newProj := proj.AddNames(expression.Name(repo))
-		proj = newProj
+func GetEnv(db dynamodbiface.ClientAPI, table string, env string) (*DevEnv, error) {
+	input := &dynamodb.GetItemInput{
+		Key: map[string]dynamodb.AttributeValue{
+			NAME: {
+				S: aws.String(env),
+			},
+		},
+		TableName: aws.String(table),
 	}
 
-	expr, err := expression.NewBuilder().
-		WithKeyCondition(keyCond).
-		WithProjection(proj).
-		Build()
-	if err != nil {
-		return &DevEnv{}, err
-	}
-
-	input := &dynamodb.QueryInput{
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		KeyConditionExpression:    expr.KeyCondition(),
-		ProjectionExpression:      expr.Projection(),
-		TableName:                 aws.String(table),
-	}
-
-	req := db.QueryRequest(input)
+	req := db.GetItemRequest(input)
 	result, err := req.Send(context.Background())
-	//log.Debug().Interface("result", result).Msg("query")
+	log.Trace().Interface("result", result).Msgf("get for %s", env)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -136,22 +152,14 @@ func GetEnv(db dynamodbiface.ClientAPI, table string, env string, repos []string
 		}
 		return &DevEnv{}, err
 	}
-	if result.LastEvaluatedKey != nil {
-		log.Warn().Msgf("implment pagination in devenv.GetEnv()")
-	}
-	de := make(DevEnv)
-
-	switch len(result.Items) {
-	case 0:
+	if result.Item == nil {
 		return &DevEnv{}, NotFoundError{env}
-	case 1:
-		err := dynamodbattribute.UnmarshalMap(result.Items[0], de)
-		if err != nil {
-			return &de, err
-		}
-	default:
-		log.Error().Msgf("more than one env found for %s in %s", env, table)
-		return &DevEnv{}, errors.New("this should not happen, ask in #devops")
+	}
+
+	de := make(DevEnv)
+	err = dynamodbattribute.UnmarshalMap(result.Item, &de)
+	if err != nil {
+		return &de, err
 	}
 
 	return &de, nil
@@ -161,7 +169,7 @@ func GetEnv(db dynamodbiface.ClientAPI, table string, env string, repos []string
 func InsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap DevEnv) error {
 	// Remove key elements from the map as updates will fail
 	delete(stateMap, NAME)
-	delete(stateMap, STATE)
+	stateMap[STATE] = "new"
 
 	// An env with the "name" key from state should not already exist
 	cond := expression.AttributeNotExists(expression.Name(NAME))
@@ -186,9 +194,6 @@ func InsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap De
 			NAME: {
 				S: aws.String(env),
 			},
-			STATE: {
-				S: aws.String("new"),
-			},
 		},
 		ConditionExpression:       expr.Condition(),
 		ExpressionAttributeValues: expr.Values(),
@@ -210,7 +215,9 @@ func InsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap De
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case dynamodb.ErrCodeConditionalCheckFailedException:
-				log.Error().Err(aerr).Msgf("env %s already exists", env)
+				log.Error().
+					Err(aerr).
+					Msgf("env %s already exists", env)
 				return ExistsError{env}
 			case dynamodb.ErrCodeResourceNotFoundException:
 				log.Warn().Msgf("table %s not found, creating.", table)
@@ -224,13 +231,21 @@ func InsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap De
 					return err
 				}
 			case dynamodb.ErrCodeItemCollectionSizeLimitExceededException:
-				log.Error().Err(aerr).Msgf("table %s too big for inserts", table)
+				log.Error().
+					Err(aerr).
+					Msgf("table %s too big for inserts", table)
 			case dynamodb.ErrCodeRequestLimitExceeded:
-				log.Error().Err(aerr).Msgf("request limit exceeded for table %s", table)
+				log.Error().
+					Err(aerr).
+					Msgf("request limit exceeded for table %s", table)
 			case dynamodb.ErrCodeInternalServerError:
-				log.Error().Err(aerr).Msg("ISE from AWS, please implement retry if appropriate")
+				log.Error().
+					Err(aerr).
+					Msg("ISE from AWS, please implement retry if appropriate")
 			default:
-				log.Error().Err(aerr).Msgf("error inserting %s into %s", env, table)
+				log.Error().
+					Err(aerr).
+					Msgf("error inserting %s into %s", env, table)
 			}
 		}
 		return err
@@ -243,7 +258,8 @@ func InsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap De
 func UpsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap DevEnv) error {
 	// Remove key elements from the map as updates will fail
 	delete(stateMap, NAME)
-	delete(stateMap, STATE)
+	// Reset the state so that the runner will pick it up
+	stateMap[STATE] = "new"
 
 	update := expression.UpdateBuilder{}
 	for k, v := range stateMap {
@@ -264,9 +280,6 @@ func UpsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap De
 		Key: map[string]dynamodb.AttributeValue{
 			NAME: {
 				S: aws.String(env),
-			},
-			STATE: {
-				S: aws.String("new"),
 			},
 		},
 		ExpressionAttributeValues: expr.Values(),
@@ -300,6 +313,38 @@ func UpsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap De
 				log.Error().Err(aerr).Msg("ISE from AWS, please implement retry if appropriate")
 			default:
 				log.Error().Err(aerr).Msgf("error inserting %s into %s", env, table)
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+// DeleteEnv will blindly delete the given env
+func DeleteEnv(db dynamodbiface.ClientAPI, table string, env string) error {
+	input := &dynamodb.DeleteItemInput{
+		Key: map[string]dynamodb.AttributeValue{
+			NAME: {
+				S: aws.String(env),
+			},
+		},
+		TableName: aws.String(table),
+	}
+
+	req := db.DeleteItemRequest(input)
+	result, err := req.Send(context.Background())
+	log.Trace().Interface("result", result).Msgf("result from deleting %s", env)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeResourceNotFoundException:
+				log.Warn().Msgf("env %s not found, doing nothing as a delete was called.", table)
+			case dynamodb.ErrCodeRequestLimitExceeded:
+				log.Error().Err(aerr).Msgf("request limit exceeded for table %s", table)
+			case dynamodb.ErrCodeInternalServerError:
+				log.Error().Err(aerr).Msg("ISE from AWS, please implement retry if appropriate")
+			default:
+				log.Error().Err(aerr).Msgf("error deleting %s from %s", env, table)
 			}
 		}
 		return err
