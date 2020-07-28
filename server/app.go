@@ -10,6 +10,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -88,7 +90,6 @@ func (a *App) Init(ca string) {
 	a.tlsConfig = tlsConfig
 	log.Debug().Msgf("CA cert loaded from %s", ca)
 
-	a.Router = mux.NewRouter()
 	a.initRoutes()
 }
 
@@ -96,6 +97,7 @@ func (a *App) Init(ca string) {
 func (a *App) Run(addr string, cert string, key string) {
 	server := &http.Server{
 		Addr:      addr,
+		Handler:   a.Router,
 		TLSConfig: a.tlsConfig,
 	}
 	log.Info().Msg("starting server")
@@ -105,18 +107,24 @@ func (a *App) Run(addr string, cert string, key string) {
 }
 
 func (a *App) initRoutes() {
+	a.Router = mux.NewRouter()
+
 	a.Router.HandleFunc("/healthcheck", a.healthCheck).Methods("GET")
 	a.Router.HandleFunc("/loglevel/{level}", a.setLoglevel).Methods("PUT")
 	a.Router.HandleFunc("/loglevel", a.getLoglevel).Methods("GET")
 
-	//a.Router.HandleFunc("/newbuild", a.newBuild).Methods("POST")
+	// Endpoint for int-image GHA
+	a.Router.HandleFunc("/newbuild", a.newBuild).Methods("POST")
 
+	// ReST API
 	a.Router.HandleFunc("/envs", a.getEnvs).Methods("GET")
 	a.Router.HandleFunc("/env/{name}", a.createEnv).Methods("PUT")
 	a.Router.HandleFunc("/env/{name}", a.updateEnv).Methods("PATCH")
 	a.Router.HandleFunc("/env/{name}", a.deleteEnv).Methods("DELETE")
 	a.Router.HandleFunc("/env/{name}", a.getEnv).Methods("GET")
 }
+
+// Infra routes
 
 func (a *App) healthCheck(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "OK")
@@ -142,6 +150,59 @@ func (a *App) getLoglevel(w http.ResponseWriter, r *http.Request) {
 
 	respondWithJSON(w, http.StatusOK, loglevel)
 }
+
+func getTrailingElement(string string, separator string) string {
+	urlDecoded, err := url.QueryUnescape(string)
+	if err != nil {
+		log.Debug().Err(err).Msgf("could not decode %s, proceeding anyway", string)
+	}
+	stringArray := strings.Split(urlDecoded, separator)
+	return stringArray[len(stringArray)-1]
+}
+
+// This is the handler that is invoked from github
+
+func (a *App) newBuild(w http.ResponseWriter, r *http.Request) {
+	newBuild := make(map[string]string)
+	err := json.NewDecoder(r.Body).Decode(&newBuild)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	log.Trace().Interface("newBuild", newBuild).Msg("parsed from github")
+
+	// Github sends org/reponame
+	repo := getTrailingElement(newBuild["repo"], "/")
+	// Github sends a path like refs/.../integration/<ref that we want>
+	ref := getTrailingElement(newBuild["ref"], "/")
+	sha := newBuild["sha"]
+
+	log.Debug().Msgf("sha %s for repo %s from ref %s", sha, repo, ref)
+
+	ecrState, err := devenv.GetECRState(a.ECR, a.Env.RegistryID, ref, a.Env.Repos)
+	if err != nil {
+		log.Warn().
+			Err(err).
+			Msgf("could not get ecr state for %s using registry %s with repo list %v", ref, a.Env.RegistryID, a.Env.Repos)
+		respondWithError(w, http.StatusInternalServerError, "could got retrieve ecr state")
+		return
+	}
+	log.Trace().Interface("ecrState", ecrState).Msgf("for ref %s", ref)
+	ecrState[repo] = sha
+	log.Trace().Interface("ecrState", ecrState).Msgf("for ref %s after update", ref)
+
+	err = devenv.UpsertEnv(a.DB, a.Env.TableName, ref, ecrState)
+	if err != nil {
+		log.Warn().
+			Interface("ecrState", ecrState).
+			Err(err).
+			Msgf("could not add new build for %s", ref)
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+	}
+	respondWithJSON(w, http.StatusOK, ecrState)
+}
+
+// ReST API for /env
 
 // TODO Implement listing of all environments
 func (a *App) getEnvs(w http.ResponseWriter, r *http.Request) {

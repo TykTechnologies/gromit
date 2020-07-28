@@ -90,11 +90,13 @@ var clientCmd = &cobra.Command{
 			}
 		}
 		host, _ := cmd.Flags().GetString("server")
-		healthcheck(client, fmt.Sprintf("https://%s/healthcheck", host))
+		healthcheckURL := fmt.Sprintf("https://%s/healthcheck", host)
+		log.Debug().Msgf("Going to healthcheck %s", healthcheckURL)
+		makeTLSRequest(client, healthcheckURL)
 	},
 }
 
-func healthcheck(client http.Client, url string) {
+func makeTLSRequest(client http.Client, url string) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not construct request")

@@ -9,13 +9,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// EnvState holds the branch name for an environment
-type EnvState map[string]string
-
-// GetEnvState returns master as the ref if no env was found
-func GetEnvState(svc ecriface.ClientAPI, registry string, env string, repos []string) (EnvState, error) {
-	var state = make(EnvState)
-	state["name"] = env
+// GetECRState returns master as the ref if no env was found.
+// Using DevEnv here to model the state of the repositories, the actual repos
+// being used is abstracted away. Hopefully, this will turn out to be the right choice.
+func GetECRState(svc ecriface.ClientAPI, registry string, env string, repos []string) (DevEnv, error) {
+	var state = make(DevEnv)
 
 	for _, repo := range repos {
 		tag, err := getExistingTag(svc, registry, repo, env)
@@ -37,7 +35,7 @@ func getExistingTag(svc ecriface.ClientAPI, registry string, repo string, tag st
 	input := &ecr.DescribeImagesInput{
 		RegistryId:     aws.String(registry),
 		RepositoryName: aws.String(repo),
-		MaxResults:     func() *int64 { i := int64(1000); return &i }(),
+		MaxResults:     aws.Int64(1000),
 	}
 
 	req := svc.DescribeImagesRequest(input)

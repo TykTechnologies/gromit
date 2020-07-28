@@ -152,6 +152,56 @@ func TestNegatives(t *testing.T) {
 	runSubTests(t, cases)
 }
 
+func TestNewBuild(t *testing.T) {
+	// Use this formulation of sub-tests when ordering matters
+	// GetLoglvl below works because InfoLvl has set it
+	cases := []APITestCase{
+		{
+			Name:       "PlainPump",
+			Endpoint:   "/newbuild",
+			HTTPStatus: http.StatusOK,
+			Payload:    `{"repo":"tyk-pump","ref":"test","sha":"sha-pump"}`,
+			HTTPMethod: "POST",
+		},
+		{
+			Name:         "CheckPlainPump",
+			Endpoint:     "/env/test",
+			HTTPStatus:   http.StatusOK,
+			ResponseJSON: `{"name":"test","state":"new","tyk":"master","tyk-analytics":"master","tyk-pump":"sha-pump"}`,
+			HTTPMethod:   "GET",
+		},
+		{
+			Name:       "GHStyleGateway",
+			Endpoint:   "/newbuild",
+			HTTPStatus: http.StatusOK,
+			Payload:    `{"repo":"TykTechnologies/tyk","ref":"refs/heads/integration/test","sha":"sha-gw"}`,
+			HTTPMethod: "POST",
+		},
+		{
+			Name:         "CheckGHStyleGateway",
+			Endpoint:     "/env/test",
+			HTTPStatus:   http.StatusOK,
+			ResponseJSON: `{"name":"test","state":"new","tyk":"sha-gw","tyk-analytics":"master","tyk-pump":"master"}`,
+			HTTPMethod:   "GET",
+		},
+		{
+			Name:       "URLEncGHStyleDashboard",
+			Endpoint:   "/newbuild",
+			HTTPStatus: http.StatusOK,
+			Payload:    `{"repo":"TykTechnologies%2Ftyk-analytics","ref":"refs%2Fheads%2Fintegration%2Ftest","sha":"sha-db"}`,
+			HTTPMethod: "POST",
+		},
+		{
+			Name:         "CheckURLEncStyleDashboard",
+			Endpoint:     "/env/test",
+			HTTPStatus:   http.StatusOK,
+			ResponseJSON: `{"name":"test","state":"new","tyk":"master","tyk-analytics":"sha-db","tyk-pump":"master"}`,
+			HTTPMethod:   "GET",
+		},
+	}
+	runSubTests(t, cases)
+}
+
 func runSubTests(t *testing.T, cases []APITestCase) {
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {

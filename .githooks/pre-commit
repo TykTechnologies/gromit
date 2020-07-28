@@ -1,9 +1,16 @@
 #!/bin/sh
 #
-# Update the TODO file on commit
+# Update $TODO_FILE on commit
+# Hooks, except the push related ones run in repo root
 
 exec 1>&2
 
-echo Updating TODO file from $(pwd)
-grep -ri TODO * > TODO
-exec git add TODO
+TODO_FILE=TODO.md
+echo Updating $TODO_FILE from $(pwd)
+cat > $TODO_FILE <<EOF
+# TODOs
+Generated from lines with TODO in the repo , use the pre-commit hook in `.githooks`.
+EOF
+grep --exclude-dir=.git\* --exclude=\*.md -rn TODO
+grep -ri TODO * >> $TODO_FILE
+exec git add $TODO_FILE

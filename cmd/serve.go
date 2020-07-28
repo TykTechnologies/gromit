@@ -45,36 +45,3 @@ func init() {
 
 	serveCmd.Flags().StringVar(&certPath, "certpath", "certs", "path to rootca and key pair. Expects files named ca.pem, server(-key).pem")
 }
-
-// TODO: Implement newbuild ahndler in new mux code
-// func newBuild(cfg *aws.Config, w http.ResponseWriter, r *http.Request) {
-// 	var req Build
-// 	err := json.NewDecoder(r.Body).Decode(&req)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusBadRequest)
-// 		return
-// 	}
-// 	log.Trace().Interface("req", req).Msg("parsed from github")
-
-// 	// Github sends a path like refs/.../integration/<ref that we want>
-// 	ss := strings.Split(req.Ref, "/")
-// 	req.Ref = ss[len(ss)-1]
-
-// 	state, err := devenv.GetEnvState(ecr.New(*cfg), e.RegistryID, req.Ref, e.Repos)
-// 	if err != nil {
-// 		log.Warn().Err(err).Msg("could not unmarhsal state")
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-// 	log.Trace().Interface("state", state).Msg("initial")
-// 	state[req.Repo] = req.Sha
-// 	log.Trace().Interface("state", state).Msg("final")
-
-// 	err = devenv.UpsertNewBuild(dynamodb.New(*cfg), e.TableName, req.Ref, state)
-// 	if err != nil {
-// 		log.Warn().Err(err).Msg("could not add new build")
-// 		http.Error(w, err.Error(), http.StatusBadRequest)
-// 		return
-// 	}
-// 	io.WriteString(w, "OK New build "+req.Ref)
-// }
