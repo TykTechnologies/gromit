@@ -143,6 +143,7 @@ func (a *App) getLoglevel(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, loglevel)
 }
 
+// TODO Implement listing of all environments
 func (a *App) getEnvs(w http.ResponseWriter, r *http.Request) {
 	return
 }
