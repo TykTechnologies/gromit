@@ -3,7 +3,7 @@ package devenv
 import (
 	"context"
 	"errors"
-	"os"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
@@ -12,18 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/ecsiface"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
-	"github.com/kelseyhightower/envconfig"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
-
-// EnvConfig holds global environment variables
-type EnvConfig struct {
-	ZoneID string
-	Domain string
-}
-
-var e EnvConfig
 
 // Will only fetch fargate tasks that want to be or are RUNNING
 func getClusterTasks(svc ecsiface.ClientAPI, cluster string) ([]string, error) {
@@ -87,18 +77,27 @@ func getPublicIP(svc ec2iface.ClientAPI, eni string) (string, error) {
 	}
 	log.Trace().Interface("netifaces", result)
 
-	return *result.NetworkInterfaces[0].Association.PublicIp, nil
+	if len(result.NetworkInterfaces) > 0 {
+		assoc := result.NetworkInterfaces[0].Association
+		if assoc != nil && assoc.PublicIp != nil {
+			return *assoc.PublicIp, nil
+		}
+	}
+	return "", errors.New("No public IP")
 }
 
-func updateClusterIPs(cluster string) {
+// UpdateClusterIPs is the entrypoint for CLI
+func UpdateClusterIPs(cluster string, zoneid string, domain string) error {
 	cfg, err := external.LoadDefaultAWSConfig()
 	if err != nil {
-		log.Fatal().Err(err).Msg("unable to load SDK config,")
+		log.Error().Err(err).Msg("unable to load SDK config,")
+		return err
 	}
 	region, flag, err := external.GetRegion(external.Configs{cfg})
-	log.Debug().Msgf("getting region flag: %t", flag)
+	log.Trace().Msgf("got region flag: %v, not sure what this is supposed to indicate", flag)
 	if err != nil {
-		log.Fatal().Err(err).Msg("unable to find region,")
+		log.Error().Err(err).Msg("unable to find region,")
+		return err
 	}
 
 	fargate := ecs.New(cfg)
@@ -116,21 +115,14 @@ func updateClusterIPs(cluster string) {
 			continue
 		}
 		log.Debug().Msgf("Found ip %s for task %s.%s", ip, cluster, taskName)
-		fqdn, err := UpsertTaskDNS(route53.New(cfg), region, taskName, ip)
+		fqdn := fmt.Sprintf("%s.%s", taskName, domain)
+
+		err = UpsertTaskDNS(route53.New(cfg), region, zoneid, fqdn, ip)
 		if err != nil {
 			log.Warn().Err(err).Msgf("could not bind %s", ip)
 			continue
 		}
 		log.Info().Msgf("Bound %s to %s", ip, fqdn)
 	}
-}
-
-func entrypoint() {
-	zerolog.SetGlobalLevel(zerolog.TraceLevel)
-	err := envconfig.Process("gromit", &e)
-	if err != nil {
-		log.Fatal().Err(err)
-	}
-	log.Info().Interface("env", e).Msg("loaded env")
-	updateClusterIPs(os.Args[1])
+	return nil
 }

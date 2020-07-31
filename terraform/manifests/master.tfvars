@@ -1,0 +1,8 @@
+name_prefix = "master"
+region      = "eu-central-1"
+cfssl_efs   = "fs-f60295ae"
+config_efs  = "fs-f50295ad"
+tyk_image = "046805072452.dkr.ecr.eu-central-1.amazonaws.com/tyk:master"
+tyk-analytics_image = "046805072452.dkr.ecr.eu-central-1.amazonaws.com/tyk-analytics:master"
+tyk-pump_image = "046805072452.dkr.ecr.eu-central-1.amazonaws.com/tyk-pump:master"
+vpc_id = "vpc-06074698e1a0aa8aa"

@@ -3,7 +3,9 @@ module github.com/TykTechnologies/gromit
 go 1.14
 
 require (
+	github.com/GeertJohan/go.rice v1.0.0
 	github.com/aws/aws-sdk-go-v2 v0.24.0
+	github.com/daaku/go.zipexe v1.0.1 // indirect
 	github.com/gorilla/mux v1.7.4
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-homedir v1.1.0
