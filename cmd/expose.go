@@ -23,8 +23,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// EnvConfig holds global environment variables
-type EnvConfig struct {
+// envConfig holds global environment variables
+type exposeEnvConfig struct {
 	ZoneID string
 	Domain string
 }
@@ -37,7 +37,7 @@ var exposeCmd = &cobra.Command{
 
 Currently it creates only A records.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var e EnvConfig
+		var e exposeEnvConfig
 
 		err := envconfig.Process("r53", &e)
 		if err != nil {

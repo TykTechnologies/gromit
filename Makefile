@@ -1,6 +1,6 @@
 gromit: *.go cmd/*.go devenv/*.go terraform/*.go server/*.go
-	rice embed-go
 	go build
+	rice append --exec $@
 	go mod tidy
 	sudo setcap 'cap_net_bind_service=+ep' $(@)
 

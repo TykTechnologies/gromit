@@ -2,6 +2,7 @@ package devenv
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
@@ -17,6 +18,8 @@ const (
 	STATE = "state"
 	// NAME is the name of the name attribute in the DB :)
 	NAME = "name"
+	// NEW is the state when an env is new
+	NEW = "new"
 )
 
 // DevEnv is a tyk env on the dev env. This is not a type because
@@ -169,7 +172,7 @@ func GetEnv(db dynamodbiface.ClientAPI, table string, env string) (*DevEnv, erro
 func InsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap DevEnv) error {
 	// Remove key elements from the map as updates will fail
 	delete(stateMap, NAME)
-	stateMap[STATE] = "new"
+	stateMap[STATE] = NEW
 
 	// An env with the "name" key from state should not already exist
 	cond := expression.AttributeNotExists(expression.Name(NAME))
@@ -259,7 +262,7 @@ func UpsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap De
 	// Remove key elements from the map as updates will fail
 	delete(stateMap, NAME)
 	// Reset the state so that the runner will pick it up
-	stateMap[STATE] = "new"
+	stateMap[STATE] = NEW
 
 	update := expression.UpdateBuilder{}
 	for k, v := range stateMap {
@@ -350,4 +353,61 @@ func DeleteEnv(db dynamodbiface.ClientAPI, table string, env string) error {
 		return err
 	}
 	return nil
+}
+
+// GetNewEnvs will fetch all envs with state==NEW from the DB
+// Only attribute names matching the list in repos will be fetched
+func GetNewEnvs(db dynamodbiface.ClientAPI, table string, repos []string) ([]DevEnv, error) {
+	filt := expression.Name(STATE).Equal(expression.Value(NEW))
+
+	proj := expression.NamesList(expression.Name(NAME))
+	for _, r := range repos {
+		newProj := proj.AddNames(expression.Name(r))
+		proj = newProj
+	}
+
+	expr, err := expression.NewBuilder().
+		WithFilter(filt).
+		WithProjection(proj).
+		Build()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Use the built expression to populate the DynamoDB Scan API input parameters.
+	input := &dynamodb.ScanInput{
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		FilterExpression:          expr.Filter(),
+		ProjectionExpression:      expr.Projection(),
+		TableName:                 aws.String(table),
+	}
+
+	req := db.ScanRequest(input)
+	result, err := req.Send(context.Background())
+	var envs []DevEnv
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeResourceNotFoundException:
+				log.Warn().Msgf("table %s not found", table)
+			case dynamodb.ErrCodeRequestLimitExceeded:
+				log.Error().Err(aerr).Msgf("request limit exceeded for table %s", table)
+			case dynamodb.ErrCodeInternalServerError:
+				log.Error().Err(aerr).Msg("ISE from AWS, please implement retry if appropriate")
+			default:
+				log.Error().Err(aerr).Msgf("error getting new envs from table %s", table)
+			}
+		}
+		return envs, err
+	}
+	for _, row := range result.Items {
+		de := make(DevEnv)
+		err = dynamodbattribute.UnmarshalMap(row, &de)
+		if err != nil {
+			return envs, err
+		}
+		envs = append(envs, de)
+	}
+	return envs, nil
 }

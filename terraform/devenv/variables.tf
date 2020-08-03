@@ -8,17 +8,17 @@ variable "vpc_id" {
   type = string
 }
 
-variable "tyk_image" {
+variable "tyk" {
   description = "Image for the tyk service"
   type        = string
 }
 
-variable "tyk-analytics_image" {
+variable "tyk-analytics" {
   description = "Image for the tyk-analytics service"
   type        = string
 }
 
-variable "tyk-pump_image" {
+variable "tyk-pump" {
   description = "Image for the tyk-pump service"
   type        = string
 }

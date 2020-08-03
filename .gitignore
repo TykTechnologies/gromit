@@ -15,3 +15,5 @@
 # vendor/
 /gromit
 .terraform/
+terraform.tfstate
+*.plan

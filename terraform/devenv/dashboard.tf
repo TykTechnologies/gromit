@@ -5,7 +5,7 @@ data "template_file" "dashboard" {
     { port      = 3000,
       name      = local.db_name,
       log_group = "internal",
-      image     = var.tyk-analytics_image,
+      image     = var.tyk-analytics,
       command   = ["--conf=/conf/tyk-analytics.conf"],
       mounts = [
         { src = "config", dest = "/conf" }

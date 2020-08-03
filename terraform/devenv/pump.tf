@@ -5,7 +5,7 @@ data "template_file" "pump" {
     { port      = 3000,
       name      = local.pump_name,
       log_group = "internal",
-      image     = var.tyk-pump_image,
+      image     = var.tyk-pump,
       command   = ["--conf=/conf/tyk-pump.conf"],
       mounts = [
         { src = "config", dest = "/conf" }

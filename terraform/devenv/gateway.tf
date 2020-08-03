@@ -5,7 +5,7 @@ data "template_file" "gateway" {
     { port      = 8080,
       name      = local.gw_name,
       log_group = "internal",
-      image     = var.tyk_image,
+      image     = var.tyk,
       command   = ["--conf=/conf/tyk.conf"],
       mounts = [
         { src = "config", dest = "/conf" }

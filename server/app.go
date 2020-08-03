@@ -53,12 +53,11 @@ func (a *App) Init(ca string) {
 	// Read env vars prefixed by GROMIT_
 	err := envconfig.Process("gromit", &e)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Err(err).Msg("could not load env")
 	}
 	log.Info().Interface("env", e).Msg("loaded env")
 	a.Env = &e
 
-	// Set global cfg
 	cfg, err := external.LoadDefaultAWSConfig()
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to load SDK config")

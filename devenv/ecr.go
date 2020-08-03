@@ -40,7 +40,7 @@ func getExistingTag(svc ecriface.ClientAPI, registry string, repo string, tag st
 
 	req := svc.DescribeImagesRequest(input)
 	result, err := req.Send(context.Background())
-	log.Trace().Interface("netifaces", result).Msgf("images for %s", repo)
+	log.Trace().Interface("result", result).Msgf("images for %s", repo)
 	if err != nil {
 		return "", err
 	}
