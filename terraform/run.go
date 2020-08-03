@@ -21,9 +21,9 @@ import (
 func terraform(args ...string) ([]byte, error) {
 	tfEnv := append(os.Environ(),
 		"TF_IN_AUTOMATION=1",
+		"TF_CLI_ARGS=-no-color",
 	)
-	noColourCmdLine := append(args, "-no-color")
-	tf := exec.Command("terraform", noColourCmdLine...)
+	tf := exec.Command("terraform", args...)
 	tf.Env = tfEnv
 
 	out, err := tf.CombinedOutput()
@@ -139,6 +139,14 @@ func apply(env string, dir string) {
 	terraformExitOnFailure("apply", "tfplan")
 }
 
+func setupTerraformCreds(token string) error {
+	credFile := fmt.Sprintf("%s/.terraformrc", os.Getenv("HOME"))
+	creds := fmt.Sprintf(`credentials "app.terraform.io" {
+  token = "%s"
+}`, token)
+	return ioutil.WriteFile(credFile, []byte(creds), 0600)
+}
+
 // Run is the entrypoint from the CLI
 func Run() error {
 	var e server.EnvConfig
@@ -153,6 +161,10 @@ func Run() error {
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to load SDK config")
 	}
+	err = setupTerraformCreds(os.Getenv("TF_API_TOKEN"))
+	if err != nil {
+		log.Fatal().Err(err).Msg("unable to setup terraform creds")
+	}
 
 	envs, err := devenv.GetNewEnvs(dynamodb.New(cfg), e.TableName, e.Repos)
 	if err != nil {
@@ -165,15 +177,18 @@ func Run() error {
 		devManifest := rice.MustFindBox("devenv")
 		tfDir, err := deployManifest(devManifest, envName)
 		if err != nil {
-			log.Fatal().Err(err).Msgf("could not deploy manifest for env %s", envName)
+			log.Error().Err(err).Msgf("could not deploy manifest for env %s", envName)
+			continue
 		}
 		infraOutput, err := GetInfraValues()
 		if err != nil {
-			log.Fatal().Err(err).Msgf("could not get infra vars for env %s", envName)
+			log.Error().Err(err).Msgf("could not get infra vars for env %s", envName)
+			continue
 		}
 		err = makeInputVarfile(tfDir, env, infraOutput)
 		if err != nil {
-			log.Fatal().Err(err).Msgf("could not write input file for env %s", envName)
+			log.Error().Err(err).Msgf("could not write input file for env %s", envName)
+			continue
 		}
 		apply(envName, tfDir)
 		os.RemoveAll(tfDir)

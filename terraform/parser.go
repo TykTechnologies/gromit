@@ -41,22 +41,24 @@ func getOutput(dir string, wrkSpace string) (TFOutput, error) {
 	tfEnv := append(os.Environ(),
 		fmt.Sprintf("TF_WORKSPACE=%s", wrkSpace))
 	terraformInit(tfEnv)
-	_, err := terraform("workspace", "select", wrkSpace)
+	op, err := terraform("workspace", "select", wrkSpace)
+	log.Trace().Str("output", string(op)).Msgf("output from workspace %s selection", dir, wrkSpace)
 	if err != nil {
 		return tfOutput, err
 	}
 
 	// This refresh is needed to init the infra state (which uses
 	// a prefix to choose envs) correctly
-	_, err = terraform("refresh")
+	op, err = terraform("refresh")
+	log.Trace().Str("output", string(op)).Msg("output from refresh")
 	if err != nil {
 		return tfOutput, err
 	}
-	op, err := terraform("output", "-json")
-	if err != nil {
-		return tfOutput, err
-	}
+	op, err = terraform("output", "-json")
 	log.Trace().Str("output", string(op)).Msgf("tf output from %s for workspace %s", dir, wrkSpace)
+	if err != nil {
+		return tfOutput, err
+	}
 	if err != nil {
 		return tfOutput, err
 	}
