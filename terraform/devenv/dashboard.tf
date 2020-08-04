@@ -44,7 +44,7 @@ resource "aws_service_discovery_service" "dashboard" {
 
     dns_records {
       ttl  = 60
-      type = "SRV"
+      type = "A"
     }
   }
 }
@@ -67,7 +67,6 @@ resource "aws_ecs_service" "dashboard" {
 
   service_registries {
     registry_arn = aws_service_discovery_service.dashboard.arn
-    port = 3000
   }
 
   tags = local.common_tags

@@ -44,7 +44,7 @@ resource "aws_service_discovery_service" "pump" {
 
     dns_records {
       ttl  = 60
-      type = "SRV"
+      type = "A"
     }
   }
 }
@@ -66,7 +66,6 @@ resource "aws_ecs_service" "pump" {
 
   service_registries {
     registry_arn = aws_service_discovery_service.pump.arn
-    port = 8181
   }
 
   tags = local.common_tags

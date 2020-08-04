@@ -44,7 +44,7 @@ resource "aws_service_discovery_service" "gateway" {
 
     dns_records {
       ttl  = 60
-      type = "SRV"
+      type = "A"
     }
   }
 }
@@ -66,7 +66,6 @@ resource "aws_ecs_service" "gateway" {
 
   service_registries {
     registry_arn = aws_service_discovery_service.gateway.arn
-    port = 8181
   }
 
   tags = local.common_tags
@@ -105,7 +104,7 @@ resource "aws_service_discovery_service" "redis" {
 
     dns_records {
       ttl  = 60
-      type = "SRV"
+      type = "A"
     }
   }
 }
