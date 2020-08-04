@@ -34,11 +34,11 @@ func terraform(args ...string) ([]byte, error) {
 func terraformExitOnFailure(args ...string) {
 	tfEnv := append(os.Environ(),
 		"TF_IN_AUTOMATION=1",
+		"TF_CLI_ARGS=-no-color",
 	)
 	cmd := args[0]
 
-	noColourCmdLine := append(args, "-no-color")
-	tf := exec.Command("terraform", noColourCmdLine...)
+	tf := exec.Command("terraform", args...)
 	tf.Env = tfEnv
 
 	out, err := tf.CombinedOutput()
@@ -192,6 +192,11 @@ func Run() error {
 		}
 		apply(envName, tfDir)
 		os.RemoveAll(tfDir)
+		err = devenv.UpdateClusterIPs(envName, e.ZoneID, e.Domain)
+		if err != nil {
+			log.Error().Err(err).Msgf("could not update IPs for env %s", envName)
+			continue
+		}
 	}
 	return nil
 }

@@ -33,6 +33,8 @@ type EnvConfig struct {
 	Repos      []string
 	TableName  string
 	RegistryID string
+	ZoneID     string
+	Domain     string
 }
 
 // App holds the API clients for the gromit server
