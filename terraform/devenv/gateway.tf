@@ -46,6 +46,7 @@ resource "aws_service_discovery_service" "gateway" {
       ttl  = 60
       type = "A"
     }
+    routing_policy = "MULTIVALUE"
   }
 }
 
@@ -106,6 +107,7 @@ resource "aws_service_discovery_service" "redis" {
       ttl  = 60
       type = "A"
     }
+    routing_policy = "MULTIVALUE"
   }
 }
 
@@ -125,7 +127,6 @@ resource "aws_ecs_service" "redis" {
 
   service_registries {
     registry_arn = aws_service_discovery_service.redis.arn
-    port = 6379
   }
 
   tags = local.common_tags

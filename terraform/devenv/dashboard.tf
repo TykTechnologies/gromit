@@ -46,6 +46,7 @@ resource "aws_service_discovery_service" "dashboard" {
       ttl  = 60
       type = "A"
     }
+    routing_policy = "MULTIVALUE"
   }
 }
 

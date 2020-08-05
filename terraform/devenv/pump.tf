@@ -46,6 +46,7 @@ resource "aws_service_discovery_service" "pump" {
       ttl  = 60
       type = "A"
     }
+    routing_policy = "MULTIVALUE"
   }
 }
 
