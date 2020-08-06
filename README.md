@@ -47,17 +47,3 @@ Flags:
 Global Flags:
       --config string   config file (default is $HOME/.gromit.yaml)
 ```
-
-# To test gromit run locally
-
-```
-docker build -t grun . && docker run --rm --name gr0 \
--e GROMIT_TABLENAME=DeveloperEnvironments \
--e GROMIT_REPOS=tyk,tyk-analytics,tyk-pump \
--e AWS_ACCESS_KEY_ID=keyid \
--e AWS_SECRET_ACCESS_KEY=secret \
--e AWS_REGION=eu-central-1 \
--e TF_API_TOKEN=secret \
--e GROMIT_DOMAIN=dev.tyk.technology \
-grun run
-```

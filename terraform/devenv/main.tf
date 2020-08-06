@@ -36,6 +36,10 @@ locals {
 resource "aws_ecs_cluster" "env" {
   name = var.name_prefix
 
+  setting {
+    name = "containerInsights"
+    value = "enabled"
+  }
   tags = local.common_tags
 }
 
