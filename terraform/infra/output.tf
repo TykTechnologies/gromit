@@ -4,7 +4,7 @@ data "terraform_remote_state" "infra" {
   config = {
     organization = "Tyk"
     workspaces = {
-      name = "dev-euc1"
+      name = "infra-prod"
     }
   }
 }

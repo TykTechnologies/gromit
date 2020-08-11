@@ -1,12 +1,10 @@
 terraform {
   required_version = ">= 0.12"
-  backend "remote" {
-    hostname     = "app.terraform.io"
-    organization = "Tyk"
-
-    workspaces {
-      prefix = "env-"
-    }
+  backend "s3" {
+    bucket         = "terraform-state-devenv"
+    key            = "devenv/"
+    region         = "eu-central-1"
+    dynamodb_table = "terraform-state-locks"
   }
 }
 
@@ -43,9 +41,8 @@ resource "aws_ecs_cluster" "env" {
   tags = local.common_tags
 }
 
-# The default for ecs task definitions
 data "aws_iam_role" "ecs_task_execution_role" {
-  name = "ecsTaskExecutionRole"
+  name = "ecsExecutionRole"
 }
 
 # Security groups

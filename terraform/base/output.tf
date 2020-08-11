@@ -4,7 +4,7 @@ data "terraform_remote_state" "integration" {
   config = {
     organization = "Tyk"
     workspaces = {
-      name = "base-euc1"
+      name = "base-prod"
     }
   }
 }
