@@ -70,38 +70,11 @@ func terraformInit(tfEnv []string) {
 	log.Trace().Str("output", string(out)).Msg("init")
 }
 
-// deployManifests to a temporary dir prefixed with destPrefix
-func deployManifest(b *rice.Box, destPrefix string) (string, error) {
-	tmpDir, err := ioutil.TempDir("", destPrefix)
-	if err != nil {
-		return "", err
-	}
-
-	err = copyBoxToDir(b, "/", tmpDir)
-	if err != nil {
-		log.Fatal().Err(err).Msgf("could not restore embedded manifests to %s", tmpDir)
-	}
-	return tmpDir, nil
-}
-
-// makeInputFromTFState transforms the envState into terraform inputs
+// makeInputFromTFState transforms envMap into terraform inputs
 // See master.tfvars for a sample inputfile in hcl format
-func makeInputVarfile(tfDir string, envMap devenv.DevEnv, tfOutput TFOutput) error {
-	inpMap := make(TFInputs)
-	for k, v := range tfOutput {
-		if k == "repo_urls" {
-			for repo, ecr := range v.getMapValue() {
-				inpMap[repo] = fmt.Sprintf("%s:%s", ecr, envMap[repo])
-			}
-		} else {
-			inpMap[k] = v.getStringValue()
-		}
-
-	}
-	inpMap["name_prefix"] = envMap[devenv.NAME].(string)
-
+func makeInputVarfile(tfDir string, envMap devenv.DevEnv) error {
 	varFile := fmt.Sprintf("%s.tfvars.json", envMap[devenv.NAME].(string))
-	varsJSON, err := json.Marshal(inpMap)
+	varsJSON, err := json.Marshal(envMap)
 	if err != nil {
 		return err
 	}
@@ -129,7 +102,6 @@ func apply(env string, dir string) {
 			Err(err).
 			Msg("env select failed, assuming it needs creation")
 		terraformExitOnFailure("workspace", "new", env)
-		return
 	}
 
 	terraformExitOnFailure("validate")
@@ -180,18 +152,13 @@ func Run() error {
 			log.Error().Err(err).Msgf("could not deploy manifest for env %s", envName)
 			continue
 		}
-		infraOutput, err := GetInfraValues()
-		if err != nil {
-			log.Error().Err(err).Msgf("could not get infra vars for env %s", envName)
-			continue
-		}
-		err = makeInputVarfile(tfDir, env, infraOutput)
+		err = makeInputVarfile(tfDir, env)
 		if err != nil {
 			log.Error().Err(err).Msgf("could not write input file for env %s", envName)
 			continue
 		}
 		apply(envName, tfDir)
-		os.RemoveAll(tfDir)
+		// os.RemoveAll(tfDir)
 		err = devenv.UpdateClusterIPs(envName, e.ZoneID, e.Domain)
 		if err != nil {
 			log.Error().Err(err).Msgf("could not update IPs for env %s", envName)

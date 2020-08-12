@@ -13,6 +13,7 @@ grun: gromit
 	-e AWS_REGION=eu-central-1 \
 	-e TF_API_TOKEN=$(tf_api) \
 	-e GROMIT_DOMAIN=dev.tyk.technology \
+	-e GROMIT_ZONEID=Z06422931MJIQS870BBM7 \
 	grun run
 
 .PHONY: grun

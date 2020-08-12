@@ -2,7 +2,7 @@ terraform {
   required_version = ">= 0.12"
   backend "s3" {
     bucket         = "terraform-state-devenv"
-    key            = "devenv/"
+    key            = "devenv"
     region         = "eu-central-1"
     dynamodb_table = "terraform-state-locks"
   }
@@ -21,18 +21,18 @@ locals {
     "managed", "automation",
     "ou", "devops",
     "purpose", "ci",
-    "env", var.name_prefix,
+    "env", var.name,
   )}"
   # Name for the task
-  gw_name    = join("-", [var.name_prefix, "gw"])
-  db_name    = join("-", [var.name_prefix, "db"])
-  pump_name  = join("-", [var.name_prefix, "pump"])
-  redis_name = join("-", [var.name_prefix, "redis"])
-  int_domain = join(".", [var.name_prefix, "internal"])
+  gw_name    = join("-", [var.name, "gw"])
+  db_name    = join("-", [var.name, "db"])
+  pump_name  = join("-", [var.name, "pump"])
+  redis_name = join("-", [var.name, "redis"])
+  int_domain = join(".", [var.name, "internal"])
   # Construct full ECR URLs
-  tyk_image           = join(":", [data.terraform_remote_state.base.outputs.tyk["ecr"], var.tyk_tag])
-  tyk-analytics_image = join(":", [data.terraform_remote_state.base.outputs.tyk-analytics["ecr"], var.tyk-pump_tag])
-  tyk-pump_image      = join(":", [data.terraform_remote_state.base.outputs.tyk-pump["ecr"], var.tyk-pump_tag])
+  tyk_image           = join(":", [data.terraform_remote_state.base.outputs.tyk["ecr"], var.tyk])
+  tyk-analytics_image = join(":", [data.terraform_remote_state.base.outputs.tyk-analytics["ecr"], var.tyk-pump])
+  tyk-pump_image      = join(":", [data.terraform_remote_state.base.outputs.tyk-pump["ecr"], var.tyk-pump])
 }
 
 # For VPC
@@ -64,7 +64,7 @@ data "terraform_remote_state" "base" {
 # ECS cluster
 
 resource "aws_ecs_cluster" "env" {
-  name = var.name_prefix
+  name = var.name
 
   setting {
     name  = "containerInsights"
@@ -80,7 +80,7 @@ data "aws_iam_role" "ecs_task_execution_role" {
 # Security groups
 
 resource "aws_security_group" "gateway" {
-  name        = "gateway"
+  name        = "${var.name}-gateway"
   description = "Traffic from anywhere 8000-9000"
   vpc_id      = data.terraform_remote_state.infra.outputs.vpc_id
 
@@ -103,7 +103,7 @@ resource "aws_security_group" "gateway" {
 }
 
 resource "aws_security_group" "dashboard" {
-  name        = "dashboard"
+  name        = "${var.name}-dashboard"
   description = "Traffic from anywhere on 3000"
   vpc_id      = data.terraform_remote_state.infra.outputs.vpc_id
 
@@ -126,7 +126,7 @@ resource "aws_security_group" "dashboard" {
 }
 
 resource "aws_security_group" "pump" {
-  name        = "pump"
+  name        = "${var.name}-pump"
   description = "Allow traffic from anywhere in the vpc"
   vpc_id      = data.terraform_remote_state.infra.outputs.vpc_id
 

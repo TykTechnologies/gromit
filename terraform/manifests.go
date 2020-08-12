@@ -47,3 +47,17 @@ func copyBoxToDir(b *rice.Box, boxPath string, dest string) error {
 	}
 	return nil
 }
+
+// deployManifests to a temporary dir prefixed with destPrefix
+func deployManifest(b *rice.Box, destPrefix string) (string, error) {
+	tmpDir, err := ioutil.TempDir("", destPrefix)
+	if err != nil {
+		return "", err
+	}
+
+	err = copyBoxToDir(b, "/", tmpDir)
+	if err != nil {
+		log.Fatal().Err(err).Msgf("could not restore embedded manifests to %s", tmpDir)
+	}
+	return tmpDir, nil
+}

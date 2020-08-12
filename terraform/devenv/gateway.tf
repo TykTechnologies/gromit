@@ -75,7 +75,7 @@ resource "aws_ecs_service" "gateway" {
 # Redis
 
 resource "aws_security_group" "redis" {
-  name        = "redis"
+  name        = "${var.name}-redis"
   description = "Allow traffic from anywhere in the vpc"
   vpc_id      = data.terraform_remote_state.infra.outputs.vpc_id
 

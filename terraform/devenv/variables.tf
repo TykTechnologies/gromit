@@ -8,22 +8,22 @@ variable "infra" {
   type = string
 }
 
-variable "name_prefix" {
-  description = "The DNS record will be name_prefix-{gw,db,etc}"
+variable "name" {
+  description = "The DNS record will be name-{gw,db,etc}"
   type = string
 }
 
-variable "tyk_tag" {
+variable "tyk" {
   description = "Image tag for the tyk service"
   type        = string
 }
 
-variable "tyk-analytics_tag" {
+variable "tyk-analytics" {
   description = "Image tag for the tyk-analytics service"
   type        = string
 }
 
-variable "tyk-pump_tag" {
+variable "tyk-pump" {
   description = "Image tag for the tyk-pump service"
   type        = string
 }
