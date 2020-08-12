@@ -29,7 +29,7 @@ resource "aws_ecs_task_definition" "dashboard" {
 
     efs_volume_configuration {
       file_system_id = data.terraform_remote_state.base.outputs.config_efs
-      root_directory = "/default/tyk-analytics"
+      root_directory = "/${var.name}/tyk-analytics"
     }
   }
 
