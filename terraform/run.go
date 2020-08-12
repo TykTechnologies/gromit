@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	rice "github.com/GeertJohan/go.rice"
+	"github.com/TykTechnologies/gromit/configs"
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/server"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
@@ -120,7 +121,7 @@ func setupTerraformCreds(token string) error {
 }
 
 // Run is the entrypoint from the CLI
-func Run() error {
+func Run(confPath string) error {
 	var e server.EnvConfig
 	// Read env vars prefixed by GROMIT_
 	err := envconfig.Process("gromit", &e)
@@ -145,6 +146,12 @@ func Run() error {
 	for _, env := range envs {
 		log.Info().Interface("env", env).Msg("processing")
 		envName := env[devenv.NAME].(string)
+
+		err := configs.Must(confPath, envName)
+		if err != nil {
+			log.Error().Err(err).Msgf("could not create config tree for env %s", envName)
+			continue
+		}
 		// go.rice only works with string literals
 		devManifest := rice.MustFindBox("devenv")
 		tfDir, err := deployManifest(devManifest, envName)

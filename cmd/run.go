@@ -27,14 +27,15 @@ var runCmd = &cobra.Command{
 	Short: "Update envs from $GROMIT_TABLENAME",
 	Long:  `Read state and called the embedded terraform manifest with the new tags. This component is meant to run in a scheduled task.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		terraform.Run()
+		confPath, _ := cmd.Flags().GetString("config")
+		terraform.Run(confPath)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(runCmd)
 
-	runCmd.PersistentFlags().StringP("table", "t", "DeveloperEnvironments", "DynamoDB table to read")
+	runCmd.PersistentFlags().StringP("config", "c", "/config", "Root of the config dir")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
