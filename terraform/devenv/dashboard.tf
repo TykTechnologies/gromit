@@ -5,13 +5,13 @@ data "template_file" "dashboard" {
     { port      = 3000,
       name      = local.db_name,
       log_group = "internal",
-      image     = var.tyk-analytics,
+      image     = local.tyk-analytics_image,
       command   = ["--conf=/conf/tyk-analytics.conf"],
       mounts = [
         { src = "config", dest = "/conf" }
       ],
       env = [],
-  region = var.region })
+  region = data.terraform_remote_state.base.outputs.region })
 }
 
 resource "aws_ecs_task_definition" "dashboard" {
@@ -28,7 +28,7 @@ resource "aws_ecs_task_definition" "dashboard" {
     name = "config"
 
     efs_volume_configuration {
-      file_system_id = var.config_efs
+      file_system_id = data.terraform_remote_state.base.outputs.config_efs
       root_directory = "/default/tyk-analytics"
     }
   }

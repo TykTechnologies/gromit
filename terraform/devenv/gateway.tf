@@ -5,13 +5,13 @@ data "template_file" "gateway" {
     { port      = 8080,
       name      = local.gw_name,
       log_group = "internal",
-      image     = var.tyk,
+      image     = local.tyk_image,
       command   = ["--conf=/conf/tyk.conf"],
       mounts = [
         { src = "config", dest = "/conf" }
       ],
       env = [],
-  region = var.region })
+  region = data.terraform_remote_state.base.outputs.region })
 }
 
 resource "aws_ecs_task_definition" "gateway" {
@@ -28,7 +28,7 @@ resource "aws_ecs_task_definition" "gateway" {
     name = "config"
 
     efs_volume_configuration {
-      file_system_id = var.config_efs
+      file_system_id = data.terraform_remote_state.base.outputs.config_efs
       root_directory = "/default/tyk"
     }
   }
@@ -77,14 +77,14 @@ resource "aws_ecs_service" "gateway" {
 resource "aws_security_group" "redis" {
   name        = "redis"
   description = "Allow traffic from anywhere in the vpc"
-  vpc_id      = data.aws_vpc.devenv.id
+  vpc_id      = data.terraform_remote_state.infra.outputs.vpc_id
 
 
   ingress {
     from_port   = 6379
     to_port     = 6379
     protocol    = "tcp"
-    cidr_blocks = [ data.aws_vpc.devenv.cidr_block ]
+    cidr_blocks = [ data.terraform_remote_state.infra.outputs.vpc_cidr ]
   }
 
   egress {
@@ -141,7 +141,7 @@ data "template_file" "redis" {
     command   = [],
     log_group = "internal",
     image     = "redis",
-    region    = var.region,
+    region    = data.terraform_remote_state.base.outputs.region,
   })
 }
 

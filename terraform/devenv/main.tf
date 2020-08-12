@@ -11,7 +11,7 @@ terraform {
 provider "aws" {
   # 3.0.0 seems to have bug in fetching the ecs iam role
   version = "= 2.70"
-  region  = var.region
+  region  = data.terraform_remote_state.base.outputs.region
 }
 
 # Internal variables
@@ -29,13 +29,45 @@ locals {
   pump_name  = join("-", [var.name_prefix, "pump"])
   redis_name = join("-", [var.name_prefix, "redis"])
   int_domain = join(".", [var.name_prefix, "internal"])
+  # Construct full ECR URLs
+  tyk_image           = join(":", [data.terraform_remote_state.base.outputs.tyk["ecr"], var.tyk_tag])
+  tyk-analytics_image = join(":", [data.terraform_remote_state.base.outputs.tyk-analytics["ecr"], var.tyk-pump_tag])
+  tyk-pump_image      = join(":", [data.terraform_remote_state.base.outputs.tyk-pump["ecr"], var.tyk-pump_tag])
 }
+
+# For VPC
+
+data "terraform_remote_state" "infra" {
+  backend = "remote"
+
+  config = {
+    organization = "Tyk"
+    workspaces = {
+      name = var.infra
+    }
+  }
+}
+
+# EFS, ECR
+
+data "terraform_remote_state" "base" {
+  backend = "remote"
+
+  config = {
+    organization = "Tyk"
+    workspaces = {
+      name = var.base
+    }
+  }
+}
+
+# ECS cluster
 
 resource "aws_ecs_cluster" "env" {
   name = var.name_prefix
 
   setting {
-    name = "containerInsights"
+    name  = "containerInsights"
     value = "enabled"
   }
   tags = local.common_tags
@@ -50,7 +82,7 @@ data "aws_iam_role" "ecs_task_execution_role" {
 resource "aws_security_group" "gateway" {
   name        = "gateway"
   description = "Traffic from anywhere 8000-9000"
-  vpc_id      = data.aws_vpc.devenv.id
+  vpc_id      = data.terraform_remote_state.infra.outputs.vpc_id
 
 
   ingress {
@@ -73,7 +105,7 @@ resource "aws_security_group" "gateway" {
 resource "aws_security_group" "dashboard" {
   name        = "dashboard"
   description = "Traffic from anywhere on 3000"
-  vpc_id      = data.aws_vpc.devenv.id
+  vpc_id      = data.terraform_remote_state.infra.outputs.vpc_id
 
 
   ingress {
@@ -96,14 +128,14 @@ resource "aws_security_group" "dashboard" {
 resource "aws_security_group" "pump" {
   name        = "pump"
   description = "Allow traffic from anywhere in the vpc"
-  vpc_id      = data.aws_vpc.devenv.id
+  vpc_id      = data.terraform_remote_state.infra.outputs.vpc_id
 
 
   ingress {
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"
-    cidr_blocks = [data.aws_vpc.devenv.cidr_block]
+    cidr_blocks = [ data.terraform_remote_state.infra.outputs.vpc_cidr ]
   }
 
   egress {
@@ -116,16 +148,10 @@ resource "aws_security_group" "pump" {
   tags = local.common_tags
 }
 
-# VPC that base and infra are running in
-
-data "aws_vpc" "devenv" {
-  id = var.vpc_id
-}
-
 # Private subnets
 
 data "aws_subnet_ids" "private" {
-  vpc_id = data.aws_vpc.devenv.id
+  vpc_id = data.terraform_remote_state.infra.outputs.vpc_id
 
   tags = {
     Type = "private"
@@ -134,7 +160,7 @@ data "aws_subnet_ids" "private" {
 
 # Public subnets
 data "aws_subnet_ids" "public" {
-  vpc_id = data.aws_vpc.devenv.id
+  vpc_id = data.terraform_remote_state.infra.outputs.vpc_id
 
   tags = {
     Type = "public"
@@ -145,6 +171,6 @@ data "aws_subnet_ids" "public" {
 # Service discovery
 resource "aws_service_discovery_private_dns_namespace" "internal" {
   name        = local.int_domain
-  vpc         = data.aws_vpc.devenv.id
+  vpc         = data.terraform_remote_state.infra.outputs.vpc_id
   description = "The tyk conf files can use friendly names"
 }
