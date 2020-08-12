@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	rice "github.com/GeertJohan/go.rice"
-	"github.com/TykTechnologies/gromit/configs"
+	"github.com/TykTechnologies/gromit/confgen"
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/server"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
@@ -147,7 +147,7 @@ func Run(confPath string) error {
 		log.Info().Interface("env", env).Msg("processing")
 		envName := env[devenv.NAME].(string)
 
-		err := configs.Must(confPath, envName)
+		err := confgen.Must(confPath, envName)
 		if err != nil {
 			log.Error().Err(err).Msgf("could not create config tree for env %s", envName)
 			continue
