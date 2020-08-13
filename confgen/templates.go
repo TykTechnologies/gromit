@@ -22,6 +22,7 @@ func makeConfigTree(b *rice.Box, boxPath string, dest string, envName string) er
 		return err
 	}
 	os.MkdirAll(dest, 0755)
+	log.Trace().Msgf("created dir: %s", dest)
 
 	for _, e := range entries {
 		srcPath := filepath.Join(boxPath, e.Name())
@@ -41,7 +42,7 @@ func makeConfigTree(b *rice.Box, boxPath string, dest string, envName string) er
 			t := template.Must(template.New(e.Name()).Parse(tempStr))
 			f, err := os.Create(destPath)
 			if err != nil {
-				log.Error().Err(err).Msgf("could not create: ", destPath)
+				log.Error().Err(err).Msgf("could not create: %s", destPath)
 				return err
 			}
 			defer f.Close()
