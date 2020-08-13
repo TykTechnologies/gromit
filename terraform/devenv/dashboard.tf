@@ -59,6 +59,8 @@ resource "aws_ecs_service" "dashboard" {
   launch_type     = "FARGATE"
   # Needed for EFS
   platform_version = "1.4.0"
+  # Restart tasks when updating definition
+  force_new_deployment = true
 
   network_configuration {
     subnets          = data.aws_subnet_ids.public.ids
