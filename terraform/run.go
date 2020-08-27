@@ -8,10 +8,13 @@ import (
 	"os/exec"
 	"strings"
 
+	"time"
+
 	rice "github.com/GeertJohan/go.rice"
 	"github.com/TykTechnologies/gromit/confgen"
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/server"
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/kelseyhightower/envconfig"
@@ -123,6 +126,13 @@ func setupTerraformCreds(token string) error {
 // Run is the entrypoint from the CLI
 func Run(confPath string) error {
 	var e server.EnvConfig
+
+	t := time.Now()
+	defer func() {
+		util.StatTime("run.timetaken", time.Since(t))
+	}()
+	util.StatCount("run.count", 1)
+
 	// Read env vars prefixed by GROMIT_
 	err := envconfig.Process("gromit", &e)
 	if err != nil {
@@ -143,12 +153,19 @@ func Run(confPath string) error {
 	if err != nil {
 		log.Fatal().Err(err).Msgf("could not get new envs from table %s", e.TableName)
 	}
+	util.StatGauge("run.nenvs", len(envs))
+
 	for _, env := range envs {
 		log.Info().Interface("env", env).Msg("processing")
 		envName := env[devenv.NAME].(string)
+		envTime := time.Now()
+		defer func() {
+			util.StatTime(fmt.Sprintf("run.%s.timetaken", envName), time.Since(envTime))
+		}()
 
 		err := confgen.Must(confPath, envName)
 		if err != nil {
+			util.StatCount("run.failures", 1)
 			log.Error().Err(err).Msgf("could not create config tree for env %s", envName)
 			continue
 		}
@@ -156,11 +173,13 @@ func Run(confPath string) error {
 		devManifest := rice.MustFindBox("devenv")
 		tfDir, err := deployManifest(devManifest, envName)
 		if err != nil {
+			util.StatCount("run.failures", 1)
 			log.Error().Err(err).Msgf("could not deploy manifest for env %s", envName)
 			continue
 		}
 		err = makeInputVarfile(tfDir, env)
 		if err != nil {
+			util.StatCount("run.failures", 1)
 			log.Error().Err(err).Msgf("could not write input file for env %s", envName)
 			continue
 		}
@@ -169,6 +188,7 @@ func Run(confPath string) error {
 		err = devenv.UpdateClusterIPs(envName, e.ZoneID, e.Domain)
 		if err != nil {
 			log.Error().Err(err).Msgf("could not update IPs for env %s", envName)
+			util.StatCount("expose.failures", 1)
 			continue
 		}
 	}

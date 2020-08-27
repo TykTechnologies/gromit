@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -88,6 +89,7 @@ func getPublicIP(svc ec2iface.ClientAPI, eni string) (string, error) {
 
 // UpdateClusterIPs is the entrypoint for CLI
 func UpdateClusterIPs(cluster string, zoneid string, domain string) error {
+	util.StatCount("expose.count", 1)
 	cfg, err := external.LoadDefaultAWSConfig()
 	if err != nil {
 		log.Error().Err(err).Msg("unable to load SDK config,")
@@ -105,12 +107,14 @@ func UpdateClusterIPs(cluster string, zoneid string, domain string) error {
 	for _, task := range tasks {
 		taskName, eni, err := getTaskENI(fargate, cluster, task)
 		if err != nil {
+			util.StatCount("expose.failures", 1)
 			log.Warn().Err(err).Msgf("could not get eni for %s.%s", cluster, task)
 			continue
 		}
 		log.Debug().Msgf("Found eni %s for task %s.%s (%s)", eni, cluster, taskName, task)
 		ip, err := getPublicIP(ec2.New(cfg), eni)
 		if err != nil {
+			util.StatCount("expose.failures", 1)
 			log.Warn().Err(err).Msgf("could not get ip for %s.%s", cluster, taskName)
 			continue
 		}
@@ -119,6 +123,7 @@ func UpdateClusterIPs(cluster string, zoneid string, domain string) error {
 
 		err = UpsertTaskDNS(route53.New(cfg), region, zoneid, fqdn, ip)
 		if err != nil {
+			util.StatCount("expose.failures", 1)
 			log.Warn().Err(err).Msgf("could not bind %s", ip)
 			continue
 		}

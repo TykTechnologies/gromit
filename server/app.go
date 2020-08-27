@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/TykTechnologies/gromit/devenv"
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -164,9 +165,11 @@ func getTrailingElement(string string, separator string) string {
 // This is the handler that is invoked from github
 
 func (a *App) newBuild(w http.ResponseWriter, r *http.Request) {
+	util.StatCount("newbuild.count", 1)
 	newBuild := make(map[string]string)
 	err := json.NewDecoder(r.Body).Decode(&newBuild)
 	if err != nil {
+		util.StatCount("newbuild.failures", 1)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -182,6 +185,7 @@ func (a *App) newBuild(w http.ResponseWriter, r *http.Request) {
 
 	ecrState, err := devenv.GetECRState(a.ECR, a.Env.RegistryID, ref, a.Env.Repos)
 	if err != nil {
+		util.StatCount("newbuild.failures", 1)
 		log.Warn().
 			Err(err).
 			Msgf("could not get ecr state for %s using registry %s with repo list %v", ref, a.Env.RegistryID, a.Env.Repos)
@@ -194,6 +198,7 @@ func (a *App) newBuild(w http.ResponseWriter, r *http.Request) {
 
 	err = devenv.UpsertEnv(a.DB, a.Env.TableName, ref, ecrState)
 	if err != nil {
+		util.StatCount("newbuild.failures", 1)
 		log.Warn().
 			Interface("ecrState", ecrState).
 			Err(err).
@@ -211,6 +216,7 @@ func (a *App) getEnvs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) createEnv(w http.ResponseWriter, r *http.Request) {
+	util.StatCount("env.create.count", 1)
 	vars := mux.Vars(r)
 	env := vars["name"]
 
@@ -228,6 +234,7 @@ func (a *App) createEnv(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusConflict, ierr.Error())
 			return
 		}
+		util.StatCount("env.create.failures", 1)
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -237,6 +244,7 @@ func (a *App) createEnv(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) updateEnv(w http.ResponseWriter, r *http.Request) {
+	util.StatCount("env.update.count", 1)
 	vars := mux.Vars(r)
 	env := vars["name"]
 
@@ -254,6 +262,7 @@ func (a *App) updateEnv(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusConflict, ierr.Error())
 			return
 		}
+		util.StatCount("env.update.failures", 1)
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -263,6 +272,7 @@ func (a *App) updateEnv(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) getEnv(w http.ResponseWriter, r *http.Request) {
+	util.StatCount("env.get.count", 1)
 	vars := mux.Vars(r)
 	name := vars["name"]
 	log.Debug().Interface("vars", vars).Msgf("get for %s received", name)
@@ -273,6 +283,7 @@ func (a *App) getEnv(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusNotFound, ierr.Error())
 			return
 		}
+		util.StatCount("env.get.failures", 1)
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -280,12 +291,14 @@ func (a *App) getEnv(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) deleteEnv(w http.ResponseWriter, r *http.Request) {
+	util.StatCount("env.delete.count", 1)
 	vars := mux.Vars(r)
 	name := vars["name"]
 	log.Debug().Interface("vars", vars).Msgf("delete for %s received", name)
 
 	err := devenv.DeleteEnv(a.DB, a.Env.TableName, name)
 	if err != nil {
+		util.StatCount("env.delete.failures", 1)
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

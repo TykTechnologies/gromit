@@ -24,8 +24,13 @@ import (
 // runCmd represents the run command
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Update envs from $GROMIT_TABLENAME",
-	Long:  `Read state and called the embedded terraform manifest with the new tags. This component is meant to run in a scheduled task.`,
+	Short: "Process envs from GROMIT_TABLENAME",
+	Long: `Read state and called the embedded terraform manifest with the new tags. This component is meant to run in a scheduled task
+Env vars:
+Apart from the global env vars, this command will use
+GROMIT_ZONEID Route53 zone to use for external DNS
+GROMIT_DOMAIN Route53 domain corresponding to GROMIT_ZONEID
+If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and TF_API_TOKEN`,
 	Run: func(cmd *cobra.Command, args []string) {
 		confPath, _ := cmd.Flags().GetString("config")
 		terraform.Run(confPath)

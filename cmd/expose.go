@@ -32,10 +32,11 @@ type exposeEnvConfig struct {
 // exposeCmd represents the expose command
 var exposeCmd = &cobra.Command{
 	Use:   "expose",
-	Short: "Upsert a record in Route53 for an ECS task/cluster",
-	Long: `When exposing a whole cluster, will make the entries in Route53 as <task_name>.$R53_DOMAIN
-
-Currently it creates only A records.`,
+	Short: "Upsert a record in Route53 for the given ECS cluster",
+	Long: `Makes entries in Route53 as <task_name>.R53_DOMAIN
+Env vars:
+R53_ZONEID Route53 zone to use for external DNS
+R53_DOMAIN domain served by GROMIT_ZONEID`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var e exposeEnvConfig
 
