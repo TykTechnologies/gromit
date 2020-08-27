@@ -31,6 +31,19 @@ func Get(key string) ([]byte, error) {
 	return data, err
 }
 
+func TTL(key string) (int, error) {
+
+	conn := Pool.Get()
+	defer conn.Close()
+
+	var data int
+	data, err := redis.Int(conn.Do("TTL", key))
+	if err != nil {
+		return data, fmt.Errorf("error getting TTL for key %s: %v", key, err)
+	}
+	return data, err
+}
+
 func Set(key string, value []byte) error {
 
 	conn := Pool.Get()

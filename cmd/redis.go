@@ -19,7 +19,6 @@ limitations under the License.
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/TykTechnologies/gromit/redis"
 	"github.com/spf13/cobra"
@@ -41,11 +40,9 @@ Meant to be run in prod.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		host, _ := cmd.Flags().GetString("server")
 		redis.InitPool(host)
-		dumpDir, _ := cmd.Flags().GetString("dir")
-		os.MkdirAll(dumpDir, 0755)
 
 		org, _ := cmd.Flags().GetString("org")
-		err := redis.DumpOrgKeys(args[0], dumpDir, org)
+		err := redis.DumpOrgKeys(args[0], org)
 		fmt.Println(err)
 	},
 }
@@ -58,6 +55,4 @@ func init() {
 
 	redisCmd.PersistentFlags().StringP("org", "o", "", "Org to dump keys for (required)")
 	redisCmd.MarkFlagRequired("org")
-
-	redisCmd.PersistentFlags().StringP("dir", "d", ".", "Write files in dir")
 }
