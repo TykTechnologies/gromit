@@ -26,7 +26,8 @@ func DumpOrgKeys(pattern string, org string) error {
 	for index, k := range keys {
 		byteVal, err := Get(k)
 		if err != nil {
-			return err
+			log.Error().Err(err).Str("key", k).Msg("could not retrieve")
+			continue
 		}
 		var jsonVal = make(map[string]interface{})
 		err = json.NewDecoder(bytes.NewReader(byteVal)).Decode(&jsonVal)
