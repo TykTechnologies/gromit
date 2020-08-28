@@ -1,5 +1,7 @@
 package cmd
 
+import "github.com/spf13/cobra"
+
 /*
 Copyright © 2020 Tyk Technologies
 
@@ -16,35 +18,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import (
-	"errors"
-	"fmt"
-
-	"github.com/TykTechnologies/gromit/redis"
-	"github.com/spf13/cobra"
-)
-
 // redisCmd represents the redis command
 var redisCmd = &cobra.Command{
 	Use:   "redis",
-	Short: "Dump redis keys to files",
-	Long: `Uses SCAN with COUNT to dump keys into files.
-
-Meant to be run in prod.`,
-	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) < 1 {
-			return errors.New("missing pattern for keys")
-		}
-		return nil
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		host, _ := cmd.Flags().GetString("server")
-		redis.InitPool(host)
-
-		org, _ := cmd.Flags().GetString("org")
-		err := redis.DumpOrgKeys(args[0], org)
-		fmt.Println(err)
-	},
+	Short: "operate at the org level with redis",
+	Long:  `These commands are meant to be run in prod. However, it might be wise to run it against a read-replica.`,
 }
 
 func init() {

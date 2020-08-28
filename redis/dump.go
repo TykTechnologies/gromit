@@ -19,8 +19,9 @@ func DumpOrgKeys(pattern string, org string) error {
 	if err != nil {
 		return err
 	}
-	log.Debug().Str("org", org).Msg("looking for")
-	log.Debug().Int("keys", len(keys)).Msgf("pattern: %s", pattern)
+	var nKeys = len(keys)
+	var progressFreq = int(nKeys / 5)
+	log.Info().Str("org", org).Int("keys", nKeys).Str("pattern", pattern).Msg("start dump")
 
 	found := 0
 	for index, k := range keys {
@@ -56,7 +57,7 @@ func DumpOrgKeys(pattern string, org string) error {
 			// Write a new line
 			os.Stdout.Write([]byte{10})
 		}
-		if index%1e4 == 0 {
+		if index%progressFreq == 0 {
 			log.Trace().Int("keys", index).Msg("processed")
 		}
 	}
