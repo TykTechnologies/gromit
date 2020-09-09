@@ -1,4 +1,4 @@
-gromit: *.go cmd/*.go devenv/*.go terraform/*.go server/*.go confgen/*.go redis/*.go
+gromit: */*.go #cmd/*.go devenv/*.go terraform/*.go server/*.go confgen/*.go redis/*.go
 	go build
 	rice embed-go
 	go mod tidy

@@ -1,20 +1,15 @@
-package redis
+package keys
 
 import (
 	"bytes"
 	"encoding/json"
 	"os"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/rs/zerolog/log"
 )
 
-type redisKey struct {
-	Name  string                 `json:"name"`
-	TTL   int                    `json:"ttl"`
-	Value map[string]interface{} `json:"value"`
-}
-
-func DumpOrgKeys(pattern string, org string) error {
+func DumpOrgKeys(rdb *redis.UniversalClient, pattern string, org string) error {
 	keys, err := GetKeys(pattern)
 	if err != nil {
 		return err

@@ -3,26 +3,27 @@
 This is ostensibly a [cobra](https://github.com/spf13/cobra "cobra cli") app. 
 
 ``` shellsession
-% ./gromit --help
-A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.
+The subcommands run as services and scheduled tasks in the internal cluster.
+Global env vars:
+These vars apply to all commands
+GROMIT_TABLENAME DynamoDB tablename to use for env state
+GROMIT_REPOS Comma separated list of ECR repos to answer for
 
 Usage:
   gromit [command]
 
 Available Commands:
   client      Interact with the gromit server
+  expose      Upsert a record in Route53 for the given ECS cluster
   help        Help about any command
+  redis       Dump redis keys to files
+  run         Process envs from GROMIT_TABLENAME
   serve       Run endpoint for github requests
 
 Flags:
-      --config string   config file (default is $HOME/.gromit.yaml)
-  -h, --help            help for gromit
-  -t, --toggle          Help message for toggle
+      --gconf string   config file (default is $HOME/.gromit.yaml)
+  -h, --help           help for gromit
+  -t, --toggle         Help message for toggle
 
 Use "gromit [command] --help" for more information about a command.
 ```

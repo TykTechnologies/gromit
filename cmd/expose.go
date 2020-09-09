@@ -18,7 +18,6 @@ limitations under the License.
 
 import (
 	"github.com/TykTechnologies/gromit/devenv"
-	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -33,19 +32,13 @@ type exposeEnvConfig struct {
 var exposeCmd = &cobra.Command{
 	Use:   "expose",
 	Short: "Upsert a record in Route53 for the given ECS cluster",
-	Long: `Makes entries in Route53 as <task_name>.R53_DOMAIN
-Env vars:
-R53_ZONEID Route53 zone to use for external DNS
-R53_DOMAIN domain served by GROMIT_ZONEID`,
+	Long: `Given an ECS cluster, looks for all tasks with a public IP and 
+makes A records in Route53 accessible as <task_name>.<domain>.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var e exposeEnvConfig
-
-		err := envconfig.Process("r53", &e)
-		if err != nil {
-			log.Fatal().Err(err).Msg("Could not get env")
-		}
-		log.Info().Interface("env", e).Msg("loaded env")
-		err = devenv.UpdateClusterIPs(args[0], e.ZoneID, e.Domain)
+		zoneID, _ := cmd.Flags().GetString("zone")
+		domain, _ := cmd.Flags().GetString("domain")
+		
+		err := devenv.UpdateClusterIPs(args[0], zoneID, domain)
 		if err != nil {
 			log.Fatal().Err(err).Msgf("Failed to update cluster IPs for 5s", args[0])
 		}
@@ -55,13 +48,9 @@ R53_DOMAIN domain served by GROMIT_ZONEID`,
 func init() {
 	rootCmd.AddCommand(exposeCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// exposeCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// exposeCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	exposeCmd.PersistentFlags().StringP("zone", "z", "", "Route53 zone id to make entries in")
+	exposeCmd.MarkFlagRequired("zone")
+	
+	exposeCmd.PersistentFlags().StringP("domain", "d", "dev.tyk.technology", "Domain part of the DNS record")
+	exposeCmd.MarkFlagRequired("domain")
 }
