@@ -30,6 +30,7 @@ import (
 )
 
 var cfgFile string
+var logLevel string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -51,6 +52,14 @@ func Execute() {
 	if terminal.IsTerminal(int(os.Stdout.Fd())) {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
+	ll, err := zerolog.ParseLevel(logLevel)
+	if err != nil {
+		log.Warn().Str("level", logLevel).Msg("Could not parse, defaulting to info.")
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	} else {
+		zerolog.SetGlobalLevel(ll)
+	}
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -64,12 +73,8 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "gconf", "", "config file (default is $HOME/.gromit.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	runCmd.PersistentFlags().StringP("feeds", "f", "/feeds", "Root of the feeds dir")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "conf", "", "config file (default is $HOME/.gromit.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "info", "Log verbosity: trace, info, warn, error")
 }
 
 // initConfig reads in config file and ENV variables if set.

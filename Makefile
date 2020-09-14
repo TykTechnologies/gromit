@@ -1,5 +1,9 @@
-gromit: *.go cmd/*.go devenv/*.go terraform/*.go server/*.go confgen/*.go redis/*.go
-	go build
+VERSION := $(shell git describe --tags)
+COMMIT := $(shell git rev-list -1 HEAD)
+BUILD_DATE := $(shell date +%FT%T%z)
+
+gromit: */*.go
+	go build -ldflags "-X util.Version=$(VERSION) -X util.Commit=$(COMMIT) -X util.BuildDate=$(BUILD_DATE)"
 	rice embed-go
 	go mod tidy
 	sudo setcap 'cap_net_bind_service=+ep' $(@)
