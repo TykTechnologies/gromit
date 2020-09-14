@@ -1,4 +1,4 @@
-package keys
+package orgs
 
 import (
 	"bufio"
@@ -7,11 +7,15 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-redis/redis"
 	"github.com/rs/zerolog/log"
 )
 
-func streamKeys(filepath string, keyChan chan<- []redisKey) {
+const (
+	batchSize        = 100
+	writeKeysTimeout = 10 * time.Second
+)
+
+func streamKeys(filepath string, keyChan chan<- []redisKey, batchSize int) {
 	file, openErr := os.Open(filepath)
 	if openErr != nil {
 		panic(openErr)
@@ -45,39 +49,40 @@ func streamKeys(filepath string, keyChan chan<- []redisKey) {
 	close(keyChan)
 }
 
-func writeKeysToRedis(ctx context.Context, rdb *redis.UniversalClient, keys []redisKey) error {
-	_, err := rdb.Pipelined(ctx, func(pipeliner redis.Pipeliner) error {
-		for _, key := range keys {
-			ttl := time.Duration(0)
-			if key.Ttl > 0 {
-				ttl = time.Duration(key.Ttl) * time.Second
-			}
+func (r *redisClient) writeKeys(ctx context.Context, keys []redisKey) error {
+	// _, err := r.rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+	// 	for _, key := range keys {
+	// 		ttl := time.Duration(0)
+	// 		if key.TTL > 0 {
+	// 			ttl = time.Duration(key.TTL) * time.Second
+	// 		}
 
-			keyValue, jsonErr := json.Marshal(key.Value)
-			if jsonErr != nil {
-				return jsonErr
-			}
+	// 		keyValue, jsonErr := json.Marshal(key.Value)
+	// 		if jsonErr != nil {
+	// 			return jsonErr
+	// 		}
 
-			pipeliner.Set(ctx, key.Name, keyValue, ttl)
-		}
+	// 		pipe.Set(key.Name, keyValue, ttl)
+	// 	}
 
-		return nil
-	})
+	// 	return nil
+	// })
 
-	return err
+	// return err
+	return nil
 }
 
-func RestoreKeys(rdb *redis.UniversalClient, dumpFile string) {
+func (r *redisClient) RestoreKeys(dumpFile string) {
 	keyChan := make(chan []redisKey, 2)
 
-	go streamKeys(dumpFile, keyChan)
+	go streamKeys(dumpFile, keyChan, batchSize)
 
 	nWrote := 0
 
 	for redisKeys := range keyChan {
-		writeCtx, writeCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		writeCtx, writeCancel := context.WithTimeout(context.Background(), writeKeysTimeout)
 
-		if err := writeKeysToRedis(writeCtx, rdb, redisKeys); err != nil {
+		if err := r.writeKeys(writeCtx, redisKeys); err != nil {
 			writeCancel()
 			log.Fatal().Err(err).Msg("could not write to redis")
 		}
