@@ -4,13 +4,10 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
+	"path/filepath"
 	"time"
 
 	"os"
-
-	"sync"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/rs/zerolog"
@@ -31,11 +28,11 @@ type redisClient struct {
 	rdb       redis.UniversalClient
 	batchSize int64
 	ctx       context.Context
-	keysChan  chan ([]string)
-	foundChan chan (int)
+	keysChans map[string]chan ([]string)
+	opFiles   map[string]string
 }
 
-func RedisClient(ctx context.Context, addrs []string, masterName string, batchSize int64) redisClient {
+func RedisClient(ctx context.Context, addrs []string, masterName string, batchSize int64, orgs []string, dir string) redisClient {
 	var rdb redis.UniversalClient
 	rdb = redis.NewUniversalClient(&redis.UniversalOptions{
 		MaxRetries:   3,
@@ -52,113 +49,90 @@ func RedisClient(ctx context.Context, addrs []string, masterName string, batchSi
 
 	rdb.Ping(ctx)
 
+	keysChans := make(map[string]chan ([]string))
+	opFiles := make(map[string]string)
+
+	for _, org := range orgs {
+		log.Debug().Str("org", org).Msg("setting up channels")
+		keysChans[org] = make(chan ([]string), batchSize)
+		opFiles[org] = filepath.Join(dir, org+".keys.jl")
+	}
+
 	return redisClient{
 		rdb,
 		batchSize,
 		ctx,
-		make(chan ([]string), batchSize),
-		make(chan (int)),
+		keysChans,
+		opFiles,
 	}
-}
-
-func (r *redisClient) WriteKeys(orgs []string, patterns []string) {
-	for _, org := range orgs {
-		log.Info().Str("org", org).Msg("processing keys")
-		fname := fmt.Sprintf("%s.keys.jl", org)
-		log.Info().Str("fname", fname).Msg("keys will be written to")
-		f, err := os.Create(fname)
-		if err != nil {
-			log.Fatal().Err(err).Str("fname", fname).Msg("cannot create")
-		}
-		defer f.Close()
-		w := bufio.NewWriter(f)
-
-		// Scan keys in batches and write to r.keysChan
-		go func() {
-			scanned := 0
-			for _, pattern := range patterns {
-				scanned += r.ScanKeys(pattern, r.batchSize)
-			}
-			close(r.keysChan)
-			log.Info().Int("scanned", scanned).Msg("total")
-		}()
-
-		var wg sync.WaitGroup
-		// Read in batches and fire off a goroutine for each batch
-		for keys := range r.keysChan {
-			log.Debug().Int("keys", len(keys)).Msg("to filter")
-			go func() {
-				wg.Add(1)
-				r.FilterOrg(org, keys, w)
-				wg.Done()
-			}()
-		}
-		// Wait for all the writers to finish
-		go func() {
-			wg.Wait()
-			close(r.foundChan)
-			w.Flush()
-		}()
-	}
-	found := 0
-	for f := range r.foundChan {
-		found += f
-	}
-	log.Info().Int("found", found).Msg("written")
 }
 
 // FilterOrg will MGET the block of keys and write out all those belonging to org
-func (r *redisClient) FilterOrg(org string, keys []string, w io.Writer) {
-	found := 0
-	values, err := r.rdb.MGet(r.ctx, keys...).Result()
+func (r *redisClient) filterOrg(org string) {
+	f, err := os.Create(r.opFiles[org])
 	if err != nil {
-		log.Error().Err(err).Msg("mget")
+		log.Fatal().Err(err).Str("opfile", r.opFiles[org]).Msg("cannot create")
 	}
-	log.Debug().Int("keys", len(values)).Msg("mget")
-	for i, val := range values {
-		if val == nil {
-			log.Trace().Str("key", keys[i]).Msg("nil value")
-			continue
-		}
-		jsonVal := make(map[string]interface{})
-		err = json.Unmarshal([]byte(val.(string)), &jsonVal)
-		if err != nil {
-			log.Error().Err(err).Interface("val", val).Msg("cannot decode")
-			continue
-		}
-		if jsonVal["org_id"] == org {
-			found++
-			ttl, _ := r.getTTL(keys[i])
+	defer f.Close()
+	log.Info().Str("opfile", r.opFiles[org]).Msg("truncated")
+	w := bufio.NewWriter(f)
+	defer w.Flush()
 
-			output, err := json.Marshal(&redisKey{
-				Name:  keys[i],
-				TTL:   ttl,
-				Value: jsonVal,
-			})
-			if err != nil {
-				log.Error().Err(err).Bytes("output", output).Msg("could not marshal")
+	found := 0
+	for keys := range r.keysChans[org] {
+		values, err := r.rdb.MGet(r.ctx, keys...).Result()
+		if err != nil {
+			log.Error().Err(err).Msg("mget")
+		}
+		log.Debug().Int("keys", len(values)).Msg("mget")
+		for i, val := range values {
+			if val == nil || val == "0" {
+				log.Trace().Str("key", keys[i]).Msg("nil/zero value")
 				continue
 			}
-			w.Write(output)
-			// Write a new line
-			w.Write([]byte{10})
+			jsonVal := make(map[string]interface{})
+			err = json.Unmarshal([]byte(val.(string)), &jsonVal)
+			if err != nil {
+				log.Error().Err(err).Interface("val", val).Msg("cannot decode")
+				continue
+			}
+			if jsonVal["org_id"] == org {
+				found++
+				ttl, _ := r.getTTL(keys[i])
+
+				output, err := json.Marshal(&redisKey{
+					Name:  keys[i],
+					TTL:   ttl,
+					Value: jsonVal,
+				})
+				if err != nil {
+					log.Error().Err(err).Bytes("output", output).Msg("could not marshal")
+					continue
+				}
+				// Add a newline
+				w.Write(append(output, byte(10)))
+			}
 		}
 	}
-	r.foundChan <- found
+	log.Info().Int("found", found).Str("org", org).Msg("done")
 }
 
-func (r *redisClient) ScanKeys(pattern string, batchSize int64) int {
+func (r *redisClient) scanKeys(org string, pattern string, batchSize int64) int {
 	scanned := 0
+	var cursor uint64 = 0
 	for {
-		var cursor uint64 = 0
-		keys, cursor, err := r.rdb.Scan(r.ctx, cursor, pattern, batchSize).Result()
+		var (
+			keys []string
+			err  error
+		)
+		keys, cursor, err = r.rdb.Scan(r.ctx, cursor, pattern, batchSize).Result()
 		if err != nil {
-			log.Error().Err(err).Str("pattern", pattern).Msg("scan failure")
+			log.Error().Err(err).Uint64("cursor", cursor).Msg("scan failure")
 		}
 		nKeys := len(keys)
-		log.Debug().Int("keys", nKeys).Msg("scanned in this block")
 		scanned += nKeys
-		r.keysChan <- keys
+		log.Debug().Int("keys", nKeys).Uint64("cursor", cursor).Msg("scanned in this block")
+		r.keysChans[org] <- keys
 
 		if cursor == 0 {
 			break
@@ -180,4 +154,23 @@ func logArray(strs []string) *zerolog.Array {
 		array.Str(s)
 	}
 	return &array
+}
+
+// DumpOrgKeys is suited to run in prod. Just one goroutine per org to write the output file.
+// The run time is about 3x that of the threaded version
+func (r *redisClient) DumpOrgKeys(orgs []string, patterns []string, batchSize int64) {
+	scanned := 0
+	start := time.Now()
+	for _, org := range orgs {
+		go func() {
+			log.Debug().Str("org", org).Msg("spawning filterOrg")
+			r.filterOrg(org)
+		}()
+		for _, pattern := range patterns {
+			log.Info().Str("org", org).Str("pattern", pattern).Msg("processing")
+			scanned += r.scanKeys(org, pattern, batchSize)
+		}
+		close(r.keysChans[org])
+	}
+	log.Info().Dur("time", time.Since(start)).Int("scanned", scanned).Msg("done with keys")
 }

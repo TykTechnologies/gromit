@@ -52,14 +52,6 @@ func Execute() {
 	if terminal.IsTerminal(int(os.Stdout.Fd())) {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
-	ll, err := zerolog.ParseLevel(logLevel)
-	if err != nil {
-		log.Warn().Str("level", logLevel).Msg("Could not parse, defaulting to debug.")
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(ll)
-	}
-
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -74,7 +66,8 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "conf", "", "config file (default is $HOME/.gromit.yaml)")
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "debug", "Log verbosity: trace, info, warn, error")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "info", "Log verbosity: trace, info, warn, error")
+
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -95,6 +88,13 @@ func initConfig() {
 		viper.SetConfigName(".gromit")
 	}
 
+	ll, err := zerolog.ParseLevel(logLevel)
+	if err != nil {
+		log.Warn().Str("level", logLevel).Msg("Could not parse, defaulting to debug.")
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(ll)
+	}
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.

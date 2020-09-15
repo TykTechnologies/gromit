@@ -7,6 +7,7 @@ import (
 	"github.com/mongodb/mongo-tools-common/db"
 	"github.com/mongodb/mongo-tools-common/options"
 	"github.com/mongodb/mongo-tools/mongodump"
+	"github.com/mongodb/mongo-tools/mongorestore"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
 )
@@ -47,7 +48,7 @@ func DumpFilteredCollections(uri *options.URI, queryField string, queryValue str
 					Query: fmt.Sprintf(`{"%s": "%s"}`, queryField, queryValue),
 				},
 				OutputOptions: &mongodump.OutputOptions{
-					Out:                    fmt.Sprintf("%s_colls", queryValue),
+					Out:                    ".",
 					NumParallelCollections: 4,
 				},
 				SessionProvider: sp,
@@ -82,7 +83,6 @@ func DumpAnalyticzCollections(uri *options.URI, org string, colls []string) erro
 			ToolOptions:  topts,
 			InputOptions: &mongodump.InputOptions{},
 			OutputOptions: &mongodump.OutputOptions{
-				Out:                    fmt.Sprintf("%s_colls", org),
 				NumParallelCollections: 4,
 			},
 			SessionProvider: sp,
@@ -97,4 +97,33 @@ func DumpAnalyticzCollections(uri *options.URI, org string, colls []string) erro
 		}
 	}
 	return nil
+}
+
+// RestoreCollections will restore all the collections in dir
+func RestoreCollections(org string, uri *options.URI, dir string, dryRun bool) mongorestore.Result {
+	connOpts := uri.ParsedConnString()
+	topts := toolOpts(uri)
+	mdb, err := mongorestore.New(mongorestore.Options{
+		ToolOptions: topts,
+		InputOptions: &mongorestore.InputOptions{
+			//Objcheck: true,
+			Directory: dir,
+		},
+		OutputOptions: &mongorestore.OutputOptions{
+			Drop:                   false,
+			DryRun:                 dryRun,
+			StopOnError:            true,
+			NumParallelCollections: 4,
+		},
+		TargetDirectory: dir,
+		NSOptions: &mongorestore.NSOptions{
+			NSInclude: []string{connOpts.Database + ".*"},
+		},
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot instantiate mongorestore")
+	}
+	defer mdb.Close()
+
+	return mdb.Restore()
 }

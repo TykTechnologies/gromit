@@ -3,7 +3,7 @@ COMMIT := $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
 
 gromit: */*.go
-	go build -ldflags "-X util.Version=$(VERSION) -X util.Commit=$(COMMIT) -X util.BuildDate=$(BUILD_DATE)"
+	go build -trimpath -ldflags "-X util.Version=$(VERSION) -X util.Commit=$(COMMIT) -X util.BuildDate=$(BUILD_DATE)"
 	rice embed-go
 	go mod tidy
 	sudo setcap 'cap_net_bind_service=+ep' $(@)

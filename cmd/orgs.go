@@ -31,7 +31,8 @@ var (
 	redisHosts      string
 	redisMasterName string
 	mongoURL        string
-	oDir            string
+	dir             string
+	timeout         time.Duration
 )
 
 // orgsCmd represents the top-level orgs command
@@ -54,15 +55,18 @@ Writes collections in {orgid}_colls/{db}/*.bson and keys in {orgid}.keys.jl. Exi
 Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
 		// Redis
 		patterns, _ := cmd.Flags().GetString("patterns")
 		count, _ := cmd.Flags().GetInt64("count")
 
-		rdb := orgs.RedisClient(ctx, strings.Split(redisHosts, ","), redisMasterName, count)
-		rdb.WriteKeys(args, strings.Split(patterns, ","))
+		os.MkdirAll(dir, 0755)
+		rdb := orgs.RedisClient(ctx, strings.Split(redisHosts, ","), redisMasterName, count, args, dir)
+		rdb.DumpOrgKeys(args, strings.Split(patterns, ","), count)
+		// Threaded version suffers from buffers
+		// rdb.WriteKeys(args, strings.Split(patterns, ","))
 
 		// Mongo
 		org_idColls, _ := cmd.Flags().GetString("org_id_colls")
@@ -92,7 +96,6 @@ Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 				log.Error().Err(err).Msg("dumping analyticz collections")
 			}
 		}
-
 	},
 }
 
@@ -100,8 +103,20 @@ Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 var orgsRestoreCmd = &cobra.Command{
 	Use:   "restore org0 org1 ...",
 	Short: "Concurrently restore mongo and redis",
-	Long:  `Expects files named {orgid}.mongo.bson and {orgid}.redis.jl`,
-	Args:  cobra.MinimumNArgs(1),
+	Long: `Will process all files named {orgid}.redis.jl for keys and
+all bson files in {orgid}/*/*.bson.`,
+	Args: cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		muri, err := orgs.ParseMongoURI(mongoURL)
+		dryRun, _ := cmd.Flags().GetBool("dry_run")
+		if err != nil {
+			log.Fatal().Err(err).Str("murl", mongoURL).Msg("could not parse")
+		}
+		for _, org := range args {
+			res := orgs.RestoreCollections(org, muri, dir, dryRun)
+			log.Info().Int64("success", res.Successes).Int64("failures", res.Failures).Err(res.Err).Msg("collection restore done")
+		}
+	},
 }
 
 func init() {
@@ -112,13 +127,16 @@ func init() {
 	orgsCmd.PersistentFlags().StringVarP(&redisHosts, "redis", "r", os.Getenv("REDIS_HOSTS"), "Redis hosts (required), uses REDISCLI_AUTH if set. A comma-separated list will be used as a cluster.")
 	orgsCmd.PersistentFlags().StringVarP(&mongoURL, "murl", "m", os.Getenv("MONGO_URL"), "Mongo URL mongodb://...")
 	orgsCmd.PersistentFlags().StringVarP(&redisMasterName, "name", "n", os.Getenv("REDIS_MASTER"), "Sentinel master name, failover clients only.")
-	orgsDumpCmd.Flags().StringVarP(&oDir, "dir", "d", ".", "Directory to read/write files")
+	orgsCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "t", 15*time.Minute, "Timeout for the whole dump/restore process in minutes.")
+	orgsCmd.PersistentFlags().StringVarP(&dir, "dir", "d", ".", "Directory to read/write files")
 	orgsCmd.MarkFlagRequired("redis")
 	orgsCmd.MarkFlagRequired("murl")
 
 	orgsDumpCmd.Flags().StringP("patterns", "p", "apikey-*,tyk-admin-api-*", "Comma separated list of patterns to SCAN for")
-	orgsDumpCmd.PersistentFlags().Int64P("count", "c", 10e4, "Passed as COUNT to SCAN, effectively batchsize")
+	orgsDumpCmd.PersistentFlags().Int64P("count", "c", 1000, "Passed as COUNT to SCAN, effectively batchsize")
 	orgsDumpCmd.Flags().StringP("org_id_colls", "u", "portal_catalogue,portal_configurations,portal_css,portal_developers,portal_key_requests,portal_menus,portal_pages,tyk_apis,tyk_policies", "These will be queried by org_id")
 	orgsDumpCmd.Flags().StringP("orgid_colls", "v", "tyk_analytics_users", "These will be queried by orgid")
 	orgsDumpCmd.Flags().StringP("agg_colls", "a", "z_tyk_analyticz_,z_tyk_analyticz_aggregate_", "These will have the org_id suffixed to their names")
+
+	orgsRestoreCmd.Flags().BoolP("dry_run", "y", true, "Dry run")
 }
