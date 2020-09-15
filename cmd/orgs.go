@@ -17,8 +17,10 @@ limitations under the License.
 */
 
 import (
+	"context"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/TykTechnologies/gromit/orgs"
 	"github.com/rs/zerolog/log"
@@ -52,6 +54,16 @@ Writes collections in {orgid}_colls/{db}/*.bson and keys in {orgid}.keys.jl. Exi
 Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+
+		// Redis
+		patterns, _ := cmd.Flags().GetString("patterns")
+		count, _ := cmd.Flags().GetInt64("count")
+
+		rdb := orgs.RedisClient(ctx, strings.Split(redisHosts, ","), redisMasterName, count)
+		rdb.WriteKeys(args, strings.Split(patterns, ","))
+
 		// Mongo
 		org_idColls, _ := cmd.Flags().GetString("org_id_colls")
 		orgidColls, _ := cmd.Flags().GetString("orgid_colls")
@@ -60,41 +72,27 @@ Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 		if err != nil {
 			log.Fatal().Err(err).Str("murl", mongoURL).Msg("could not parse")
 		}
-		topts := orgs.DumpCollectionOpts(muri)
+
 		for _, org := range args {
 			log.Info().Str("org", org).Msg("processing collections")
-
-			orgs.DumpFilteredCollections(topts, "org_id", org, strings.Split(org_idColls, ","))
-			orgs.DumpFilteredCollections(topts, "orgid", org, strings.Split(orgidColls, ","))
-
 			var aggs []string
 			for _, coll := range strings.Split(aggColls, ",") {
 				aggs = append(aggs, coll+org)
 			}
-			orgs.DumpAnalyticzCollections(topts, org, aggs)
+			err = orgs.DumpFilteredCollections(muri, "org_id", org, strings.Split(org_idColls, ","))
+			if err != nil {
+				log.Error().Err(err).Msg("dumping org_id collections")
+			}
+			err = orgs.DumpFilteredCollections(muri, "orgid", org, strings.Split(orgidColls, ","))
+			if err != nil {
+				log.Error().Err(err).Msg("dumping orgid collections")
+			}
+			err = orgs.DumpAnalyticzCollections(muri, org, aggs)
+			if err != nil {
+				log.Error().Err(err).Msg("dumping analyticz collections")
+			}
 		}
 
-		// Redis
-		patterns, _ := cmd.Flags().GetString("patterns")
-		count, _ := cmd.Flags().GetInt64("count")
-		workers, _ := cmd.Flags().GetInt("workers")
-
-		log.Info().Msg("Dumping keys")
-		r := orgs.RedisClient(strings.Split(redisHosts, ","), redisMasterName)
-		redisChans := make(map[string]chan ([]string))
-		for _, org := range args {
-			log.Info().Str("org", org).Msg("processing keys")
-			redisChans[org] = make(chan []string, count)
-			for w := 0; w < workers; w++ {
-				// Workers will wait until ScanKeys() writes to the channel
-				go r.FilterOrg(org, redisChans[org])
-			}
-			for _, pattern := range strings.Split(patterns, ",") {
-				r.ScanKeys(pattern, count, redisChans[org])
-			}
-			close(redisChans[org])
-			log.Info().Str("org", org).Msg("done dumping keys")
-		}
 	},
 }
 
@@ -119,8 +117,7 @@ func init() {
 	orgsCmd.MarkFlagRequired("murl")
 
 	orgsDumpCmd.Flags().StringP("patterns", "p", "apikey-*,tyk-admin-api-*", "Comma separated list of patterns to SCAN for")
-	orgsDumpCmd.PersistentFlags().Int64P("count", "c", 100, "Passed as COUNT to SCAN, effectively batchsize")
-	orgsDumpCmd.Flags().IntP("workers", "w", 4, "Concurrency level of mgets")
+	orgsDumpCmd.PersistentFlags().Int64P("count", "c", 10e4, "Passed as COUNT to SCAN, effectively batchsize")
 	orgsDumpCmd.Flags().StringP("org_id_colls", "u", "portal_catalogue,portal_configurations,portal_css,portal_developers,portal_key_requests,portal_menus,portal_pages,tyk_apis,tyk_policies", "These will be queried by org_id")
 	orgsDumpCmd.Flags().StringP("orgid_colls", "v", "tyk_analytics_users", "These will be queried by orgid")
 	orgsDumpCmd.Flags().StringP("agg_colls", "a", "z_tyk_analyticz_,z_tyk_analyticz_aggregate_", "These will have the org_id suffixed to their names")
