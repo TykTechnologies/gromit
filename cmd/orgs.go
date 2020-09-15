@@ -58,11 +58,12 @@ Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
+		os.MkdirAll(dir, 0755)
+
 		// Redis
 		patterns, _ := cmd.Flags().GetString("patterns")
 		count, _ := cmd.Flags().GetInt64("count")
 
-		os.MkdirAll(dir, 0755)
 		rdb := orgs.RedisClient(ctx, strings.Split(redisHosts, ","), redisMasterName, count, args, dir)
 		rdb.DumpOrgKeys(args, strings.Split(patterns, ","), count)
 		// Threaded version suffers from buffers

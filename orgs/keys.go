@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"os"
@@ -161,10 +162,14 @@ func logArray(strs []string) *zerolog.Array {
 func (r *redisClient) DumpOrgKeys(orgs []string, patterns []string, batchSize int64) {
 	scanned := 0
 	start := time.Now()
+
+	var wg sync.WaitGroup
 	for _, org := range orgs {
 		go func() {
+			wg.Add(1)
 			log.Debug().Str("org", org).Msg("spawning filterOrg")
 			r.filterOrg(org)
+			wg.Done()
 		}()
 		for _, pattern := range patterns {
 			log.Info().Str("org", org).Str("pattern", pattern).Msg("processing")
@@ -172,5 +177,6 @@ func (r *redisClient) DumpOrgKeys(orgs []string, patterns []string, batchSize in
 		}
 		close(r.keysChans[org])
 	}
+	wg.Wait()
 	log.Info().Dur("time", time.Since(start)).Int("scanned", scanned).Msg("done with keys")
 }
