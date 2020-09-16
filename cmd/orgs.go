@@ -84,11 +84,11 @@ Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 			for _, coll := range strings.Split(aggColls, ",") {
 				aggs = append(aggs, coll+org)
 			}
-			err = orgs.DumpFilteredCollections(muri, "org_id", org, strings.Split(org_idColls, ","))
+			err = orgs.SlowFilteredCollections(muri, "org_id", org, strings.Split(org_idColls, ","))
 			if err != nil {
 				log.Error().Err(err).Msg("dumping org_id collections")
 			}
-			err = orgs.DumpFilteredCollections(muri, "orgid", org, strings.Split(orgidColls, ","))
+			err = orgs.SlowFilteredCollections(muri, "orgid", org, strings.Split(orgidColls, ","))
 			if err != nil {
 				log.Error().Err(err).Msg("dumping orgid collections")
 			}
@@ -114,8 +114,8 @@ all bson files in {orgid}/*/*.bson.`,
 			log.Fatal().Err(err).Str("murl", mongoURL).Msg("could not parse")
 		}
 		for _, org := range args {
-			res := orgs.RestoreCollections(org, muri, dir, dryRun)
-			log.Info().Int64("success", res.Successes).Int64("failures", res.Failures).Err(res.Err).Msg("collection restore done")
+			res := orgs.RestoreCollections(org, muri, dryRun)
+			log.Info().Interface("results", res).Msg("all collections restore done")
 		}
 	},
 }
@@ -139,5 +139,5 @@ func init() {
 	orgsDumpCmd.Flags().StringP("orgid_colls", "v", "tyk_analytics_users", "These will be queried by orgid")
 	orgsDumpCmd.Flags().StringP("agg_colls", "a", "z_tyk_analyticz_,z_tyk_analyticz_aggregate_", "These will have the org_id suffixed to their names")
 
-	orgsRestoreCmd.Flags().BoolP("dry_run", "y", true, "Dry run")
+	orgsRestoreCmd.Flags().BoolP("dry_run", "y", false, "Dry run")
 }
