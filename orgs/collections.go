@@ -25,10 +25,10 @@ func toolOpts(uri *options.URI) *options.ToolOptions {
 	opts := options.New(util.Name, util.Version, util.Commit, "see gromit help", false, options.EnabledOptions{Auth: true, Connection: true, Namespace: true, URI: true})
 	connOpts := uri.ParsedConnString()
 	opts.URI = uri
-	opts.Direct = false
 	opts.Namespace.DB = connOpts.Database
-	opts.SSL = &options.SSL{}
-	opts.SSL.UseSSL = connOpts.SSL
+	// opts.SSL = &options.SSL{}
+	// opts.SSL.UseSSL = connOpts.SSL
+	opts.ReplicaSetName = connOpts.ReplicaSet
 
 	err := opts.NormalizeOptionsAndURI()
 	if err != nil {
@@ -37,6 +37,7 @@ func toolOpts(uri *options.URI) *options.ToolOptions {
 	return opts
 }
 
+// FastFilteredCollections dumps collections concurrently
 func FastFilteredCollections(uri *options.URI, queryField string, queryValue string, colls []string) error {
 	mongoGrp := new(errgroup.Group)
 	for _, coll := range colls {
@@ -77,6 +78,7 @@ func FastFilteredCollections(uri *options.URI, queryField string, queryValue str
 	return nil
 }
 
+// SlowFilteredCollections dumps collections sequentially
 func SlowFilteredCollections(uri *options.URI, queryField string, queryValue string, colls []string) error {
 	for _, coll := range colls {
 		coll := coll // https://golang.org/doc/faq#closures_and_goroutines
@@ -187,6 +189,8 @@ func (c *collection) restore(uri *options.URI, dryRun bool) mongorestore.Result 
 	return mdb.Restore()
 }
 
+// findCollections will walk the tree from dir and update the colls pointer
+// with the collections that it finds
 func findCollections(dir string, colls *[]collection) error {
 	rootDir, err := os.Open(dir)
 	if err != nil {

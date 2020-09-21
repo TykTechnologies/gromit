@@ -66,8 +66,6 @@ Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 
 		rdb := orgs.RedisClient(ctx, strings.Split(redisHosts, ","), redisMasterName, count, args, dir)
 		rdb.DumpOrgKeys(args, strings.Split(patterns, ","), count)
-		// Threaded version suffers from buffers
-		// rdb.WriteKeys(args, strings.Split(patterns, ","))
 
 		// Mongo
 		org_idColls, _ := cmd.Flags().GetString("org_id_colls")
@@ -84,11 +82,11 @@ Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 			for _, coll := range strings.Split(aggColls, ",") {
 				aggs = append(aggs, coll+org)
 			}
-			err = orgs.SlowFilteredCollections(muri, "org_id", org, strings.Split(org_idColls, ","))
+			err = orgs.FastFilteredCollections(muri, "org_id", org, strings.Split(org_idColls, ","))
 			if err != nil {
 				log.Error().Err(err).Msg("dumping org_id collections")
 			}
-			err = orgs.SlowFilteredCollections(muri, "orgid", org, strings.Split(orgidColls, ","))
+			err = orgs.FastFilteredCollections(muri, "orgid", org, strings.Split(orgidColls, ","))
 			if err != nil {
 				log.Error().Err(err).Msg("dumping orgid collections")
 			}
