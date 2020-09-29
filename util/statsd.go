@@ -1,6 +1,6 @@
 package util
 
-// Send metrics to hostedgrapahite.com
+// Send metrics to metricsfire.com
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ func StatCount(metric string, value int) {
 }
 
 func StatTime(metric string, took time.Duration) {
-	queue <- fmt.Sprintf("%s.%s:%d|ms", os.Getenv("STATS_API_KEY"), metric, took/1e6)
+	queue <- fmt.Sprintf("%s.%s:%d|ms", os.Getenv("STATS_API_KEY"), metric, took.Milliseconds())
 }
 
 func StatGauge(metric string, value int) {
