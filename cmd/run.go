@@ -15,34 +15,3 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-import (
-	"github.com/TykTechnologies/gromit/terraform"
-	"github.com/spf13/cobra"
-)
-
-// runCmd represents the run command
-var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Process envs from GROMIT_TABLENAME",
-	Long: `Read state and called the embedded terraform manifest with the new tags. This component is meant to run in a scheduled task
-Env vars:
-Apart from the global env vars, this command will use
-GROMIT_ZONEID Route53 zone to use for external DNS
-GROMIT_DOMAIN Route53 domain corresponding to GROMIT_ZONEID
-If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and TF_API_TOKEN`,
-	Run: func(cmd *cobra.Command, args []string) {
-		confPath, _ := cmd.Flags().GetString("config")
-		terraform.Run(confPath)
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(runCmd)
-
-	runCmd.PersistentFlags().StringP("config", "c", "/config", "Root of the config dir")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// runCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}

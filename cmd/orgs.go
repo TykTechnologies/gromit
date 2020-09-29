@@ -103,7 +103,7 @@ var orgsRestoreCmd = &cobra.Command{
 	Use:   "restore org0 org1 ...",
 	Short: "Concurrently restore mongo and redis",
 	Long: `Will process all files named {orgid}.redis.jl for keys and
-all bson files in {orgid}/*/*.bson.`,
+all bson files in {orgid}/**/*.bson.`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		muri, err := orgs.ParseMongoURI(mongoURL)

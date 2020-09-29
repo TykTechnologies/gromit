@@ -149,7 +149,6 @@ resource "aws_security_group" "pump" {
 }
 
 # Private subnets
-
 data "aws_subnet_ids" "private" {
   vpc_id = data.terraform_remote_state.infra.outputs.vpc_id
 
