@@ -6,7 +6,7 @@ gromit: */*.go
 	go build -trimpath -ldflags "-X util.Version=$(VERSION) -X util.Commit=$(COMMIT) -X util.BuildDate=$(BUILD_DATE)"
 	rice embed-go
 	go mod tidy
-	sudo setcap 'cap_net_bind_service=+ep' $(@)
+	#sudo setcap 'cap_net_bind_service=+ep' $(@)
 
 grun: gromit
 	docker build -t grun . && docker run --rm --name $(@) \

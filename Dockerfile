@@ -1,8 +1,10 @@
 FROM golang:1.14 as builder 
 
+ARG TF_VER=0.13.4
+
 RUN apt-get update && apt-get install -y unzip && go get -u github.com/GeertJohan/go.rice/rice
 WORKDIR /src/gromit
-RUN curl https://releases.hashicorp.com/terraform/0.13.0-rc1/terraform_0.13.0-rc1_linux_amd64.zip -o terraform.zip && unzip terraform.zip && mv terraform /
+RUN curl https://releases.hashicorp.com/terraform/${TF_VER}/terraform_${TF_VER}_linux_amd64.zip -o terraform.zip && unzip terraform.zip && mv terraform /
 ADD . .
 RUN CGO_ENABLED=0 make
 
