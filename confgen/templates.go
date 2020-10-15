@@ -36,7 +36,7 @@ func makeConfigTree(b *rice.Box, boxPath string, dest string, envName string) er
 			// e is a file
 			tempStr, err := b.String(srcPath)
 			if err != nil {
-				log.Error().Err(err).Msgf("could not read as string: ", srcPath)
+				log.Error().Err(err).Msgf("could not read as string: %s", srcPath)
 				return err
 			}
 			t := template.Must(template.New(e.Name()).Parse(tempStr))
@@ -59,10 +59,10 @@ func makeConfigTree(b *rice.Box, boxPath string, dest string, envName string) er
 // Only the root path is checked as a full set of templates will be generated into confDir
 func Must(confPath string, envName string) error {
 	confDir := filepath.Join(confPath, envName)
-	// Does a config dire matching the env name exist?
+	// Does a config dir matching the env name exist?
 	if _, err := os.Stat(confDir); os.IsNotExist(err) {
 		configs := rice.MustFindBox("templates")
-		return makeConfigTree(configs, "/", confDir, envName)
+		return makeConfigTree(configs, "", confDir, envName)
 	}
 	return nil
 }

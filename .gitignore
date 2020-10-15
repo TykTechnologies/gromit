@@ -17,3 +17,4 @@
 .terraform/
 terraform.tfstate
 *.plan
+rice-box.go

@@ -12,10 +12,8 @@ RUN CGO_ENABLED=0 make
 FROM alpine:latest
 COPY --from=builder /src/gromit/gromit /usr/bin/
 COPY --from=builder /terraform /usr/bin/
-
 EXPOSE 443
-VOLUME /cfssl
-WORKDIR /cfssl
+VOLUME [ "/cfssl" "/config" ]
 
 # executable
 ENTRYPOINT [ "gromit" ]
