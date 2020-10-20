@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/sync/errgroup"
 )
 
 // Will return the output and error
@@ -155,42 +157,56 @@ func Run(confPath string) error {
 	}
 	util.StatGauge("run.nenvs", len(envs))
 
-	for _, env := range envs {
-		log.Info().Interface("env", env).Msg("processing")
-		envName := env[devenv.NAME].(string)
-		envTime := time.Now()
-		defer func() {
-			util.StatTime(fmt.Sprintf("run.%s.timetaken", envName), time.Since(envTime))
-		}()
-
-		err := confgen.Must(confPath, envName)
-		if err != nil {
-			util.StatCount("run.failures", 1)
-			log.Error().Err(err).Msgf("could not create config tree for env %s", envName)
-			continue
-		}
-		// go.rice only works with string literals
-		devManifest := rice.MustFindBox("devenv")
-		tfDir, err := deployManifest(devManifest, envName)
-		if err != nil {
-			util.StatCount("run.failures", 1)
-			log.Error().Err(err).Msgf("could not deploy manifest for env %s", envName)
-			continue
-		}
-		err = makeInputVarfile(tfDir, env)
-		if err != nil {
-			util.StatCount("run.failures", 1)
-			log.Error().Err(err).Msgf("could not write input file for env %s", envName)
-			continue
-		}
-		apply(envName, tfDir)
-		// os.RemoveAll(tfDir)
-		err = devenv.UpdateClusterIPs(envName, e.ZoneID, e.Domain)
-		if err != nil {
-			log.Error().Err(err).Msgf("could not update IPs for env %s", envName)
-			util.StatCount("expose.failures", 1)
-			continue
-		}
+	procSentinelFile := filepath.Join(confPath, "noprocess")
+	if _, err := os.Stat(procSentinelFile); !os.IsNotExist(err) {
+		log.Info().Interface("envs", envs).Msgf("Not processing envs as %s exists", procSentinelFile)
+		return nil
 	}
-	return nil
+	log.Trace().Str("sentinelfile", procSentinelFile).Msg("not found")
+
+	runGrp := new(errgroup.Group)
+	for _, env := range envs {
+		env := env
+		runGrp.Go(func() error {
+			log.Info().Interface("env", env).Msg("processing")
+			envName := env[devenv.NAME].(string)
+			envTime := time.Now()
+			defer func() {
+				util.StatTime(fmt.Sprintf("run.%s.timetaken", envName), time.Since(envTime))
+			}()
+
+			err := confgen.Must(confPath, envName)
+			if err != nil {
+				util.StatCount("run.failures", 1)
+				log.Error().Err(err).Msgf("could not create config tree for env %s", envName)
+				return err
+			}
+			// go.rice only works with string literals
+			devManifest := rice.MustFindBox("devenv")
+			tfDir, err := deployManifest(devManifest, envName)
+			if err != nil {
+				util.StatCount("run.failures", 1)
+				log.Error().Err(err).Msgf("could not deploy manifest for env %s", envName)
+				return err
+			}
+			err = makeInputVarfile(tfDir, env)
+			if err != nil {
+				util.StatCount("run.failures", 1)
+				log.Error().Err(err).Msgf("could not write input file for env %s", envName)
+				return err
+			}
+			apply(envName, tfDir)
+			// os.RemoveAll(tfDir)
+			// Wait for the apply to catch up debfore looking for IP addresses
+			time.Sleep(1 * time.Minute)
+			err = devenv.UpdateClusterIPs(envName, e.ZoneID, e.Domain)
+			if err != nil {
+				log.Error().Err(err).Msgf("could not update IPs for env %s", envName)
+				util.StatCount("expose.failures", 1)
+				return err
+			}
+			return nil
+		})
+	}
+	return runGrp.Wait()
 }

@@ -42,7 +42,7 @@ var clusterCmd = &cobra.Command{
 var runCmd = &cobra.Command{
 	Use:   "run <config bundle path>",
 	Short: "Process envs from GROMIT_TABLENAME using supplied config bundle path",
-	Long: `Read state and call the embedded devenv terraform manifest for new envs. The config bundle is a directory tree containing config files for all the components in the cluster. The names of the config dirs have to strictly match with the repository names.
+	Long: `Read state and call the embedded devenv terraform manifest for new envs. The config bundle is a directory tree containing config files for all the components in the cluster. The names of the config dirs have to strictly match the repository names.
 
 This component is meant to run in a scheduled task.
 Env vars:
