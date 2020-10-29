@@ -3,7 +3,7 @@ COMMIT := $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
 
 # A docker volume, can be empty for testing, will have data in it after
-CONF_VOL := tests/conftest
+CONF_VOL := testdata
 
 gromit: */*.go
 	find . -name rice_box.go | xargs rm -fv
@@ -13,7 +13,7 @@ gromit: */*.go
 #	sudo setcap 'cap_net_bind_service=+ep' $(@)
 
 grun: clean
-	docker build -t grun . && docker run --rm --name $(@) \
+	docker build -t $(@) . && docker run --rm --name $(@) \
 	-e GROMIT_TABLENAME=DeveloperEnvironments \
 	-e GROMIT_REPOS=tyk,tyk-analytics,tyk-pump \
 	-e AWS_ACCESS_KEY_ID=$(aws_id) \
@@ -24,6 +24,12 @@ grun: clean
 	-e GROMIT_ZONEID=Z06422931MJIQS870BBM7 \
 	--mount type=bind,src=$(PWD)/$(CONF_VOL),target=/config \
 	grun -l trace cluster run /config
+
+licenser: clean
+	docker build -t $(@) . && docker run --rm --name $(@) \
+	-e LICENSER_TOKEN=$(token) \
+	--mount type=bind,src=$(PWD)/$(CONF_VOL),target=/config \
+	$(@) licenser dashboard-trial /config/dash.test
 
 gserve: clean
 	docker build -t gserve . && docker run --rm --name $(@) \

@@ -2,7 +2,12 @@ package licenser
 
 import (
 	"bytes"
+	"context"
+	"crypto/tls"
 	"io/ioutil"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -45,7 +50,7 @@ func TestParseKey(t *testing.T) {
 			}
 			if claims, ok := token.Claims.(jwt.MapClaims); ok {
 				if claims["owner"] != tc.owner {
-					t.Errorf("Expected owner %s, got %s", tc.owner, claims["owner"])
+					t.Error("Expected", tc.owner, "got", claims["owner"])
 				}
 				licenseExpiry := time.Unix(int64(claims["exp"].(float64)), int64(860564083)).UTC()
 				expectedExpiry, err := time.Parse(time.RFC3339, tc.expiry)
@@ -53,11 +58,63 @@ func TestParseKey(t *testing.T) {
 					t.Fatalf("Bad check in test: %s", tc.expiry)
 				}
 				if licenseExpiry != expectedExpiry {
-					t.Errorf("Expected expiry %s, got %s", expectedExpiry, licenseExpiry)
+					t.Error("Expected", expectedExpiry, "got", licenseExpiry)
 				}
 			} else {
 				t.Fatal(ok, token.Valid, claims)
 			}
 		})
 	}
+}
+
+func TestFetch(t *testing.T) {
+	cases := []struct {
+		botResponse string
+		name        string
+	}{
+		{
+			botResponse: "../testdata/dash.trial",
+			name:        "dash-trial",
+		},
+		{
+			botResponse: "../testdata/mdcb.trial",
+			name:        "mdcb-trial",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(T *testing.T) {
+			response, err := ioutil.ReadFile(tc.botResponse)
+			if err != nil {
+				t.Fatalf("Could not find mock response fixture %s", tc.botResponse)
+			}
+			mockClient, teardown := mockHTTPClient(response)
+			defer teardown()
+			temp := Licenser{
+				Client: mockClient,
+			}
+			_, err = temp.Fetch("http://this.is.fake/", tc.name, "token")
+			if err != nil {
+				t.Fatal("Failed fetching", tc.name, err)
+			}
+		})
+	}
+}
+
+func mockHTTPClient(response []byte) (*http.Client, func()) {
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(response)
+	})
+	s := httptest.NewServer(h)
+	cli := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, network, _ string) (net.Conn, error) {
+				return net.Dial(network, s.Listener.Addr().String())
+			},
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: false,
+			},
+		},
+	}
+
+	return cli, s.Close
 }

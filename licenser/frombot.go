@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 )
@@ -40,10 +41,14 @@ func (l *Licenser) Fetch(baseURL string, product string, token string) (string, 
 }
 
 func parseKey(r io.Reader) (string, error) {
-	var t wireStruct
-	err := json.NewDecoder(r).Decode(&t)
+	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return "", err
+	}
+	var t wireStruct
+	err = json.Unmarshal(b, &t)
+	if err != nil {
+		return "", fmt.Errorf("%v when parsing raw response '%s'", err, b)
 	}
 	re := regexp.MustCompile("```(.+)```")
 	matches := re.FindStringSubmatch(string(t.Key))
