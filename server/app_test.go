@@ -16,7 +16,7 @@ var a App
 func TestMain(m *testing.M) {
 	os.Setenv("GROMIT_TABLENAME", "GromitTest")
 	os.Setenv("GROMIT_REPOS", "tyk,tyk-analytics,tyk-pump")
-	os.Setenv("GROMIT_REGISTRYID", "046805072452")
+	os.Setenv("GROMIT_REGISTRYID", "754489498669")
 	a.Init("../ccerts/ca.pem")
 	code := m.Run()
 	devenv.DeleteTable(a.DB, "GromitTest")

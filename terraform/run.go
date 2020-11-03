@@ -62,7 +62,8 @@ func terraformInit(tfEnv []string) {
 	tfEnv = append(tfEnv,
 		"TF_IN_AUTOMATION=1",
 	)
-	tf := exec.Command("terraform", "init", "-input=false", "-no-color")
+	// XXX: read-only so no locks are needed?
+	tf := exec.Command("terraform", "init", "-input=false", "-no-color", "-lock=false")
 	tf.Env = tfEnv
 	tf.Stdin = strings.NewReader("1")
 
@@ -112,7 +113,7 @@ func apply(env string, dir string) {
 
 	terraformExitOnFailure("validate")
 
-	terraformExitOnFailure("plan", "-out=tfplan", fmt.Sprintf("-var-file=%s.tfvars.json", env))
+	terraformExitOnFailure("plan", "-out=tfplan", fmt.Sprintf("-var-file=%s/%s.tfvars.json", dir, env))
 
 	terraformExitOnFailure("apply", "tfplan")
 }
@@ -166,47 +167,44 @@ func Run(confPath string) error {
 
 	runGrp := new(errgroup.Group)
 	for _, env := range envs {
-		env := env
-		runGrp.Go(func() error {
-			log.Info().Interface("env", env).Msg("processing")
-			envName := env[devenv.NAME].(string)
-			envTime := time.Now()
-			defer func() {
-				util.StatTime(fmt.Sprintf("run.%s.timetaken", envName), time.Since(envTime))
-			}()
+		log.Info().Interface("env", env).Msg("processing")
+		envName := env[devenv.NAME].(string)
+		envTime := time.Now()
+		defer func() {
+			util.StatTime(fmt.Sprintf("run.%s.timetaken", envName), time.Since(envTime))
+		}()
 
-			err := confgen.Must(confPath, envName)
-			if err != nil {
-				util.StatCount("run.failures", 1)
-				log.Error().Err(err).Msgf("could not create config tree for env %s", envName)
-				return err
-			}
-			// go.rice only works with string literals
-			devManifest := rice.MustFindBox("devenv")
-			tfDir, err := deployManifest(devManifest, envName)
-			if err != nil {
-				util.StatCount("run.failures", 1)
-				log.Error().Err(err).Msgf("could not deploy manifest for env %s", envName)
-				return err
-			}
-			err = makeInputVarfile(tfDir, env)
-			if err != nil {
-				util.StatCount("run.failures", 1)
-				log.Error().Err(err).Msgf("could not write input file for env %s", envName)
-				return err
-			}
-			apply(envName, tfDir)
-			// os.RemoveAll(tfDir)
-			// Wait for the apply to catch up debfore looking for IP addresses
-			time.Sleep(1 * time.Minute)
-			err = devenv.UpdateClusterIPs(envName, e.ZoneID, e.Domain)
-			if err != nil {
-				log.Error().Err(err).Msgf("could not update IPs for env %s", envName)
-				util.StatCount("expose.failures", 1)
-				return err
-			}
-			return nil
-		})
+		err := confgen.Must(confPath, envName)
+		if err != nil {
+			util.StatCount("run.failures", 1)
+			log.Error().Err(err).Msgf("could not create config tree for env %s", envName)
+			return err
+		}
+		// go.rice only works with string literals
+		devManifest := rice.MustFindBox("devenv")
+		tfDir, err := deployManifest(devManifest, envName)
+		if err != nil {
+			util.StatCount("run.failures", 1)
+			log.Error().Err(err).Msgf("could not deploy manifest for env %s", envName)
+			return err
+		}
+		err = makeInputVarfile(tfDir, env)
+		if err != nil {
+			util.StatCount("run.failures", 1)
+			log.Error().Err(err).Msgf("could not write input file for env %s", envName)
+			return err
+		}
+		apply(envName, tfDir)
+		// os.RemoveAll(tfDir)
+		// Wait for the apply to catch up debfore looking for IP addresses
+		time.Sleep(1 * time.Minute)
+		err = devenv.UpdateClusterIPs(envName, e.ZoneID, e.Domain)
+		if err != nil {
+			log.Error().Err(err).Msgf("could not update IPs for env %s", envName)
+			util.StatCount("expose.failures", 1)
+			return err
+		}
+		return nil
 	}
 	return runGrp.Wait()
 }
