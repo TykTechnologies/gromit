@@ -56,20 +56,21 @@ locals {
 resource "aws_ecs_cluster" "env" {
   name = var.name
 
-  setting {
-    name  = "containerInsights"
-    value = "enabled"
-  }
+  # setting {
+  #   name  = "containerInsights"
+  #   value = "enabled"
+  # }
   tags = local.common_tags
 }
 
+# Nmae should match name given to resource ~tyk-ci/infra/iam.tf:aws_iam_role:gromit_ter
 data "aws_iam_role" "ecs_task_execution_role" {
-  name = "ecsExecutionRole"
+  name = "gromit-ecs-init"
 }
 
 resource "aws_cloudwatch_log_group" "env" {
   name              = var.name
-  retention_in_days = 5
+  retention_in_days = 1
 
   tags = local.common_tags
 }

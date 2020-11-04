@@ -120,7 +120,7 @@ var authToken string
 
 func init() {
 	rootCmd.AddCommand(clientCmd)
-	clientCmd.PersistentFlags().StringP("server", "s", "gromit.dev.tyk.technology", "Server hostname, will use https always")
+	clientCmd.PersistentFlags().StringP("server", "s", "gserve.dev.tyk.technology", "Server hostname, will use https always")
 	clientCmd.PersistentFlags().BoolP("mtls", "m", false, "Use mTLS")
 	clientCmd.PersistentFlags().StringVarP(&authToken, "auth", "a", viper.GetString("GROMIT_AUTHTOKEN"), "Auth token")
 	clientCmd.PersistentFlags().StringP("certpath", "c", os.Getenv("GROMIT_CLIENTCERTPATH"), "Path to client key pair")

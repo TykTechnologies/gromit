@@ -84,9 +84,9 @@ Use this for debugging or for a quick load test`,
 func init() {
 	rootCmd.AddCommand(clusterCmd)
 	clusterCmd.PersistentFlags().StringVarP(&cluster, "cluster", "c", os.Getenv("GROMIT_CLUSTER"), "Cluster to be operated on")
-	clusterCmd.PersistentFlags().StringVarP(&zoneID, "zone", "z", os.Getenv("GROMIT_ZONEID"), "Route53 zone id to make entries in")
+	clusterCmd.PersistentFlags().StringVarP(&zoneID, "zone", "z", "Z02045551IU0LZIOX4AO0", "Route53 zone id to make entries in")
 	clusterCmd.MarkFlagRequired("zone")
-	clusterCmd.PersistentFlags().StringVarP(&domain, "domain", "d", os.Getenv("GROMIT_DOMAIN"), "Domain part of the DNS record")
+	clusterCmd.PersistentFlags().StringVarP(&domain, "domain", "d", "dev.tyk.technology", "Domain part of the DNS record")
 	clusterCmd.MarkFlagRequired("domain")
 
 	clusterCmd.AddCommand(runCmd, exposeCmd, tdbCmd)

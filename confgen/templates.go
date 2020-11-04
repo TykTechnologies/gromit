@@ -14,7 +14,7 @@ import (
 // templateVars will be interpolated into templates
 type templateVars struct {
 	EnvName     string
-	DashLicense []byte
+	DashLicense string
 }
 
 // dest is always treated as a directory name
@@ -63,12 +63,12 @@ func makeConfigTree(b *rice.Box, boxPath string, dest string, tVars templateVars
 	return nil
 }
 
-func getLicense(path string) ([]byte, error) {
+func getLicense(path string) (string, error) {
 	key, err := ioutil.ReadFile(path)
 	if err != nil {
-		return []byte{}, err
+		return "", err
 	}
-	return key, nil
+	return string(key), nil
 
 }
 
