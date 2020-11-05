@@ -2,7 +2,6 @@ package devenv
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/TykTechnologies/gromit/util"
@@ -61,7 +60,7 @@ func getTaskENI(svc ecsiface.ClientAPI, cluster string, taskid string) (string, 
 			return *task, *d.Value, nil
 		}
 	}
-	return "", "", errors.New("no eni found for " + taskid)
+	return "", "", fmt.Errorf("no eni found for %s", taskid)
 }
 
 func getPublicIP(svc ec2iface.ClientAPI, eni string) (string, error) {
@@ -84,7 +83,7 @@ func getPublicIP(svc ec2iface.ClientAPI, eni string) (string, error) {
 			return *assoc.PublicIp, nil
 		}
 	}
-	return "", errors.New("No public IP")
+	return "", fmt.Errorf("no public IP")
 }
 
 // UpdateClusterIPs is the entrypoint for CLI
@@ -104,6 +103,10 @@ func UpdateClusterIPs(cluster string, zoneid string, domain string) error {
 
 	fargate := ecs.New(cfg)
 	tasks, err := getClusterTasks(fargate, cluster)
+	if err != nil {
+		return err
+	}
+
 	for _, task := range tasks {
 		taskName, eni, err := getTaskENI(fargate, cluster, task)
 		if err != nil {
@@ -114,12 +117,11 @@ func UpdateClusterIPs(cluster string, zoneid string, domain string) error {
 		log.Debug().Msgf("Found eni %s for task %s.%s (%s)", eni, cluster, taskName, task)
 		ip, err := getPublicIP(ec2.New(cfg), eni)
 		if err != nil {
-			util.StatCount("expose.failures", 1)
 			log.Warn().Err(err).Msgf("could not get ip for %s.%s", cluster, taskName)
 			continue
 		}
 		log.Debug().Msgf("Found ip %s for task %s.%s", ip, cluster, taskName)
-		fqdn := fmt.Sprintf("%s.%s", taskName, domain)
+		fqdn := fmt.Sprintf("%s.%s.%s", taskName, cluster, domain)
 
 		err = UpsertTaskDNS(route53.New(cfg), region, zoneid, fqdn, ip)
 		if err != nil {
