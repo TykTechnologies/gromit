@@ -58,7 +58,7 @@ func (a *App) Init(ca string) {
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not load env")
 	}
-	log.Info().Interface("env", e).Msg("loaded env")
+	log.Info().Interface("env", e).Msg("loaded env for gserve")
 	a.Env = &e
 
 	cfg, err := external.LoadDefaultAWSConfig()

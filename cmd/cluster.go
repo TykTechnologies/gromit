@@ -22,6 +22,7 @@ import (
 
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/terraform"
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -51,6 +52,7 @@ GROMIT_DOMAIN Route53 domain corresponding to GROMIT_ZONEID
 If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and TF_API_TOKEN`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		log.Info().Str("name", util.Name).Str("component", "run").Str("version", util.Version).Msg("starting")
 		terraform.Run(args[0])
 	},
 }
@@ -64,7 +66,7 @@ makes A records in Route53 accessible as <task_name>.<domain>.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		err := devenv.UpdateClusterIPs(cluster, zoneID, domain)
 		if err != nil {
-			log.Fatal().Err(err).Msgf("Failed to update cluster IPs for 5s", cluster)
+			log.Fatal().Err(err).Msgf("Failed to update cluster IPs for %s", cluster)
 		}
 	},
 }
@@ -86,7 +88,7 @@ func init() {
 	clusterCmd.PersistentFlags().StringVarP(&cluster, "cluster", "c", os.Getenv("GROMIT_CLUSTER"), "Cluster to be operated on")
 	clusterCmd.PersistentFlags().StringVarP(&zoneID, "zone", "z", "Z02045551IU0LZIOX4AO0", "Route53 zone id to make entries in")
 	clusterCmd.MarkFlagRequired("zone")
-	clusterCmd.PersistentFlags().StringVarP(&domain, "domain", "d", "dev.tyk.technology", "Domain part of the DNS record")
+	clusterCmd.PersistentFlags().StringVarP(&domain, "domain", "d", "dev.tyk.technology", "Suffixed to the DNS record to make an FQDN")
 	clusterCmd.MarkFlagRequired("domain")
 
 	clusterCmd.AddCommand(runCmd, exposeCmd, tdbCmd)
