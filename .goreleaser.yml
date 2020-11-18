@@ -17,7 +17,7 @@ builds:
       - -X util.commit={{ .Commit }}
       - -X util.buildDate={{ .Date }}
     hooks:
-      pre: rice embed-go -i ./terraform -i ./confgen
+      pre: rice -v embed-go -i ./terraform -i ./confgen
 
 archives:
 - replacements:
@@ -30,8 +30,8 @@ dockers:
     binaries:
       - gromit
     image_templates:
-      - "TykTechnologies/gromit:latest"
-      - "TykTechnologies/gromit:{{ .Tag }}"
+      - "tykio/gromit:latest"
+      - "tykio/gromit:{{ .Tag }}"
       
 changelog:
   sort: asc
