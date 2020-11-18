@@ -7,7 +7,7 @@ import (
 
 // Serve starts the gromit server
 func Serve(ca string, cert string, key string) {
-	log.Info().Str("name", util.Name).Str("component", "serve").Str("version", util.Version).Msg("starting")
+	log.Info().Str("name", util.Name()).Str("component", "serve").Str("version", util.Version()).Msg("starting")
 	a := App{}
 	a.Init(ca)
 

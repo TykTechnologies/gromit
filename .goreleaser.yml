@@ -4,10 +4,18 @@ before:
     - go mod download
       
 builds:
-  - env:
+  -
+    binary: gromit
+    env:
       - CGO_ENABLED=0
     goarch:
       - amd64
+    ldflags:
+      - -X util.version={{ .Version }}
+      - -X util.commit={{ .Commit }}
+      - -X util.buildDate={{ .Date }}
+    hooks:
+      pre: rice embed-go -i ./terraform -i ./confgen
 
 archives:
 - replacements:
@@ -15,6 +23,14 @@ archives:
     386: i386
     amd64: x86_64
 
+dockers:
+  -
+    binaries:
+      - gromit
+    image_templates:
+      - "TykTechnologies/gromit:latest"
+      - "TykTechnologies/gromit:{{ .Tag }}"
+      
 changelog:
   sort: asc
   filters:

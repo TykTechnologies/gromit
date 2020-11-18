@@ -22,7 +22,7 @@ func ParseMongoURI(url string) (*options.URI, error) {
 }
 
 func toolOpts(uri *options.URI) *options.ToolOptions {
-	opts := options.New(util.Name, util.Version, util.Commit, "see gromit help", false, options.EnabledOptions{Auth: true, Connection: true, Namespace: true, URI: true})
+	opts := options.New(util.Name(), util.Version(), util.Commit(), "see gromit help", false, options.EnabledOptions{Auth: true, Connection: true, Namespace: true, URI: true})
 	connOpts := uri.ParsedConnString()
 	opts.URI = uri
 	opts.Namespace.DB = connOpts.Database

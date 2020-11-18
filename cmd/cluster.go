@@ -52,7 +52,7 @@ GROMIT_DOMAIN Route53 domain corresponding to GROMIT_ZONEID
 If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and TF_API_TOKEN`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Info().Str("name", util.Name).Str("component", "run").Str("version", util.Version).Msg("starting")
+		log.Info().Str("name", util.Name()).Str("component", "run").Str("version", util.Version()).Msg("starting")
 		terraform.Run(args[0])
 	},
 }
