@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/GeertJohan/go.rice v1.0.0
+	github.com/akavel/rsrc v0.9.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v0.24.0
 	github.com/daaku/go.zipexe v1.0.1 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -13,11 +14,13 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mongodb/mongo-tools v0.0.0-20200911144454-4ba3e828ed5c
 	github.com/mongodb/mongo-tools-common v4.0.6+incompatible
+	github.com/nkovacs/streamquote v1.0.0 // indirect
 	github.com/rs/zerolog v1.19.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.6.1
+	github.com/valyala/fasttemplate v1.2.1 // indirect
 	go.mongodb.org/mongo-driver v1.4.1 // indirect
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e

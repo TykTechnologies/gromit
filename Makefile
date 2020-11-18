@@ -6,7 +6,7 @@ BUILD_DATE := $(shell date +%FT%T%z)
 CONF_VOL := testdata
 
 gromit: */*.go
-	find . -name rice_box.go | xargs rm -fv
+	find . -name rice-box.go | xargs rm -fv
 	rice -v embed-go -i ./terraform -i ./confgen
 	go build -v -trimpath -ldflags "-X 'github.com/TykTechnologies/gromit/util.version=$(VERSION)' -X 'github.com/TykTechnologies/gromit/util.commit=$(COMMIT)' -X 'github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)'"
 	go mod tidy
