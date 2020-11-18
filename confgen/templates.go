@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	rice "github.com/GeertJohan/go.rice"
@@ -83,6 +84,7 @@ func Must(confPath string, envName string) error {
 	if _, err := os.Stat(confDir); os.IsNotExist(err) {
 		configs := rice.MustFindBox("templates")
 		dashLicense, err := getLicense(dashLicenseFile)
+		dashLicense = strings.TrimSuffix(dashLicense, "\n")
 		if err != nil {
 			return fmt.Errorf("error reading license file %s: %v", dashLicenseFile, err)
 		}

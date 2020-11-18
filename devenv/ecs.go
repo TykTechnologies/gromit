@@ -86,7 +86,7 @@ func getPublicIP(svc ec2iface.ClientAPI, eni string) (string, error) {
 	return "", fmt.Errorf("no public IP")
 }
 
-// UpdateClusterIPs is the entrypoint for CLI
+// UpdateClusterIPs will upsert new DNS records into a Route53 zone
 func UpdateClusterIPs(cluster string, zoneid string, domain string) error {
 	util.StatCount("expose.count", 1)
 	cfg, err := external.LoadDefaultAWSConfig()
