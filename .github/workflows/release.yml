@@ -32,11 +32,11 @@ jobs:
         if: startsWith(github.ref, 'refs/heads/')
         run: git tag $(git describe --tags)
       
-      - name: Build
+      - name: Test build
         uses: goreleaser/goreleaser-action@v2
         with:
           version: latest
-          args: build
+          args: build --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

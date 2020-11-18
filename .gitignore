@@ -12,9 +12,10 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
 /gromit
 .terraform/
 terraform.tfstate
 *.plan
 rice-box.go
+dist/
