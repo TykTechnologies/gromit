@@ -112,9 +112,7 @@ func apply(env string, dir string) {
 
 	terraformExitOnFailure("validate")
 
-	terraformExitOnFailure("plan", "-out=tfplan", fmt.Sprintf("-var-file=%s/%s.tfvars.json", dir, env))
-
-	terraformExitOnFailure("apply", "tfplan")
+	terraformExitOnFailure("apply", "-auto-approve", fmt.Sprintf("-var-file=%s/%s.tfvars.json", dir, env))
 }
 
 func setupTerraformCreds(token string) error {
