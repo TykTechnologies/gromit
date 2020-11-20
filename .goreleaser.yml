@@ -13,7 +13,9 @@ builds:
     goarch:
       - amd64
     ldflags:
-      - -X util.version={{.Version}} -X util.commit={{.Commit}} -X util.buildDate={{.Date}}
+      - -X github.com/TykTechnologies/gromit/util.version={{.Version}}
+      - -X github.com/TykTechnologies/gromit/util.commit={{.Commit}}
+      - -X github.com/TykTechnologies/gromit/util.buildDate={{.Date}}
 
 archives:
 - replacements:
