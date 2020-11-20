@@ -1,19 +1,19 @@
 package cmd
 
 /*
-Copyright © 2020 Tyk technologies
+   Copyright © 2020 Tyk technologies
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 */
 
 import (
@@ -23,19 +23,26 @@ import (
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/terraform"
 	"github.com/TykTechnologies/gromit/util"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 var zoneID, domain, cluster string
+var cfg aws.Config
 
 // clusterCmd is a top level command
 var clusterCmd = &cobra.Command{
 	Use:   "cluster",
 	Short: "Manage cluster of tyk components",
-	Long:  `Set cluster to use via -c flag.`,
+	Long:  `Set cluster to use via -c flag. With no parameters it will list the clusters.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("no top-level functions, see subcommands.")
+		clusters, err := devenv.ListClusters(cfg)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(clusters)
 	},
 }
 
@@ -53,7 +60,7 @@ If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCES
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Info().Str("name", util.Name()).Str("component", "run").Str("version", util.Version()).Msg("starting")
-		terraform.Run(args[0])
+		terraform.Run(cfg, args[0])
 	},
 }
 
@@ -64,9 +71,24 @@ var exposeCmd = &cobra.Command{
 	Long: `Given an ECS cluster, looks for all tasks with a public IP and 
 makes A records in Route53 accessible as <task_name>.<domain>.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := devenv.UpdateClusterIPs(cluster, zoneID, domain)
-		if err != nil {
-			log.Fatal().Err(err).Msgf("Failed to update cluster IPs for %s", cluster)
+		all, _ := cmd.Flags().GetBool("all")
+		if all {
+			clusters, err := devenv.ListClusters(cfg)
+			if err != nil {
+				log.Fatal().Err(err).Msg("could not get list of clusters")
+			}
+			for _, c := range clusters {
+				err := devenv.UpdateClusterIPs(cfg, c, zoneID, domain)
+				if err != nil {
+					log.Error().Err(err).Str("cluster", cluster).Msg("failed to update IPs")
+				}
+			}
+		} else {
+			err := devenv.UpdateClusterIPs(cfg, cluster, zoneID, domain)
+			if err != nil {
+				log.Error().Err(err).Str("cluster", cluster).Msg("failed to update IPs")
+			}
+
 		}
 	},
 }
@@ -87,19 +109,20 @@ func init() {
 	rootCmd.AddCommand(clusterCmd)
 	clusterCmd.PersistentFlags().StringVarP(&cluster, "cluster", "c", os.Getenv("GROMIT_CLUSTER"), "Cluster to be operated on")
 	clusterCmd.PersistentFlags().StringVarP(&zoneID, "zone", "z", "Z02045551IU0LZIOX4AO0", "Route53 zone id to make entries in")
-	clusterCmd.MarkFlagRequired("zone")
 	clusterCmd.PersistentFlags().StringVarP(&domain, "domain", "d", "dev.tyk.technology", "Suffixed to the DNS record to make an FQDN")
-	clusterCmd.MarkFlagRequired("domain")
 
+	exposeCmd.Flags().BoolP("all", "a", false, "All available public IPs in all clusters will be exposed")
 	clusterCmd.AddCommand(runCmd, exposeCmd, tdbCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// clusterCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// clusterCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	var err error
+	// cfg is global
+	cfg, err = external.LoadDefaultAWSConfig()
+	if err != nil {
+		panic(err)
+	}
+	// region, flag, err := external.GetRegion(external.Configs{cfg})
+	// log.Trace().Msgf("got region %v flag: %v, not sure what this is supposed to indicate", region, flag)
+	// if err != nil {
+	// 	log.Error().Err(err).Msg("unable to find region,")
+	// }
 }

@@ -16,7 +16,7 @@ import (
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/server"
 	"github.com/TykTechnologies/gromit/util"
-	"github.com/aws/aws-sdk-go-v2/aws/external"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/zerolog/log"
@@ -124,7 +124,7 @@ func setupTerraformCreds(token string) error {
 }
 
 // Run is the entrypoint from the CLI
-func Run(confPath string) error {
+func Run(cfg aws.Config, confPath string) error {
 	var e server.EnvConfig
 
 	t := time.Now()
@@ -140,10 +140,6 @@ func Run(confPath string) error {
 	}
 	log.Info().Interface("env", e).Msg("loaded env")
 
-	cfg, err := external.LoadDefaultAWSConfig()
-	if err != nil {
-		log.Fatal().Err(err).Msg("unable to load SDK config")
-	}
 	err = setupTerraformCreds(os.Getenv("TF_API_TOKEN"))
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to setup terraform creds")
@@ -197,7 +193,7 @@ func Run(confPath string) error {
 		// os.RemoveAll(tfDir)
 		// Wait for the apply to catch up before looking for IP addresses
 		time.Sleep(1 * time.Minute)
-		err = devenv.UpdateClusterIPs(envName, e.ZoneID, e.Domain)
+		err = devenv.UpdateClusterIPs(cfg, envName, e.ZoneID, e.Domain)
 		if err != nil {
 			log.Error().Err(err).Msgf("could not update IPs for env %s", envName)
 			util.StatCount("expose.failures", 1)

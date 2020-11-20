@@ -3,6 +3,7 @@ package devenv
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -28,7 +29,7 @@ func getClusterTasks(svc ecsiface.ClientAPI, cluster string) ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	log.Trace().Interface("taskarns", result)
+	log.Trace().Interface("taskarns", result).Str("cluster", cluster).Msg("tasks")
 
 	return result.TaskArns, nil
 }
@@ -87,13 +88,8 @@ func getPublicIP(svc ec2iface.ClientAPI, eni string) (string, error) {
 }
 
 // UpdateClusterIPs will upsert new DNS records into a Route53 zone
-func UpdateClusterIPs(cluster string, zoneid string, domain string) error {
+func UpdateClusterIPs(cfg aws.Config, cluster string, zoneid string, domain string) error {
 	util.StatCount("expose.count", 1)
-	cfg, err := external.LoadDefaultAWSConfig()
-	if err != nil {
-		log.Error().Err(err).Msg("unable to load SDK config,")
-		return err
-	}
 	region, flag, err := external.GetRegion(external.Configs{cfg})
 	log.Trace().Msgf("got region flag: %v, not sure what this is supposed to indicate", flag)
 	if err != nil {
@@ -132,4 +128,20 @@ func UpdateClusterIPs(cluster string, zoneid string, domain string) error {
 		log.Info().Msgf("Bound %s to %s", ip, fqdn)
 	}
 	return nil
+}
+
+// ListClusters will return a list running ECS clusters. Just the names.
+func ListClusters(cfg aws.Config) ([]string, error) {
+	svc := ecs.New(cfg)
+	req := svc.ListClustersRequest(&ecs.ListClustersInput{})
+	result, err := req.Send(context.Background())
+	if err != nil {
+		return []string{}, err
+	}
+
+	var clusters []string
+	for _, c := range result.ClusterArns {
+		clusters = append(clusters, strings.Split(c, "/")[1])
+	}
+	return clusters, nil
 }
