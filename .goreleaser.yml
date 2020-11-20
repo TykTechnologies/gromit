@@ -2,8 +2,8 @@
 before:
   hooks:
     - go mod download
-    - go get github.com/GeertJohan/go.rice
     - go get github.com/GeertJohan/go.rice/rice
+    - rice -v embed-go -i ./terraform -i ./confgen
       
 builds:
   -
@@ -13,11 +13,7 @@ builds:
     goarch:
       - amd64
     ldflags:
-      - -X util.version={{ .Version }}
-      - -X util.commit={{ .Commit }}
-      - -X util.buildDate={{ .Date }}
-    hooks:
-      pre: rice -v embed-go -i ./terraform -i ./confgen
+      - -X util.version={{.Version}} -X util.commit={{.Commit}} -X util.buildDate={{.Date}}
 
 archives:
 - replacements:

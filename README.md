@@ -1,3 +1,5 @@
+![Docker build](https://github.com/TykTechnologies/gromit/workflows/Release/badge.svg?branch=master)
+
 # Gromit
 
 This is ostensibly a [cobra](https://github.com/spf13/cobra "cobra cli") app. 
