@@ -178,10 +178,11 @@ func (a *App) newBuild(w http.ResponseWriter, r *http.Request) {
 	// Github sends org/reponame
 	repo := getTrailingElement(newBuild["repo"], "/")
 	// Github sends a path like refs/.../integration/<ref that we want>
-	ref := getTrailingElement(newBuild["ref"], "/")
+	// Removing . from the ref as it will be used as the cluster name and in DNS
+	ref := strings.ReplaceAll(getTrailingElement(newBuild["ref"], "/"), ".", "")
 	sha := newBuild["sha"]
 
-	log.Debug().Msgf("sha %s for repo %s from ref %s", sha, repo, ref)
+	log.Debug().Str("repo", repo).Str("ref", ref).Str("sha", sha).Msg("to be inserted")
 
 	ecrState, err := devenv.GetECRState(a.ECR, a.Env.RegistryID, ref, a.Env.Repos)
 	if err != nil {
