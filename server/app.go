@@ -196,6 +196,8 @@ func (a *App) newBuild(w http.ResponseWriter, r *http.Request) {
 	ecrState[repo] = sha
 	log.Trace().Interface("ecrState", ecrState).Msgf("for ref %s after update", ref)
 
+	// Set state so that the runner will pick this up
+	ecrState[devenv.STATE] = devenv.NEW
 	err = devenv.UpsertEnv(a.DB, a.Env.TableName, ref, ecrState)
 	if err != nil {
 		util.StatCount("newbuild.failures", 1)
@@ -256,7 +258,7 @@ func (a *App) updateEnv(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Debug().Interface("env", newEnv).Msgf("update for %s received", env)
 
-	err = devenv.UpsertEnv(a.DB, a.Env.TableName, vars["name"], newEnv)
+	err = devenv.UpsertEnv(a.DB, a.Env.TableName, env, newEnv)
 	if err != nil {
 		if ierr, ok := err.(devenv.ExistsError); ok {
 			respondWithError(w, http.StatusConflict, ierr.Error())

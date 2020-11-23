@@ -20,6 +20,8 @@ const (
 	NAME = "name"
 	// NEW is the state when an env is new
 	NEW = "new"
+	// PROCESSED is the state when an env has been processed by the runner
+	PROCESSED = "processed"
 )
 
 // DevEnv is a tyk env on the dev env. This is not a type because
@@ -261,8 +263,6 @@ func InsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap De
 func UpsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap DevEnv) error {
 	// Remove key elements from the map as updates will fail
 	delete(stateMap, NAME)
-	// Reset the state so that the runner will pick it up
-	stateMap[STATE] = NEW
 
 	update := expression.UpdateBuilder{}
 	for k, v := range stateMap {

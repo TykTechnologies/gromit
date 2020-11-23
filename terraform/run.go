@@ -145,7 +145,8 @@ func Run(cfg aws.Config, confPath string) error {
 		log.Fatal().Err(err).Msg("unable to setup terraform creds")
 	}
 
-	envs, err := devenv.GetNewEnvs(dynamodb.New(cfg), e.TableName, e.Repos)
+	db := dynamodb.New(cfg)
+	envs, err := devenv.GetNewEnvs(db, e.TableName, e.Repos)
 	if err != nil {
 		log.Fatal().Err(err).Msgf("could not get new envs from table %s", e.TableName)
 	}
@@ -199,6 +200,12 @@ func Run(cfg aws.Config, confPath string) error {
 			util.StatCount("expose.failures", 1)
 			lastError = err
 			continue
+		}
+		// Mark env processed so that the runner will not pick it up
+		env[devenv.STATE] = devenv.PROCESSED
+		err = devenv.UpsertEnv(db, e.TableName, envName, env)
+		if err != nil {
+			log.Error().Err(err).Str("env", envName).Msg("could not mark env as PROCESSED")
 		}
 	}
 	return lastError
