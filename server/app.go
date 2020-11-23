@@ -259,6 +259,7 @@ func (a *App) updateEnv(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Debug().Interface("env", newEnv).Msgf("update for %s received", env)
 
+	newEnv[devenv.STATE] = devenv.NEW
 	err = devenv.UpsertEnv(a.DB, a.Env.TableName, env, newEnv)
 	if err != nil {
 		if ierr, ok := err.(devenv.ExistsError); ok {

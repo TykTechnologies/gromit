@@ -171,6 +171,20 @@ func TestNewBuild(t *testing.T) {
 			HTTPMethod:   "GET",
 		},
 		{
+			Name:       "BranchWithDots",
+			Endpoint:   "/newbuild",
+			HTTPStatus: http.StatusOK,
+			Payload:    `{"repo":"tyk-pump","ref":"release-3.1.0","sha":"sha-pump"}`,
+			HTTPMethod: "POST",
+		},
+		{
+			Name:         "CheckBranchWithDots",
+			Endpoint:     "/env/release-310",
+			HTTPStatus:   http.StatusOK,
+			ResponseJSON: `{"name":"release-310","state":"new","tyk":"master","tyk-analytics":"master","tyk-pump":"sha-pump"}`,
+			HTTPMethod:   "GET",
+		},
+		{
 			Name:       "GHStyleGateway",
 			Endpoint:   "/newbuild",
 			HTTPStatus: http.StatusOK,
