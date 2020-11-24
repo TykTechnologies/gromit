@@ -178,8 +178,7 @@ func (a *App) newBuild(w http.ResponseWriter, r *http.Request) {
 	// Github sends org/reponame
 	repo := getTrailingElement(newBuild["repo"], "/")
 	// Github sends a path like refs/.../integration/<ref that we want>
-	// Removing . from the ref as it will be used as the cluster name and in DNS
-	ref := strings.ReplaceAll(getTrailingElement(newBuild["ref"], "/"), ".", "")
+	ref := getTrailingElement(newBuild["ref"], "/")
 	sha := newBuild["sha"]
 
 	log.Debug().Str("repo", repo).Str("ref", ref).Str("sha", sha).Msg("to be inserted")
@@ -199,6 +198,8 @@ func (a *App) newBuild(w http.ResponseWriter, r *http.Request) {
 
 	// Set state so that the runner will pick this up
 	ecrState[devenv.STATE] = devenv.NEW
+	// Removing . from the ref as it will be used as the cluster name and in DNS
+	ref = strings.ReplaceAll(ref, ".", "")
 	err = devenv.UpsertEnv(a.DB, a.Env.TableName, ref, ecrState)
 	if err != nil {
 		util.StatCount("newbuild.failures", 1)
