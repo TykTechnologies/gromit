@@ -1,4 +1,4 @@
-![Docker build](https://github.com/TykTechnologies/gromit/workflows/Release/badge.svg?branch=master)
+![Release](https://github.com/TykTechnologies/gromit/workflows/Release/badge.svg?branch=master)
 
 # Gromit
 
