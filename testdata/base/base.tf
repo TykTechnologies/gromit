@@ -26,9 +26,6 @@ locals {
   }
 }
 
-# This is exported in outputs.tf
-data "aws_region" "current" {}
-
 resource "aws_ecr_repository" "integration" {
   for_each = toset(local.tyk_repos)
   
@@ -41,50 +38,3 @@ resource "aws_ecr_repository" "integration" {
 
   tags = local.common_tags
 }
-
-resource "aws_ecr_lifecycle_policy" "retain_2w" {
-  for_each = toset(local.tyk_repos)
-
-  repository = each.key
-
-  policy = <<EOF
-{
-    "rules": [
-        {
-            "rulePriority": 1,
-            "description": "Expire untagged images older than 1 week",
-            "selection": {
-                "tagStatus": "untagged",
-                "countType": "sinceImagePushed",
-                "countUnit": "days",
-                "countNumber": 7
-            },
-            "action": {
-                "type": "expire"
-            }
-        },
-        {
-            "rulePriority": 2,
-            "description": "Expire all images older than 2 weeks",
-            "selection": {
-                "tagStatus": "any",
-                "countType": "sinceImagePushed",
-                "countUnit": "days",
-                "countNumber": 14
-            },
-            "action": {
-                "type": "expire"
-            }
-        }
-    ]
-}
-EOF
-}
-
-# terraform apply -target=null_resource.debug will show the rendered template
-# resource "null_resource" "debug" {
-#   triggers = {
-#     json = "${data.template_file.tyk_repo_access.rendered}"
-#   }
-# }
-
