@@ -52,7 +52,8 @@ jobs:
         run: |
           rm -rf scerts ccerts
           cd testdata/base
-          terraform destroy -auto-approve 
+          # Not deleting allow concurrent runs of this workflow
+          #terraform destroy -auto-approve 
         
       - name: Login to DockerHub
         if: startsWith(github.ref, 'refs/tags/')

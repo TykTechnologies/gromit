@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/spf13/cobra"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -36,7 +36,7 @@ var logLevel string
 var rootCmd = &cobra.Command{
 	Use:   "gromit",
 	Short: "The glue that binds AWS Fargate, Github and DynamoDB",
-	Long: `The subcommands run as services and scheduled tasks in the internal cluster.
+	Long: `It also has a grab bag of various ops automation.
 Global env vars:
 These vars apply to all commands
 GROMIT_TABLENAME DynamoDB tablename to use for env state
@@ -65,28 +65,28 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "conf", "", "config file (default is $HOME/.gromit.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "conf", "", "config file (default is $HOME/.config/gromit.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "info", "Log verbosity: trace, info, warn, error")
 
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	appName := util.Name()
+	viper.AddConfigPath(fmt.Sprintf("/etc/%s", appName))
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+
+	// Default config path
+	var confPath = fmt.Sprintf("$HOME/.config/%s", appName)
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		// Search config in home directory with name ".gromit" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".gromit")
+	} else if xdgHome := os.Getenv("XDG_CONFIG_HOME"); xdgHome != "" {
+		confPath = fmt.Sprintf("$XDG_CONFIG_HOME/%s", appName)
 	}
+	viper.AddConfigPath(confPath)
+	viper.Set("confpath", confPath)
 
 	ll, err := zerolog.ParseLevel(logLevel)
 	if err != nil {
@@ -99,6 +99,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.Debug().Str("file", viper.ConfigFileUsed()).Msg("reading config from")
 	}
 }
