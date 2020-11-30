@@ -1,0 +1,5 @@
+env:
+  ccerts:
+    ca: ../ca.pem
+    key: ccerts/key.pem
+    cert: ccerts/cert.pem

@@ -1,0 +1,5 @@
+{
+    "tyk": "gw-sha",
+    "tyk-analytics": "db-sha",
+    "tyk-pump": "pump-sha"
+}

@@ -10,7 +10,6 @@ require (
 	github.com/go-redis/redis/v8 v8.0.0-beta.10
 	github.com/gorilla/mux v1.7.4
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mongodb/mongo-tools v0.0.0-20200911144454-4ba3e828ed5c
 	github.com/mongodb/mongo-tools-common v4.0.6+incompatible
 	github.com/rs/zerolog v1.19.0

@@ -12,6 +12,7 @@ import (
 
 // dest is always treated as a directory name
 // copyBoxToDir() will skip a .terraform dir, if found
+//go:generate rice embed-go -v
 func copyBoxToDir(b *rice.Box, boxPath string, dest string) error {
 	boxFile, err := b.Open(boxPath)
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 
@@ -106,6 +107,15 @@ func (a *App) Run(addr string, cert string, key string) {
 	if err := server.ListenAndServeTLS(cert, key); err != nil && err != http.ErrServerClosed {
 		log.Fatal().Err(err).Msg("Server startup failed")
 	}
+}
+
+// Test returns a local server suitable for testing, remember to close it
+func (a *App) Test(cert string, key string) *httptest.Server {
+	log.Info().Msg("starting test server")
+	server := httptest.NewUnstartedServer(nil)
+	server.TLS = a.tlsConfig
+	server.Config.Handler = a.Router
+	return server
 }
 
 func (a *App) initRoutes() {

@@ -2,10 +2,29 @@
 
 # Gromit
 
-This is ostensibly a [cobra](https://github.com/spf13/cobra "cobra cli") app. 
+## Installation
+Install from the [releases]() page. To keep up with releases using [zinit](https://github.com/zdharma/zinit) in turbo mode, 
 
+``` shell
+zinit wait lucid from"gh-r" nocompile for \
+      bpick"*Linux_x86_64.tar.gz" TykTechnologies/gromit
+```
+## Configuration
+This is ostensibly a [cobra](https://github.com/spf13/cobra "cobra cli") app and can be configured with a config file to save a bunch of typing. A sample `gromit.yaml` file looks like:
+
+``` yaml
+env:
+  ccerts:
+    ca: ccerts/ca.pem
+    key: ccerts/key.pem
+    cert: ccerts/cert.pem
+  authtoken: supersekret
+
+```
+## Features
 ``` shellsession
-The subcommands run as services and scheduled tasks in the internal cluster.
+% gromit help
+It also has a grab bag of various ops automation.
 Global env vars:
 These vars apply to all commands
 GROMIT_TABLENAME DynamoDB tablename to use for env state
@@ -15,38 +34,25 @@ Usage:
   gromit [command]
 
 Available Commands:
-  client      Interact with the gromit server
-  expose      Upsert a record in Route53 for the given ECS cluster
+  cluster     Manage cluster of tyk components
+  env         Mess about with the env state
   help        Help about any command
-  redis       Dump redis keys to files
-  run         Process envs from GROMIT_TABLENAME
+  licenser    Get a trial license and writes it to path, overwriting it.
+  orgs        Dump/restore org keys and mongodb
   serve       Run endpoint for github requests
+  version     Print version
 
 Flags:
-      --gconf string   config file (default is $HOME/.gromit.yaml)
-  -h, --help           help for gromit
-  -t, --toggle         Help message for toggle
+      --conf string       config file (default is $HOME/.config/gromit.yaml)
+  -h, --help              help for gromit
+  -l, --loglevel string   Log verbosity: trace, info, warn, error (default "info")
 
 Use "gromit [command] --help" for more information about a command.
 ```
 
-## Server
+## Testing
+Only system tests exist and these will exercise most of the AWS API code. `make test` runs the tests and requires access to the [Engg PoC](https://046805072452/signing/aws/amazon.com/console/) AWS account.
 
-This runs at `gromit.dev.tyk.technology` and listens for the requests that come in from the [int-images](https://github.com/TykTechnologies/tyk-ci/blob/master/wf-gen/int-image.yml.m4 "integration images") Github Actions.
+The tests depend on ECR repos being present. These repos are also used by the CI workflow whose badge is at the top of this README. If you need to create the repos for whatever reason, you can do so by running terraform in <testdata/base>. 
 
-```shellsession
-% ./gromit serve --help
-Runs an HTTPS server, bound to 443 that can be accesses only via mTLS. 
-
-This endpoint is notified by the int-image workflows in the various repos when there is a new build
-
-Usage:
-  gromit serve [flags]
-
-Flags:
-      --certpath string   path to rootca and key pair. Expects files named ca.pem, server(-key).pem (default "certs")
-  -h, --help              help for serve
-
-Global Flags:
-      --config string   config file (default is $HOME/.gromit.yaml)
-```
+If your AWS account does not have the power to run the tests, please post in #devops.

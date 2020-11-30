@@ -29,7 +29,7 @@ dockers:
       - gromit
     image_templates:
       - "tykio/gromit:latest"
-      - "tykio/gromit:{{ .Tag }}"
+      - "tykio/gromit:{{.Tag}}"
       
 changelog:
   sort: asc

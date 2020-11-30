@@ -5,7 +5,7 @@ var (
 	version   = "known at build time"
 	commit    = "known at build time"
 	buildDate = "known at build time"
-	name      = "Gromit"
+	name      = "gromit"
 )
 
 func Version() string {

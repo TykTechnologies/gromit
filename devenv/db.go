@@ -24,12 +24,6 @@ const (
 	PROCESSED = "processed"
 )
 
-// DevEnv is a tyk env on the dev env. This is not a type because
-// changes in repos lists will require a change in the type since this
-// type would contain a list of repos. By using a map, we trade type
-// checking of the state for flexibility in adding and removing repos.
-type DevEnv map[string]interface{}
-
 // EnsureTableExists creates a PAY_PER_REQUEST DynamoDB table. If the
 // table already exists, it is not re-created nor is an error raised.
 // Will create the table if ResourceNotFound is received

@@ -20,6 +20,7 @@ type templateVars struct {
 
 // dest is always treated as a directory name
 // makeConfigTree() will walk the box, passing files through a template renderer
+//go:generate rice embed-go -v
 func makeConfigTree(b *rice.Box, boxPath string, dest string, tVars templateVars) error {
 	boxFile, err := b.Open(boxPath)
 	if err != nil {
