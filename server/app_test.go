@@ -13,12 +13,18 @@ import (
 
 var a App
 
+// setup environment for the test run and cleanup after
 func TestMain(m *testing.M) {
 	os.Setenv("GROMIT_TABLENAME", "GromitTest")
 	os.Setenv("GROMIT_REPOS", "tyk,tyk-analytics,tyk-pump")
 	os.Setenv("GROMIT_REGISTRYID", "046805072452")
-	a.Init("../ccerts/ca.pem")
+	os.Setenv("XDG_CONFIG_HOME", "../testdata")
+	a.Init("../testdata/ca.pem")
+	ts := a.Test("../testdata/scerts/cert.pem", "../testdata/scerts/key.pem")
+	defer ts.Close()
+
 	code := m.Run()
+
 	devenv.DeleteTable(a.DB, "GromitTest")
 	os.Exit(code)
 }
@@ -153,8 +159,6 @@ func TestNegatives(t *testing.T) {
 }
 
 func TestNewBuild(t *testing.T) {
-	// Use this formulation of sub-tests when ordering matters
-	// GetLoglvl below works because InfoLvl has set it
 	cases := []APITestCase{
 		{
 			Name:       "PlainPump",

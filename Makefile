@@ -6,11 +6,15 @@ BUILD_DATE := $(shell date +%FT%T%z)
 CONF_VOL := testdata
 
 gromit: */*.go
-	find . -name rice-box.go | xargs rm -fv
-	rice -v embed-go -i ./terraform -i ./confgen
+	go generate ./terraform ./confgen
 	go build -v -trimpath -ldflags "-X 'github.com/TykTechnologies/gromit/util.version=$(VERSION)' -X 'github.com/TykTechnologies/gromit/util.commit=$(COMMIT)' -X 'github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)'"
 	go mod tidy
 #	sudo setcap 'cap_net_bind_service=+ep' $(@)
+
+test:
+	test -n "$(AWS_ACCESS_KEY_ID)"
+	(cd testdata/base && terraform init && terraform apply -auto-approve)
+	go test ./... -p 1
 
 grun: clean
 	docker build -t $(@) . && docker run --rm --name $(@) \
@@ -38,6 +42,7 @@ gserve: clean
 	grun serve
 
 clean:
+	find . -name rice-box.go | xargs rm -fv
 	rm -fv gromit
 
 .PHONY: grun gserve clean

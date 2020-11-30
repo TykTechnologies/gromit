@@ -1,5 +1,11 @@
 package devenv
 
+// DevEnv is a tyk env on the dev env. This is not a strict type because
+// changes in repos lists will require a change in the type since this
+// type would contain a list of repos. By using a map, we trade type
+// checking of the state for flexibility in adding and removing repos.
+type DevEnv map[string]interface{}
+
 type baseError struct {
 	Thing string
 }

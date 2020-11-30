@@ -19,6 +19,7 @@ limitations under the License.
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/spf13/cobra"
@@ -73,17 +74,18 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	appName := util.Name()
-	viper.AddConfigPath(fmt.Sprintf("/etc/%s", appName))
+	viper.AddConfigPath(fmt.Sprintf("/conf/%s", appName))
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 
 	// Default config path
-	var confPath = fmt.Sprintf("$HOME/.config/%s", appName)
+	var confPath = fmt.Sprintf("%s/.config/%s", os.Getenv("HOME"), appName)
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
+		confPath = filepath.Dir(cfgFile)
 	} else if xdgHome := os.Getenv("XDG_CONFIG_HOME"); xdgHome != "" {
-		confPath = fmt.Sprintf("$XDG_CONFIG_HOME/%s", appName)
+		confPath = fmt.Sprintf("%s/%s", xdgHome, appName)
 	}
 	viper.AddConfigPath(confPath)
 	viper.Set("confpath", confPath)
