@@ -7,7 +7,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/server"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,7 +43,6 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	devenv.DeleteTable(a.DB, "GromitTest")
 	os.Exit(code)
 }
 

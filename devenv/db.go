@@ -22,6 +22,8 @@ const (
 	NEW = "new"
 	// PROCESSED is the state when an env has been processed by the runner
 	PROCESSED = "processed"
+	// DELETED is when at least one of the branches for this env have been deleted
+	DELETED = "deleted"
 )
 
 // EnsureTableExists creates a PAY_PER_REQUEST DynamoDB table. If the
@@ -317,7 +319,7 @@ func UpsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap De
 	return nil
 }
 
-// DeleteEnv will blindly delete the given env
+// DeleteEnv will blindly delete the env
 func DeleteEnv(db dynamodbiface.ClientAPI, table string, env string) error {
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]dynamodb.AttributeValue{
@@ -330,18 +332,18 @@ func DeleteEnv(db dynamodbiface.ClientAPI, table string, env string) error {
 
 	req := db.DeleteItemRequest(input)
 	result, err := req.Send(context.Background())
-	log.Trace().Interface("result", result).Msgf("result from deleting %s", env)
+	log.Trace().Interface("result", result).Str("env", env).Msg("result from deleting")
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case dynamodb.ErrCodeResourceNotFoundException:
-				log.Warn().Msgf("env %s not found, doing nothing as a delete was called.", table)
+				log.Warn().Str("env", env).Str("table", table).Msg("not found, doing nothing as a delete was called.")
 			case dynamodb.ErrCodeRequestLimitExceeded:
-				log.Error().Err(aerr).Msgf("request limit exceeded for table %s", table)
+				log.Error().Err(aerr).Str("table", table).Msg("request limit exceeded")
 			case dynamodb.ErrCodeInternalServerError:
 				log.Error().Err(aerr).Msg("ISE from AWS, please implement retry if appropriate")
 			default:
-				log.Error().Err(aerr).Msgf("error deleting %s from %s", env, table)
+				log.Error().Err(aerr).Str("env", env).Str("table", table).Msgf("could not delete")
 			}
 		}
 		return err

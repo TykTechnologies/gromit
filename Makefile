@@ -14,7 +14,7 @@ gromit: */*.go
 test:
 	test -n "$(AWS_ACCESS_KEY_ID)"
 	(cd testdata/base && terraform init && terraform apply -auto-approve)
-	go test ./... -p 1
+	go test ./...
 
 grun: clean
 	docker build -t $(@) . && docker run --rm --name $(@) \

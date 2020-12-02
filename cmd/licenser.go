@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// token is the endpoint auth, defaults to LICENSER_TOKEN
+// token is the endpoint auth, defaults to GROMIT_LICENSER_TOKEN
 var token string
 
 // baseURL is the product agnostic part of the endpoint
@@ -36,8 +36,8 @@ var baseURL string
 // licenserCmd represents the client command
 var licenserCmd = &cobra.Command{
 	Use:   "licenser [flags] <mdcb-trial|dash-trial> <path>",
-	Short: "Get a trial license and writes it to path, overwriting it.",
-	Long: `Uses the Tyk gateway in the internal k8s cluster. This is the same endpoint that the /*-trial commands use.
+	Short: "Get a trial license and writes it to path, overwriting it",
+	Long: `Uses the Tyk gateway in the internal k8s cluster. This is the same endpoint that the /*-trial commands use and needs the auth token in GROMIT_LICENSER_TOKEN
 Supports:
 - dashboard
 - mdcb`,
@@ -62,5 +62,5 @@ Supports:
 func init() {
 	rootCmd.AddCommand(licenserCmd)
 	licenserCmd.PersistentFlags().StringVarP(&baseURL, "baseurl", "b", "https://bots.cluster.internal.tyk.technology/license-bot/", "base url for the licenser endpoint")
-	licenserCmd.PersistentFlags().StringVarP(&token, "token", "t", os.Getenv("LICENSER_TOKEN"), "Auth token")
+	licenserCmd.PersistentFlags().StringVarP(&token, "token", "t", os.Getenv("GROMIT_LICENSER_TOKEN"), "Auth token")
 }

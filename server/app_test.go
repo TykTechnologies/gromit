@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +24,6 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	devenv.DeleteTable(a.DB, "GromitTest")
 	os.Exit(code)
 }
 
@@ -164,14 +162,14 @@ func TestNewBuild(t *testing.T) {
 			Name:       "PlainPump",
 			Endpoint:   "/newbuild",
 			HTTPStatus: http.StatusOK,
-			Payload:    `{"repo":"tyk-pump","ref":"test","sha":"sha-pump"}`,
+			Payload:    `{"repo":"tyk-pump","ref":"app-test","sha":"sha-pump"}`,
 			HTTPMethod: "POST",
 		},
 		{
 			Name:         "CheckPlainPump",
-			Endpoint:     "/env/test",
+			Endpoint:     "/env/app-test",
 			HTTPStatus:   http.StatusOK,
-			ResponseJSON: `{"name":"test","state":"new","tyk":"master","tyk-analytics":"master","tyk-pump":"sha-pump"}`,
+			ResponseJSON: `{"name":"app-test","state":"new","tyk":"master","tyk-analytics":"master","tyk-pump":"sha-pump"}`,
 			HTTPMethod:   "GET",
 		},
 		{
@@ -192,28 +190,28 @@ func TestNewBuild(t *testing.T) {
 			Name:       "GHStyleGateway",
 			Endpoint:   "/newbuild",
 			HTTPStatus: http.StatusOK,
-			Payload:    `{"repo":"TykTechnologies/tyk","ref":"refs/heads/integration/test","sha":"sha-gw"}`,
+			Payload:    `{"repo":"TykTechnologies/tyk","ref":"refs/heads/integration/app-test","sha":"sha-gw"}`,
 			HTTPMethod: "POST",
 		},
 		{
 			Name:         "CheckGHStyleGateway",
-			Endpoint:     "/env/test",
+			Endpoint:     "/env/app-test",
 			HTTPStatus:   http.StatusOK,
-			ResponseJSON: `{"name":"test","state":"new","tyk":"sha-gw","tyk-analytics":"master","tyk-pump":"master"}`,
+			ResponseJSON: `{"name":"app-test","state":"new","tyk":"sha-gw","tyk-analytics":"master","tyk-pump":"master"}`,
 			HTTPMethod:   "GET",
 		},
 		{
 			Name:       "URLEncGHStyleDashboard",
 			Endpoint:   "/newbuild",
 			HTTPStatus: http.StatusOK,
-			Payload:    `{"repo":"TykTechnologies%2Ftyk-analytics","ref":"refs%2Fheads%2Fintegration%2Ftest","sha":"sha-db"}`,
+			Payload:    `{"repo":"TykTechnologies%2Ftyk-analytics","ref":"refs%2Fheads%2Fintegration%2Fapp-test","sha":"sha-db"}`,
 			HTTPMethod: "POST",
 		},
 		{
 			Name:         "CheckURLEncStyleDashboard",
-			Endpoint:     "/env/test",
+			Endpoint:     "/env/app-test",
 			HTTPStatus:   http.StatusOK,
-			ResponseJSON: `{"name":"test","state":"new","tyk":"master","tyk-analytics":"sha-db","tyk-pump":"master"}`,
+			ResponseJSON: `{"name":"app-test","state":"new","tyk":"master","tyk-analytics":"sha-db","tyk-pump":"master"}`,
 			HTTPMethod:   "GET",
 		},
 	}

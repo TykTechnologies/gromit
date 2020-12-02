@@ -224,9 +224,9 @@ func (a *App) newBuild(w http.ResponseWriter, r *http.Request) {
 
 // ReST API for /env
 
-// TODO Implement listing of all environments
+// TODO: Implement listing of all environments
 func (a *App) getEnvs(w http.ResponseWriter, r *http.Request) {
-	return
+	respondWithError(w, http.StatusNotImplemented, "Not implemented")
 }
 
 func (a *App) createEnv(w http.ResponseWriter, r *http.Request) {

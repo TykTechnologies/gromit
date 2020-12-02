@@ -9,8 +9,6 @@ terraform {
 }
 
 provider "aws" {
-  # 3.0.0 seems to have bug in fetching the ecs iam role
-  #version = "= 2.70"
   region  = data.terraform_remote_state.base.outputs.region
 }
 
