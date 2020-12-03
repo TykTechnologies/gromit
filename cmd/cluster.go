@@ -19,6 +19,7 @@ http://www.apache.org/licenses/LICENSE-2.0
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/terraform"
@@ -64,6 +65,34 @@ If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCES
 	},
 }
 
+// fastDNSUpdate updates the DNS for all the clusters concurrently
+func fastDNSUpdate(clusters []string) {
+	var wg sync.WaitGroup
+	errChan := make(chan error)
+
+	for _, c := range clusters {
+		c := c
+		wg.Add(1)
+		go func() {
+			err := devenv.UpdateClusterIPs(cfg, c, zoneID, domain)
+			if err != nil {
+				errChan <- err
+			}
+			wg.Done()
+		}()
+	}
+
+	// Wait to close waitgroup
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
+
+	for err := range errChan {
+		log.Error().Err(err).Msg("dns update")
+	}
+}
+
 // exposeCmd adds r53 entries for ECS clusters
 var exposeCmd = &cobra.Command{
 	Use:   "expose",
@@ -77,12 +106,7 @@ makes A records in Route53 accessible as <task_name>.<domain>.`,
 			if err != nil {
 				log.Fatal().Err(err).Msg("could not get list of clusters")
 			}
-			for _, c := range clusters {
-				err := devenv.UpdateClusterIPs(cfg, c, zoneID, domain)
-				if err != nil {
-					log.Error().Err(err).Str("cluster", cluster).Msg("failed to update IPs")
-				}
-			}
+			fastDNSUpdate(clusters)
 		} else {
 			err := devenv.UpdateClusterIPs(cfg, cluster, zoneID, domain)
 			if err != nil {
