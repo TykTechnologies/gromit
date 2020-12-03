@@ -1,28 +1,34 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/stretchr/testify/require"
 )
 
 var a App
 
+const tableName = "GromitAPITest"
+
 // setup environment for the test run and cleanup after
 func TestMain(m *testing.M) {
-	os.Setenv("GROMIT_TABLENAME", "GromitTest")
+	os.Setenv("GROMIT_TABLENAME", tableName)
 	os.Setenv("GROMIT_REPOS", "tyk,tyk-analytics,tyk-pump")
 	os.Setenv("GROMIT_REGISTRYID", "046805072452")
 	os.Setenv("XDG_CONFIG_HOME", "../testdata")
 	a.Init("../testdata/ca.pem")
-	ts := a.Test("../testdata/scerts/cert.pem", "../testdata/scerts/key.pem")
-	defer ts.Close()
 
 	code := m.Run()
+	err := devenv.DeleteTable(a.DB, tableName)
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	os.Exit(code)
 }
@@ -36,6 +42,14 @@ type APITestCase struct {
 	ResponseJSON  string
 	HTTPMethod    string
 	RequestParams string
+}
+
+// executeMockRequest will make a mock http request
+func executeMockRequest(req *http.Request) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	a.Router.ServeHTTP(rr, req)
+
+	return rr
 }
 
 func TestInfraURLs(t *testing.T) {
@@ -222,7 +236,7 @@ func runSubTests(t *testing.T, cases []APITestCase) {
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			req, _ := http.NewRequest(tc.HTTPMethod, tc.Endpoint, strings.NewReader(tc.Payload))
-			response := executeRequest(req)
+			response := executeMockRequest(req)
 
 			checkResponseCode(t, tc.HTTPStatus, response.Code)
 
@@ -234,13 +248,6 @@ func runSubTests(t *testing.T, cases []APITestCase) {
 			}
 		})
 	}
-}
-
-func executeRequest(req *http.Request) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	a.Router.ServeHTTP(rr, req)
-
-	return rr
 }
 
 func checkResponseCode(t *testing.T, expected, actual int) {

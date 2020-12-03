@@ -11,9 +11,13 @@ gromit: */*.go
 	go mod tidy
 #	sudo setcap 'cap_net_bind_service=+ep' $(@)
 
-test:
-	test -n "$(AWS_ACCESS_KEY_ID)"
-	(cd testdata/base && terraform init && terraform apply -auto-approve)
+testdata: testdata/base/*
+	[[ $CI ]] || test -n "$(AWS_PROFILE)"
+	cd testdata/base
+	terraform init
+	terraform apply -auto-approve
+
+test:	testdata
 	go test ./...
 
 grun: clean

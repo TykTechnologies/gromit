@@ -115,6 +115,7 @@ func (a *App) Test(cert string, key string) *httptest.Server {
 	server := httptest.NewUnstartedServer(nil)
 	server.TLS = a.tlsConfig
 	server.Config.Handler = a.Router
+	server.Start()
 	return server
 }
 
