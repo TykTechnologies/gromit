@@ -4,22 +4,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
 	"time"
 
 	rice "github.com/GeertJohan/go.rice"
-	"github.com/TykTechnologies/gromit/confgen"
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/server"
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/zerolog/log"
 )
 
-// Run is an entrypoint from the CLI
-func Run(confPath string) error {
+// Reap is the entrypoint from the CLI
+func Reap(confPath string) error {
 	var e server.EnvConfig
 	// Read env vars prefixed by GROMIT_
 	err := envconfig.Process("gromit", &e)
@@ -30,17 +29,16 @@ func Run(confPath string) error {
 
 	t := time.Now()
 	defer func() {
-		util.StatTime("run.timetaken", time.Since(t))
+		util.StatTime("reap.timetaken", time.Since(t))
 	}()
 
-	util.StatCount("run.count", 1)
+	util.StatCount("reap.count", 1)
 	if token := os.Getenv("TF_API_TOKEN"); len(token) > 0 {
 		err = terraformCreds(token)
 		if err != nil {
-			util.StatCount("run.failures", 1)
+			util.StatCount("reap.failures", 1)
 			log.Fatal().Err(err).Str("confPath", confPath).Msg("could not write tf creds")
 		}
-
 	}
 	cfg, err := external.LoadDefaultAWSConfig()
 	if err != nil {
@@ -48,58 +46,56 @@ func Run(confPath string) error {
 	}
 
 	db := dynamodb.New(cfg)
-	envs, err := devenv.GetEnvsByState(db, e.TableName, devenv.NEW, e.Repos)
+	envs, err := devenv.GetEnvsByState(db, e.TableName, devenv.DELETED, e.Repos)
 	if err != nil {
-		log.Fatal().Err(err).Msgf("could not get new envs from table %s", e.TableName)
+		log.Fatal().Err(err).Str("state", devenv.DELETED).Str("table", e.TableName).Msg("could not get envs")
 	}
-	util.StatGauge("run.nenvs", len(envs))
-
-	procSentinelFile := filepath.Join(confPath, "noprocess")
-	if _, err := os.Stat(procSentinelFile); !os.IsNotExist(err) {
-		return fmt.Errorf("%s exists", procSentinelFile)
-	}
-	log.Trace().Str("sentinelfile", procSentinelFile).Msg("not found")
+	util.StatGauge("reap.nenvs", len(envs))
 
 	var lastError error = nil
 	for _, env := range envs {
-		log.Info().Interface("env", env).Msg("processing")
+		log.Info().Interface("env", env).Msg("deleting")
 		envName := env[devenv.NAME].(string)
 		envTime := time.Now()
 		defer func() {
-			util.StatTime(fmt.Sprintf("run.%s.timetaken", envName), time.Since(envTime))
+			util.StatTime(fmt.Sprintf("reap.%s.timetaken", envName), time.Since(envTime))
 		}()
 
-		err := confgen.Must(confPath, envName)
+		err := os.RemoveAll(filepath.Join(confPath, envName))
 		if err != nil {
-			util.StatCount("run.failures", 1)
-			log.Error().Err(err).Msgf("could not create config tree for env %s", envName)
+			util.StatCount("reap.failures", 1)
+			log.Error().Err(err).Str("env", envName).Msg("could not delete config tree")
 			continue
 		}
 		// go.rice only works with string literals
 		devManifest := rice.MustFindBox("devenv")
 		tfDir, err := deployManifest(devManifest, envName)
 		if err != nil {
-			util.StatCount("run.failures", 1)
+			util.StatCount("reap.failures", 1)
 			log.Error().Err(err).Msgf("could not deploy manifest for env %s", envName)
 			lastError = err
 			continue
 		}
 		err = makeInputVarfile(tfDir, env)
 		if err != nil {
-			util.StatCount("run.failures", 1)
+			util.StatCount("reap.failures", 1)
 			log.Error().Err(err).Msgf("could not write input file for env %s", envName)
 			lastError = err
 			continue
 		}
-		doTFCmd("apply", envName, tfDir)
-		// os.RemoveAll(tfDir)
-		// Wait for the apply to catch up before looking for IP addresses
-		time.Sleep(1 * time.Minute)
-		// Mark env processed so that the runner will not pick it up
-		env[devenv.STATE] = devenv.PROCESSED
-		err = devenv.UpsertEnv(db, e.TableName, envName, env)
+		gc, err := devenv.GetGromitCluster(envName)
 		if err != nil {
-			log.Error().Err(err).Str("env", envName).Msg("could not mark env as PROCESSED")
+			log.Error().Err(err).Str("env", envName).Msg("could not fetch cluster from ecs")
+			util.StatCount("expose.failures", 1)
+			lastError = err
+			continue
+		}
+		err = gc.SyncDNS(route53.ChangeActionDelete, e.ZoneID, e.Domain)
+
+		doTFCmd("destroy", envName, tfDir)
+		err = devenv.DeleteEnv(db, e.TableName, envName)
+		if err != nil {
+			log.Error().Err(err).Str("env", envName).Msg("could not delete")
 		}
 	}
 	return lastError

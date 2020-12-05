@@ -351,10 +351,10 @@ func DeleteEnv(db dynamodbiface.ClientAPI, table string, env string) error {
 	return nil
 }
 
-// GetNewEnvs will fetch all envs with state==NEW from the DB
+// GetEnvsByState will fetch all envs in the supplied state from the DB
 // Only attribute names matching the list in repos will be fetched
-func GetNewEnvs(db dynamodbiface.ClientAPI, table string, repos []string) ([]DevEnv, error) {
-	filt := expression.Name(STATE).Equal(expression.Value(NEW))
+func GetEnvsByState(db dynamodbiface.ClientAPI, table string, state string, repos []string) ([]DevEnv, error) {
+	filt := expression.Name(STATE).Equal(expression.Value(state))
 
 	proj := expression.NamesList(expression.Name(NAME))
 	for _, r := range repos {

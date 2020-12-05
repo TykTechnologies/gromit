@@ -3,7 +3,7 @@
 # Gromit
 
 ## Installation
-Install from the [releases]() page. To keep up with releases using [zinit](https://github.com/zdharma/zinit) in turbo mode, 
+Install from the [releases](releases) page. To keep up with releases using [zinit](https://github.com/zdharma/zinit) in turbo mode, 
 
 ``` shell
 zinit wait lucid from"gh-r" nocompile for \

@@ -312,13 +312,16 @@ func (a *App) deleteEnv(w http.ResponseWriter, r *http.Request) {
 	name := vars["name"]
 	log.Debug().Interface("vars", vars).Msgf("delete for %s received", name)
 
-	err := devenv.DeleteEnv(a.DB, a.Env.TableName, name)
+	newEnv := make(devenv.DevEnv)
+	newEnv[devenv.STATE] = devenv.DELETED
+
+	err := devenv.UpsertEnv(a.DB, a.Env.TableName, name, newEnv)
 	if err != nil {
 		util.StatCount("env.delete.failures", 1)
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	log.Info().Msgf("env %s deleted", name)
+	log.Info().Msgf("env %s marked for deletion", name)
 	w.WriteHeader(http.StatusAccepted)
 	io.WriteString(w, "ok")
 }

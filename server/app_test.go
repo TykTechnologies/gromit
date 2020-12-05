@@ -135,21 +135,21 @@ func TestNegatives(t *testing.T) {
 	cases := []APITestCase{
 		{
 			Name:       "InsertTestEnv",
-			Endpoint:   "/env/test",
+			Endpoint:   "/env/test-neg",
 			Payload:    `{"name":"test", "tyk":"sha1", "tyk-analytics":"sha2", "tyk-pump":"sha3"}`,
 			HTTPStatus: http.StatusCreated,
 			HTTPMethod: "PUT",
 		},
 		{
 			Name:       "Duplicate",
-			Endpoint:   "/env/test",
+			Endpoint:   "/env/test-neg",
 			Payload:    `{"name":"test", "tyk":"sha1", "tyk-analytics":"sha2", "tyk-pump":"sha3"}`,
 			HTTPStatus: http.StatusConflict,
 			HTTPMethod: "PUT",
 		},
 		{
 			Name:       "Delete",
-			Endpoint:   "/env/test",
+			Endpoint:   "/env/test-neg",
 			HTTPStatus: http.StatusAccepted,
 			HTTPMethod: "DELETE",
 		},
