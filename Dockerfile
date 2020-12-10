@@ -1,6 +1,6 @@
 FROM golang:1.14 as builder 
 
-ARG TF_VER=0.13.5
+ARG TF_VER=0.14.2
 
 RUN apt-get update && apt-get install -y unzip && go get -u github.com/GeertJohan/go.rice/rice
 WORKDIR /src/gromit
