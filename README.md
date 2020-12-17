@@ -53,6 +53,14 @@ Use "gromit [command] --help" for more information about a command.
 ## Testing
 Only system tests exist and these will exercise most of the AWS API code. `make test` runs the tests and requires access to the [Engg PoC](https://046805072452/signing/aws/amazon.com/console/) AWS account.
 
-The tests depend on ECR repos being present. These repos are also used by the CI workflow whose badge is at the top of this README. If you need to create the repos for whatever reason, you can do so by running terraform in <testdata/base>. 
+The tests depend on:
+- ECR repos
+- DynamoDB table
+- some other AWS stuff
+
+This infra is provisioned in the Engg PoC account and can be found in the `devenv-euc1-test` Terraform workspace for the state in [tyk-ci/infra](https://github.com/TykTechnologies/tyk-ci/tree/master/infra).
 
 If your AWS account does not have the power to run the tests, please post in #devops.
+
+## CD
+The [Release](https://github.com/TykTechnologies/gromit/actions?query=workflow%3ARelease) action builds a new docker image and notifies tyk-ci about the new version. Actions on tyk-ci implement further automation.

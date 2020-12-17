@@ -6,10 +6,12 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
+	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/expression"
+	"github.com/aws/aws-sdk-go-v2/service/ecr/ecriface"
 	"github.com/rs/zerolog/log"
 )
 
@@ -118,10 +120,14 @@ func createTable(db dynamodbiface.ClientAPI, table string) error {
 	return err
 }
 
-// GetEnv will get the named env using the supplied list of repos to
-// construct the projection expression. This method returns *DevEnv,
-// not a dynamodb return type
-func GetEnv(db dynamodbiface.ClientAPI, table string, env string) (*DevEnv, error) {
+// GetDevEnv will get the named env with the supplied name from the DB
+func GetDevEnv(table string, env string) (*DevEnv, error) {
+	cfg, err := external.LoadDefaultAWSConfig()
+	if err != nil {
+		return &DevEnv{}, err
+	}
+	svc := dynamodb.New(cfg)
+
 	input := &dynamodb.GetItemInput{
 		Key: map[string]dynamodb.AttributeValue{
 			NAME: {
@@ -131,7 +137,7 @@ func GetEnv(db dynamodbiface.ClientAPI, table string, env string) (*DevEnv, erro
 		TableName: aws.String(table),
 	}
 
-	req := db.GetItemRequest(input)
+	req := svc.GetItemRequest(input)
 	result, err := req.Send(context.Background())
 	log.Trace().Interface("result", result).Msgf("get for %s", env)
 	if err != nil {
@@ -157,111 +163,42 @@ func GetEnv(db dynamodbiface.ClientAPI, table string, env string) (*DevEnv, erro
 		return &DevEnv{}, NotFoundError{env}
 	}
 
-	de := make(DevEnv)
-	err = dynamodbattribute.UnmarshalMap(result.Item, &de)
+	envMap := make(versionMap)
+	err = dynamodbattribute.UnmarshalMap(result.Item, &envMap)
 	if err != nil {
-		return &de, err
+		return &DevEnv{}, err
 	}
 
-	return &de, nil
+	state := envMap[STATE]
+	delete(envMap, NAME)
+	delete(envMap, STATE)
+	return &DevEnv{
+		Name:     env,
+		versions: envMap,
+		state:    state,
+		dbClient: svc,
+	}, nil
 }
 
-// InsertEnv will error if the the env already exists
-func InsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap DevEnv) error {
-	// Remove key elements from the map as updates will fail
-	delete(stateMap, NAME)
-	stateMap[STATE] = NEW
-
-	// An env with the "name" key from state should not already exist
-	cond := expression.AttributeNotExists(expression.Name(NAME))
-
-	update := expression.UpdateBuilder{}
-	for k, v := range stateMap {
-		newUpdate := update.Set(expression.Name(k), expression.Value(v))
-		update = newUpdate
-	}
-
-	expr, err := expression.NewBuilder().
-		WithCondition(cond).
-		WithUpdate(update).
-		Build()
+// NewDevEnv returns an unsaved environment but the env is ready to be saved
+func NewDevEnv(name string, ecr ecriface.ClientAPI, db dynamodbiface.ClientAPI, table string, registry string, repos []string) (*DevEnv, error) {
+	vs, err := getECRState(ecr, registry, name, repos)
 	if err != nil {
-		return err
+		return &DevEnv{}, err
 	}
-
-	input := &dynamodb.UpdateItemInput{
-		ExpressionAttributeNames: expr.Names(),
-		Key: map[string]dynamodb.AttributeValue{
-			NAME: {
-				S: aws.String(env),
-			},
-		},
-		ConditionExpression:       expr.Condition(),
-		ExpressionAttributeValues: expr.Values(),
-		ReturnValues:              dynamodb.ReturnValueAllNew,
-		TableName:                 aws.String(table),
-		UpdateExpression:          expr.Update(),
-	}
-	// input := &dynamodb.PutItemInput{
-	// 	Item:                   insert,
-	// 	ConditionExpression:    expr.Condition(),
-	// 	ReturnConsumedCapacity: dynamodb.ReturnConsumedCapacityTotal,
-	// 	TableName:              aws.String(table),
-	// }
-
-	req := db.UpdateItemRequest(input)
-	result, err := req.Send(context.Background())
-	log.Trace().Interface("result", result).Msgf("result from inserting %s", env)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case dynamodb.ErrCodeConditionalCheckFailedException:
-				log.Error().
-					Err(aerr).
-					Msgf("env %s already exists", env)
-				return ExistsError{env}
-			case dynamodb.ErrCodeResourceNotFoundException:
-				log.Warn().Msgf("table %s not found, creating.", table)
-				err := createTable(db, table)
-				if err != nil {
-					return err
-				}
-				log.Warn().Msgf("retrying to insert the given values")
-				err = InsertEnv(db, table, env, stateMap)
-				if err != nil {
-					return err
-				}
-			case dynamodb.ErrCodeItemCollectionSizeLimitExceededException:
-				log.Error().
-					Err(aerr).
-					Msgf("table %s too big for inserts", table)
-			case dynamodb.ErrCodeRequestLimitExceeded:
-				log.Error().
-					Err(aerr).
-					Msgf("request limit exceeded for table %s", table)
-			case dynamodb.ErrCodeInternalServerError:
-				log.Error().
-					Err(aerr).
-					Msg("ISE from AWS, please implement retry if appropriate")
-			default:
-				log.Error().
-					Err(aerr).
-					Msgf("error inserting %s into %s", env, table)
-			}
-		}
-		return err
-	}
-	return nil
+	return &DevEnv{
+		Name:     name,
+		state:    NEW,
+		dbClient: db,
+		table:    table,
+		versions: vs,
+	}, nil
 }
 
-// UpsertEnv will blindly update the given env
-// If env is not found, it will be created with the given state
-func UpsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap DevEnv) error {
-	// Remove key elements from the map as updates will fail
-	delete(stateMap, NAME)
-
+// Save will save the env to the DB, creating the item if needed
+func (d *DevEnv) Save() error {
 	update := expression.UpdateBuilder{}
-	for k, v := range stateMap {
+	for k, v := range d.versions {
 		newUpdate := update.Set(expression.Name(k), expression.Value(v))
 		update = newUpdate
 	}
@@ -278,40 +215,40 @@ func UpsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap De
 		ExpressionAttributeNames: expr.Names(),
 		Key: map[string]dynamodb.AttributeValue{
 			NAME: {
-				S: aws.String(env),
+				S: aws.String(d.Name),
 			},
 		},
 		ExpressionAttributeValues: expr.Values(),
 		ReturnValues:              dynamodb.ReturnValueAllNew,
-		TableName:                 aws.String(table),
+		TableName:                 aws.String(d.table),
 		UpdateExpression:          expr.Update(),
 	}
 
-	req := db.UpdateItemRequest(input)
+	req := d.dbClient.UpdateItemRequest(input)
 	result, err := req.Send(context.Background())
-	log.Trace().Interface("result", result).Msgf("result from upserting %s", env)
+	log.Trace().Interface("result", result).Str("env", d.Name).Msgf("result from saving")
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case dynamodb.ErrCodeResourceNotFoundException:
-				log.Warn().Msgf("table %s not found, creating.", table)
-				err := createTable(db, table)
+				log.Warn().Str("table", d.table).Str("env", d.Name).Msgf("table not found, while saving env")
+				err := createTable(d.dbClient, d.table)
 				if err != nil {
 					return err
 				}
-				log.Warn().Msgf("retrying to upsert the given values")
-				err = UpsertEnv(db, table, env, stateMap)
+				log.Warn().Str("env", d.Name).Msgf("retrying saving after creating the table")
+				err = d.Save()
 				if err != nil {
 					return err
 				}
 			case dynamodb.ErrCodeItemCollectionSizeLimitExceededException:
-				log.Error().Err(aerr).Msgf("table %s too big for upserts", table)
+				log.Error().Err(aerr).Str("table", d.table).Msg("too big for upserts")
 			case dynamodb.ErrCodeRequestLimitExceeded:
-				log.Error().Err(aerr).Msgf("request limit exceeded for table %s", table)
+				log.Error().Err(aerr).Str("table", d.table).Msg("request limit exceeded")
 			case dynamodb.ErrCodeInternalServerError:
 				log.Error().Err(aerr).Msg("ISE from AWS, please implement retry if appropriate")
 			default:
-				log.Error().Err(aerr).Msgf("error inserting %s into %s", env, table)
+				log.Error().Err(aerr).Str("table", d.table).Str("env", d.Name).Msg("saving")
 			}
 		}
 		return err
@@ -319,31 +256,54 @@ func UpsertEnv(db dynamodbiface.ClientAPI, table string, env string, stateMap De
 	return nil
 }
 
-// DeleteEnv will blindly delete the env
-func DeleteEnv(db dynamodbiface.ClientAPI, table string, env string) error {
+func (d *DevEnv) MarkDeleted() {
+	d.state = DELETED
+}
+
+func (d *DevEnv) MarkNew() {
+	d.state = NEW
+}
+
+func (d *DevEnv) MarkProcessed() {
+	d.state = PROCESSED
+}
+
+func (d *DevEnv) SetVersion(vs versionMap) {
+	delete(vs, STATE)
+	delete(vs, NAME)
+	d.versions = vs
+}
+
+// Delete will delete the env if its internal state is devenv.DELETED
+func (d *DevEnv) Delete() error {
+	if d.state != DELETED {
+		return fmt.Errorf("state needs to be %s but is %s", DELETED, d.state)
+	}
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]dynamodb.AttributeValue{
 			NAME: {
-				S: aws.String(env),
+				S: aws.String(d.Name),
 			},
 		},
-		TableName: aws.String(table),
+		TableName: aws.String(d.table),
 	}
 
-	req := db.DeleteItemRequest(input)
+	req := d.dbClient.DeleteItemRequest(input)
 	result, err := req.Send(context.Background())
-	log.Trace().Interface("result", result).Str("env", env).Msg("result from deleting")
+	log.Trace().Interface("result", result).Str("env", d.Name).Msg("result from deleting")
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case dynamodb.ErrCodeResourceNotFoundException:
-				log.Warn().Str("env", env).Str("table", table).Msg("not found, doing nothing as a delete was called.")
+				log.Warn().Str("env", d.Name).Str("table", d.table).Msg("not found, doing nothing as a delete was called.")
+			case dynamodb.ErrCodeItemCollectionSizeLimitExceededException:
+				log.Error().Err(aerr).Str("table", d.table).Msg("too big for deletes")
 			case dynamodb.ErrCodeRequestLimitExceeded:
-				log.Error().Err(aerr).Str("table", table).Msg("request limit exceeded")
+				log.Error().Err(aerr).Str("table", d.table).Msg("request limit exceeded")
 			case dynamodb.ErrCodeInternalServerError:
 				log.Error().Err(aerr).Msg("ISE from AWS, please implement retry if appropriate")
 			default:
-				log.Error().Err(aerr).Str("env", env).Str("table", table).Msgf("could not delete")
+				log.Error().Err(aerr).Str("table", d.table).Str("env", d.Name).Msg("delete")
 			}
 		}
 		return err
@@ -353,7 +313,15 @@ func DeleteEnv(db dynamodbiface.ClientAPI, table string, env string) error {
 
 // GetEnvsByState will fetch all envs in the supplied state from the DB
 // Only attribute names matching the list in repos will be fetched
-func GetEnvsByState(db dynamodbiface.ClientAPI, table string, state string, repos []string) ([]DevEnv, error) {
+// If any error occurs while retrieving an env, it fails immediately and returns the list of envs that have been retrieved so far
+func GetEnvsByState(table string, state string, repos []string) ([]DevEnv, error) {
+	var envs []DevEnv
+	cfg, err := external.LoadDefaultAWSConfig()
+	if err != nil {
+		return envs, err
+	}
+	svc := dynamodb.New(cfg)
+
 	filt := expression.Name(STATE).Equal(expression.Value(state))
 
 	proj := expression.NamesList(expression.Name(NAME))
@@ -379,29 +347,41 @@ func GetEnvsByState(db dynamodbiface.ClientAPI, table string, state string, repo
 		TableName:                 aws.String(table),
 	}
 
-	req := db.ScanRequest(input)
+	req := svc.ScanRequest(input)
 	result, err := req.Send(context.Background())
-	var envs []DevEnv
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case dynamodb.ErrCodeResourceNotFoundException:
 				log.Warn().Msgf("table %s not found", table)
+			case dynamodb.ErrCodeItemCollectionSizeLimitExceededException:
+				log.Error().Err(aerr).Str("table", table).Msg("too big for upserts")
 			case dynamodb.ErrCodeRequestLimitExceeded:
-				log.Error().Err(aerr).Msgf("request limit exceeded for table %s", table)
+				log.Error().Err(aerr).Str("table", table).Msg("request limit exceeded")
 			case dynamodb.ErrCodeInternalServerError:
 				log.Error().Err(aerr).Msg("ISE from AWS, please implement retry if appropriate")
 			default:
-				log.Error().Err(aerr).Msgf("error getting new envs from table %s", table)
+				log.Error().Err(aerr).Str("table", table).Str("state", state).Msg("getting envs")
 			}
 		}
 		return envs, err
 	}
 	for _, row := range result.Items {
-		de := make(DevEnv)
-		err = dynamodbattribute.UnmarshalMap(row, &de)
+		envMap := make(versionMap)
+		err = dynamodbattribute.UnmarshalMap(row, &envMap)
 		if err != nil {
 			return envs, err
+		}
+		state := envMap[STATE]
+		name := envMap[NAME]
+		delete(envMap, NAME)
+		delete(envMap, STATE)
+		de := DevEnv{
+			Name:     name,
+			state:    state,
+			dbClient: svc,
+			table:    table,
+			versions: envMap,
 		}
 		envs = append(envs, de)
 	}

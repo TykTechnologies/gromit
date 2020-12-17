@@ -194,33 +194,30 @@ func (a *App) newBuild(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug().Str("repo", repo).Str("ref", ref).Str("sha", sha).Msg("to be inserted")
 
-	ecrState, err := devenv.GetECRState(a.ECR, a.Env.RegistryID, ref, a.Env.Repos)
+	de, err := devenv.GetDevEnv(a.DB, a.Env.TableName, ref)
 	if err != nil {
 		util.StatCount("newbuild.failures", 1)
-		log.Warn().
-			Err(err).
-			Msgf("could not get ecr state for %s using registry %s with repo list %v", ref, a.Env.RegistryID, a.Env.Repos)
-		respondWithError(w, http.StatusInternalServerError, "could got retrieve ecr state")
-		return
+		if derr, ok := err.(devenv.NotFoundError); ok {
+			log.Info().Str("env", ref).Msg("not found, creating")
+			de, err = devenv.NewDevEnv(ref, a.ECR, a.DB, a.Env.TableName, a.Env.RegistryID, a.Env.Repos)
+			if err != nil {
+				log.Error().Err(err).Str("env", ref).Msg("could not create new env")
+				respondWithError(w, http.StatusInternalServerError, "could not create new env "+ref)
+				return
+			}
+		} else {
+			log.Error().Err(derr).Str("env", ref).Msg("could not lookup env")
+			respondWithError(w, http.StatusInternalServerError, "could not lookup env "+ref)
+			return
+		}
 	}
-	log.Trace().Interface("ecrState", ecrState).Msgf("for ref %s", ref)
-	ecrState[repo] = sha
-	log.Trace().Interface("ecrState", ecrState).Msgf("for ref %s after update", ref)
-
-	// Set state so that the runner will pick this up
-	ecrState[devenv.STATE] = devenv.NEW
-	// Removing . from the ref as it will be used as the cluster name and in DNS
-	ref = strings.ReplaceAll(ref, ".", "")
-	err = devenv.UpsertEnv(a.DB, a.Env.TableName, ref, ecrState)
+	de.MarkNew()
+	err = de.Save()
 	if err != nil {
-		util.StatCount("newbuild.failures", 1)
-		log.Warn().
-			Interface("ecrState", ecrState).
-			Err(err).
-			Msgf("could not add new build for %s", ref)
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		log.Error().Err(err).Str("env", ref).Msg("could not save env")
+		respondWithError(w, http.StatusInternalServerError, "could not mark as new: "+ref)
 	}
-	respondWithJSON(w, http.StatusOK, ecrState)
+	respondWithJSON(w, http.StatusOK, de)
 }
 
 // ReST API for /env
@@ -233,95 +230,116 @@ func (a *App) getEnvs(w http.ResponseWriter, r *http.Request) {
 func (a *App) createEnv(w http.ResponseWriter, r *http.Request) {
 	util.StatCount("env.create.count", 1)
 	vars := mux.Vars(r)
-	env := vars["name"]
+	ref := vars["name"]
+	log.Debug().Interface("env", ref).Interface("payload", vars).Msgf("new env received")
 
-	newEnv := make(devenv.DevEnv)
+	newEnv := make(map[string]string)
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&newEnv)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 	}
-	log.Debug().Interface("env", newEnv).Msgf("new env %s received", env)
 
-	err = devenv.InsertEnv(a.DB, a.Env.TableName, vars["name"], newEnv)
+	de, err := devenv.NewDevEnv(ref, a.ECR, a.DB, a.Env.TableName, a.Env.RegistryID, a.Env.Repos)
 	if err != nil {
-		if ierr, ok := err.(devenv.ExistsError); ok {
-			respondWithError(w, http.StatusConflict, ierr.Error())
-			return
-		}
 		util.StatCount("env.create.failures", 1)
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	log.Info().Interface("env", newEnv).Msgf("new env %s created", env)
-
-	respondWithJSON(w, http.StatusCreated, newEnv)
+	err = de.Save()
+	if err != nil {
+		log.Error().Err(err).Str("env", ref).Msg("could not save env")
+		respondWithError(w, http.StatusInternalServerError, "could not mark as new: "+ref)
+	}
+	log.Info().Interface("env", de).Msg("new env created")
+	respondWithJSON(w, http.StatusCreated, de)
 }
 
 func (a *App) updateEnv(w http.ResponseWriter, r *http.Request) {
 	util.StatCount("env.update.count", 1)
 	vars := mux.Vars(r)
-	env := vars["name"]
+	ref := vars["name"]
+	log.Debug().Interface("env", ref).Interface("payload", vars).Msgf("update received")
 
-	newEnv := make(devenv.DevEnv)
+	newEnv := make(map[string]string)
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&newEnv)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 	}
-	log.Debug().Interface("env", newEnv).Msgf("update for %s received", env)
 
-	newEnv[devenv.STATE] = devenv.NEW
-	err = devenv.UpsertEnv(a.DB, a.Env.TableName, env, newEnv)
+	de, err := devenv.GetDevEnv(a.DB, a.Env.TableName, ref)
 	if err != nil {
-		if ierr, ok := err.(devenv.ExistsError); ok {
-			respondWithError(w, http.StatusConflict, ierr.Error())
+		util.StatCount("update.failures", 1)
+		if _, ok := err.(devenv.NotFoundError); ok {
+			log.Debug().Str("env", ref).Msg("not found")
+			respondWithError(w, http.StatusNotFound, "could not find env "+ref)
 			return
 		}
-		util.StatCount("env.update.failures", 1)
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		log.Error().Err(err).Str("env", ref).Msg("could not lookup env")
+		respondWithError(w, http.StatusInternalServerError, "unknown error while looking up "+ref)
 		return
 	}
-	log.Info().Interface("env", newEnv).Msgf("%s env updated", env)
-
-	respondWithJSON(w, http.StatusOK, newEnv)
+	de.MarkNew()
+	de.SetVersion(newEnv)
+	err = de.Save()
+	if err != nil {
+		log.Error().Err(err).Str("env", ref).Msg("could not save env")
+		respondWithError(w, http.StatusInternalServerError, "could not mark as new: "+ref)
+		return
+	}
+	log.Info().Interface("env", ref).Msg("env updated")
+	respondWithJSON(w, http.StatusOK, de)
 }
 
 func (a *App) getEnv(w http.ResponseWriter, r *http.Request) {
 	util.StatCount("env.get.count", 1)
 	vars := mux.Vars(r)
-	name := vars["name"]
-	log.Debug().Interface("vars", vars).Msgf("get for %s received", name)
+	ref := vars["name"]
+	log.Trace().Interface("env", ref).Interface("payload", vars).Msgf("get env received")
 
-	env, err := devenv.GetEnv(a.DB, a.Env.TableName, vars["name"])
+	de, err := devenv.GetDevEnv(a.DB, a.Env.TableName, ref)
 	if err != nil {
-		if ierr, ok := err.(devenv.NotFoundError); ok {
-			respondWithError(w, http.StatusNotFound, ierr.Error())
+		util.StatCount("update.failures", 1)
+		if _, ok := err.(devenv.NotFoundError); ok {
+			log.Debug().Str("env", ref).Msg("not found")
+			respondWithError(w, http.StatusNotFound, "could not find env "+ref)
 			return
 		}
-		util.StatCount("env.get.failures", 1)
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		log.Error().Err(err).Str("env", ref).Msg("could not lookup env")
+		respondWithError(w, http.StatusInternalServerError, "unknown error while looking up "+ref)
 		return
 	}
-	respondWithJSON(w, http.StatusOK, env)
+	log.Debug().Interface("env", ref).Msg("env found")
+	respondWithJSON(w, http.StatusOK, de)
 }
 
 func (a *App) deleteEnv(w http.ResponseWriter, r *http.Request) {
 	util.StatCount("env.delete.count", 1)
 	vars := mux.Vars(r)
-	name := vars["name"]
-	log.Debug().Interface("vars", vars).Msgf("delete for %s received", name)
+	ref := vars["name"]
+	log.Debug().Interface("env", ref).Interface("payload", vars).Msgf("new env received")
 
-	newEnv := make(devenv.DevEnv)
-	newEnv[devenv.STATE] = devenv.DELETED
-
-	err := devenv.UpsertEnv(a.DB, a.Env.TableName, name, newEnv)
+	de, err := devenv.GetDevEnv(a.DB, a.Env.TableName, ref)
 	if err != nil {
-		util.StatCount("env.delete.failures", 1)
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		util.StatCount("update.failures", 1)
+		if _, ok := err.(devenv.NotFoundError); ok {
+			log.Debug().Str("env", ref).Msg("not found")
+			respondWithError(w, http.StatusNotFound, "could not find env "+ref)
+			return
+		}
+		log.Error().Err(err).Str("env", ref).Msg("could not lookup env")
+		respondWithError(w, http.StatusInternalServerError, "unknown error while looking up "+ref)
 		return
 	}
-	log.Info().Msgf("env %s marked for deletion", name)
+	de.MarkDeleted()
+	err = de.Save()
+	if err != nil {
+		log.Error().Err(err).Str("env", ref).Msg("could not save env")
+		respondWithError(w, http.StatusInternalServerError, "could not mark as new: "+ref)
+		return
+	}
+	log.Info().Interface("env", ref).Msg("env updated")
 	w.WriteHeader(http.StatusAccepted)
 	io.WriteString(w, "ok")
 }

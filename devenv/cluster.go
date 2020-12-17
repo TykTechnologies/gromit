@@ -84,7 +84,7 @@ func (c *GromitCluster) getTasks() ([]string, error) {
 	return result.TaskArns, nil
 }
 
-// Populate will look up all tasks in this cluster and fill in the tasks array
+// Populate will look up all tasks in this cluster and fill in the tasks array with IPs
 func (c *GromitCluster) Populate() error {
 	tasks, err := c.getTasks()
 	if err != nil {
@@ -107,6 +107,8 @@ func (c *GromitCluster) Populate() error {
 	return nil
 }
 
+// SyncDNS will update the public Route53 records for cluster in zoneid
+// The FQDN is constructed by appending domain to the task name
 func (c *GromitCluster) SyncDNS(action route53.ChangeAction, zoneid string, domain string) error {
 	var changes []route53.Change
 	for _, t := range c.tasks {
@@ -140,7 +142,7 @@ func (c *GromitCluster) SyncDNS(action route53.ChangeAction, zoneid string, doma
 	return err
 }
 
-// Returns a fully populated gromit cluster
+// GetGromitCluster returns a fully populated gromit cluster
 func GetGromitCluster(name string) (*GromitCluster, error) {
 	cfg, err := external.LoadDefaultAWSConfig()
 	if err != nil {

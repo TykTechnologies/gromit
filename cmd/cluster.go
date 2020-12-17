@@ -19,6 +19,7 @@ http://www.apache.org/licenses/LICENSE-2.0
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/terraform"
@@ -29,7 +30,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-var zoneID, domain, clusterName string
+var zoneID, domain, clusterName, tableName string
+var repos []string
 
 // clusterCmd is a top level command
 var clusterCmd = &cobra.Command{
@@ -37,6 +39,9 @@ var clusterCmd = &cobra.Command{
 	Short: "Manage cluster of tyk components",
 	Long:  `Set cluster to use via -c flag. With no parameters it will list the clusters.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		repoList, _ := cmd.Flags().GetString("repos")
+		repos = strings.Split(repoList, ",")
+
 		clusters, err := devenv.ListClusters()
 		if err != nil {
 			panic(err)
@@ -45,11 +50,12 @@ var clusterCmd = &cobra.Command{
 	},
 }
 
-// runCmd will process envs from DynamoDB
-var runCmd = &cobra.Command{
-	Use:   "run <config bundle path>",
-	Short: "Process envs from GROMIT_TABLENAME using supplied config bundle path",
-	Long: `Read state and call the embedded devenv terraform manifest for new envs. The config bundle is a directory tree containing config files for all the components in the cluster. The names of the config dirs have to strictly match the repository names.
+// sowCmd will process envs from DynamoDB
+var sowCmd = &cobra.Command{
+	Use:     "sow <config root path>",
+	Aliases: []string{"run", "create", "update"},
+	Short:   "Sow envs from GROMIT_TABLENAME, creating a config tree at <config root path>",
+	Long: `Call the embedded devenv terraform manifest for new envs. The config root is where the config bundle, a directory tree containing config files for all the components in the cluster will be generated. Use -a to process all new envs or supply an env name with -c.
 
 This component is meant to run in a scheduled task.
 Env vars:
@@ -58,16 +64,32 @@ GROMIT_DOMAIN Route53 domain corresponding to GROMIT_ZONEID
 If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and TF_API_TOKEN`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Info().Str("name", util.Name()).Str("component", "run").Str("version", util.Version()).Msg("starting")
-		terraform.Run(args[0])
+		log.Info().Str("name", util.Name()).Str("component", "sow").Str("version", util.Version()).Msg("starting")
+		all, _ := cmd.Flags().GetBool("all")
+		if all {
+			envs, err := devenv.GetEnvsByState(tableName, devenv.NEW, repos)
+			if err != nil {
+				log.Fatal().Err(err).Str("state", devenv.NEW).Msg("could not get list of envs")
+			}
+			for _, e := range envs {
+				e.Sow(args[0])
+			}
+		} else {
+			env, err := devenv.GetDevEnv(tableName, clusterName)
+			if err != nil {
+				log.Error().Err(err).Str("cluster", clusterName).Msg("fetching")
+			}
+			env.Sow(args[0])
+		}
 	},
 }
 
 // reapCmd will delete envs from DynamoDB
 var reapCmd = &cobra.Command{
-	Use:   "reap <config bundle path>",
-	Short: "Process envs from GROMIT_TABLENAME using supplied config bundle path",
-	Long: `Read state and call the embedded devenv terraform manifest for new envs. The config bundle is a directory tree containing config files for all the components in the cluster. The names of the config dirs have to strictly match the repository names.
+	Use:     "reap <config root path>",
+	Aliases: []string{"del", "delete", "rm", "remove"},
+	Short:   "Reap envs from GROMIT_TABLENAME, using a config tree at <config root path>",
+	Long: `Call the embedded devenv terraform manifest for new envs. The config root is a directory tree containing config files for all the components in the cluster. Use -a to process all deleted envs or supply an env name with -c.
 
 This component is meant to run in a scheduled task.
 Env vars:
@@ -77,7 +99,22 @@ If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCES
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Info().Str("name", util.Name()).Str("component", "reap").Str("version", util.Version()).Msg("starting")
-		terraform.Reap(args[0])
+		all, _ := cmd.Flags().GetBool("all")
+		if all {
+			envs, err := devenv.GetEnvsByState(tableName, devenv.DELETED, repos)
+			if err != nil {
+				log.Fatal().Err(err).Str("state", devenv.DELETED).Msg("could not get list of envs")
+			}
+			for _, e := range envs {
+				e.Reap(args[0])
+			}
+		} else {
+			env, err := devenv.GetDevEnv(tableName, clusterName)
+			if err != nil {
+				log.Error().Err(err).Str("cluster", clusterName).Msg("fetching")
+			}
+			env.Reap(args[0])
+		}
 	},
 }
 
@@ -125,7 +162,12 @@ func init() {
 	clusterCmd.PersistentFlags().StringVarP(&clusterName, "cluster", "c", os.Getenv("GROMIT_CLUSTER"), "Cluster to be operated on")
 	clusterCmd.PersistentFlags().StringVarP(&zoneID, "zone", "z", viper.GetString("cluster.zoneid"), "Route53 zone id to make entries in")
 	clusterCmd.PersistentFlags().StringVarP(&domain, "domain", "d", viper.GetString("cluster.domain"), "Suffixed to the DNS record to make an FQDN")
+	clusterCmd.PersistentFlags().StringVarP(&tableName, "table", "t", os.Getenv("GROMIT_TABLENAME"), "DynamoDB table name that contains the state")
+	clusterCmd.PersistentFlags().StringP("repos", "r", os.Getenv("GROMIT_REPOS"), "ECR repositories that are to be managed")
+	clusterCmd.PersistentFlags().StringVarP(&domain, "domain", "d", viper.GetString("cluster.domain"), "Suffixed to the DNS record to make an FQDN")
 
 	exposeCmd.Flags().BoolP("all", "a", false, "All available public IPs in all clusters will be exposed")
-	clusterCmd.AddCommand(runCmd, exposeCmd, tdbCmd)
+	sowCmd.Flags().BoolP("all", "a", false, "Process all envs that are marked new")
+	reapCmd.Flags().BoolP("all", "a", false, "Delete all envs that are marked deleted")
+	clusterCmd.AddCommand(sowCmd, exposeCmd, tdbCmd)
 }

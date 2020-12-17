@@ -2,7 +2,7 @@ terraform {
   required_version = ">= 0.13"
   backend "s3" {
     bucket         = "terraform-state-devenv"
-    key            = "devenv"
+    key            = join(["devenv", var.infra, var.base])
     region         = "eu-central-1"
     dynamodb_table = "terraform-state-locks"
   }
@@ -47,6 +47,8 @@ locals {
     "purpose" = "ci",
     "env"     = var.name
   }
+  dash_license = "arn:aws:secretsmanager:eu-central-1:754489498669:secret:DashTrialLicense-7EzdZh"
+  mdcb_license = "arn:aws:secretsmanager:eu-central-1:754489498669:secret:MDCBTrialLicense-9BIRjv"
 }
 
 # ECS cluster

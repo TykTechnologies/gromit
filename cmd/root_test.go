@@ -10,9 +10,13 @@ import (
 // setup environment for the test run and cleanup after
 func TestMain(m *testing.M) {
 	os.Setenv("GROMIT_REPOS", "tyk,tyk-analytics,tyk-pump")
+	os.Setenv("GROMIT_TABLENAME", "GromitTest")
+	os.Setenv("GROMIT_DASH_LICENSE", "../testdata/dash.trial")
 	os.Setenv("GROMIT_REGISTRYID", "046805072452")
 	os.Setenv("XDG_CONFIG_HOME", "../testdata")
-
+	os.Setenv("TF_VAR_base", "base-devenv-euc1-test")
+	os.Setenv("TF_VAR_infra", "infra-devenv-euc1-test")
+	
 	code := m.Run()
 
 	os.Exit(code)

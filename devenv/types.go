@@ -2,16 +2,25 @@ package devenv
 
 import (
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/ecsiface"
 	"github.com/aws/aws-sdk-go-v2/service/route53/route53iface"
 )
 
-// DevEnv is a tyk env on the dev env. This is not a strict type because
-// changes in repos lists will require a change in the type since this
-// type would contain a list of repos. By using a map, we trade type
-// checking of the state for flexibility in adding and removing repos.
-type DevEnv map[string]interface{}
+// versionMap maps repos to any tree-ish in git
+type versionMap map[string]string
+
+// DevEnv represents the known (or desired) state of an environment based on the state in DynamoDB.
+// This type is concerned with management of the DynamoDB item representing the state of an environment named DevEnv.Name
+type DevEnv struct {
+	Name     string
+	state    string
+	versions versionMap
+	dbClient dynamodbiface.ClientAPI
+	table    string
+	aws      aws.Config
+}
 
 // GromitTask is used inside GromitCluster
 type GromitTask struct {
@@ -19,7 +28,9 @@ type GromitTask struct {
 	IP   string
 }
 
-// Reprents an ECS cluster running an environment that was spun up by terraform.Run()
+// GromitCluster represents an ECS cluster running an environment that was spun up by DevEnv.Sow()
+// It represents the runtime state (ECR, ECS, R53) of an environment and is intended to encapsulate the AWS implementation specific details
+// All its methods are read-only except for SyncDNS which will update the public Route53 entries for a developer environment
 type GromitCluster struct {
 	Name      string
 	Region    string

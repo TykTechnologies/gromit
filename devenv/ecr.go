@@ -9,26 +9,24 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// GetECRState returns master as the ref if no env was found.
-// Using DevEnv here to model the state of the repositories, the actual repos
-// being used is abstracted away. Hopefully, this will turn out to be the right choice.
-func GetECRState(svc ecriface.ClientAPI, registry string, env string, repos []string) (DevEnv, error) {
-	var state = make(DevEnv)
+// getECRState returns master as the tree-ish if no env was found
+func getECRState(svc ecriface.ClientAPI, registry string, env string, repos []string) (versionMap, error) {
+	var versionMap = make(versionMap)
 
 	for _, repo := range repos {
 		tag, err := getExistingTag(svc, registry, repo, env)
-		state[repo] = tag
+		versionMap[repo] = tag
 
 		if err != nil {
 			if _, ok := err.(NotFoundError); ok {
 				log.Debug().Msgf("%s: %s", env, err)
-				state[repo] = "master"
+				versionMap[repo] = "master"
 			} else {
-				return state, err
+				return versionMap, err
 			}
 		}
 	}
-	return state, nil
+	return versionMap, nil
 }
 
 func getExistingTag(svc ecriface.ClientAPI, registry string, repo string, tag string) (string, error) {

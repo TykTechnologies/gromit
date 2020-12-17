@@ -5,5 +5,5 @@ import (
 )
 
 func TestClusterRun(t *testing.T) {
-	executeMockCmd("cluster", "run", "/does-not-exist")
+	executeMockCmd("cluster", "run", "../testdata/config")
 }

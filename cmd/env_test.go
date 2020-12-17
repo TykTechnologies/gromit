@@ -19,7 +19,7 @@ type cmdTestCase struct {
 	ResponseJSON string
 }
 
-const tableName = "GromitCmdTest"
+const testTableName = "GromitCmdTest"
 
 func runSubTests(t *testing.T, cases []cmdTestCase, tsurl string) {
 	for _, tc := range cases {
@@ -66,9 +66,9 @@ func TestEnvCmd(t *testing.T) {
 		},
 	}
 
-	os.Setenv("GROMIT_TABLENAME", tableName)
+	os.Setenv("GROMIT_TABLENAME", testTableName)
 	var a server.App
-	err := devenv.DeleteTable(a.DB, tableName)
+	err := devenv.DeleteTable(a.DB, testTableName)
 	if err != nil {
 		t.Fatal(err)
 	}
