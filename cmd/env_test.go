@@ -19,9 +19,9 @@ type cmdTestCase struct {
 	ResponseJSON string
 }
 
-const testTableName = "GromitCmdTest"
+const cmdTestTableName = "GromitCmdTest"
 
-func runSubTests(t *testing.T, cases []cmdTestCase, tsurl string) {
+func runEnvTests(t *testing.T, cases []cmdTestCase, tsurl string) {
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			response, err := executeMockCmd(append(tc.Args, fmt.Sprintf("-s%s", tsurl))...)
@@ -66,9 +66,9 @@ func TestEnvCmd(t *testing.T) {
 		},
 	}
 
-	os.Setenv("GROMIT_TABLENAME", testTableName)
+	os.Setenv("GROMIT_TABLENAME", cmdTestTableName)
 	var a server.App
-	err := devenv.DeleteTable(a.DB, testTableName)
+	err := devenv.DeleteTable(a.DB, cmdTestTableName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,5 +76,5 @@ func TestEnvCmd(t *testing.T) {
 	ts := a.Test("../testdata/scerts/cert.pem", "../testdata/scerts/key.pem")
 	defer ts.Close()
 
-	runSubTests(t, cases, ts.URL)
+	runEnvTests(t, cases, ts.URL)
 }

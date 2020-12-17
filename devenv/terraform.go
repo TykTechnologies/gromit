@@ -63,7 +63,7 @@ func (d *DevEnv) Sow(confPath string) error {
 
 	util.StatCount("run.count", 1)
 	tf := d.tfInit(confPath)
-	tf.apply()
+	tf.Apply()
 	// os.RemoveAll(tfDir)
 	// Wait for the apply to catch up before looking for IP addresses
 	time.Sleep(1 * time.Minute)
@@ -83,7 +83,7 @@ func (d *DevEnv) Reap(confPath string) error {
 
 	util.StatCount("reap.count", 1)
 	tf := d.tfInit(confPath)
-	tf.destroy()
+	tf.Destroy()
 	return d.Delete()
 }
 

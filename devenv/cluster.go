@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/ecsiface"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/rs/zerolog/log"
 )
@@ -167,12 +168,7 @@ func GetGromitCluster(name string) (*GromitCluster, error) {
 }
 
 // ListClusters will return a list running ECS clusters. Just the names.
-func ListClusters() ([]string, error) {
-	cfg, err := external.LoadDefaultAWSConfig()
-	if err != nil {
-		return []string{}, err
-	}
-	svc := ecs.New(cfg)
+func ListClusters(svc ecsiface.ClientAPI) ([]string, error) {
 	req := svc.ListClustersRequest(&ecs.ListClustersInput{})
 	result, err := req.Send(context.Background())
 	if err != nil {

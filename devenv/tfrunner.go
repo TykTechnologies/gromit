@@ -81,10 +81,10 @@ func (t *tfRunner) doTFCmd(cmd string) {
 	}
 }
 
-func (t *tfRunner) apply() {
+func (t *tfRunner) Apply() {
 	t.doTFCmd("apply")
 }
 
-func (t *tfRunner) destroy() {
+func (t *tfRunner) Destroy() {
 	t.doTFCmd("destroy")
 }

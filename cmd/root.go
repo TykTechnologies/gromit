@@ -103,4 +103,6 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		log.Debug().Str("file", viper.ConfigFileUsed()).Msg("reading config from")
 	}
+	// Add source code reference and version to log
+	log.Logger = log.With().Caller().Str("version", util.Version()).Str("binary", util.Name()).Logger()
 }

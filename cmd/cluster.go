@@ -23,7 +23,10 @@ import (
 
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/terraform"
-	"github.com/TykTechnologies/gromit/util"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/external"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -32,17 +35,25 @@ import (
 
 var zoneID, domain, clusterName, tableName string
 var repos []string
+var cfg aws.Config
 
 // clusterCmd is a top level command
 var clusterCmd = &cobra.Command{
 	Use:   "cluster",
 	Short: "Manage cluster of tyk components",
 	Long:  `Set cluster to use via -c flag. With no parameters it will list the clusters.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		var err error
+		cfg, err = external.LoadDefaultAWSConfig()
+		if err != nil {
+			log.Fatal().Msg("Could not load AWS config")
+		}
 		repoList, _ := cmd.Flags().GetString("repos")
 		repos = strings.Split(repoList, ",")
 
-		clusters, err := devenv.ListClusters()
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		clusters, err := devenv.ListClusters(ecs.New(cfg))
 		if err != nil {
 			panic(err)
 		}
@@ -64,10 +75,11 @@ GROMIT_DOMAIN Route53 domain corresponding to GROMIT_ZONEID
 If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and TF_API_TOKEN`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Info().Str("name", util.Name()).Str("component", "sow").Str("version", util.Version()).Msg("starting")
+		log.Logger = log.With().Str("component", "sow").Str("table", tableName).Interface("repos", repos).Logger()
+		log.Info().Msg("sowing")
 		all, _ := cmd.Flags().GetBool("all")
 		if all {
-			envs, err := devenv.GetEnvsByState(tableName, devenv.NEW, repos)
+			envs, err := devenv.GetEnvsByState(dynamodb.New(cfg), tableName, devenv.NEW, repos)
 			if err != nil {
 				log.Fatal().Err(err).Str("state", devenv.NEW).Msg("could not get list of envs")
 			}
@@ -75,7 +87,7 @@ If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCES
 				e.Sow(args[0])
 			}
 		} else {
-			env, err := devenv.GetDevEnv(tableName, clusterName)
+			env, err := devenv.GetDevEnv(dynamodb.New(cfg), tableName, clusterName)
 			if err != nil {
 				log.Error().Err(err).Str("cluster", clusterName).Msg("fetching")
 			}
@@ -98,10 +110,11 @@ GROMIT_DOMAIN Route53 domain corresponding to GROMIT_ZONEID
 If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and TF_API_TOKEN`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Info().Str("name", util.Name()).Str("component", "reap").Str("version", util.Version()).Msg("starting")
+		log.Logger = log.With().Str("component", "reap").Logger()
+		log.Info().Msg("reaping")
 		all, _ := cmd.Flags().GetBool("all")
 		if all {
-			envs, err := devenv.GetEnvsByState(tableName, devenv.DELETED, repos)
+			envs, err := devenv.GetEnvsByState(dynamodb.New(cfg), tableName, devenv.DELETED, repos)
 			if err != nil {
 				log.Fatal().Err(err).Str("state", devenv.DELETED).Msg("could not get list of envs")
 			}
@@ -109,7 +122,7 @@ If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCES
 				e.Reap(args[0])
 			}
 		} else {
-			env, err := devenv.GetDevEnv(tableName, clusterName)
+			env, err := devenv.GetDevEnv(dynamodb.New(cfg), tableName, clusterName)
 			if err != nil {
 				log.Error().Err(err).Str("cluster", clusterName).Msg("fetching")
 			}
@@ -127,7 +140,7 @@ makes A records in Route53 accessible as <task>.<cluster>.<domain>.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		all, _ := cmd.Flags().GetBool("all")
 		if all {
-			cnames, err := devenv.ListClusters()
+			cnames, err := devenv.ListClusters(ecs.New(cfg))
 			if err != nil {
 				log.Fatal().Err(err).Msg("could not get list of clusters")
 			}
@@ -164,7 +177,6 @@ func init() {
 	clusterCmd.PersistentFlags().StringVarP(&domain, "domain", "d", viper.GetString("cluster.domain"), "Suffixed to the DNS record to make an FQDN")
 	clusterCmd.PersistentFlags().StringVarP(&tableName, "table", "t", os.Getenv("GROMIT_TABLENAME"), "DynamoDB table name that contains the state")
 	clusterCmd.PersistentFlags().StringP("repos", "r", os.Getenv("GROMIT_REPOS"), "ECR repositories that are to be managed")
-	clusterCmd.PersistentFlags().StringVarP(&domain, "domain", "d", viper.GetString("cluster.domain"), "Suffixed to the DNS record to make an FQDN")
 
 	exposeCmd.Flags().BoolP("all", "a", false, "All available public IPs in all clusters will be exposed")
 	sowCmd.Flags().BoolP("all", "a", false, "Process all envs that are marked new")
