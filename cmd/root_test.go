@@ -5,17 +5,21 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"github.com/rs/zerolog/log"
+	"github.com/joho/godotenv"
 )
 
 // setup environment for the test run and cleanup after
 func TestMain(m *testing.M) {
-	os.Setenv("GROMIT_REPOS", "tyk,tyk-analytics,tyk-pump")
-	os.Setenv("GROMIT_TABLENAME", "GromitTest")
-	os.Setenv("GROMIT_DASH_LICENSE", "../testdata/dash.trial")
-	os.Setenv("GROMIT_REGISTRYID", "046805072452")
-	os.Setenv("XDG_CONFIG_HOME", "../testdata")
-	os.Setenv("TF_VAR_base", "base-devenv-euc1-test")
-	os.Setenv("TF_VAR_infra", "infra-devenv-euc1-test")
+	err := godotenv.Load("../testdata/testvars")
+	if err != nil {
+		log.Error().Err(err).Msg("Could not load env from testdata/testvars")
+	}
+	path, err := os.Getwd()
+	if err != nil {
+		log.Error().Err(err).Msg("Could not find cwd")
+	}
+	log.Info().Str("path", path).Msg("cwd")
 	
 	code := m.Run()
 
