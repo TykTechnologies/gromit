@@ -2,14 +2,14 @@ terraform {
   required_version = ">= 0.13"
   backend "s3" {
     bucket         = "terraform-state-devenv"
-    key            = join(["devenv", var.infra, var.base])
+    key            = "devenv"
     region         = "eu-central-1"
     dynamodb_table = "terraform-state-locks"
   }
 }
 
 provider "aws" {
-  region  = data.terraform_remote_state.base.outputs.region
+  region = data.terraform_remote_state.base.outputs.region
 }
 
 # For VPC

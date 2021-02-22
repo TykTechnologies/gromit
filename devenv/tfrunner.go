@@ -17,7 +17,37 @@ type tfRunner struct {
 	token string
 }
 
-// terraform can be used to run any terraform command that does not
+
+func (t *tfRunner) Apply() {
+	t.doTFCmd("apply")
+}
+
+func (t *tfRunner) Destroy() {
+	t.doTFCmd("destroy")
+}
+
+// doTFCmd knows how to apply and destroy and will barf at the first sign of trouble
+// It does not return error as it uses log.Fatal()
+func (t *tfRunner) doTFCmd(cmd string) {
+	if err := t.init(); err != nil {
+		log.Fatal().Err(err).Msg("init failed")
+	}
+	if err := t.runCmd("workspace", "select", t.env); err != nil {
+		log.Warn().Err(err).Msg("env select failed, assuming it needs creation")
+		if err = t.runCmd("workspace", "new", t.env); err != nil {
+			log.Fatal().Err(err).Msg("could not create new env either")
+		}
+	}
+	if err := t.runCmd("validate"); err != nil {
+		log.Fatal().Err(err).Msg("validate failed")
+	}
+	varFile := fmt.Sprintf("-var-file=%s.tfvars.json", t.env)
+	if err := t.runCmd(cmd, "-auto-approve", varFile); err != nil {
+		log.Fatal().Err(err).Str("cmd", cmd).Msg("failed")
+	}
+}
+
+// runCmd can be used to run any terraform command that does not
 // require interactive input
 func (t *tfRunner) runCmd(args ...string) error {
 	tfEnv := append(os.Environ(),
@@ -58,33 +88,4 @@ func (t *tfRunner) init() error {
 	}
 	log.Trace().Str("output", string(out)).Msg("init")
 	return nil
-}
-
-// doTFCmd knows how to apply and destroy and will barf at the first sign of trouble
-// It does not return error as it uses log.Fatal()
-func (t *tfRunner) doTFCmd(cmd string) {
-	if err := t.init(); err != nil {
-		log.Fatal().Err(err).Msg("init failed")
-	}
-	if err := t.runCmd("workspace", "select", t.env); err != nil {
-		log.Warn().Err(err).Msg("env select failed, assuming it needs creation")
-		if err = t.runCmd("workspace", "new", t.env); err != nil {
-			log.Fatal().Err(err).Msg("could not create new env either")
-		}
-	}
-	if err := t.runCmd("validate"); err != nil {
-		log.Fatal().Err(err).Msg("validate failed")
-	}
-	varFile := fmt.Sprintf("-var-file=%s.tfvars.json", t.env)
-	if err := t.runCmd(cmd, "-auto-approve", varFile); err != nil {
-		log.Fatal().Err(err).Str("cmd", cmd).Msg("failed")
-	}
-}
-
-func (t *tfRunner) Apply() {
-	t.doTFCmd("apply")
-}
-
-func (t *tfRunner) Destroy() {
-	t.doTFCmd("destroy")
 }
