@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"path/filepath"
 	"sync"
 	"time"
@@ -97,7 +98,17 @@ func (r *redisClient) filterOrg(org string) {
 				log.Error().Err(err).Interface("val", val).Msg("cannot decode")
 				continue
 			}
-			if jsonVal["org_id"] == org {
+
+			orgIdValue := ""
+
+			var goiErr error
+			if orgIdValue, goiErr = getOrgId(jsonVal); goiErr != nil {
+				log.Error().Err(goiErr).Interface("val", jsonVal).
+					Msg("couldn't find the org_id field, skipping")
+				continue
+			}
+
+			if orgIdValue == org {
 				found++
 				ttl, _ := r.getTTL(keys[i])
 
@@ -155,6 +166,32 @@ func logArray(strs []string) *zerolog.Array {
 		array.Str(s)
 	}
 	return &array
+}
+
+// getOrgId tries to find the org_id field in several known places within different kinds of keys
+func getOrgId(jsonVal map[string]interface{}) (string, error) {
+	orgIdValue := ""
+	dataContainer := jsonVal
+
+	// Maybe it's a session object?
+	if udi, ok := jsonVal["UserData"]; ok {
+		if ud, convOK := udi.(map[string]interface{}); convOK {
+			dataContainer = ud
+		}
+	}
+
+	// Maybe it's an API token or anything else with org_id on the root level?
+	if vi, ok := dataContainer["org_id"]; ok {
+		if v, convOK := vi.(string); convOK {
+			orgIdValue = v
+		} else {
+			return "", errors.New("org_id is not a string")
+		}
+	} else {
+		return "", errors.New("org_id container not found")
+	}
+
+	return orgIdValue, nil
 }
 
 // DumpOrgKeys is suited to run in prod. Just one goroutine per org to write the output file.
