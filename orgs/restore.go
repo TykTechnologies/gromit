@@ -49,7 +49,7 @@ func streamKeys(filepath string, keyChan chan<- []redisKey, batchSize int) {
 	close(keyChan)
 }
 
-func (r *redisClient) writeKeys(ctx context.Context, keys []redisKey) error {
+func (r *RedisClient) writeKeys(ctx context.Context, keys []redisKey) error {
 	// _, err := r.rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
 	// 	for _, key := range keys {
 	// 		ttl := time.Duration(0)
@@ -72,7 +72,7 @@ func (r *redisClient) writeKeys(ctx context.Context, keys []redisKey) error {
 	return nil
 }
 
-func (r *redisClient) RestoreKeys(dumpFile string) {
+func (r *RedisClient) RestoreKeys(dumpFile string) {
 	keyChan := make(chan []redisKey, 2)
 
 	go streamKeys(dumpFile, keyChan, batchSize)

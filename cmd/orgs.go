@@ -30,6 +30,7 @@ import (
 var (
 	redisHosts      string
 	redisMasterName string
+	redisMaxRetries int
 	mongoURL        string
 	dir             string
 	timeout         time.Duration
@@ -64,7 +65,14 @@ Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 		patterns, _ := cmd.Flags().GetString("patterns")
 		count, _ := cmd.Flags().GetInt64("count")
 
-		rdb := orgs.RedisClient(ctx, strings.Split(redisHosts, ","), redisMasterName, count, args, dir)
+		rOpts := orgs.RedisOptions{
+			Addrs:      strings.Split(redisHosts, ","),
+			MasterName: redisMasterName,
+			MaxRetries: redisMaxRetries,
+			BatchSize:  count,
+		}
+
+		rdb := orgs.NewRedisClient(ctx, &rOpts, args, dir)
 		rdb.DumpOrgKeys(args, strings.Split(patterns, ","), count)
 
 		// Mongo
@@ -126,6 +134,7 @@ func init() {
 	orgsCmd.PersistentFlags().StringVarP(&redisHosts, "redis", "r", os.Getenv("REDIS_HOSTS"), "Redis hosts (required), uses REDISCLI_AUTH if set. A comma-separated list will be used as a cluster.")
 	orgsCmd.PersistentFlags().StringVarP(&mongoURL, "murl", "m", os.Getenv("MONGO_URL"), "Mongo URL mongodb://...")
 	orgsCmd.PersistentFlags().StringVarP(&redisMasterName, "name", "n", os.Getenv("REDIS_MASTER"), "Sentinel master name, failover clients only.")
+	orgsCmd.PersistentFlags().IntVar(&redisMaxRetries, "redis-max-retries", 50, "Maximum Redis failure retries")
 	orgsCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "t", 15*time.Minute, "Timeout for the whole dump/restore process in minutes.")
 	orgsCmd.PersistentFlags().StringVarP(&dir, "dir", "d", ".", "Directory to read/write files")
 	orgsCmd.MarkFlagRequired("redis")
