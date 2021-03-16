@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
-
-	"os"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/rs/zerolog"
@@ -25,51 +25,57 @@ type redisKey struct {
 	Value map[string]interface{} `json:"value"`
 }
 
-type redisClient struct {
+type RedisOptions struct {
+	Addrs      []string
+	MasterName string
+	MaxRetries int
+	BatchSize  int64
+}
+
+type RedisClient struct {
 	rdb       redis.UniversalClient
-	batchSize int64
 	ctx       context.Context
-	keysChans map[string]chan ([]string)
+	keysChans map[string]chan []string
 	opFiles   map[string]string
 }
 
-func RedisClient(ctx context.Context, addrs []string, masterName string, batchSize int64, orgs []string, dir string) redisClient {
+func NewRedisClient(ctx context.Context, opts *RedisOptions, orgs []string, dir string) RedisClient {
 	var rdb redis.UniversalClient
 	rdb = redis.NewUniversalClient(&redis.UniversalOptions{
-		MaxRetries:   3,
-		PoolSize:     3,
-		MinIdleConns: 1,
-		ReadTimeout:  getKeysTimeout,
-		WriteTimeout: getKeysTimeout,
-		PoolTimeout:  2 * getKeysTimeout,
-		IdleTimeout:  getKeysTimeout,
-		Password:     os.Getenv("REDISCLI_AUTH"),
-		MasterName:   masterName,
-		Addrs:        addrs,
+		MaxRetries:      opts.MaxRetries,
+		PoolSize:        10,
+		MinIdleConns:    1,
+		ReadTimeout:     getKeysTimeout,
+		WriteTimeout:    getKeysTimeout,
+		PoolTimeout:     2 * getKeysTimeout,
+		IdleTimeout:     10 * getKeysTimeout,
+		Password:        os.Getenv("REDISCLI_AUTH"),
+		MasterName:      opts.MasterName,
+		Addrs:           opts.Addrs,
+		MaxRetryBackoff: 1 * time.Second,
 	})
 
 	rdb.Ping(ctx)
 
-	keysChans := make(map[string]chan ([]string))
+	keysChans := make(map[string]chan []string)
 	opFiles := make(map[string]string)
 
 	for _, org := range orgs {
 		log.Debug().Str("org", org).Msg("setting up channels")
-		keysChans[org] = make(chan ([]string), batchSize)
+		keysChans[org] = make(chan []string, opts.BatchSize)
 		opFiles[org] = filepath.Join(dir, org+".keys.jl")
 	}
 
-	return redisClient{
+	return RedisClient{
 		rdb,
-		batchSize,
 		ctx,
 		keysChans,
 		opFiles,
 	}
 }
 
-// FilterOrg will MGET the block of keys and write out all those belonging to org
-func (r *redisClient) filterOrg(org string) {
+// filterOrg will MGET the block of keys and write out all those belonging to org
+func (r *RedisClient) filterOrg(org string) {
 	f, err := os.Create(r.opFiles[org])
 	if err != nil {
 		log.Fatal().Err(err).Str("opfile", r.opFiles[org]).Msg("cannot create")
@@ -97,7 +103,17 @@ func (r *redisClient) filterOrg(org string) {
 				log.Error().Err(err).Interface("val", val).Msg("cannot decode")
 				continue
 			}
-			if jsonVal["org_id"] == org {
+
+			orgIdValue := ""
+
+			var goiErr error
+			if orgIdValue, goiErr = getOrgId(jsonVal); goiErr != nil {
+				log.Error().Err(goiErr).Interface("val", jsonVal).
+					Msg("couldn't find the org_id field, skipping")
+				continue
+			}
+
+			if orgIdValue == org {
 				found++
 				ttl, _ := r.getTTL(keys[i])
 
@@ -118,7 +134,7 @@ func (r *redisClient) filterOrg(org string) {
 	log.Info().Int("found", found).Str("org", org).Msg("done")
 }
 
-func (r *redisClient) scanKeys(org string, pattern string, batchSize int64) int {
+func (r *RedisClient) scanKeys(org string, pattern string, batchSize int64) int {
 	scanned := 0
 	var cursor uint64 = 0
 	for {
@@ -142,9 +158,15 @@ func (r *redisClient) scanKeys(org string, pattern string, batchSize int64) int 
 	return scanned
 }
 
-func (r *redisClient) getTTL(keyName string) (ttl int64, err error) {
-	duration, err := r.rdb.TTL(r.ctx, keyName).Result()
-	return int64(duration.Seconds()), err
+func (r *RedisClient) getTTL(keyName string) (int64, error) {
+	var duration time.Duration
+	var err error
+
+	if duration, err = r.rdb.TTL(r.ctx, keyName).Result(); err != nil {
+		return 0, err
+	}
+
+	return int64(duration.Seconds()), nil
 }
 
 // A simple hack to work around lack of generics in logging an array to zerolog
@@ -157,9 +179,35 @@ func logArray(strs []string) *zerolog.Array {
 	return &array
 }
 
+// getOrgId tries to find the org_id field in several known places within different kinds of keys
+func getOrgId(jsonVal map[string]interface{}) (string, error) {
+	orgIdValue := ""
+	dataContainer := jsonVal
+
+	// Maybe it's a session object?
+	if udi, ok := jsonVal["UserData"]; ok {
+		if ud, convOK := udi.(map[string]interface{}); convOK {
+			dataContainer = ud
+		}
+	}
+
+	// Maybe it's an API token or anything else with org_id on the root level?
+	if vi, ok := dataContainer["org_id"]; ok {
+		if v, convOK := vi.(string); convOK {
+			orgIdValue = v
+		} else {
+			return "", errors.New("org_id is not a string")
+		}
+	} else {
+		return "", errors.New("org_id container not found")
+	}
+
+	return orgIdValue, nil
+}
+
 // DumpOrgKeys is suited to run in prod. Just one goroutine per org to write the output file.
 // The run time is about 3x that of the threaded version
-func (r *redisClient) DumpOrgKeys(orgs []string, patterns []string, batchSize int64) {
+func (r *RedisClient) DumpOrgKeys(orgs []string, patterns []string, batchSize int64) {
 	scanned := 0
 	start := time.Now()
 
