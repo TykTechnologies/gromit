@@ -61,6 +61,7 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	log.Logger = log.With().Caller().Str("version", util.Version()).Str("binary", util.Name()).Logger()
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -97,12 +98,9 @@ func initConfig() {
 	} else {
 		zerolog.SetGlobalLevel(ll)
 	}
-	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		log.Debug().Str("file", viper.ConfigFileUsed()).Msg("reading config from")
 	}
-	// Add source code reference and version to log
-	log.Logger = log.With().Caller().Str("version", util.Version()).Str("binary", util.Name()).Logger()
 }

@@ -11,16 +11,9 @@ import (
 
 // setup environment for the test run and cleanup after
 func TestMain(m *testing.M) {
-	err := godotenv.Load("../testdata/testvars")
-	if err != nil {
-		log.Error().Err(err).Msg("Could not load env from testdata/testvars")
-	}
-	path, err := os.Getwd()
-	if err != nil {
-		log.Error().Err(err).Msg("Could not find cwd")
-	}
-	log.Info().Str("path", path).Msg("cwd")
-	
+	os.Setenv("TF_VAR_base", "base-devenv-euc1-test")
+	os.Setenv("TF_VAR_infra", "infra-devenv-euc1-test")
+
 	code := m.Run()
 
 	os.Exit(code)

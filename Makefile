@@ -17,8 +17,13 @@ testdata: testdata/base/*
 	terraform init
 	terraform apply -auto-approve
 
-test:	testdata
-	go test ./...
+test: testdata
+	GROMIT_TABLENAME=GromitTest \
+	GROMIT_REPOS=tyk,tyk-analytics,tyk-pump \
+	GROMIT_DOMAIN=test.tyk.technology \
+	GROMIT_ZONEID=Z0326653CS8RP88TOKKI \
+	GROMIT_REGISTRYID=046805072452 \
+	go test ./... #-run TestPositives
 
 grun: clean
 	docker build -t $(@) . && docker run --rm --name $(@) \

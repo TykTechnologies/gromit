@@ -75,7 +75,7 @@ func (a *App) Init(ca string) {
 	if err != nil {
 		log.Fatal().Err(err).Msgf("Could not ensure table %s exists", a.Env.TableName)
 	}
-	log.Info().Msgf("Found table %s", a.Env.TableName)
+	log.Info().Str("table", a.Env.TableName).Msg("Found")
 
 	caCert, err := ioutil.ReadFile(ca)
 	if err != nil {
@@ -188,36 +188,41 @@ func (a *App) newBuild(w http.ResponseWriter, r *http.Request) {
 
 	// Github sends org/reponame
 	repo := getTrailingElement(newBuild["repo"], "/")
-	// Github sends a path like refs/.../integration/<ref that we want>
-	ref := getTrailingElement(newBuild["ref"], "/")
+	// Github sends a path like refs/.../heads/<ref that we want>
+	// Also remove all . as it will cause a problem with DNS
+	ref := strings.Replace(getTrailingElement(newBuild["ref"], "/"), ".", "", -1)
 	sha := newBuild["sha"]
 
 	log.Debug().Str("repo", repo).Str("ref", ref).Str("sha", sha).Msg("to be inserted")
 
 	de, err := devenv.GetDevEnv(a.DB, a.Env.TableName, ref)
 	if err != nil {
-		util.StatCount("newbuild.failures", 1)
 		if derr, ok := err.(devenv.NotFoundError); ok {
 			log.Info().Str("env", ref).Msg("not found, creating")
-			de, err = devenv.NewDevEnv(ref, a.ECR, a.DB, a.Env.TableName, a.Env.RegistryID, a.Env.Repos)
-			if err != nil {
-				log.Error().Err(err).Str("env", ref).Msg("could not create new env")
-				respondWithError(w, http.StatusInternalServerError, "could not create new env "+ref)
-				return
-			}
+			de = devenv.NewDevEnv(ref, a.DB, a.Env.TableName)
 		} else {
+			util.StatCount("newbuild.failures", 1)
 			log.Error().Err(derr).Str("env", ref).Msg("could not lookup env")
 			respondWithError(w, http.StatusInternalServerError, "could not lookup env "+ref)
 			return
 		}
 	}
 	de.MarkNew()
+	vs, err := devenv.GetECRState(a.ECR, a.Env.RegistryID, ref, a.Env.Repos)
+	if err != nil {
+		util.StatCount("newbuild.failures", 1)
+		log.Error().Err(err).Str("env", ref).Msg("could not find ecr state")
+		respondWithError(w, http.StatusInternalServerError, "could not find ecr state "+ref)
+		return
+	}
+	de.SetVersions(vs)
+	de.SetVersion(repo, sha)
 	err = de.Save()
 	if err != nil {
 		log.Error().Err(err).Str("env", ref).Msg("could not save env")
 		respondWithError(w, http.StatusInternalServerError, "could not mark as new: "+ref)
 	}
-	respondWithJSON(w, http.StatusOK, de)
+	respondWithJSON(w, http.StatusOK, de.VersionMap())
 }
 
 // ReST API for /env
@@ -231,28 +236,29 @@ func (a *App) createEnv(w http.ResponseWriter, r *http.Request) {
 	util.StatCount("env.create.count", 1)
 	vars := mux.Vars(r)
 	ref := vars["name"]
-	log.Debug().Interface("env", ref).Interface("payload", vars).Msgf("new env received")
 
-	newEnv := make(map[string]string)
+	newEnv := make(devenv.VersionMap)
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&newEnv)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 	}
 
-	de, err := devenv.NewDevEnv(ref, a.ECR, a.DB, a.Env.TableName, a.Env.RegistryID, a.Env.Repos)
+	log.Debug().Str("envname", ref).Interface("payload", newEnv).Msg("new env received")
+	de := devenv.NewDevEnv(ref, a.DB, a.Env.TableName)
 	if err != nil {
 		util.StatCount("env.create.failures", 1)
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	de.SetVersions(newEnv)
 	err = de.Save()
 	if err != nil {
 		log.Error().Err(err).Str("env", ref).Msg("could not save env")
-		respondWithError(w, http.StatusInternalServerError, "could not mark as new: "+ref)
+		respondWithError(w, http.StatusInternalServerError, "could not create: "+ref)
 	}
-	log.Info().Interface("env", de).Msg("new env created")
-	respondWithJSON(w, http.StatusCreated, de)
+	log.Info().Interface("env", de.VersionMap()).Msg("created")
+	respondWithJSON(w, http.StatusCreated, de.VersionMap())
 }
 
 func (a *App) updateEnv(w http.ResponseWriter, r *http.Request) {
@@ -261,7 +267,7 @@ func (a *App) updateEnv(w http.ResponseWriter, r *http.Request) {
 	ref := vars["name"]
 	log.Debug().Interface("env", ref).Interface("payload", vars).Msgf("update received")
 
-	newEnv := make(map[string]string)
+	newEnv := make(devenv.VersionMap)
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&newEnv)
 	if err != nil {
@@ -281,15 +287,14 @@ func (a *App) updateEnv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	de.MarkNew()
-	de.SetVersion(newEnv)
-	err = de.Save()
+	err = de.MergeVersions(newEnv)
 	if err != nil {
 		log.Error().Err(err).Str("env", ref).Msg("could not save env")
-		respondWithError(w, http.StatusInternalServerError, "could not mark as new: "+ref)
+		respondWithError(w, http.StatusInternalServerError, "could not update: "+ref)
 		return
 	}
 	log.Info().Interface("env", ref).Msg("env updated")
-	respondWithJSON(w, http.StatusOK, de)
+	respondWithJSON(w, http.StatusOK, de.VersionMap())
 }
 
 func (a *App) getEnv(w http.ResponseWriter, r *http.Request) {
@@ -311,7 +316,7 @@ func (a *App) getEnv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Debug().Interface("env", ref).Msg("env found")
-	respondWithJSON(w, http.StatusOK, de)
+	respondWithJSON(w, http.StatusOK, de.VersionMap())
 }
 
 func (a *App) deleteEnv(w http.ResponseWriter, r *http.Request) {
@@ -336,10 +341,10 @@ func (a *App) deleteEnv(w http.ResponseWriter, r *http.Request) {
 	err = de.Save()
 	if err != nil {
 		log.Error().Err(err).Str("env", ref).Msg("could not save env")
-		respondWithError(w, http.StatusInternalServerError, "could not mark as new: "+ref)
+		respondWithError(w, http.StatusInternalServerError, "could not delete: "+ref)
 		return
 	}
-	log.Info().Interface("env", ref).Msg("env updated")
+	log.Info().Interface("env", ref).Msg("marked as deleted")
 	w.WriteHeader(http.StatusAccepted)
 	io.WriteString(w, "ok")
 }

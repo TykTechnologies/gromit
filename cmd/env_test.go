@@ -2,10 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
-	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/TykTechnologies/gromit/server"
 	"github.com/stretchr/testify/assert"
 )
@@ -18,8 +16,6 @@ type cmdTestCase struct {
 	ResponseStr  string
 	ResponseJSON string
 }
-
-const cmdTestTableName = "GromitCmdTest"
 
 func runEnvTests(t *testing.T, cases []cmdTestCase, tsurl string) {
 	for _, tc := range cases {
@@ -66,12 +62,7 @@ func TestEnvCmd(t *testing.T) {
 		},
 	}
 
-	os.Setenv("GROMIT_TABLENAME", cmdTestTableName)
 	var a server.App
-	err := devenv.DeleteTable(a.DB, cmdTestTableName)
-	if err != nil {
-		t.Fatal(err)
-	}
 	a.Init("../testdata/ca.pem")
 	ts := a.Test("../testdata/scerts/cert.pem", "../testdata/scerts/key.pem")
 	defer ts.Close()

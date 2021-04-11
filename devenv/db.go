@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/expression"
-	"github.com/aws/aws-sdk-go-v2/service/ecr/ecriface"
 	"github.com/rs/zerolog/log"
 )
 
@@ -28,13 +27,11 @@ const (
 )
 
 // GetDevEnv will get the named env with the supplied name from the DB
-func GetDevEnv(svc dynamodbiface.ClientAPI, table string, env string) (*DevEnv, error) {
-	log.Logger = log.With().Str("name", env).Str("op", "get").Logger()
-
+func GetDevEnv(svc dynamodbiface.ClientAPI, table string, envName string) (*DevEnv, error) {
 	input := &dynamodb.GetItemInput{
 		Key: map[string]dynamodb.AttributeValue{
 			NAME: {
-				S: aws.String(env),
+				S: aws.String(envName),
 			},
 		},
 		TableName: aws.String(table),
@@ -42,7 +39,7 @@ func GetDevEnv(svc dynamodbiface.ClientAPI, table string, env string) (*DevEnv, 
 
 	req := svc.GetItemRequest(input)
 	result, err := req.Send(context.Background())
-	log.Trace().Interface("result", result).Msgf("get for %s", env)
+	log.Trace().Interface("result", result).Msgf("get for %s", envName)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -57,10 +54,10 @@ func GetDevEnv(svc dynamodbiface.ClientAPI, table string, env string) (*DevEnv, 
 		return &DevEnv{}, err
 	}
 	if result.Item == nil {
-		return &DevEnv{}, NotFoundError{env}
+		return &DevEnv{}, NotFoundError{envName}
 	}
 
-	envMap := make(versionMap)
+	envMap := make(VersionMap)
 	err = dynamodbattribute.UnmarshalMap(result.Item, &envMap)
 	if err != nil {
 		return &DevEnv{}, err
@@ -70,35 +67,31 @@ func GetDevEnv(svc dynamodbiface.ClientAPI, table string, env string) (*DevEnv, 
 	delete(envMap, NAME)
 	delete(envMap, STATE)
 	return &DevEnv{
-		Name:     env,
+		Name:     envName,
 		versions: envMap,
 		state:    state,
 		dbClient: svc,
+		table:    table,
 	}, nil
 }
 
 // NewDevEnv returns an unsaved environment but the env is ready to be saved
-func NewDevEnv(name string, ecr ecriface.ClientAPI, db dynamodbiface.ClientAPI, table string, registry string, repos []string) (*DevEnv, error) {
-	vs, err := getECRState(ecr, registry, name, repos)
-	if err != nil {
-		return &DevEnv{}, err
-	}
+func NewDevEnv(name string, db dynamodbiface.ClientAPI, table string) *DevEnv {
 	return &DevEnv{
 		Name:     name,
 		state:    NEW,
 		dbClient: db,
 		table:    table,
-		versions: vs,
-	}, nil
+		versions: nil,
+	}
 }
 
 // Save will save the env to the DB, creating the item if needed
 func (d *DevEnv) Save() error {
-	log.Logger = log.With().Str("name", d.Name).Str("op", "save").Logger()
 	update := expression.UpdateBuilder{}
+	update = update.Set(expression.Name("state"), expression.Value(d.state))
 	for k, v := range d.versions {
-		newUpdate := update.Set(expression.Name(k), expression.Value(v))
-		update = newUpdate
+		update = update.Set(expression.Name(k), expression.Value(v))
 	}
 
 	// Create the DynamoDB expression from the Update.
@@ -154,6 +147,18 @@ func (d *DevEnv) Save() error {
 	return nil
 }
 
+// Promote all versions to top-level keys.
+// This is done so that VersionMap can support any list of repos at run time
+func (d *DevEnv) VersionMap() map[string]string {
+	versions := make(map[string]string)
+	versions["name"] = d.Name
+	versions["state"] = d.state
+	for k, v := range d.versions {
+		versions[k] = v
+	}
+	return versions
+}
+
 func (d *DevEnv) MarkDeleted() {
 	d.state = DELETED
 }
@@ -166,16 +171,25 @@ func (d *DevEnv) MarkProcessed() {
 	d.state = PROCESSED
 }
 
-func (d *DevEnv) SetVersion(vs versionMap) {
+func (d *DevEnv) MergeVersions(vs VersionMap) error {
+	for k, v := range vs {
+		d.versions[k] = v
+	}
+	return d.Save()
+}
+
+func (d *DevEnv) SetVersions(vs VersionMap) {
 	delete(vs, STATE)
 	delete(vs, NAME)
 	d.versions = vs
 }
 
+func (d *DevEnv) SetVersion(repo string, version string) {
+	d.versions[repo] = version
+}
+
 // Delete will delete the env if its internal state is devenv.DELETED
 func (d *DevEnv) Delete() error {
-	log.Logger = log.With().Str("name", d.Name).Str("op", "delete").Logger()
-
 	if d.state != DELETED {
 		return fmt.Errorf("state needs to be %s but is %s", DELETED, d.state)
 	}
@@ -215,8 +229,6 @@ func (d *DevEnv) Delete() error {
 // Only attribute names matching the list in repos will be fetched
 // If any error occurs while retrieving an env, it fails immediately and returns the list of envs that have been retrieved so far
 func GetEnvsByState(svc dynamodbiface.ClientAPI, table string, state string, repos []string) ([]DevEnv, error) {
-	log.Logger = log.With().Str("state", state).Str("op", "scan").Logger()
-
 	var envs []DevEnv
 	filt := expression.Name(STATE).Equal(expression.Value(state))
 
@@ -263,7 +275,7 @@ func GetEnvsByState(svc dynamodbiface.ClientAPI, table string, state string, rep
 		return envs, err
 	}
 	for _, row := range result.Items {
-		envMap := make(versionMap)
+		envMap := make(VersionMap)
 		err = dynamodbattribute.UnmarshalMap(row, &envMap)
 		if err != nil {
 			return envs, err

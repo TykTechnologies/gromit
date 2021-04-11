@@ -9,17 +9,17 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// getECRState returns master as the tree-ish if no env was found
-func getECRState(svc ecriface.ClientAPI, registry string, env string, repos []string) (versionMap, error) {
-	var versionMap = make(versionMap)
+// GetECRState returns master as the tree-ish if no env was found
+func GetECRState(svc ecriface.ClientAPI, registry string, envName string, repos []string) (VersionMap, error) {
+	var versionMap = make(VersionMap)
 
 	for _, repo := range repos {
-		tag, err := getExistingTag(svc, registry, repo, env)
+		tag, err := getExistingTag(svc, registry, repo, envName)
 		versionMap[repo] = tag
 
 		if err != nil {
 			if _, ok := err.(NotFoundError); ok {
-				log.Debug().Msgf("%s: %s", env, err)
+				log.Debug().Msgf("%s: %s", envName, err)
 				versionMap[repo] = "master"
 			} else {
 				return versionMap, err

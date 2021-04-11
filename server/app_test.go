@@ -1,35 +1,22 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/stretchr/testify/require"
 )
 
 var a App
 
-const tableName = "GromitAPITest"
-
 // setup environment for the test run and cleanup after
 func TestMain(m *testing.M) {
-	os.Setenv("GROMIT_TABLENAME", tableName)
-	os.Setenv("GROMIT_REPOS", "tyk,tyk-analytics,tyk-pump")
-	os.Setenv("GROMIT_REGISTRYID", "046805072452")
-	os.Setenv("XDG_CONFIG_HOME", "../testdata")
 	a.Init("../testdata/ca.pem")
 
 	code := m.Run()
-	err := devenv.DeleteTable(a.DB, tableName)
-	if err != nil {
-		fmt.Println(err)
-	}
-
 	os.Exit(code)
 }
 
@@ -91,11 +78,12 @@ func TestPositives(t *testing.T) {
 	// Order matters, delete after creating
 	cases := []APITestCase{
 		{
-			Name:       "InsertTestEnv",
-			Endpoint:   "/env/test",
-			Payload:    `{"state":"new","tyk":"sha1","tyk-analytics":"sha2","tyk-pump":"sha3"}`,
-			HTTPStatus: http.StatusCreated,
-			HTTPMethod: "PUT",
+			Name:         "InsertTestEnv",
+			Endpoint:     "/env/test",
+			Payload:      `{"tyk":"sha1","tyk-analytics":"sha2","tyk-pump":"sha3"}`,
+			ResponseJSON: `{"name":"test","state":"new","tyk":"sha1","tyk-analytics":"sha2","tyk-pump":"sha3"}`,
+			HTTPStatus:   http.StatusCreated,
+			HTTPMethod:   "PUT",
 		},
 		{
 			Name:         "GetTestEnv",
@@ -109,7 +97,7 @@ func TestPositives(t *testing.T) {
 			Endpoint:     "/env/test",
 			Payload:      `{"tyk":"updated-sha"}`,
 			HTTPStatus:   http.StatusOK,
-			ResponseJSON: `{"state":"new","tyk":"updated-sha"}`,
+			ResponseJSON: `{"name":"test","state":"new","tyk":"updated-sha","tyk-analytics":"sha2","tyk-pump":"sha3"}`,
 			HTTPMethod:   "PATCH",
 		},
 		{
@@ -144,7 +132,7 @@ func TestNegatives(t *testing.T) {
 			Name:       "Duplicate",
 			Endpoint:   "/env/test-neg",
 			Payload:    `{"name":"test", "tyk":"sha1", "tyk-analytics":"sha2", "tyk-pump":"sha3"}`,
-			HTTPStatus: http.StatusConflict,
+			HTTPStatus: http.StatusCreated,
 			HTTPMethod: "PUT",
 		},
 		{
@@ -156,14 +144,14 @@ func TestNegatives(t *testing.T) {
 		{
 			Name:       "DeleteUnknown",
 			Endpoint:   "/env/unknown",
-			HTTPStatus: http.StatusAccepted,
+			HTTPStatus: http.StatusNotFound,
 			HTTPMethod: "DELETE",
 		},
 		{
 			Name:         "UnknownEnv",
 			Endpoint:     "/env/unknown-env",
 			HTTPStatus:   http.StatusNotFound,
-			ResponseJSON: `{"error":"does not exist: unknown-env"}`,
+			ResponseJSON: `{"error":"could not find env unknown-env"}`,
 			HTTPMethod:   "GET",
 		},
 	}

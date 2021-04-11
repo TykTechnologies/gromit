@@ -8,15 +8,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/route53/route53iface"
 )
 
-// versionMap maps repos to any tree-ish in git
-type versionMap map[string]string
+// VersionMap maps repos to any tree-ish in git
+type VersionMap map[string]string
 
 // DevEnv represents the known (or desired) state of an environment based on the state in DynamoDB.
 // This type is concerned with management of the DynamoDB item representing the state of an environment named DevEnv.Name
 type DevEnv struct {
-	Name     string
+	Name     string `json:"name"`
 	state    string
-	versions versionMap
+	versions VersionMap
 	dbClient dynamodbiface.ClientAPI
 	table    string
 	aws      aws.Config
