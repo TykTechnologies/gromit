@@ -1,10 +1,4 @@
 # Make sure to check the documentation at http://goreleaser.com
-before:
-  hooks:
-    - go mod download
-    - go get github.com/GeertJohan/go.rice/rice
-    - rice -v embed-go -i ./terraform -i ./confgen
-      
 builds:
   -
     binary: gromit
@@ -20,8 +14,6 @@ builds:
 archives:
 - replacements:
     linux: Linux
-    386: i386
-    amd64: x86_64
 
 dockers:
   -

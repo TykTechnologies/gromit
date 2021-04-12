@@ -5,8 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"github.com/rs/zerolog/log"
-	"github.com/joho/godotenv"
 )
 
 // setup environment for the test run and cleanup after
