@@ -2,9 +2,13 @@ package cmd
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
+
+	"github.com/TykTechnologies/gromit/server"
 )
 
 // setup environment for the test run and cleanup after
@@ -12,6 +16,20 @@ func TestMain(m *testing.M) {
 	os.Setenv("TF_VAR_base", "base-devenv-euc1-test")
 	os.Setenv("TF_VAR_infra", "infra-devenv-euc1-test")
 
+	a := server.App{
+		TableName:  os.Getenv("GROMIT_TABLENAME"),
+		RegistryID: os.Getenv("GROMIT_REGISTRYID"),
+		Repos:      strings.Split(os.Getenv("GROMIT_REPOS"), ","),
+	}
+	err := a.Init([]byte(os.Getenv("GROMIT_CA")), []byte(os.Getenv("GROMIT_SERVE_CERT")), []byte(os.Getenv("GROMIT_SERVE_KEY")))
+	if err != nil {
+		fmt.Println("could not init test app", err)
+		os.Exit(1)
+	}
+
+	ts := a.Test()
+	defer ts.Close()
+	os.Setenv("GROMIT_SERVE_URL", ts.URL)
 	code := m.Run()
 
 	os.Exit(code)

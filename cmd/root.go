@@ -20,8 +20,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/TykTechnologies/gromit/util"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/spf13/cobra"
 
 	"github.com/rs/zerolog"
@@ -32,6 +34,11 @@ import (
 
 var cfgFile string
 var logLevel string
+
+// Global vars that are available to all commands
+var ZoneID, Domain, TableName, RegistryID string
+var Repos []string
+var AWScfg aws.Config
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -60,8 +67,9 @@ func Execute() {
 }
 
 func init() {
+	// Call initConfig() for every command before running
 	cobra.OnInitialize(initConfig)
-	log.Logger = log.With().Caller().Str("version", util.Version()).Str("binary", util.Name()).Logger()
+	log.Logger = log.With().Caller().Str("version", util.Version()).Logger()
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -72,7 +80,7 @@ func init() {
 
 }
 
-// initConfig reads in config file and ENV variables if set.
+// initConfig reads in config file and env variables if set.
 func initConfig() {
 	appName := util.Name()
 	viper.AddConfigPath(fmt.Sprintf("/conf/%s", appName))
@@ -88,6 +96,12 @@ func initConfig() {
 	} else if xdgHome := os.Getenv("XDG_CONFIG_HOME"); xdgHome != "" {
 		confPath = fmt.Sprintf("%s/%s", xdgHome, appName)
 	}
+	viper.SetEnvPrefix("GROMIT")
+	// Look in env first for every viper.Get* call
+	viper.AutomaticEnv()
+	replacer := strings.NewReplacer(".", "_")
+	viper.SetEnvKeyReplacer(replacer)
+
 	viper.AddConfigPath(confPath)
 	viper.Set("confpath", confPath)
 
@@ -103,4 +117,9 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		log.Debug().Str("file", viper.ConfigFileUsed()).Msg("reading config from")
 	}
+	Repos = strings.Split(viper.GetString("repos"), ",")
+	RegistryID = viper.GetString("registryid")
+	TableName = viper.GetString("tablename")
+	ZoneID = viper.GetString("cluster.zoneid")
+	Domain = viper.GetString("cluster.domain")
 }

@@ -17,7 +17,6 @@ type tfRunner struct {
 	token string
 }
 
-
 func (t *tfRunner) Apply() {
 	t.doTFCmd("apply")
 }
@@ -78,8 +77,7 @@ func (t *tfRunner) init() error {
 		return err
 	}
 	chdir := fmt.Sprintf("-chdir=%s", t.dir)
-	// XXX: read-only so no locks are needed?
-	tf := exec.Command("terraform", chdir, "init", "-input=false", "-no-color", "-lock=false")
+	tf := exec.Command("terraform", chdir, "init", "-input=false", "-no-color")
 	tf.Stdin = strings.NewReader("1")
 
 	out, err := tf.CombinedOutput()

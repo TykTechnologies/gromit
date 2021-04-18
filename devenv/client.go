@@ -77,7 +77,7 @@ func (g *GromitClient) makeRequest(method string, api string, body io.Reader, co
 	//req.Header.Add("Content-Type", contentType)
 	resp, err := g.Client.Do(req)
 	if err != nil {
-		return []byte{}, resp.StatusCode, fmt.Errorf("making request to %s: %w", gurl, err)
+		return []byte{}, -1, fmt.Errorf("making request to %s: %w", gurl, err)
 	}
 	defer resp.Body.Close()
 

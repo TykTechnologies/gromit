@@ -20,7 +20,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -34,23 +33,6 @@ import (
 var envName, inputFile string
 var client devenv.GromitClient
 
-// getTLSClient can give you a http client that all commands can use
-func getTLSClient(confKey string) util.TLSAuthClient {
-	certs := viper.GetStringMapString(confKey)
-	log.Debug().Interface("certs", certs).Msg("will be loaded")
-	for k, v := range certs {
-		if !strings.HasPrefix(v, "/") {
-			// confpath is set in root.go:init()
-			certs[k] = filepath.Join(viper.GetString("confpath"), v)
-		}
-	}
-	return util.TLSAuthClient{
-		CA:   certs["ca"],
-		Cert: certs["cert"],
-		Key:  certs["key"],
-	}
-}
-
 // Using functions instead of vars makes testing easier
 var envCmd = &cobra.Command{
 	Use:   "env",
@@ -58,10 +40,15 @@ var envCmd = &cobra.Command{
 	Long: `Certificates and such like are configured in the env.ccerts section 
 of the gromit config file`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		server, _ := cmd.Flags().GetString("server")
+		server := viper.GetString("serve.url")
 		if mtls, _ := cmd.Flags().GetBool("mtls"); mtls {
-			t := getTLSClient("env.ccerts")
-			c, err := t.GetHTTPClient()
+			tls := util.TLSAuthClient{
+				CA:   []byte(viper.GetString("ca")),
+				Cert: []byte(viper.GetString("client.cert")),
+				Key:  []byte(viper.GetString("client.key")),
+			}
+
+			c, err := tls.GetHTTPSClient()
 			if err != nil {
 				log.Fatal().Err(err).Msg("getting http client")
 			}
@@ -70,10 +57,9 @@ of the gromit config file`,
 				Client: c,
 			}
 		} else {
-			authToken, _ := cmd.Flags().GetString("authtoken")
 			client = devenv.GromitClient{
 				Server:    server,
-				AuthToken: authToken,
+				AuthToken: viper.GetString("authtoken"),
 				Client: http.Client{
 					Timeout: time.Duration(10 * time.Second),
 				},
@@ -130,9 +116,7 @@ func init() {
 
 	envCmd.AddCommand(replaceSubCmd)
 	envCmd.AddCommand(deleteSubCmd)
-	envCmd.PersistentFlags().StringP("server", "s", "https://gserve.internal.dev.tyk.technology", "base url for requests")
 	envCmd.PersistentFlags().BoolP("mtls", "m", true, "Use mTLS")
-	envCmd.PersistentFlags().StringP("authtoken", "a", viper.GetString("env.authtoken"), "Auth token")
 	envCmd.PersistentFlags().StringVarP(&envName, "envname", "e", "", "Name of the environment")
 	envCmd.PersistentFlags().StringP("file", "f", "-", "File to use as input - reads from stdin")
 }

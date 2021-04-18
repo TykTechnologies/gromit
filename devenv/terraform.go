@@ -54,7 +54,7 @@ func (d *DevEnv) tfInit(confPath string) tfRunner {
 
 // Sow will run an deploy an env with terraform
 func (d *DevEnv) Sow(confPath string) error {
-	log.Info().Str("component", "run").Msg("starting")
+	log.Info().Str("envName", d.Name).Msg("starting")
 
 	t := time.Now()
 	defer func() {
@@ -74,7 +74,7 @@ func (d *DevEnv) Sow(confPath string) error {
 
 // Reap will destroy an env that was created with Sow() and delete it from the DB
 func (d *DevEnv) Reap(confPath string) error {
-	log.Info().Str("component", "reap").Msg("starting")
+	log.Info().Str("envName", d.Name).Msg("starting")
 
 	t := time.Now()
 	defer func() {

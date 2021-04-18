@@ -1,3 +1,4 @@
+SHELL := bash
 VERSION := $(shell git describe --tags)
 COMMIT := $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
@@ -17,13 +18,18 @@ testdata: testdata/base/*
 	terraform init
 	terraform apply -auto-approve
 
-test: testdata
+test: 
 	GROMIT_TABLENAME=GromitTest \
 	GROMIT_REPOS=tyk,tyk-analytics,tyk-pump \
-	GROMIT_DOMAIN=test.tyk.technology \
-	GROMIT_ZONEID=Z0326653CS8RP88TOKKI \
 	GROMIT_REGISTRYID=046805072452 \
-	go test ./... #-run TestPositives
+	GROMIT_CLUSTER_DOMAIN=test.tyk.technology \
+	GROMIT_CLUSTER_ZONEID=Z0326653CS8RP88TOKKI \
+	GROMIT_SERVE_CERT=$$(<testdata/scerts/cert.pem) \
+	GROMIT_SERVE_KEY=$$(<testdata/scerts/key.pem) \
+	GROMIT_CLIENT_CERT=$$(</home/alok/.config/gromit/ccerts/cert.pem) \
+	GROMIT_CLIENT_KEY=$$(</home/alok/.config/gromit/ccerts/key.pem) \
+	GROMIT_CA=$$(</home/alok/work/tyk/src/tyk-ci/certs/rootca/rootca.pem) \
+	go test ./... # dlv test ./cmd #
 
 grun: clean
 	docker build -t $(@) . && docker run --rm --name $(@) \

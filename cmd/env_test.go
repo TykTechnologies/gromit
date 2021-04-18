@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/TykTechnologies/gromit/server"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,10 +15,10 @@ type cmdTestCase struct {
 	ResponseJSON string
 }
 
-func runEnvTests(t *testing.T, cases []cmdTestCase, tsurl string) {
+func runEnvTests(t *testing.T, cases []cmdTestCase) {
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			response, err := executeMockCmd(append(tc.Args, fmt.Sprintf("-s%s", tsurl))...)
+			response, err := executeMockCmd(tc.Args...)
 			if err != nil {
 				t.Error(err)
 			}
@@ -61,11 +59,5 @@ func TestEnvCmd(t *testing.T) {
 			ResponseJSON: `{"name":"env-test","state":"deleted","tyk":"gw-sha","tyk-analytics":"db-sha","tyk-pump":"pump-sha"}`,
 		},
 	}
-
-	var a server.App
-	a.Init("../testdata/ca.pem")
-	ts := a.Test("../testdata/scerts/cert.pem", "../testdata/scerts/key.pem")
-	defer ts.Close()
-
-	runEnvTests(t, cases, ts.URL)
+	runEnvTests(t, cases)
 }

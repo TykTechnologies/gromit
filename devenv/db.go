@@ -149,7 +149,7 @@ func (d *DevEnv) Save() error {
 
 // Promote all versions to top-level keys.
 // This is done so that VersionMap can support any list of repos at run time
-func (d *DevEnv) VersionMap() map[string]string {
+func (d *DevEnv) VersionMap() VersionMap {
 	versions := make(map[string]string)
 	versions["name"] = d.Name
 	versions["state"] = d.state
