@@ -9,7 +9,7 @@ terraform {
 }
 
 provider "aws" {
-  region  = data.terraform_remote_state.base.outputs.region
+  region = data.terraform_remote_state.base.outputs.region
 }
 
 # For VPC
@@ -47,6 +47,8 @@ locals {
     "purpose" = "ci",
     "env"     = var.name
   }
+  dash_license = "arn:aws:secretsmanager:eu-central-1:754489498669:secret:DashTrialLicense-7EzdZh"
+  mdcb_license = "arn:aws:secretsmanager:eu-central-1:754489498669:secret:MDCBTrialLicense-9BIRjv"
 }
 
 # ECS cluster

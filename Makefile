@@ -1,3 +1,4 @@
+SHELL := bash
 VERSION := $(shell git describe --tags)
 COMMIT := $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
@@ -17,8 +18,9 @@ testdata: testdata/base/*
 	terraform init
 	terraform apply -auto-approve
 
-test:	testdata
-	go test ./...
+test: 
+	echo Use a config file locally and env variables in CI
+	go test ./... # dlv test ./cmd #
 
 grun: clean
 	docker build -t $(@) . && docker run --rm --name $(@) \

@@ -17,7 +17,7 @@ type GromitClient struct {
 	Client    http.Client
 }
 
-// Replace() uses PUT to replace the env
+// Replace uses PUT to replace the env
 func (g *GromitClient) Replace(name string, body io.Reader) error {
 	api := "/env/" + url.PathEscape(name)
 	resp, rc, err := g.makeRequest("PUT", api, body, "application/json")
@@ -33,7 +33,7 @@ func (g *GromitClient) Replace(name string, body io.Reader) error {
 	return err
 }
 
-// Delete() uses DELETE to delete the env
+// Delete uses DELETE to delete the env
 func (g *GromitClient) Delete(name string) error {
 	api := "/env/" + url.PathEscape(name)
 	resp, rc, err := g.makeRequest("DELETE", api, nil, "application/json")
@@ -77,7 +77,7 @@ func (g *GromitClient) makeRequest(method string, api string, body io.Reader, co
 	//req.Header.Add("Content-Type", contentType)
 	resp, err := g.Client.Do(req)
 	if err != nil {
-		return []byte{}, resp.StatusCode, fmt.Errorf("making request to %s: %w", gurl, err)
+		return []byte{}, -1, fmt.Errorf("making request to %s: %w", gurl, err)
 	}
 	defer resp.Body.Close()
 

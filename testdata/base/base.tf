@@ -18,15 +18,18 @@ locals {
   name = "test"
   # Repositories to create
   tyk_repos = ["tyk", "tyk-analytics", "tyk-pump" ]
+  gromit = {
+    "domain" = "test.tyk.technology"
+  }
   common_tags = {
     "managed" = "automation",
     "ou"      = "devops",
-    "purpose" = "ci",
+    "purpose" = "ci-test",
     "env"     = local.name
   }
 }
 
-resource "aws_ecr_repository" "integration" {
+resource "aws_ecr_repository" "integration_test" {
   for_each = toset(local.tyk_repos)
   
   name                 = each.key
@@ -35,6 +38,13 @@ resource "aws_ecr_repository" "integration" {
   image_scanning_configuration {
     scan_on_push = false
   }
+
+  tags = local.common_tags
+}
+
+resource "aws_route53_zone" "test_tyk_tech" {
+  name = local.gromit.domain
+  comment = "Hosted zone for gromit testing"
 
   tags = local.common_tags
 }

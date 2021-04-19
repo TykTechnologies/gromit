@@ -1,22 +1,14 @@
 package confgen
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	rice "github.com/GeertJohan/go.rice"
 	"github.com/rs/zerolog/log"
 )
-
-// templateVars will be interpolated into templates
-type templateVars struct {
-	EnvName     string
-	DashLicense string
-}
 
 // dest is always treated as a directory name
 // makeConfigTree() will walk the box, passing files through a template renderer
@@ -74,8 +66,10 @@ func getLicense(path string) (string, error) {
 
 }
 
-// dashLicenseFile is created by tyk-ci/infra/gromit.tf:licenser, paths have to match
-const dashLicenseFile = "/config/dash.license"
+// templateVars will be interpolated into templates
+type templateVars struct {
+	EnvName string
+}
 
 // Must will create a config tree if it does not exist
 // Only the root path is checked as a full set of templates will be generated into confDir
@@ -84,14 +78,8 @@ func Must(confPath string, envName string) error {
 	// Does a config dir matching the env name exist?
 	if _, err := os.Stat(confDir); os.IsNotExist(err) {
 		configs := rice.MustFindBox("templates")
-		dashLicense, err := getLicense(dashLicenseFile)
-		dashLicense = strings.TrimSuffix(dashLicense, "\n")
-		if err != nil {
-			return fmt.Errorf("error reading license file %s: %v", dashLicenseFile, err)
-		}
 		tVars := templateVars{
 			envName,
-			dashLicense,
 		}
 		return makeConfigTree(configs, "", confDir, tVars)
 	}

@@ -1,27 +1,29 @@
 package cmd
 
 /*
-Copyright © 2020 Tyk Technologies
+   Copyright © 2020 Tyk Technologies
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 */
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/TykTechnologies/gromit/util"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/spf13/cobra"
 
 	"github.com/rs/zerolog"
@@ -32,6 +34,11 @@ import (
 
 var cfgFile string
 var logLevel string
+
+// Global vars that are available to all commands
+var ZoneID, Domain, TableName, RegistryID string
+var Repos []string
+var AWScfg aws.Config
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -60,7 +67,9 @@ func Execute() {
 }
 
 func init() {
+	// Call initConfig() for every command before running
 	cobra.OnInitialize(initConfig)
+	log.Logger = log.With().Caller().Str("version", util.Version()).Logger()
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -71,14 +80,29 @@ func init() {
 
 }
 
-// initConfig reads in config file and ENV variables if set.
+// initConfig reads in config file and env variables if set.
 func initConfig() {
+	ll, err := zerolog.ParseLevel(logLevel)
+	if err != nil {
+		log.Warn().Str("level", logLevel).Msg("Could not parse, defaulting to debug.")
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(ll)
+	}
+	loadConfig()
+}
+
+// loadConfig is a helper function that loads the environment into the
+// global variables TableName, RegistryID and so on defined at the top
+// of this file. It is called from initConfig as well as any tests that
+// need it
+func loadConfig() {
 	appName := util.Name()
 	viper.AddConfigPath(fmt.Sprintf("/conf/%s", appName))
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 
-	// Default config path
+	// Local config path
 	var confPath = fmt.Sprintf("%s/.config/%s", os.Getenv("HOME"), appName)
 	if cfgFile != "" {
 		// Use config file from the flag.
@@ -87,20 +111,24 @@ func initConfig() {
 	} else if xdgHome := os.Getenv("XDG_CONFIG_HOME"); xdgHome != "" {
 		confPath = fmt.Sprintf("%s/%s", xdgHome, appName)
 	}
+
 	viper.AddConfigPath(confPath)
 	viper.Set("confpath", confPath)
-
-	ll, err := zerolog.ParseLevel(logLevel)
-	if err != nil {
-		log.Warn().Str("level", logLevel).Msg("Could not parse, defaulting to debug.")
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(ll)
-	}
-	viper.AutomaticEnv() // read in environment variables that match
-
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		log.Debug().Str("file", viper.ConfigFileUsed()).Msg("reading config from")
 	}
+	// Look in env first for every viper.Get* call
+	viper.AutomaticEnv()
+	viper.SetEnvPrefix("GROMIT")
+	replacer := strings.NewReplacer(".", "_")
+	viper.SetEnvKeyReplacer(replacer)
+
+	Repos = strings.Split(viper.GetString("repos"), ",")
+	RegistryID = viper.GetString("registryid")
+	TableName = viper.GetString("tablename")
+	ZoneID = viper.GetString("cluster.zoneid")
+	Domain = viper.GetString("cluster.domain")
+
+	log.Info().Interface("repos", Repos).Msg("loaded")
 }

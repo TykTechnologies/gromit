@@ -19,10 +19,12 @@ limitations under the License.
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"net/http"
 
 	"github.com/TykTechnologies/gromit/licenser"
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -44,17 +46,24 @@ Supports:
 	Args: cobra.MaximumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		product := args[0]
-		opFile := args[1]
+		opPath := args[1]
 		l := licenser.Licenser{
 			Client: http.DefaultClient,
 		}
 		license, err := l.Fetch(baseURL, product, token)
 		if err != nil {
-			log.Error().Err(err).Str("baseURL", baseURL).Msg("could not fetch license")
+			log.Fatal().Err(err).Str("baseURL", baseURL).Msg("could not fetch license")
 		}
-		err = ioutil.WriteFile(opFile, []byte(license), 0444)
+		aws, _ := cmd.Flags().GetBool("aws")
+		license = strings.TrimSuffix(license, "\n")
+		if aws {
+			err = util.UpdateSecret(opPath, license)
+		} else {
+			err = ioutil.WriteFile(opPath, []byte(license), 0444)
+		}
+
 		if err != nil {
-			log.Error().Err(err).Str("opFile", opFile).Msg("could not write")
+			log.Error().Err(err).Str("opFile", opPath).Msg("could not write")
 		}
 	},
 }
@@ -63,4 +72,5 @@ func init() {
 	rootCmd.AddCommand(licenserCmd)
 	licenserCmd.PersistentFlags().StringVarP(&baseURL, "baseurl", "b", "https://bots.cluster.internal.tyk.technology/license-bot/", "base url for the licenser endpoint")
 	licenserCmd.PersistentFlags().StringVarP(&token, "token", "t", os.Getenv("GROMIT_LICENSER_TOKEN"), "Auth token")
+	licenserCmd.Flags().BoolP("aws", "a", false, "The path is the AWS secret name to store the secret in")
 }

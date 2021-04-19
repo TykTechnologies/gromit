@@ -3,7 +3,7 @@ data "template_file" "cd" {
 }
 
 resource "aws_ecs_task_definition" "td" {
-  family                   = var.cd.name
+  family                   = join("-", [ var.cd.name, var.env_name ])
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   execution_role_arn       = var.tearn
