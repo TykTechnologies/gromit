@@ -5,23 +5,28 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/TykTechnologies/gromit/server"
+	"github.com/spf13/viper"
 )
 
 // setup environment for the test run and cleanup after
 func TestMain(m *testing.M) {
 	os.Setenv("TF_VAR_base", "base-devenv-euc1-test")
 	os.Setenv("TF_VAR_infra", "infra-devenv-euc1-test")
+	loadConfig()
 
 	a := server.App{
-		TableName:  os.Getenv("GROMIT_TABLENAME"),
-		RegistryID: os.Getenv("GROMIT_REGISTRYID"),
-		Repos:      strings.Split(os.Getenv("GROMIT_REPOS"), ","),
+		TableName:  TableName,
+		RegistryID: RegistryID,
+		Repos:      Repos,
 	}
-	err := a.Init([]byte(os.Getenv("GROMIT_CA")), []byte(os.Getenv("GROMIT_SERVE_CERT")), []byte(os.Getenv("GROMIT_SERVE_KEY")))
+	err := a.Init(
+		[]byte(viper.GetString("ca")),
+		[]byte(viper.GetString("serve.cert")),
+		[]byte(viper.GetString("serve.key")),
+	)
 	if err != nil {
 		fmt.Println("could not init test app", err)
 		os.Exit(1)

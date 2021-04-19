@@ -19,16 +19,7 @@ testdata: testdata/base/*
 	terraform apply -auto-approve
 
 test: 
-	GROMIT_TABLENAME=GromitTest \
-	GROMIT_REPOS=tyk,tyk-analytics,tyk-pump \
-	GROMIT_REGISTRYID=046805072452 \
-	GROMIT_CLUSTER_DOMAIN=test.tyk.technology \
-	GROMIT_CLUSTER_ZONEID=Z0326653CS8RP88TOKKI \
-	GROMIT_SERVE_CERT=$$(<testdata/scerts/cert.pem) \
-	GROMIT_SERVE_KEY=$$(<testdata/scerts/key.pem) \
-	GROMIT_CLIENT_CERT=$$(</home/alok/.config/gromit/ccerts/cert.pem) \
-	GROMIT_CLIENT_KEY=$$(</home/alok/.config/gromit/ccerts/key.pem) \
-	GROMIT_CA=$$(</home/alok/work/tyk/src/tyk-ci/certs/rootca/rootca.pem) \
+	echo Use a config file locally and env variables in CI
 	go test ./... # dlv test ./cmd #
 
 grun: clean

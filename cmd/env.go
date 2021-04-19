@@ -37,8 +37,7 @@ var client devenv.GromitClient
 var envCmd = &cobra.Command{
 	Use:   "env",
 	Short: "Mess about with the env state",
-	Long: `Certificates and such like are configured in the env.ccerts section 
-of the gromit config file`,
+	Long:  `Certificates and such like are configured in client{.key,cert} in the gromit config file or in the corresponding environment variables`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		server := viper.GetString("serve.url")
 		if mtls, _ := cmd.Flags().GetBool("mtls"); mtls {
@@ -50,7 +49,7 @@ of the gromit config file`,
 
 			c, err := tls.GetHTTPSClient()
 			if err != nil {
-				log.Fatal().Err(err).Msg("getting http client")
+				log.Fatal().Err(err).Msg("getting mtls client")
 			}
 			client = devenv.GromitClient{
 				Server: server,
@@ -114,9 +113,10 @@ The environment in ECS will continue to run. Gromit run will no longer be aware 
 func init() {
 	rootCmd.AddCommand(envCmd)
 
+	replaceSubCmd.PersistentFlags().StringP("file", "f", "-", "File to use as input - reads from stdin")
 	envCmd.AddCommand(replaceSubCmd)
 	envCmd.AddCommand(deleteSubCmd)
+
 	envCmd.PersistentFlags().BoolP("mtls", "m", true, "Use mTLS")
 	envCmd.PersistentFlags().StringVarP(&envName, "envname", "e", "", "Name of the environment")
-	envCmd.PersistentFlags().StringP("file", "f", "-", "File to use as input - reads from stdin")
 }
