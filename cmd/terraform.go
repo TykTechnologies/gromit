@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/TykTechnologies/gromit/config"
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -28,7 +29,7 @@ If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCES
 		if err != nil {
 			log.Fatal().Msg("Could not load AWS config")
 		}
-		envs, err := devenv.GetEnvsByState(dynamodb.New(AWScfg), TableName, devenv.NEW, Repos)
+		envs, err := devenv.GetEnvsByState(dynamodb.New(AWScfg), config.TableName, devenv.NEW, config.Repos)
 		if err != nil {
 			log.Error().Err(err).Msg("could not get list of new envs")
 		}
@@ -59,7 +60,7 @@ If testing locally, you may also have to set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCES
 		if err != nil {
 			log.Fatal().Msg("Could not load AWS config")
 		}
-		envs, err := devenv.GetEnvsByState(dynamodb.New(AWScfg), TableName, devenv.DELETED, Repos)
+		envs, err := devenv.GetEnvsByState(dynamodb.New(AWScfg), config.TableName, devenv.DELETED, config.Repos)
 		if err != nil {
 			log.Error().Err(err).Msg("could not get list of new envs")
 		}

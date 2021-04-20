@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/TykTechnologies/gromit/config"
 	"github.com/TykTechnologies/gromit/server"
 	"github.com/spf13/viper"
 )
@@ -15,12 +16,12 @@ import (
 func TestMain(m *testing.M) {
 	os.Setenv("TF_VAR_base", "base-devenv-euc1-test")
 	os.Setenv("TF_VAR_infra", "infra-devenv-euc1-test")
-	loadConfig()
+	config.LoadConfig("")
 
 	a := server.App{
-		TableName:  TableName,
-		RegistryID: RegistryID,
-		Repos:      Repos,
+		TableName:  config.TableName,
+		RegistryID: config.RegistryID,
+		Repos:      config.Repos,
 	}
 	err := a.Init(
 		[]byte(viper.GetString("ca")),

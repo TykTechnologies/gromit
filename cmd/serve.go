@@ -19,6 +19,7 @@ http://www.apache.org/licenses/LICENSE-2.0
 import (
 	"net/http"
 
+	"github.com/TykTechnologies/gromit/config"
 	"github.com/TykTechnologies/gromit/server"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -39,9 +40,9 @@ This endpoint is notified by the int-image workflows in the various repos when t
 		key := []byte(viper.GetString("serve.key"))
 
 		a := server.App{
-			TableName:  TableName,
-			RegistryID: RegistryID,
-			Repos:      Repos,
+			TableName:  config.TableName,
+			RegistryID: config.RegistryID,
+			Repos:      config.Repos,
 		}
 		err := a.Init(ca, cert, key)
 		if err != nil {

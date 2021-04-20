@@ -20,7 +20,7 @@ testdata: testdata/base/*
 
 test: 
 	echo Use a config file locally and env variables in CI
-	go test ./... # dlv test ./cmd #
+	go test -coverprofile cp.out ./... # dlv test ./cmd #
 
 grun: clean
 	docker build -t $(@) . && docker run --rm --name $(@) \

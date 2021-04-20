@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var clusterName string
+var clusterName, zoneID, domain string
 
 // clusterCmd is a top level command
 var clusterCmd = &cobra.Command{
@@ -68,14 +68,14 @@ makes A records in Route53 accessible as <task>.<cluster>.<domain>.`,
 			}
 			clusters := devenv.FastFetchClusters(cnames)
 			for _, c := range clusters {
-				c.SyncDNS(route53.ChangeActionUpsert, ZoneID, Domain)
+				c.SyncDNS(route53.ChangeActionUpsert, zoneID, domain)
 			}
 		} else {
 			cluster, err := devenv.GetGromitCluster(clusterName)
 			if err != nil {
 				log.Error().Err(err).Str("cluster", clusterName).Msg("fetching")
 			}
-			cluster.SyncDNS(route53.ChangeActionUpsert, ZoneID, Domain)
+			cluster.SyncDNS(route53.ChangeActionUpsert, zoneID, domain)
 		}
 	},
 }
@@ -95,8 +95,8 @@ Use this for debugging or for a quick load test`,
 func init() {
 	rootCmd.AddCommand(clusterCmd)
 	clusterCmd.PersistentFlags().StringVarP(&clusterName, "cluster", "c", os.Getenv("GROMIT_CLUSTER"), "Cluster to be operated on")
-	clusterCmd.PersistentFlags().StringVarP(&ZoneID, "zone", "z", viper.GetString("cluster.zoneid"), "Route53 zone id to make entries in")
-	clusterCmd.PersistentFlags().StringVarP(&Domain, "domain", "d", viper.GetString("cluster.domain"), "Suffixed to the DNS record to make an FQDN")
+	clusterCmd.PersistentFlags().StringVarP(&zoneID, "zone", "z", viper.GetString("cluster.zoneid"), "Route53 zone id to make entries in")
+	clusterCmd.PersistentFlags().StringVarP(&domain, "domain", "d", viper.GetString("cluster.domain"), "Suffixed to the DNS record to make an FQDN")
 
 	exposeCmd.Flags().BoolP("all", "a", false, "All available public IPs in all clusters will be exposed")
 	clusterCmd.AddCommand(exposeCmd, tdbCmd)
