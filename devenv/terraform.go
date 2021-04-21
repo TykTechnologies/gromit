@@ -151,7 +151,7 @@ func deployManifest(fs embed.FS, destPrefix string) (string, error) {
 		return "", err
 	}
 
-	err = copyEmbedDir(fs, "/", tmpDir)
+	err = copyEmbedDir(fs, ".", tmpDir)
 	if err != nil {
 		log.Fatal().Err(err).Str("dest", tmpDir).Msg("could not restore embedded manifests")
 	}
