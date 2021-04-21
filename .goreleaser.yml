@@ -34,4 +34,16 @@ changelog:
     exclude:
     - '^utils:'
     - (?i)typo
-    - (?i)fixup
+    - 'Merge (pull request|branch)'
+    - '\[CI\]'
+    - '(?i)\[Buddy\]'
+    - 'cherry picked'
+    - '^rel-eng:'
+    - '^minor:'
+
+release:
+  github:
+    owner: TykTechnologies
+    name: gromit
+  prerelease: auto
+  name_template: "{{.ProjectName}}-v{{.Version}}"
