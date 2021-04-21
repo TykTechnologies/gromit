@@ -1,25 +1,23 @@
+// confgen generates a config directory tree for all components
 package confgen
 
 import (
+	"embed"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"text/template"
 
-	rice "github.com/GeertJohan/go.rice"
 	"github.com/rs/zerolog/log"
 )
 
+//go:embed templates
+var confTemplates embed.FS
+
 // dest is always treated as a directory name
-// makeConfigTree() will walk the box, passing files through a template renderer
-//go:generate rice embed-go -v
-func makeConfigTree(b *rice.Box, boxPath string, dest string, tVars templateVars) error {
-	boxFile, err := b.Open(boxPath)
-	if err != nil {
-		return err
-	}
-	defer boxFile.Close()
-	entries, err := boxFile.Readdir(0)
+// makeConfigTree() will walk the embed.FS, passing files through a template renderer
+func makeConfigTree(fs embed.FS, src string, dest string, tVars templateVars) error {
+	entries, err := fs.ReadDir(src)
 	if err != nil {
 		return err
 	}
@@ -27,20 +25,21 @@ func makeConfigTree(b *rice.Box, boxPath string, dest string, tVars templateVars
 	log.Trace().Msgf("created dir: %s", dest)
 
 	for _, e := range entries {
-		srcPath := filepath.Join(boxPath, e.Name())
+		srcPath := filepath.Join(src, e.Name())
 		destPath := filepath.Join(dest, e.Name())
 
 		log.Trace().Msgf("Copying %s to %s", srcPath, destPath)
 
 		if e.IsDir() {
-			makeConfigTree(b, srcPath, destPath, tVars)
+			makeConfigTree(fs, srcPath, destPath, tVars)
 		} else {
 			// e is a file
-			tempStr, err := b.String(srcPath)
+			data, err := ioutil.ReadFile(srcPath)
 			if err != nil {
-				log.Error().Err(err).Msgf("could not read as string: %s", srcPath)
+				log.Error().Err(err).Str("srcPath", srcPath).Msgf("could not read from embedded file")
 				return err
 			}
+			tempStr := string(data)
 			t := template.Must(template.New(e.Name()).Parse(tempStr))
 			f, err := os.Create(destPath)
 			if err != nil {
@@ -77,11 +76,10 @@ func Must(confPath string, envName string) error {
 	confDir := filepath.Join(confPath, envName)
 	// Does a config dir matching the env name exist?
 	if _, err := os.Stat(confDir); os.IsNotExist(err) {
-		configs := rice.MustFindBox("templates")
 		tVars := templateVars{
 			envName,
 		}
-		return makeConfigTree(configs, "", confDir, tVars)
+		return makeConfigTree(confTemplates, "", confDir, tVars)
 	}
 	return nil
 }

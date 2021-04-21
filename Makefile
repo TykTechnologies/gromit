@@ -8,7 +8,6 @@ CONF_VOL := testdata
 
 gromit: */*.go
 	#GOOS=js GOARCH=wasm go build -o server/debug/debugger.wasm
-	go generate ./devenv ./confgen
 	go build -v -trimpath -ldflags "-X 'github.com/TykTechnologies/gromit/util.version=$(VERSION)' -X 'github.com/TykTechnologies/gromit/util.commit=$(COMMIT)' -X 'github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)'"
 	go mod tidy
 #	sudo setcap 'cap_net_bind_service=+ep' $(@)

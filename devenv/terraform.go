@@ -1,6 +1,7 @@
 package devenv
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -9,11 +10,13 @@ import (
 
 	"time"
 
-	rice "github.com/GeertJohan/go.rice"
 	"github.com/TykTechnologies/gromit/confgen"
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/rs/zerolog/log"
 )
+
+//go:embed terraform
+var devManifest embed.FS
 
 // tfInit will
 // 1. setup credentials to access state in TF Cloud
@@ -22,7 +25,7 @@ import (
 // 4. Return a tfRunner that can used to operate upon the terraform manifests deployed in (3)
 func (d *DevEnv) tfInit(confPath string) tfRunner {
 	token := os.Getenv("TF_API_TOKEN")
-	if len(token) > 0 {
+	if len(token) < 1 {
 		util.StatCount("run.failures", 1)
 		log.Fatal().Str("env", d.Name).Msg("TF_API_TOKEN not found in env")
 	}
@@ -33,8 +36,6 @@ func (d *DevEnv) tfInit(confPath string) tfRunner {
 		util.StatCount("run.failures", 1)
 		log.Error().Err(err).Str("env", d.Name).Msg("could not create config tree")
 	}
-	// go.rice only works with string literals
-	devManifest := rice.MustFindBox("terraform")
 	tfDir, err := deployManifest(devManifest, d.Name)
 	if err != nil {
 		util.StatCount("run.failures", 1)
@@ -108,21 +109,15 @@ func (d *DevEnv) makeInputVarfile(tfDir string) error {
 }
 
 // dest is always treated as a directory name
-//go:generate rice embed-go -v
-func copyBoxToDir(b *rice.Box, boxPath string, dest string) error {
-	boxFile, err := b.Open(boxPath)
-	if err != nil {
-		return err
-	}
-	defer boxFile.Close()
-	entries, err := boxFile.Readdir(0)
+func copyEmbedDir(fs embed.FS, src string, dest string) error {
+	entries, err := fs.ReadDir(src)
 	if err != nil {
 		return err
 	}
 	os.MkdirAll(dest, 0755)
 
 	for _, e := range entries {
-		srcPath := filepath.Join(boxPath, e.Name())
+		srcPath := filepath.Join(src, e.Name())
 		destPath := filepath.Join(dest, e.Name())
 
 		log.Trace().Msgf("Copying %s to %s", srcPath, destPath)
@@ -133,10 +128,14 @@ func copyBoxToDir(b *rice.Box, boxPath string, dest string) error {
 				log.Debug().Msg("skipping terraform dir")
 				continue
 			}
-			copyBoxToDir(b, srcPath, destPath)
+			copyEmbedDir(fs, srcPath, destPath)
 		} else {
 			// e is a file
-			err = ioutil.WriteFile(destPath, b.MustBytes(srcPath), 0644)
+			data, err := ioutil.ReadFile(srcPath)
+			if err != nil {
+				return err
+			}
+			err = ioutil.WriteFile(destPath, data, 0644)
 			if err != nil {
 				return err
 			}
@@ -146,15 +145,15 @@ func copyBoxToDir(b *rice.Box, boxPath string, dest string) error {
 }
 
 // deployManifests to a temporary dir prefixed with destPrefix
-func deployManifest(b *rice.Box, destPrefix string) (string, error) {
+func deployManifest(fs embed.FS, destPrefix string) (string, error) {
 	tmpDir, err := ioutil.TempDir("", destPrefix)
 	if err != nil {
 		return "", err
 	}
 
-	err = copyBoxToDir(b, "", tmpDir)
+	err = copyEmbedDir(fs, "/", tmpDir)
 	if err != nil {
-		log.Fatal().Err(err).Msgf("could not restore embedded manifests to %s", tmpDir)
+		log.Fatal().Err(err).Str("dest", tmpDir).Msg("could not restore embedded manifests")
 	}
 	return tmpDir, nil
 }
