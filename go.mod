@@ -1,6 +1,6 @@
 module github.com/TykTechnologies/gromit
 
-go 1.14
+go 1.16
 
 require (
 	github.com/GeertJohan/go.rice v1.0.0
@@ -19,5 +19,4 @@ require (
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20210415045647-66c3f260301c // indirect
-	google.golang.org/protobuf v1.25.0 // indirect
 )

@@ -6,6 +6,7 @@ package server
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -41,6 +42,9 @@ type App struct {
 	TableName  string
 	RegistryID string
 }
+
+//go:embed debug
+var debugger embed.FS
 
 // Init loads env vars, AWS, TLS config
 // Keep this separate from App.Run() for testing purposes
@@ -113,6 +117,7 @@ func (a *App) initRoutes() {
 	a.Router.HandleFunc("/healthcheck", a.healthCheck).Methods("GET")
 	a.Router.HandleFunc("/loglevel/{level}", a.setLoglevel).Methods("PUT")
 	a.Router.HandleFunc("/loglevel", a.getLoglevel).Methods("GET")
+	a.Router.PathPrefix("/debug").Handler(http.FileServer(http.FS(debugger)))
 
 	// Endpoint for int-image GHA
 	a.Router.HandleFunc("/newbuild", a.newBuild).Methods("POST")
@@ -125,7 +130,6 @@ func (a *App) initRoutes() {
 }
 
 // Infra routes
-
 func (a *App) healthCheck(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "OK")
 	log.Debug().Msg("Healthcheck")

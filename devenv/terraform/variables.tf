@@ -27,3 +27,13 @@ variable "tyk-pump" {
   description = "Image tag for the tyk-pump service"
   type        = string
 }
+
+variable "raava" {
+  description = "Image tag for the raava service"
+  type        = string
+}
+
+variable "tyk-identity-broker" {
+  description = "Image tag for the tib service"
+  type        = string
+}

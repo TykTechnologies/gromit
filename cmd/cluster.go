@@ -21,7 +21,6 @@ import (
 	"os"
 
 	"github.com/TykTechnologies/gromit/devenv"
-	"github.com/TykTechnologies/gromit/terraform"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
@@ -88,7 +87,7 @@ var tdbCmd = &cobra.Command{
 Use this for debugging or for a quick load test`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return terraform.Tdb(args[0], args[1:]...)
+		return devenv.Tdb(args[0], args[1:]...)
 	},
 }
 

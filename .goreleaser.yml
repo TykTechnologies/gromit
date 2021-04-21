@@ -1,7 +1,7 @@
 # Make sure to check the documentation at http://goreleaser.com
+
 builds:
-  -
-    binary: gromit
+  - binary: gromit
     env:
       - CGO_ENABLED=0
     goarch:
@@ -10,19 +10,24 @@ builds:
       - -X github.com/TykTechnologies/gromit/util.version={{.Version}}
       - -X github.com/TykTechnologies/gromit/util.commit={{.Commit}}
       - -X github.com/TykTechnologies/gromit/util.buildDate={{.Date}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    hooks:
+      pre: go generate ./confgen ./devenv
 
 archives:
 - replacements:
     linux: Linux
 
 dockers:
-  -
-    binaries:
-      - gromit
-    image_templates:
+  - image_templates:
       - "tykio/gromit:latest"
       - "tykio/gromit:{{.Tag}}"
-      
+    build_flag_templates:
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+
 changelog:
   sort: asc
   filters:
