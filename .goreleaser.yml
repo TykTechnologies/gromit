@@ -45,5 +45,6 @@ release:
   github:
     owner: TykTechnologies
     name: gromit
+  discussion_category_name: General
   prerelease: auto
   name_template: "{{.ProjectName}}-v{{.Version}}"
