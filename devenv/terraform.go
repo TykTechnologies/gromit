@@ -31,6 +31,12 @@ func (d *DevEnv) tfInit(confPath string) tfRunner {
 	}
 	log.Info().Interface("env_data", d).Msg("processing")
 
+	procSentinelFile := filepath.Join(confPath, "noprocess")
+	if _, err := os.Stat(procSentinelFile); !os.IsNotExist(err) {
+		log.Fatal().Msgf("%s exists", procSentinelFile)
+	}
+	log.Trace().Str("sentinelfile", procSentinelFile).Msg("not found")
+
 	err := confgen.Must(confPath, d.Name)
 	if err != nil {
 		util.StatCount("run.failures", 1)
@@ -157,35 +163,3 @@ func deployManifest(fs embed.FS, destPrefix string) (string, error) {
 	}
 	return tmpDir, nil
 }
-
-// // Run is an entrypoint from the CLI
-// func RunAll(confPath string) error {
-// 	cfg, err := external.LoadDefaultAWSConfig()
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	// TODO: read from the API here, not from the DB
-// 	db := dynamodb.New(cfg)
-// 	envs, err := devenv.GetEnvsByState(db, e.TableName, devenv.NEW, e.Repos)
-// 	if err != nil {
-// 		log.Fatal().Err(err).Msgf("could not get new envs from table %s", e.TableName)
-// 	}
-// 	util.StatGauge("run.nenvs", len(envs))
-
-// 	procSentinelFile := filepath.Join(confPath, "noprocess")
-// 	if _, err := os.Stat(procSentinelFile); !os.IsNotExist(err) {
-// 		return fmt.Errorf("%s exists", procSentinelFile)
-// 	}
-// 	log.Trace().Str("sentinelfile", procSentinelFile).Msg("not found")
-
-// 	var lastError error = nil
-// 	for _, env := range envs {
-// 		err := runOneEnv(env, confPath)
-// 		err = devenv.UpsertEnv(db, e.TableName, envName, env)
-// 		if err != nil {
-// 			log.Error().Err(err).Str("env", envName).Msg("could not mark env as PROCESSED")
-// 		}
-// 	}
-// 	return lastError
-// }

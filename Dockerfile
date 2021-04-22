@@ -1,8 +1,8 @@
-FROM golang:1.14 as builder 
+FROM golang:1.16 as builder 
 
-ARG TF_VER=0.14.2
+ARG TF_VER=0.15.0
 
-RUN apt-get update && apt-get install -y unzip && go get -u github.com/GeertJohan/go.rice/rice
+RUN apt-get update && apt-get install -y unzip
 WORKDIR /src/gromit
 RUN curl https://releases.hashicorp.com/terraform/${TF_VER}/terraform_${TF_VER}_linux_amd64.zip -o terraform.zip && unzip terraform.zip && mv terraform /
 ADD . .
@@ -19,4 +19,4 @@ VOLUME [ "/cfssl" "/config" ]
 # executable
 ENTRYPOINT [ "gromit" ]
 # arguments that can be overridden
-CMD [ "serve", "--certpath=gromit/server" ]
+CMD [ "serve" ]

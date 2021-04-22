@@ -22,7 +22,7 @@ test:
 	echo Use a config file locally and env variables in CI
 	go test -coverprofile cp.out ./... # dlv test ./cmd #
 
-grun: clean
+sow: clean
 	docker build -t $(@) . && docker run --rm --name $(@) \
 	-e GROMIT_TABLENAME=DeveloperEnvironments \
 	-e GROMIT_REPOS=tyk,tyk-analytics,tyk-pump \
@@ -33,7 +33,7 @@ grun: clean
 	-e GROMIT_DOMAIN=dev.tyk.technology \
 	-e GROMIT_ZONEID=Z06422931MJIQS870BBM7 \
 	--mount type=bind,src=$(PWD)/$(CONF_VOL),target=/config \
-	grun -l trace cluster run /config
+	$(@) -l trace /config
 
 licenser: clean
 	docker build -t $(@) . && docker run --rm --name $(@) \
