@@ -14,19 +14,25 @@ variable "name" {
 }
 
 variable "tyk" {
-  description = "Image tag for the tyk service"
+  description = "Image tag for the gateway service"
   type        = string
   default     = "master"
 }
 
 variable "tyk-analytics" {
-  description = "Image tag for the tyk-analytics service"
+  description = "Image tag for the dashboard service"
   type        = string
   default     = "master"
 }
 
 variable "tyk-pump" {
   description = "Image tag for the tyk-pump service"
+  type        = string
+  default     = "master"
+}
+
+variable "tyk-sink" {
+  description = "Image tag for the mdcb service"
   type        = string
   default     = "master"
 }
