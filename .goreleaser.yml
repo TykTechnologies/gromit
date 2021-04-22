@@ -11,8 +11,6 @@ builds:
       - -X github.com/TykTechnologies/gromit/util.commit={{.Commit}}
       - -X github.com/TykTechnologies/gromit/util.buildDate={{.Date}}
     mod_timestamp: '{{ .CommitTimestamp }}'
-    hooks:
-      pre: go generate ./confgen ./devenv
 
 archives:
 - replacements:

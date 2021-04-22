@@ -34,20 +34,25 @@ func makeConfigTree(fs embed.FS, src string, dest string, tVars templateVars) er
 			makeConfigTree(fs, srcPath, destPath, tVars)
 		} else {
 			// e is a file
-			data, err := ioutil.ReadFile(srcPath)
+			i, err := fs.Open(srcPath)
+			if err != nil {
+				return err
+			}
+			data, err := ioutil.ReadAll(i)
 			if err != nil {
 				log.Error().Err(err).Str("srcPath", srcPath).Msgf("could not read from embedded file")
 				return err
 			}
 			tempStr := string(data)
 			t := template.Must(template.New(e.Name()).Parse(tempStr))
-			f, err := os.Create(destPath)
+
+			o, err := os.Create(destPath)
 			if err != nil {
 				log.Error().Err(err).Msgf("could not create: %s", destPath)
 				return err
 			}
-			defer f.Close()
-			err = t.Execute(f, tVars)
+			defer o.Close()
+			err = t.Execute(o, tVars)
 			if err != nil {
 				return err
 			}

@@ -23,17 +23,19 @@ test:
 	go test -coverprofile cp.out ./... # dlv test ./cmd #
 
 sow: clean
-	docker build -t $(@) . && docker run --rm --name $(@) \
-	-e GROMIT_TABLENAME=DeveloperEnvironments \
-	-e GROMIT_REPOS=tyk,tyk-analytics,tyk-pump \
+	docker run --rm --name $(@) \
+	-e GROMIT_TABLENAME=GromitTest \
+	-e GROMIT_REPOS=tyk,tyk-analytics,tyk-pump,tyk-identity-broker,raava \
 	-e AWS_ACCESS_KEY_ID=$(aws_id) \
 	-e AWS_SECRET_ACCESS_KEY=$(aws_key) \
 	-e AWS_REGION=eu-central-1 \
 	-e TF_API_TOKEN=$(tf_api) \
 	-e GROMIT_DOMAIN=dev.tyk.technology \
-	-e GROMIT_ZONEID=Z06422931MJIQS870BBM7 \
+	-e GROMIT_ZONEID=Z0326653CS8RP88TOKKI \
+	-e GROMIT_BASE=base-devenv-euc1-test \
+	-e GROMIT_INFRA=infra-devenv-euc1-test \
 	--mount type=bind,src=$(PWD)/$(CONF_VOL),target=/config \
-	$(@) -l trace /config
+	tykio/gromit:latest -l trace sow /config
 
 licenser: clean
 	docker build -t $(@) . && docker run --rm --name $(@) \

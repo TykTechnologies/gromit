@@ -98,7 +98,15 @@ func (d *DevEnv) Reap(confPath string) error {
 // See master.tfvars for a sample inputfile in hcl format
 func (d *DevEnv) makeInputVarfile(tfDir string) error {
 	varFile := fmt.Sprintf("%s.tfvars.json", d.Name)
-	varsJSON, err := json.Marshal(d.versions)
+	inputMap := make(map[string]string)
+	for k, v := range d.versions {
+		inputMap[k] = v
+	}
+	inputMap["base"] = os.Getenv("GROMIT_BASE")
+	inputMap["infra"] = os.Getenv("GROMIT_INFRA")
+	inputMap["name"] = d.Name
+
+	varsJSON, err := json.Marshal(inputMap)
 	if err != nil {
 		return err
 	}
@@ -137,7 +145,11 @@ func copyEmbedDir(fs embed.FS, src string, dest string) error {
 			copyEmbedDir(fs, srcPath, destPath)
 		} else {
 			// e is a file
-			data, err := ioutil.ReadFile(srcPath)
+			f, err := fs.Open(srcPath)
+			if err != nil {
+				return err
+			}
+			data, err := ioutil.ReadAll(f)
 			if err != nil {
 				return err
 			}
@@ -157,7 +169,7 @@ func deployManifest(fs embed.FS, destPrefix string) (string, error) {
 		return "", err
 	}
 
-	err = copyEmbedDir(fs, ".", tmpDir)
+	err = copyEmbedDir(fs, "terraform", tmpDir)
 	if err != nil {
 		log.Fatal().Err(err).Str("dest", tmpDir).Msg("could not restore embedded manifests")
 	}
