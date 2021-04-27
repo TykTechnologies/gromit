@@ -84,7 +84,7 @@ func Must(confPath string, envName string) error {
 		tVars := templateVars{
 			envName,
 		}
-		return makeConfigTree(confTemplates, "", confDir, tVars)
+		return makeConfigTree(confTemplates, "templates", confDir, tVars)
 	}
 	return nil
 }
