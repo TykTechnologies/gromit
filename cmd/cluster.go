@@ -20,16 +20,16 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/TykTechnologies/gromit/config"
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var clusterName, zoneID, domain string
+var clusterName string
 
 // clusterCmd is a top level command
 var clusterCmd = &cobra.Command{
@@ -67,14 +67,14 @@ makes A records in Route53 accessible as <task>.<cluster>.<domain>.`,
 			}
 			clusters := devenv.FastFetchClusters(cnames)
 			for _, c := range clusters {
-				c.SyncDNS(route53.ChangeActionUpsert, zoneID, domain)
+				c.SyncDNS(route53.ChangeActionUpsert, config.ZoneID, config.Domain)
 			}
 		} else {
 			cluster, err := devenv.GetGromitCluster(clusterName)
 			if err != nil {
 				log.Error().Err(err).Str("cluster", clusterName).Msg("fetching")
 			}
-			cluster.SyncDNS(route53.ChangeActionUpsert, zoneID, domain)
+			cluster.SyncDNS(route53.ChangeActionUpsert, config.ZoneID, config.Domain)
 		}
 	},
 }
@@ -94,8 +94,6 @@ Use this for debugging or for a quick load test`,
 func init() {
 	rootCmd.AddCommand(clusterCmd)
 	clusterCmd.PersistentFlags().StringVarP(&clusterName, "cluster", "c", os.Getenv("GROMIT_CLUSTER"), "Cluster to be operated on")
-	clusterCmd.PersistentFlags().StringVarP(&zoneID, "zone", "z", viper.GetString("cluster.zoneid"), "Route53 zone id to make entries in")
-	clusterCmd.PersistentFlags().StringVarP(&domain, "domain", "d", viper.GetString("cluster.domain"), "Suffixed to the DNS record to make an FQDN")
 
 	exposeCmd.Flags().BoolP("all", "a", false, "All available public IPs in all clusters will be exposed")
 	clusterCmd.AddCommand(exposeCmd, tdbCmd)

@@ -29,7 +29,7 @@ func (c *GromitCluster) getTaskENI(taskid string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	log.Trace().Interface("taskdetails", result)
+	c.log.Trace().Interface("taskdetails", result)
 
 	if len(result.Tasks) > 1 {
 		log.Warn().
@@ -57,7 +57,7 @@ func (c *GromitCluster) getPublicIP(eni string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Trace().Interface("netifaces", result)
+	c.log.Trace().Interface("netifaces", result)
 
 	if len(result.NetworkInterfaces) > 0 {
 		assoc := result.NetworkInterfaces[0].Association
@@ -81,7 +81,7 @@ func (c *GromitCluster) getTasks() ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	log.Trace().Interface("taskarns", result).Str("cluster", c.Name).Msg("tasks")
+	c.log.Trace().Interface("taskarns", result).Msg("tasks")
 	return result.TaskArns, nil
 }
 
@@ -94,11 +94,11 @@ func (c *GromitCluster) Populate() error {
 	for _, t := range tasks {
 		tname, eni, err := c.getTaskENI(t)
 		if err != nil {
-			return err
+			continue
 		}
 		ip, err := c.getPublicIP(eni)
 		if err != nil {
-			return err
+			continue
 		}
 		c.tasks = append(c.tasks, GromitTask{
 			Name: tname,
@@ -114,6 +114,7 @@ func (c *GromitCluster) SyncDNS(action route53.ChangeAction, zoneid string, doma
 	var changes []route53.Change
 	for _, t := range c.tasks {
 		fqdn := fmt.Sprintf("%s.%s.%s", t.Name, c.Name, domain)
+		c.log.Trace().Str("fqdn", fqdn).Str("A record", t.IP).Msgf("for task %s", t.Name)
 		changes = append(changes, route53.Change{
 			Action: action,
 			ResourceRecordSet: &route53.ResourceRecordSet{
@@ -139,7 +140,7 @@ func (c *GromitCluster) SyncDNS(action route53.ChangeAction, zoneid string, doma
 
 	req := c.r53Client.ChangeResourceRecordSetsRequest(input)
 	result, err := req.Send(context.Background())
-	log.Trace().Str("cluster", c.Name).Interface("r53execute", result).Msg("r53 bulk upsert")
+	c.log.Trace().Interface("r53execute", result).Msg("r53 bulk upsert")
 	return err
 }
 
@@ -149,8 +150,7 @@ func GetGromitCluster(name string) (*GromitCluster, error) {
 	if err != nil {
 		return &GromitCluster{}, err
 	}
-	region, flag, err := external.GetRegion(external.Configs{cfg})
-	log.Trace().Msgf("got region flag: %v, not sure what this is supposed to indicate", flag)
+	region, _, err := external.GetRegion(external.Configs{cfg})
 	if err != nil {
 		log.Error().Err(err).Msg("unable to find region,")
 		return &GromitCluster{}, err
@@ -162,6 +162,7 @@ func GetGromitCluster(name string) (*GromitCluster, error) {
 		ecsClient: ecs.New(cfg),
 		ec2Client: ec2.New(cfg),
 		aws:       cfg,
+		log:       log.With().Str("cluster", name).Logger(),
 	}
 	err = gc.Populate()
 	return gc, err

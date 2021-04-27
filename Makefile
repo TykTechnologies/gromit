@@ -6,7 +6,7 @@ BUILD_DATE := $(shell date +%FT%T%z)
 # A docker volume, can be empty for testing, will have data in it after
 CONF_VOL := testdata
 
-gromit: */*.go server/debug/debugger.wasm
+gromit: */*.go # server/debug/debugger.wasm
 	go build -v -trimpath -ldflags "-X 'github.com/TykTechnologies/gromit/util.version=$(VERSION)' -X 'github.com/TykTechnologies/gromit/util.commit=$(COMMIT)' -X 'github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)'"
 	go mod tidy
 	sudo setcap 'cap_net_bind_service=+ep' $(@)

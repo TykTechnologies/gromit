@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/ecsiface"
 	"github.com/aws/aws-sdk-go-v2/service/route53/route53iface"
+	"github.com/rs/zerolog"
 )
 
 // VersionMap maps repos to any tree-ish in git
@@ -39,6 +40,7 @@ type GromitCluster struct {
 	ec2Client ec2iface.ClientAPI
 	aws       aws.Config
 	tasks     []GromitTask
+	log       zerolog.Logger
 }
 
 type baseError struct {
