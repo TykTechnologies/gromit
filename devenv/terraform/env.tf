@@ -73,7 +73,7 @@ module "dashboard" {
     ],
     env = [],
     secrets = [
-      # { name = "TYK_DB_LICENSEKEY", from = local.dash_license }
+      { name = "TYK_DB_LICENSEKEY", from = local.dash_license }
     ],
     region = data.terraform_remote_state.base.outputs.region
   }
