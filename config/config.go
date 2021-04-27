@@ -42,7 +42,7 @@ func LoadConfig(cfgFile string) {
 	if err := viper.ReadInConfig(); err == nil {
 		log.Debug().Str("file", viper.ConfigFileUsed()).Msg("reading config from")
 	} else {
-		log.Info().Msg("No config file read, depending on env variables")
+		log.Debug().Msg("No config file read, depending on env variables")
 	}
 	// Look in env first for every viper.Get* call
 	viper.AutomaticEnv()
@@ -56,5 +56,5 @@ func LoadConfig(cfgFile string) {
 	ZoneID = viper.GetString("cluster.zoneid")
 	Domain = viper.GetString("cluster.domain")
 
-	log.Info().Interface("repos", Repos).Msg("loaded")
+	log.Info().Interface("repos", Repos).Str("tablename", TableName).Str("registry", RegistryID).Str("zoneid", ZoneID).Str("domain", Domain).Msg("loaded environment")
 }

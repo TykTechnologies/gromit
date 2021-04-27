@@ -8,14 +8,22 @@ require (
 	github.com/go-redis/redis/v8 v8.7.1
 	github.com/gorilla/mux v1.7.4
 	github.com/jessevdk/go-flags v1.4.0 // indirect
+	github.com/magiconair/properties v1.8.5 // indirect
+	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/mongodb/mongo-tools v0.0.0-20200911144454-4ba3e828ed5c
 	github.com/mongodb/mongo-tools-common v4.0.6+incompatible
+	github.com/pelletier/go-toml v1.9.0 // indirect
 	github.com/rs/zerolog v1.19.0
+	github.com/spf13/afero v1.6.0 // indirect
+	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/cobra v1.1.3
-	github.com/spf13/viper v1.7.0
+	github.com/spf13/jwalterweatherman v1.1.0 // indirect
+	github.com/spf13/viper v1.7.2-0.20210422093502-50f933027707
 	github.com/stretchr/testify v1.7.0
 	go.mongodb.org/mongo-driver v1.4.1 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20210415045647-66c3f260301c // indirect
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+	golang.org/x/sys v0.0.0-20210421221651-33663a62ff08 // indirect
+	golang.org/x/text v0.3.6 // indirect
+	gopkg.in/ini.v1 v1.62.0 // indirect
 )

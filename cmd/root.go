@@ -27,11 +27,10 @@ import (
 	"github.com/TykTechnologies/gromit/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
-var cfgFile string
-var logLevel string
+var cfgFile, logLevel string
+var textLogs bool
 
 // AWScfg is used in cluster, sow, reap and the server
 var AWScfg aws.Config
@@ -53,9 +52,6 @@ GROMIT_REPOS Comma separated list of ECR repos to answer for`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if terminal.IsTerminal(int(os.Stdout.Fd())) {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	}
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -73,7 +69,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "conf", "", "config file (default is $HOME/.config/gromit.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "info", "Log verbosity: trace, info, warn, error")
-
+	rootCmd.PersistentFlags().BoolVarP(&textLogs, "textlogs", "t", false, "Logs in plain text")
 }
 
 // initConfig reads in config file and env variables if set.
@@ -84,6 +80,9 @@ func initConfig() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	} else {
 		zerolog.SetGlobalLevel(ll)
+	}
+	if textLogs {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
 	config.LoadConfig(cfgFile)
 }

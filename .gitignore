@@ -20,3 +20,4 @@ terraform.tfstate
 rice-box.go
 dist/
 /testdata/config/
+/server/debug/debugger.wasm

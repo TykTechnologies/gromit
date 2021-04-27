@@ -6,11 +6,10 @@ BUILD_DATE := $(shell date +%FT%T%z)
 # A docker volume, can be empty for testing, will have data in it after
 CONF_VOL := testdata
 
-gromit: */*.go
-	#GOOS=js GOARCH=wasm go build -o server/debug/debugger.wasm
+gromit: */*.go server/debug/debugger.wasm
 	go build -v -trimpath -ldflags "-X 'github.com/TykTechnologies/gromit/util.version=$(VERSION)' -X 'github.com/TykTechnologies/gromit/util.commit=$(COMMIT)' -X 'github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)'"
 	go mod tidy
-#	sudo setcap 'cap_net_bind_service=+ep' $(@)
+	sudo setcap 'cap_net_bind_service=+ep' $(@)
 
 testdata: testdata/base/*
 	[[ $CI ]] || test -n "$(AWS_PROFILE)"
@@ -48,6 +47,9 @@ gserve: clean
 	-e GROMIT_TABLENAME=DeveloperEnvironments \
 	-e GROMIT_REPOS=tyk,tyk-analytics,tyk-pump \
 	grun serve
+
+server/debug/debugger.wasm: */*.go
+	GOOS=js GOARCH=wasm go build -o $(@)
 
 clean:
 	find . -name rice-box.go | xargs rm -fv
