@@ -67,7 +67,10 @@ makes A records in Route53 accessible as <task>.<cluster>.<domain>.`,
 			}
 			clusters := devenv.FastFetchClusters(cnames)
 			for _, c := range clusters {
-				c.SyncDNS(route53.ChangeActionUpsert, config.ZoneID, config.Domain)
+				err := c.SyncDNS(route53.ChangeActionUpsert, config.ZoneID, config.Domain)
+				if err != nil {
+					log.Error().Err(err).Interface("cluster", c).Msg("could not update DNS")
+				}
 			}
 		} else {
 			cluster, err := devenv.GetGromitCluster(clusterName)

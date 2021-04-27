@@ -100,6 +100,7 @@ func (c *GromitCluster) Populate() error {
 		if err != nil {
 			continue
 		}
+		c.log.Trace().Str("task", t).Str("ip", ip).Msg("populating tasks")
 		c.tasks = append(c.tasks, GromitTask{
 			Name: tname,
 			IP:   ip,
@@ -114,7 +115,7 @@ func (c *GromitCluster) SyncDNS(action route53.ChangeAction, zoneid string, doma
 	var changes []route53.Change
 	for _, t := range c.tasks {
 		fqdn := fmt.Sprintf("%s.%s.%s", t.Name, c.Name, domain)
-		c.log.Trace().Str("fqdn", fqdn).Str("A record", t.IP).Msgf("for task %s", t.Name)
+		c.log.Debug().Str("fqdn", fqdn).Str("A record", t.IP).Msgf("for task %s", t.Name)
 		changes = append(changes, route53.Change{
 			Action: action,
 			ResourceRecordSet: &route53.ResourceRecordSet{
