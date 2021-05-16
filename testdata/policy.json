@@ -1,0 +1,55 @@
+{
+	"Protected": [
+		"master"
+	],
+	"Repos": {
+		"tyk": {
+			"Protected": null,
+			"Deprecations": {
+				"v3.0.1": [
+					"tyk-deprecated-file1"
+				]
+			},
+			"Backports": {
+				"tyk-branch1": "tyk-backport-branch-1",
+				"tyk-branch2": "tyk-backport-branch-2"
+			},
+			"Files": null
+		},
+		"tyk-analytics": {
+			"Protected": null,
+			"Deprecations": {
+				"v3.0.1": [
+					"tyk-analytics-deprecated-file1",
+					"tyk-analytics-deprecated-file1"
+				]
+			},
+			"Backports": {
+				"tyk-analytics-branch1": "tyk-backport-branch-1",
+				"tyk-analytics-branch2": "tyk-backport-branch-2"
+			},
+			"Files": [
+				"tyk-analytics-extra-file1",
+				"tyk-analytics-extra-file1"
+			]
+		},
+		"tyk-pump": {
+			"Protected": null,
+			"Deprecations": null,
+			"Backports": null,
+			"Files": null
+		},
+		"tyk-sink": {
+			"Protected": null,
+			"Deprecations": null,
+			"Backports": null,
+			"Files": [
+				"tyk-sink-extra-file-1"
+			]
+		}
+	},
+	"Files": [
+		"commonfile1",
+		"commonfile1"
+	]
+}

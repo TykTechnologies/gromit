@@ -67,7 +67,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "conf", "", "config file (default is $HOME/.config/gromit.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "conf", "f", "config file (default is $HOME/.config/gromit.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "info", "Log verbosity: trace, info, warn, error")
 	rootCmd.PersistentFlags().BoolVarP(&textLogs, "textlogs", "t", false, "Logs in plain text")
 }

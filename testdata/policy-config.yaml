@@ -1,0 +1,28 @@
+policy:
+  protected: [ master ]
+  files:
+    - commonfile1
+    - commonfile1
+  repos:
+    tyk:
+      deprecations:
+        v3.0.1:
+          - tyk-deprecated-file1
+      backports:
+        tyk-branch1: tyk-backport-branch-1
+        tyk-branch2: tyk-backport-branch-2
+    tyk-analytics:
+      files:
+        - tyk-analytics-extra-file1
+        - tyk-analytics-extra-file1
+      deprecations:
+        v3.0.1:
+          - tyk-analytics-deprecated-file1
+          - tyk-analytics-deprecated-file1
+      backports:
+        tyk-analytics-branch1: tyk-backport-branch-1
+        tyk-analytics-branch2: tyk-backport-branch-2
+    tyk-pump:
+    tyk-sink:
+      files:
+        - tyk-sink-extra-file-1

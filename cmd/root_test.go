@@ -2,40 +2,13 @@ package cmd
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
-
-	"github.com/TykTechnologies/gromit/config"
-	"github.com/TykTechnologies/gromit/server"
-	"github.com/spf13/viper"
 )
 
 // setup environment for the test run and cleanup after
 func TestMain(m *testing.M) {
-	os.Setenv("TF_VAR_base", "base-devenv-euc1-test")
-	os.Setenv("TF_VAR_infra", "infra-devenv-euc1-test")
-	config.LoadConfig("")
-
-	a := server.App{
-		TableName:  config.TableName,
-		RegistryID: config.RegistryID,
-		Repos:      config.Repos,
-	}
-	err := a.Init(
-		[]byte(viper.GetString("ca")),
-		[]byte(viper.GetString("serve.cert")),
-		[]byte(viper.GetString("serve.key")),
-	)
-	if err != nil {
-		fmt.Println("could not init test app", err)
-		os.Exit(1)
-	}
-
-	ts := a.Test()
-	defer ts.Close()
-	os.Setenv("GROMIT_SERVE_URL", ts.URL)
 	code := m.Run()
 
 	os.Exit(code)
@@ -48,7 +21,7 @@ type cmdExecution struct {
 	Stderr  []byte
 }
 
-// executeMock cmd will make an API request to a locally running server
+// executeMock cmd will call a subcommand with args capturing stdout and stderr
 func executeMockCmd(args ...string) (*cmdExecution, error) {
 	o := new(bytes.Buffer)
 	e := new(bytes.Buffer)

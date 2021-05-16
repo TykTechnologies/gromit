@@ -6,15 +6,17 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/TykTechnologies/gromit/policy"
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
-// Global vars that are available to all commands
+// Global vars that are available to appropriate commands
 // Loaded by loadConfig()
 var ZoneID, Domain, TableName, RegistryID string
 var Repos []string
+var RepoPolicies policy.RepoPolicies
 
 // LoadConfig is a helper function that loads the environment into the
 // global variables TableName, RegistryID and so on defined at the top
@@ -53,8 +55,20 @@ func LoadConfig(cfgFile string) {
 	Repos = strings.Split(viper.GetString("repos"), ",")
 	RegistryID = viper.GetString("registryid")
 	TableName = viper.GetString("tablename")
+
+	log.Info().Interface("repos", Repos).Str("tablename", TableName).Str("registry", RegistryID).Msg("loaded config")
+}
+
+// LoadClusterConfig loads the config that the cluster command will need
+func LoadClusterConfig() {
 	ZoneID = viper.GetString("cluster.zoneid")
 	Domain = viper.GetString("cluster.domain")
+	log.Info().Str("zoneid", ZoneID).Str("domain", Domain).Msg("loaded cluster config")
+}
 
-	log.Info().Interface("repos", Repos).Str("tablename", TableName).Str("registry", RegistryID).Str("zoneid", ZoneID).Str("domain", Domain).Msg("loaded environment")
+// GetPolicyConfig returns the policies as a map of repos to policies
+// This will panic if the type assertions fail
+func LoadRepoPolicies() error {
+	log.Info().Msg("loading repo policies")
+	return viper.UnmarshalKey("policy", &RepoPolicies)
 }
