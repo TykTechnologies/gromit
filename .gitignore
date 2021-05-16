@@ -21,3 +21,4 @@ rice-box.go
 dist/
 /testdata/config/
 /server/debug/debugger.wasm
+/tyk/

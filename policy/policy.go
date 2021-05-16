@@ -2,7 +2,14 @@ package policy
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
+	"os"
+	"path/filepath"
+	"text/template"
+	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type branchPolicies struct {
@@ -16,6 +23,44 @@ type RepoPolicies struct {
 	Protected []string
 	Repos     map[string]branchPolicies
 	Files     []string
+}
+
+//go:embed templates
+var maTemplates embed.FS
+
+// Gen generates .g/w/sync-automation.yml
+func (r *RepoPolicies) Gen(repo, branch, templateDir string) error {
+	log.Debug().Str("repo", repo).Str("branch", branch).Str("templateDir", templateDir).Msg("generating meta automation from templateDir")
+
+	opDir := filepath.Join(repo, ".github", "workflows")
+	opFile := filepath.Join(opDir, "sync-automation.yml")
+	err := os.MkdirAll(opDir, 0755)
+	if err != nil {
+		return fmt.Errorf("%s: %w", opDir, err)
+	}
+	op, err := os.Create(opFile)
+	if err != nil {
+		return fmt.Errorf("%s: %w", opFile, err)
+	}
+	defer op.Close()
+
+	files := r.Repos[repo].Files
+	files = append(files, r.Files...)
+	templateVars := struct {
+		Timestamp  string
+		MAFiles    []string
+		SrcBranch  string
+		DestBranch string
+	}{
+		time.Now().UTC().String(),
+		files,
+		branch,
+		r.Repos[repo].Backports[branch],
+	}
+	t := template.Must(template.New("sync-automation.tmpl").ParseFS(maTemplates, "templates/sync-automation.tmpl"))
+	log.Debug().Str("opFile", opFile).Msg("writing meta automation")
+	err = t.Execute(op, templateVars)
+	return err
 }
 
 // String representation

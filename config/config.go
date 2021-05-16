@@ -34,8 +34,12 @@ func LoadConfig(cfgFile string) {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 		confPath = filepath.Dir(cfgFile)
+		log.Debug().Str("file", cfgFile).Msg("using config file")
 	} else if xdgHome := os.Getenv("XDG_CONFIG_HOME"); xdgHome != "" {
-		confPath = fmt.Sprintf("%s/%s", xdgHome, appName)
+		confPath = filepath.Join(xdgHome, appName)
+		log.Debug().Str("path", confPath).Msg("looking for config path")
+	} else {
+		log.Debug().Str("path", confPath).Msg("using default config path")
 	}
 
 	viper.AddConfigPath(confPath)
@@ -56,7 +60,7 @@ func LoadConfig(cfgFile string) {
 	RegistryID = viper.GetString("registryid")
 	TableName = viper.GetString("tablename")
 
-	log.Info().Interface("repos", Repos).Str("tablename", TableName).Str("registry", RegistryID).Msg("loaded config")
+	log.Info().Interface("repos", Repos).Str("tablename", TableName).Str("registry", RegistryID).Str("file", viper.ConfigFileUsed()).Msg("loaded config from file")
 }
 
 // LoadClusterConfig loads the config that the cluster command will need

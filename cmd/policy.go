@@ -23,13 +23,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var branch string
+
 // policyCmd represents the policy command
 var policyCmd = &cobra.Command{
 	Use:   "policy",
 	Short: "Mess with the release engineering policy",
 	Long: `Controls the automation that is active in each repo for each branch.
-Operates directly on github and creates PRs for protected branches. Requires an OAuth2 token and a section in the config file describing the policy like,
-`,
+Operates directly on github and creates PRs for protected branches. Requires an OAuth2 token and a section in the config file describing the policy. `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		err := config.LoadRepoPolicies()
 		if err != nil {
@@ -50,7 +51,25 @@ Operates directly on github and creates PRs for protected branches. Requires an 
 	},
 }
 
+// genSubCmd generates a set of files ready to be checked in
+var genSubCmd = &cobra.Command{
+	Use:     "generate <repo>",
+	Aliases: []string{"gen"},
+	Args:    cobra.MinimumNArgs(1),
+	Short:   "generate a set of file for a given repo and branch",
+	Long:    `Will create a tree rooted at <repo> with the files release engineering depends on, creating directories as needed, this can be overlaid on a repo and merged into it.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		templateDir, _ := cmd.Flags().GetString("templates")
+		return config.RepoPolicies.Gen(args[0], branch, templateDir)
+
+	},
+}
+
 func init() {
-	rootCmd.AddCommand(policyCmd)
+	genSubCmd.Flags().StringVarP(&branch, "branch", "b", "master", "Branch for meta-automation")
+	genSubCmd.Flags().StringP("meta", "m", "templates", "Directory with meta-automation templates")
+
+	policyCmd.AddCommand(genSubCmd)
 	policyCmd.Flags().BoolP("json", "j", false, "Output in JSON")
+	rootCmd.AddCommand(policyCmd)
 }
