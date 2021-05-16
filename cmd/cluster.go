@@ -42,6 +42,7 @@ var clusterCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Msg("Could not load AWS config")
 		}
+		config.LoadClusterConfig()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		clusters, err := devenv.ListClusters(ecs.New(AWScfg))
