@@ -40,5 +40,5 @@ var versionCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(versionCmd)
 
-	versionCmd.Flags().BoolP("full", "f", false, "Add build information")
+	versionCmd.Flags().Bool("full", false, "Add build information")
 }

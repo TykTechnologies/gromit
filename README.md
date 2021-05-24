@@ -9,6 +9,7 @@ Install from the [releases](releases) page. To keep up with releases using [zini
 zinit wait lucid from"gh-r" nocompile for \
       bpick"*Linux_x86_64.tar.gz" TykTechnologies/gromit
 ```
+
 ## Configuration
 This is ostensibly a [cobra](https://github.com/spf13/cobra "cobra cli") app and can be configured with a config file to save a bunch of typing. A sample `gromit.yaml` file looks like:
 
@@ -52,6 +53,50 @@ client:
 All parameters can also be set by environment variables with the `GROMIT_` prefix. So the environment variable for the config parameter `cluster.domain` would be `GROMIT_CLUSTER_DOMAIN`.
 
 ## Features
+To various degrees of competence, gromit can,
+- wait for new builds from the Release workflow in repos and persist the current state to DB
+- read build state from DB and update the developer environments with latest images
+- manage the meta-automation for the release process ([sync-automation.yml](policy/templates/sync-automation.tmpl "template"))
+- fetch developer licenses for dashboard and mdcb
+- generate config files from a `text/template`
+- dump redis and mongo data for a classic cloud org to local disk
+- restore redis and mongo data for a classic cloud org from local disk
+
+### Policy Engine for release engineering
+If it is told (via the config file), gromit can manage the forward and back porting of the release engineering code. [RFC](https://tyktech.atlassian.net/wiki/spaces/EN/pages/1030586370/Keeping+release+engineering+code+in+sync) here. Given a policy definition like
+``` yaml
+policy:
+  protected: [ branches_that_are_protected on_github ]
+  files:
+    - file1
+    - .goreleaser.yml
+    - Dockerfile.std
+  repos:
+    tyk:
+      deprecations:
+        <version_when_deprecated>:
+          - file_that_was_deprecated
+          - bin/integration_build.sh
+      backports:
+        release-3.0.5: releng/release-3-lts
+        <source_branch>: <backport_branch>
+    repo2:
+      files:
+        - .github/workflows/update-gomod.yml
+        - .github/workflows/build-assets.yml
+      deprecations:
+        v3.0.1:
+          - .github/workflows/int-image.yml
+          - bin/integration_build.sh
+      backports:
+        release-3.0.5: releng/release-3-lts
+        release-3.1.2: releng/release-3.1
+```
+gromit will generate a `.g/w/sync-automation.yml` file in each `<source_branch>` which will copy all files related to release engineering to `<backport_branch>`. The `<backport_branch>` can be merged into its ancestor branch at periodic intervals. 
+
+For the example `tyk` repo above, commits on `release-3.0.5` related to release engineering will be copied to `releng/release-3-lts`. `releng/release-3-lts` can be merged, via a PR manually, or auotmatically, into `release-3-lts` as part of the release process.
+
+### Usage
 ``` shellsession
 % gromit help
 It also has a grab bag of various ops automation.
@@ -70,13 +115,15 @@ Available Commands:
   licenser    Get a trial license and writes it to path, overwriting it
   orgs        Dump/restore org keys and mongodb
   passwd      Returns the password hash of the given plaintext
+  policy      Mess with the release engineering policy
   reap        Reap envs from GROMIT_TABLENAME, using a config tree at <config root path>
+  repo        Work with git repos
   serve       Run endpoint for github requests
   sow         Sow envs creating a config tree at <config root path>
   version     Print version
 
 Flags:
-      --conf string       config file (default is $HOME/.config/gromit.yaml)
+  -f, --conf string       config file (default is $HOME/.config/gromit.yaml)
   -h, --help              help for gromit
   -l, --loglevel string   Log verbosity: trace, info, warn, error (default "info")
   -t, --textlogs          Logs in plain text
@@ -85,12 +132,12 @@ Use "gromit [command] --help" for more information about a command.
 ```
 
 ## Testing
-Only system tests exist and these will exercise most of the AWS API code. `make test` runs the tests and requires access to the [Engg PoC](https://046805072452/signing/aws/amazon.com/console/) AWS account.
+All tests in the `cmd` directory are system tests. Tests in other directories are unit tests. `make test` runs the tests and requires access to the [Engg PoC](https://046805072452/signing/aws/amazon.com/console/) AWS account.
 
 The tests depend on:
 - ECR repos
 - DynamoDB table
-- some other AWS stuff
+- some other AWS stuff, see config file
 
 This infra is provisioned in the Engg PoC account and can be found in the `devenv-euc1-test` Terraform workspace for the state in [tyk-ci/infra](https://github.com/TykTechnologies/tyk-ci/tree/master/infra).
 

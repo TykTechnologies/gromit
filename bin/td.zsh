@@ -12,7 +12,7 @@ old_td=$(aws ecs describe-task-definition --task-definition $td  \
                   requiresCompatibilities: taskDefinition.requiresCompatibilities,
                   cpu: taskDefinition.cpu,
                   memory: taskDefinition.memory}')
-new_td=${old_td/tyk-analytics:master/tyk-analytics:federation-test}
+new_td=${old_td/tyk-analytics:federation-test/tyk-analytics:master}
 print $new_td
 aws ecs register-task-definition --family $td --cli-input-json "$new_td"
 aws ecs update-service --cluster federation-test --service tyk-analytics --task-definition $td
