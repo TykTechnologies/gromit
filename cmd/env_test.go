@@ -3,6 +3,7 @@ package cmd
 import (
 	"testing"
 
+	"github.com/TykTechnologies/gromit/server"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,6 +17,7 @@ type cmdTestCase struct {
 }
 
 func runEnvTests(t *testing.T, cases []cmdTestCase) {
+	server.StartTestServer("testdata/env-config.yaml")
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			response, err := executeMockCmd(tc.Args...)

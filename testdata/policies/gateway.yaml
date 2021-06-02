@@ -1,0 +1,28 @@
+policy:
+  protected: [ master ]
+  files:
+    - bin/unlock-agent.sh
+    - .goreleaser.yml
+    - Dockerfileg.std
+    - Dockerfile.slim
+    - aws/byol.pkr.hcl
+    - .github/workflows/release.yml
+    - .github/workflows/del-env.yml
+    - integration/terraform/outputs.tf
+    - install/before_install.sh
+    - install/post_install.sh
+    - install/post_remove.sh
+  repos:
+    tyk:
+      protected: [ release-3-lts ]
+      files:
+        - images/*
+      deprecations:
+        v3.0.1:
+          - .github/workflows/int-image.yml
+          - bin/integration_build.sh
+      backports:
+        release-3.0.5: releng/release-3-lts
+        release-3.1.2: releng/release-3.1
+        release-3.2.0: releng/release-3.2
+

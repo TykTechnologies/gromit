@@ -1,15 +1,12 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/TykTechnologies/gromit/config"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,22 +14,7 @@ var a *App
 
 // setup environment for the test run and cleanup after
 func TestMain(m *testing.M) {
-	config.LoadConfig("")
-	a = &App{
-		TableName:  config.TableName,
-		RegistryID: config.RegistryID,
-		Repos:      config.Repos,
-	}
-	err := a.Init(
-		[]byte(viper.GetString("ca")),
-		[]byte(viper.GetString("serve.cert")),
-		[]byte(viper.GetString("serve.key")),
-	)
-	if err != nil {
-		fmt.Println("could not init test app", err)
-		os.Exit(1)
-	}
-	a.initRoutes()
+	StartTestServer("testdata/env-config.yaml")
 	code := m.Run()
 	os.Exit(code)
 }

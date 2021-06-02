@@ -14,8 +14,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 
+	"github.com/TykTechnologies/gromit/config"
 	"github.com/TykTechnologies/gromit/devenv"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
@@ -28,6 +30,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 )
 
 // App holds the API clients for the gromit server
@@ -109,6 +112,29 @@ func (a *App) Test() *httptest.Server {
 	// server.Config.Handler = a.Router
 	server.StartTLS()
 	return server
+}
+
+// StartTestServer starts an HttpTest server that is suitable for testing
+func StartTestServer(confFile string) {
+	config.LoadConfig("testdata/env-config.yaml")
+	a := App{
+		TableName:  config.TableName,
+		RegistryID: config.RegistryID,
+		Repos:      config.Repos,
+	}
+	err := a.Init(
+		[]byte(viper.GetString("ca")),
+		[]byte(viper.GetString("serve.cert")),
+		[]byte(viper.GetString("serve.key")),
+	)
+	if err != nil {
+		fmt.Println("could not init test app", err)
+		os.Exit(1)
+	}
+
+	ts := a.Test()
+	defer ts.Close()
+	os.Setenv("GROMIT_SERVE_URL", ts.URL)
 }
 
 func (a *App) initRoutes() {

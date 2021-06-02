@@ -61,13 +61,17 @@ func Execute() {
 func init() {
 	// Call initConfig() for every command before running
 	cobra.OnInitialize(initConfig)
-	log.Logger = log.With().Caller().Str("version", util.Version()).Logger()
+	log.Logger = log.With().Str("version", util.Version()).Logger()
+
+	if zerolog.Nop().GetLevel() == zerolog.TraceLevel {
+		log.Logger = log.With().Caller().Str("version", util.Version()).Logger()
+	}
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "conf", "", "config file (default is $HOME/.config/gromit.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "conf", "f", "", "config file (default is $HOME/.config/gromit.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "info", "Log verbosity: trace, info, warn, error")
 	rootCmd.PersistentFlags().BoolVarP(&textLogs, "textlogs", "t", false, "Logs in plain text")
 }
