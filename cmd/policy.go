@@ -149,6 +149,11 @@ var docSubCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not fetch branches")
 		}
+		if config.Branch != "" {
+			relBranches = []string{config.Branch}
+		}
+		log.Trace().Strs("branches", relBranches).Msg("to minister")
+
 		srcBranches, err := repoPolicies.SrcBranches(repoName)
 		if err != nil {
 			log.Fatal().Err(err).Msg("fetching src branches")

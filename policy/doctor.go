@@ -53,6 +53,7 @@ func (r *GitRepo) CheckMetaAutomation(rp RepoPolicies) error {
 		// file doesn't exist and shouldn't exist
 		return nil
 	}
+	log.Debug().Bool("exists", exists).Bool("shouldExist", shouldExist).Msg("current vs desired")
 	var remoteBranch string
 	isProtected, err := rp.IsProtected(r.Name, r.branch)
 	if err != nil {

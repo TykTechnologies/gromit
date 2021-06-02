@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/TykTechnologies/gromit/policy"
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -81,11 +80,4 @@ func LoadClusterConfig() {
 	ZoneID = viper.GetString("cluster.zoneid")
 	Domain = viper.GetString("cluster.domain")
 	log.Info().Str("zoneid", ZoneID).Str("domain", Domain).Msg("loaded cluster config")
-}
-
-// GetPolicyConfig returns the policies as a map of repos to policies
-// This will panic if the type assertions fail
-func LoadRepoPolicies(policies *policy.RepoPolicies) error {
-	log.Info().Msg("loading repo policies")
-	return viper.UnmarshalKey("policy", policies)
 }

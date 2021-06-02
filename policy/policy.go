@@ -2,8 +2,12 @@ package policy
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 )
 
 type RepoPolicies struct {
@@ -19,15 +23,21 @@ type maVars struct {
 	DestBranch string
 }
 
+var ErrUnknownRepo = errors.New("repo not present in policies")
+var ErrUnknownBranch = errors.New("branch not present in branch policies of repo")
+
 // getMAVars returns the template vars required to render the sync-automation template
 func (rp RepoPolicies) getMAVars(repo, srcBranch string) (maVars, error) {
 	bps, found := rp.Repos[repo]
 	if !found {
-		return maVars{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
+		return maVars{}, ErrUnknownRepo
 	}
 	destBranch, err := bps.BackportBranch(srcBranch)
 	if err != nil {
-		return maVars{}, err
+		return maVars{
+			Timestamp: time.Now().UTC().String(),
+			MAFiles:   append(rp.Files, bps.Files...),
+		}, ErrUnknownBranch
 	}
 	return maVars{
 		Timestamp:  time.Now().UTC().String(),
@@ -114,4 +124,11 @@ func (rp RepoPolicies) String() string {
 	}
 	fmt.Fprintln(w)
 	return w.String()
+}
+
+// GetPolicyConfig returns the policies as a map of repos to policies
+// This will panic if the type assertions fail
+func LoadRepoPolicies(policies *RepoPolicies) error {
+	log.Info().Msg("loading repo policies")
+	return viper.UnmarshalKey("policy", policies)
 }
