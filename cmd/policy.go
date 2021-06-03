@@ -41,7 +41,7 @@ var policyCmd = &cobra.Command{
 	Long: `Controls the automation that is active in each repo for each branch.
 Operates directly on github and creates PRs for protected branches. Requires an OAuth2 token and a section in the config file describing the policy. `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		err := config.LoadRepoPolicies(&repoPolicies)
+		err := policy.LoadRepoPolicies(&repoPolicies)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not parse repo policies")
 		}
@@ -61,24 +61,26 @@ Operates directly on github and creates PRs for protected branches. Requires an 
 
 // genSubCmd generates a set of files in an in-memory git repo and pushes it to origin.
 var genSubCmd = &cobra.Command{
-	Use:     "generate <repo> <commit msg> [commit_msg...]",
+	Use:     "generate <repo> <title> [commit_msg...]",
 	Aliases: []string{"gen", "add", "new"},
 	Args:    cobra.MinimumNArgs(2),
-	Short:   "generate the meta-automation for a given repo and branch",
-	Long: `Will create .g/w/sync-automation.yml, overlaid onto an in-memory git repo. 
-If the branch is marked protected in the repo policies, a draft PR will be created with the changes and @devops will be asked for a review.
+	Short:   "overwrite the meta-automation for a given repo and branch",
+	Long: `Will overwite the existing meta-automation, and supports signing of the commits. This is not really meant for use in automation. Use this for manual fixes when you know better than the doctor.
+If the branch requires reviews before merging, a draft PR will be created with the changes and @devops will be asked for a review.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		repoName := args[0]
-		commitMsg := strings.Join(args[1:], "\n")
-		fqdnRepo := fmt.Sprintf("%s/%s", config.RepoURLPrefix, repoName)
+		prTitle := args[1]
+		commitMsg := strings.Join(args[2:], "\n")
+		fqrn := fmt.Sprintf("%s/%s", config.RepoURLPrefix, repoName)
 
 		log.Logger = log.With().Str("repo", repoName).Str("branch", config.Branch).Logger()
 
-		r, err := policy.FetchRepo(repoName, fqdnRepo, dir, ghToken, 1)
+		r, err := policy.FetchRepo(repoName, fqrn, dir, ghToken, 1)
 		if err != nil {
-			log.Fatal().Err(err).Str("repo", fqdnRepo).Msg("could not fetch")
+			log.Fatal().Err(err).Str("fqrn", fqrn).Msg("could not fetch")
 		}
+		r.SetDryRun(dryRun)
 		signKeyid := viper.GetUint64("signingkey")
 		if signKeyid != 0 {
 			signer, err := util.GetSigningEntity(signingKeyid)
@@ -92,7 +94,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 		}
 		branches, err := repoPolicies.SrcBranches(repoName)
 		if err != nil {
-			log.Fatal().Err(err).Msg("backport branches")
+			log.Fatal().Err(err).Msg("src branches")
 		}
 		if config.Branch != "" {
 			branches = []string{config.Branch}
@@ -106,7 +108,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 				log.Fatal().Err(err).Msg("could not generate meta-automation")
 			}
 			var remoteBranch string
-			isProtected, err := repoPolicies.IsProtected(r.Name, b)
+			isProtected, err := r.IsProtected(b)
 			if err != nil {
 				log.Fatal().Err(err).Msg("getting protected status")
 			}
@@ -116,8 +118,18 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 				remoteBranch = b
 			}
 			err = r.Push(b, remoteBranch)
+			if err != nil {
+				log.Fatal().Err(err).Msg("could not push")
+			}
 			log.Info().Str("origin", remoteBranch).Msg("pushed to origin")
+			if isProtected {
+				err = r.CreatePR(prTitle, "sync-automation.tmpl", repoPolicies, false)
+				if err != nil {
+					log.Fatal().Err(err).Msg("could not create PR")
+				}
+			}
 		}
+		log.Info().Strs("prs", r.PRs()).Msg("created")
 	},
 }
 
@@ -132,14 +144,16 @@ var docSubCmd = &cobra.Command{
   + if found on an inactive branch, it is removed
   + if the branch it is found on is protected, a draft PR is created to remove it
 - if deprecated code is found, it is removed (not implemented)
-  + if on a protected branch a draft PR is created`,
+  + if on a protected branch a draft PR is created
+This can be used in automation.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		repoName := args[0]
 		log.Logger = log.With().Str("repo", repoName).Logger()
 
 		fqrn := fmt.Sprintf("%s/%s", config.RepoURLPrefix, repoName)
 		// Shallow clones cause all sorts of transient faults
-		r, err := policy.FetchRepo(repoName, fqrn, dir, ghToken, 0)
+		// But with retries, the savings in bandwidth are considerable
+		r, err := policy.FetchRepo(repoName, fqrn, dir, ghToken, 1)
 		if err != nil {
 			log.Fatal().Err(err).Str("fqrn", fqrn).Msg("could not fetch")
 		}
@@ -170,6 +184,7 @@ var docSubCmd = &cobra.Command{
 				log.Fatal().Err(err).Msg("checking meta-automation")
 			}
 		}
+		log.Info().Strs("prs", r.PRs()).Msg("created")
 	},
 }
 
@@ -183,7 +198,7 @@ func init() {
 	policyCmd.PersistentFlags().Bool("sign", true, "Sign commits, requires -k/--key. gpgconf and an active gpg-agent are required if the key is protected by a passphrase.")
 	policyCmd.PersistentFlags().StringVarP(&config.RepoURLPrefix, "prefix", "u", "https://github.com/TykTechnologies", "Prefix to derive the fqdn repo")
 	policyCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output in JSON")
-	policyCmd.PersistentFlags().BoolVarP(&dryRun, "dry", "d", false, "Output in JSON")
+	policyCmd.PersistentFlags().BoolVarP(&dryRun, "dry", "d", false, "Do not actually push or create PRs")
 	policyCmd.PersistentFlags().StringVar(&ghToken, "token", os.Getenv("GITHUB_TOKEN"), "Github token for private repositories")
 	policyCmd.PersistentFlags().StringVar(&dir, "dir", "", "Use dir for git operations, instead of an in-memory fs")
 	rootCmd.AddCommand(policyCmd)

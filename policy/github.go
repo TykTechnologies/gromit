@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v35/github"
 	"github.com/rs/zerolog/log"
 )
 
@@ -15,6 +15,16 @@ const ghOrg = "TykTechnologies"
 
 //go:embed pr-templates
 var ghTemplates embed.FS
+
+// (rp RepoPolicies) IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
+func (r *GitRepo) IsProtected(branch string) (bool, error) {
+	b, resp, err := r.gh.Repositories.GetBranch(context.Background(), ghOrg, r.Name, branch)
+	if err != nil {
+		return true, fmt.Errorf("error: %w, response: %v", err, resp)
+	}
+
+	return b.GetProtected(), nil
+}
 
 func (r *GitRepo) CreatePR(title, templateName string, rp RepoPolicies, removal bool) error {
 	if r.branch == "" {

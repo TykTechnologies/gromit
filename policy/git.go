@@ -19,7 +19,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v35/github"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/oauth2"
@@ -124,7 +124,7 @@ func (r *GitRepo) addFile(path, msg string, confirm bool) (plumbing.Hash, error)
 	log.Trace().Str("hash", origHead.String()).Msg("HEAD")
 	hash, err := r.worktree.Add(path)
 	if err != nil {
-		return plumbing.ZeroHash, fmt.Errorf("adding to worktree: %w", err)
+		return plumbing.ZeroHash, fmt.Errorf("adding %s to worktree: %w", path, err)
 	}
 	log.Trace().Str("hash", hash.String()).Msg("add")
 	newCommitHash, err := r.worktree.Commit(msg, r.commitOpts)
@@ -147,7 +147,7 @@ func (r *GitRepo) addFile(path, msg string, confirm bool) (plumbing.Hash, error)
 		return plumbing.ZeroHash, fmt.Errorf("encoding diff: %w", err)
 	}
 	if confirm {
-		fmt.Printf("\n----End of diff for %s. Control-C to abort, ⏎/Enter to continue.", r.Name)
+		fmt.Printf("\n----End of diff for branch %s on %s. Control-C to abort, ⏎/Enter to continue.", r.branch, r.Name)
 		fmt.Scanln()
 	}
 

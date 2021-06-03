@@ -55,7 +55,7 @@ func (r *GitRepo) CheckMetaAutomation(rp RepoPolicies) error {
 	}
 	log.Debug().Bool("exists", exists).Bool("shouldExist", shouldExist).Msg("current vs desired")
 	var remoteBranch string
-	isProtected, err := rp.IsProtected(r.Name, r.branch)
+	isProtected, err := r.IsProtected(r.branch)
 	if err != nil {
 		return fmt.Errorf("getting protected status: %w", err)
 	}
@@ -128,8 +128,9 @@ func (r *GitRepo) AddMetaAutomation(commitMsg string, rp RepoPolicies) error {
 	}
 	log.Trace().Interface("tv", tv).Msg("template vars for adding meta automation")
 	err = t.Execute(op, tv)
-	hash, err := r.addFile(opFile, commitMsg, true)
-
-	log.Debug().Str("hash", hash.String()).Str("path", opFile).Msg("sync-automation.yml generated")
+	if err != nil {
+		return fmt.Errorf("rendering template: %w", err)
+	}
+	_, err = r.addFile(opFile, commitMsg, true)
 	return err
 }

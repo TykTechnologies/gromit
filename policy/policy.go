@@ -17,14 +17,14 @@ type RepoPolicies struct {
 }
 
 type maVars struct {
-	Timestamp  string
-	MAFiles    []string
-	SrcBranch  string
-	DestBranch string
+	Timestamp string
+	MAFiles   []string
+	SrcBranch string
+	Backport  string
+	Fwdports  []string
 }
 
 var ErrUnknownRepo = errors.New("repo not present in policies")
-var ErrUnknownBranch = errors.New("branch not present in branch policies of repo")
 
 // getMAVars returns the template vars required to render the sync-automation template
 func (rp RepoPolicies) getMAVars(repo, srcBranch string) (maVars, error) {
@@ -32,19 +32,26 @@ func (rp RepoPolicies) getMAVars(repo, srcBranch string) (maVars, error) {
 	if !found {
 		return maVars{}, ErrUnknownRepo
 	}
-	destBranch, err := bps.BackportBranch(srcBranch)
-	if err != nil {
-		return maVars{
-			Timestamp: time.Now().UTC().String(),
-			MAFiles:   append(rp.Files, bps.Files...),
-		}, ErrUnknownBranch
+	var ma = maVars{
+		Timestamp: time.Now().UTC().String(),
+		MAFiles:   append(rp.Files, bps.Files...),
+		SrcBranch: srcBranch,
 	}
-	return maVars{
-		Timestamp:  time.Now().UTC().String(),
-		MAFiles:    append(rp.Files, bps.Files...),
-		SrcBranch:  srcBranch,
-		DestBranch: destBranch,
-	}, nil
+	destBranch, err := bps.BackportBranch(srcBranch)
+	if err == ErrUnknownBranch {
+		log.Debug().Msg("no backports")
+	} else {
+		ma.Backport = destBranch
+	}
+
+	destBranches, err := bps.FwdportBranch(srcBranch)
+	if err == ErrUnknownBranch {
+		log.Debug().Msg("no fwdports")
+	} else {
+		ma.Fwdports = destBranches
+	}
+
+	return ma, nil
 }
 
 type prVars struct {
@@ -69,20 +76,6 @@ func (rp RepoPolicies) getPRVars(repo, branch string, removal bool) (prVars, err
 		Branch:    branch,
 		Remove:    removal,
 	}, nil
-}
-
-// (rp RepoPolicies) IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
-func (rp RepoPolicies) IsProtected(repo, branch string) (bool, error) {
-	bps, found := rp.Repos[repo]
-	if !found {
-		return false, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
-	}
-	for _, pb := range append(bps.Protected, rp.Protected...) {
-		if pb == branch {
-			return true, nil
-		}
-	}
-	return false, nil
 }
 
 // (rp RepoPolicies) SrcBranches returns a list of branches that are sources of commits
