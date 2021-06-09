@@ -3,7 +3,7 @@
 
 # This workflow should only exist in {{ .SrcBranch }}
 # Missing files are silently ignored. Most of the time this is what we want, older repos may not have some files
-# If {{ .DestBranch }} does not exist, it will be created
+# If fwd or backport branches do not exist, they will be created
 
 name: Sync automation
 
@@ -15,22 +15,53 @@ on:
     {{- end }}
 
 jobs:
-  sync:
+{{ if .Backport }}
+  backport:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
         with:
-          depth: 1
+          fetch-depth: 1
 
-      - name: sync {{ .SrcBranch }} → {{ .DestBranch }}
+      - name: Backport {{ .SrcBranch }} → {{ .Backport }}
         run: |
-          git fetch origin +refs/heads/{{ .DestBranch }}:refs/heads/{{ .DestBranch }} && git checkout {{ .DestBranch }}
+          git checkout {{ .Backport }} || git checkout -b {{ .Backport }}
           git config --local user.email "policy@gromit"
           git config --local user.name "Bender"
           {{- range $file := .MAFiles }}
           git checkout --theirs origin/{{ $.SrcBranch }} -- {{ $file }}
 	  {{- end }}
           git commit -m "[CI] Backport release automation from {{ .SrcBranch }}" -m "{{ `${{ github.event.head_commit.message }}` }}"
-          git push origin {{ .DestBranch }}
-          echo "::debug::syncd from {{ .SrcBranch }} to {{ .DestBranch }}"
+          git push -u origin {{ .Backport }}
+          echo "::debug::syncd from {{ .SrcBranch }} to {{ .Backport }}"
+{{ end }}
+
+{{ if .Fwdports }}
+  fwdport:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: {{range $fp := .Fwdports }}
+          - {{ $fp }}
+	{{- end }}
+          
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: {{ `${{matrix.branch}}` }}
+
+      - name: Forward port {{ .SrcBranch }} → {{ `${{matrix.branch}}` }}
+        run: |
+          git checkout {{ `${{matrix.branch}}` }} || git checkout -b {{ `${{matrix.branch}}` }}
+          git config --local user.email "policy@gromit"
+          git config --local user.name "Bender"
+          {{- range $file := .MAFiles }}
+          git checkout --theirs origin/{{ $.SrcBranch }} -- {{ $file }}
+	  {{- end }}
+          git commit -m "[CI] Fwdport release automation from {{ .SrcBranch }}" -m "{{ `${{ github.event.head_commit.message }}` }}"
+          git push -u origin {{ `${{matrix.branch}}` }}
+          echo "::debug::syncd from {{ .SrcBranch }} to {{ `${{matrix.branch}}` }}"
+{{ end }}
