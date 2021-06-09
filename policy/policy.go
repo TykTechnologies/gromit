@@ -11,9 +11,9 @@ import (
 )
 
 type RepoPolicies struct {
-	Protected []string
 	Repos     map[string]branchPolicies // map of reponames to branchPolicies
 	Files     []string
+	Protected []string
 }
 
 type maVars struct {
@@ -78,6 +78,20 @@ func (rp RepoPolicies) getPRVars(repo, branch string, removal bool) (prVars, err
 	}, nil
 }
 
+// (rp RepoPolicies) IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
+func (rp RepoPolicies) IsProtected(repo, branch string) (bool, error) {
+	bps, found := rp.Repos[repo]
+	if !found {
+		return false, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
+	}
+	for _, pb := range append(bps.Protected, rp.Protected...) {
+		if pb == branch {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // (rp RepoPolicies) SrcBranches returns a list of branches that are sources of commits
 func (rp RepoPolicies) SrcBranches(repo string) ([]string, error) {
 	bps, found := rp.Repos[repo]
@@ -92,7 +106,6 @@ func (rp RepoPolicies) String() string {
 	w := new(bytes.Buffer)
 	fmt.Fprintln(w, `Commits landing on the Source branch are automatically sync'd to the list of Destinations. PRs will be created for the protected branch. Other branches will be updated directly.`)
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, "Protected branches: %v\n", rp.Protected)
 	fmt.Fprintln(w, "Common Files:")
 	for _, file := range rp.Files {
 		fmt.Fprintf(w, " - %s\n", file)

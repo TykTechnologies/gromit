@@ -3,11 +3,11 @@ package policy
 import "errors"
 
 type branchPolicies struct {
-	Protected    []string            `mapstructure:",omitempty"`
 	Deprecations map[string][]string `mapstructure:",omitempty"`
 	Backports    map[string]string   `mapstructure:",omitempty"`
 	Fwdports     map[string][]string `mapstructure:",omitempty"`
 	Files        []string            `mapstructure:",omitempty"`
+	Protected    []string            `mapstructure:",omitempty"`
 }
 
 var ErrUnknownBranch = errors.New("branch not present in branch policies of repo")

@@ -30,6 +30,7 @@ type GitRepo struct {
 	repo         *git.Repository
 	branch       string // local branch
 	remoteBranch string // remote branch
+	origRefs     []config.RefSpec
 	worktree     *git.Worktree
 	fs           billy.Filesystem
 	Name         string
@@ -107,21 +108,36 @@ func FetchRepo(repoName, fqdnRepo, dir, authToken string, depth int) (*GitRepo, 
 	}, err
 }
 
-// AddFile adds a file in the worktree to the index and then displays the resulting changeset as a patch.
+// addFile adds a file in the worktree to the index and then displays the resulting changeset as a patch.
 // The file is assumed to have been updated prior to calling this function.
 // It will show the changes commited in the form of a patch to stdout and wait for user confirmation.
 // Note that this commit will be lost if it is not pushed to a remote.
+// Additionally, it saves the ref before it does anything to the GitRepo object, this can be used at push
+// to ensure that the remote is not unexpectedly updated.
 func (r *GitRepo) addFile(path, msg string, confirm bool) (plumbing.Hash, error) {
 	origRef, err := r.repo.Head()
 	if err != nil {
 		return plumbing.ZeroHash, fmt.Errorf("getting hash for original head: %w", err)
 	}
+
 	log.Trace().Str("ref", origRef.String()).Msg("HEAD")
 	origHead, err := r.repo.CommitObject(origRef.Hash())
 	if err != nil {
 		return plumbing.ZeroHash, fmt.Errorf("getting original head: %w", err)
 	}
-	log.Trace().Str("hash", origHead.String()).Msg("HEAD")
+	origHash := origHead.String()
+	log.Trace().Str("hash", origHash).Msg("HEAD")
+
+	rs := fmt.Sprintf("%s:%s", origRef.String(), plumbing.NewRemoteHEADReferenceName(defaultRemote).String())
+	log.Trace().Str("refspec", rs).Msg("for push")
+	refspec := config.RefSpec(rs)
+	err = refspec.Validate()
+	if err != nil {
+		return plumbing.ZeroHash, fmt.Errorf("validation failed for origRef %s", rs)
+	}
+	// Save the original reference
+	r.origRefs = append(r.origRefs, refspec)
+
 	hash, err := r.worktree.Add(path)
 	if err != nil {
 		return plumbing.ZeroHash, fmt.Errorf("adding %s to worktree: %w", path, err)
@@ -154,10 +170,19 @@ func (r *GitRepo) addFile(path, msg string, confirm bool) (plumbing.Hash, error)
 	return newCommitHash, nil
 }
 
-// (r *GitRepo) Checkout fetches the given ref and then checks it out to the worktree
-// Any local changes are lost
-func (r *GitRepo) Checkout(branch string) error {
-	err := r.worktree.Clean(&git.CleanOptions{
+// Checkout fetches the given ref and then checks it out to the worktree
+// Any local changes are lost if clean is true
+func (r *GitRepo) Pull(ctx context.Context, branch string, clean bool) error {
+	status, err := r.worktree.Status()
+	if err != nil {
+		return fmt.Errorf("status: %w", err)
+	}
+	if status.IsClean() != true && clean == false {
+		return fmt.Errorf("dirty worktree (%s)", branch)
+	} else {
+		log.Debug().Str("branch", branch).Msg("dirty worktree cleaned up")
+	}
+	err = r.worktree.Clean(&git.CleanOptions{
 		Dir: true,
 	})
 	if err != nil {
@@ -169,19 +194,25 @@ func (r *GitRepo) Checkout(branch string) error {
 	if err != nil {
 		return fmt.Errorf("resetting: %w", err)
 	}
-	refspec := config.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/heads/%s", branch, branch))
-	err = r.repo.Fetch(&git.FetchOptions{
-		RemoteName:      "origin",
-		RefSpecs:        []config.RefSpec{refspec},
+	branchRef := plumbing.NewBranchReferenceName(branch)
+	err = r.worktree.Checkout(&git.CheckoutOptions{
+		Branch: branchRef,
+		Force:  true,
+	})
+	if err != nil {
+		return fmt.Errorf("checkout: %w", err)
+	}
+	err = r.worktree.PullContext(ctx, &git.PullOptions{
+		RemoteName:      defaultRemote,
+		ReferenceName:   branchRef,
 		Auth:            r.auth,
 		Progress:        os.Stdout,
 		InsecureSkipTLS: false,
 	})
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		log.Debug().Msg("fetching failed, re-trying")
-		err = r.repo.Fetch(&git.FetchOptions{
-			RemoteName:      "origin",
-			RefSpecs:        []config.RefSpec{refspec},
+		err = r.worktree.PullContext(ctx, &git.PullOptions{
+			RemoteName:      defaultRemote,
 			Auth:            r.auth,
 			Progress:        os.Stdout,
 			InsecureSkipTLS: false,
@@ -189,14 +220,6 @@ func (r *GitRepo) Checkout(branch string) error {
 		if err != nil {
 			return fmt.Errorf("re-tried fetching: %w", err)
 		}
-	}
-	branchRef := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch))
-	err = r.worktree.Checkout(&git.CheckoutOptions{
-		Branch: branchRef,
-		Force:  true,
-	})
-	if err != nil {
-		return fmt.Errorf("checkout: %w", err)
 	}
 	r.branch = branch
 	return nil
@@ -211,23 +234,16 @@ func (r *GitRepo) Push(branch, remoteBranch string) error {
 	if remoteBranch == branch {
 		log.Warn().Msg("pushing to same branch as checkout")
 	}
-	rs := fmt.Sprintf("+refs/heads/%s:refs/heads/%s", branch, remoteBranch)
-	log.Trace().Str("refspec", rs).Msg("for push")
-	refspec := config.RefSpec(rs)
-	err := refspec.Validate()
-	if err != nil {
-		return fmt.Errorf("refspec %s failed validation", rs)
-	}
 	if r.dryRun {
 		log.Warn().Msg("only dry-run, not really pushing")
 	} else {
-		err = r.repo.Push(&git.PushOptions{
-			RemoteName:      "origin",
-			RefSpecs:        []config.RefSpec{refspec},
-			Auth:            r.auth,
-			Progress:        os.Stdout,
-			Force:           false,
-			InsecureSkipTLS: false,
+		err := r.repo.Push(&git.PushOptions{
+			RemoteName:        "origin",
+			Auth:              r.auth,
+			Progress:          os.Stdout,
+			Force:             false,
+			InsecureSkipTLS:   false,
+			RequireRemoteRefs: r.origRefs,
 		})
 		if err != nil {
 			return fmt.Errorf("pushing: %w", err)

@@ -61,12 +61,6 @@ func Execute() {
 func init() {
 	// Call initConfig() for every command before running
 	cobra.OnInitialize(initConfig)
-	log.Logger = log.With().Str("version", util.Version()).Logger()
-
-	if zerolog.Nop().GetLevel() == zerolog.TraceLevel {
-		log.Logger = log.With().Caller().Str("version", util.Version()).Logger()
-	}
-
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
@@ -88,5 +82,11 @@ func initConfig() {
 	if textLogs {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
+	log.Logger = log.With().Str("version", util.Version()).Logger()
+
+	if zerolog.Nop().GetLevel() == zerolog.TraceLevel {
+		log.Logger = log.With().Caller().Logger()
+	}
+
 	config.LoadConfig(cfgFile)
 }

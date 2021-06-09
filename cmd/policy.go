@@ -16,6 +16,7 @@ http://www.apache.org/licenses/LICENSE-2.0
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -31,7 +32,7 @@ import (
 
 var repoPolicies policy.RepoPolicies
 var signingKeyid uint64
-var jsonOutput, dryRun bool
+var jsonOutput, dryRun, cleanDir bool
 var ghToken string
 
 // policyCmd represents the policy command
@@ -101,33 +102,37 @@ If the branch requires reviews before merging, a draft PR will be created with t
 		}
 		log.Trace().Strs("branches", branches).Msg("to generate")
 		for _, b := range branches {
-			r.Checkout(b)
+			r.Pull(context.Background(), b, cleanDir)
 			log.Logger = log.With().Str("repo", r.Name).Str("branch", b).Logger()
 			err = r.AddMetaAutomation(commitMsg, repoPolicies)
 			if err != nil {
 				log.Fatal().Err(err).Msg("could not generate meta-automation")
 			}
 			var remoteBranch string
-			isProtected, err := r.IsProtected(b)
+			isOriginProtected, err := r.IsProtected(b)
 			if err != nil {
-				log.Fatal().Err(err).Msg("getting protected status")
+				log.Fatal().Err(err).Msg("getting protected status from origin")
 			}
-			if isProtected {
-				remoteBranch = fmt.Sprintf("releng/%s", b)
-			} else {
-				remoteBranch = b
-			}
-			err = r.Push(b, remoteBranch)
+			isPolicyProtected, err := repoPolicies.IsProtected(r.Name, b)
 			if err != nil {
-				log.Fatal().Err(err).Msg("could not push")
+				log.Fatal().Err(err).Msg("getting protected status from policy")
 			}
-			log.Info().Str("origin", remoteBranch).Msg("pushed to origin")
-			if isProtected {
+			if isOriginProtected || isPolicyProtected {
+				err = r.Push(b, fmt.Sprintf("releng/%s", b))
+				if err != nil {
+					log.Fatal().Err(err).Msg("could not push")
+				}
 				err = r.CreatePR(prTitle, "sync-automation.tmpl", repoPolicies, false)
 				if err != nil {
 					log.Fatal().Err(err).Msg("could not create PR")
 				}
+			} else {
+				err = r.Push(b, b)
+				if err != nil {
+					log.Fatal().Err(err).Msg("could not push")
+				}
 			}
+			log.Info().Str("origin", remoteBranch).Msg("pushed to origin")
 		}
 		log.Info().Strs("prs", r.PRs()).Msg("created")
 	},
@@ -175,13 +180,14 @@ This can be used in automation.`,
 		log.Trace().Strs("relBranches", relBranches).Strs("srcBranches", srcBranches).Msg("starting examination")
 		for _, b := range relBranches {
 			log.Logger = log.With().Str("branch", b).Logger()
-			err = r.Checkout(b)
+			err = r.Pull(context.Background(), b, cleanDir)
 			if err != nil {
-				log.Fatal().Err(err).Msg("checkout")
+				log.Error().Err(err).Msg("checkout")
+				continue
 			}
 			err = r.CheckMetaAutomation(repoPolicies)
 			if err != nil {
-				log.Fatal().Err(err).Msg("checking meta-automation")
+				log.Error().Err(err).Msg("checking meta-automation")
 			}
 		}
 		log.Info().Strs("prs", r.PRs()).Msg("created")
@@ -201,5 +207,6 @@ func init() {
 	policyCmd.PersistentFlags().BoolVarP(&dryRun, "dry", "d", false, "Do not actually push or create PRs")
 	policyCmd.PersistentFlags().StringVar(&ghToken, "token", os.Getenv("GITHUB_TOKEN"), "Github token for private repositories")
 	policyCmd.PersistentFlags().StringVar(&dir, "dir", "", "Use dir for git operations, instead of an in-memory fs")
+	policyCmd.PersistentFlags().BoolVarP(&cleanDir, "clean", "c", true, "Drop local changes in local cache before every pull. When used with --dir any unpushed local changes in any of the branches operated on are lost.")
 	rootCmd.AddCommand(policyCmd)
 }
