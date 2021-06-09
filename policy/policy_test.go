@@ -63,9 +63,9 @@ func TestPortsPolicy(t *testing.T) {
 		name        string
 	}{
 		{
-			cfgFile:     "../testdata/policies/gateway.yaml",
-			testBranch:  "release-3.0.5",
 			name:        "tyk",
+			cfgFile:     "../testdata/policies/gateway.yaml",
+			testBranch:  "release-3.0.5", // the branch that will be used for tests
 			srcBranches: []string{"release-3.2.0", "release-3.0.5", "release-3.1.2", "master"},
 			prVars: prVars{
 				RepoName: "tyk",
@@ -75,6 +75,9 @@ func TestPortsPolicy(t *testing.T) {
 					"release-3.1.2": "releng/release-3.1",
 					"release-3.2.0": "releng/release-3.2",
 				},
+				Fwdports: map[string][]string{
+					"master": {"release-3.2", "release-3.2.0"},
+				},
 				Branch: "release-3.0.5",
 				Remove: false,
 			},
@@ -83,6 +86,31 @@ func TestPortsPolicy(t *testing.T) {
 				MAFiles:   gatewayFiles,
 				SrcBranch: "release-3.0.5",
 				Backport:  "releng/release-3-lts",
+			},
+		},
+		{
+			name:        "tyk",
+			cfgFile:     "../testdata/policies/gateway.yaml",
+			testBranch:  "master",
+			srcBranches: []string{"release-3.2.0", "release-3.0.5", "release-3.1.2", "master"},
+			prVars: prVars{
+				RepoName: "tyk",
+				Files:    gatewayFiles,
+				Backports: map[string]string{
+					"release-3.0.5": "releng/release-3-lts",
+					"release-3.1.2": "releng/release-3.1",
+					"release-3.2.0": "releng/release-3.2",
+				},
+				Fwdports: map[string][]string{
+					"master": {"release-3.2", "release-3.2.0"},
+				},
+				Branch: "master",
+				Remove: false,
+			},
+			maVars: maVars{
+				Timestamp: timeStamp,
+				MAFiles:   gatewayFiles,
+				SrcBranch: "master",
 				Fwdports:  []string{"release-3.2", "release-3.2.0"},
 			},
 		},
@@ -90,13 +118,16 @@ func TestPortsPolicy(t *testing.T) {
 			cfgFile:     "../testdata/policies/dashboard.yaml",
 			testBranch:  "release-3.0.5",
 			name:        "tyk-analytics",
-			srcBranches: []string{"release-3.1.2", "release-3.0.5"},
+			srcBranches: []string{"release-3.1.2", "release-3.0.5", "master"},
 			prVars: prVars{
 				RepoName: "tyk-analytics",
 				Files:    dashboardFiles,
 				Backports: map[string]string{
 					"release-3.0.5": "releng/release-3-lts",
 					"release-3.1.2": "releng/release-3.1",
+				},
+				Fwdports: map[string][]string{
+					"master": {"release-3.2", "release-3.2.0"},
 				},
 				Branch: "release-3.0.5",
 				Remove: false,
@@ -106,7 +137,6 @@ func TestPortsPolicy(t *testing.T) {
 				MAFiles:   dashboardFiles,
 				SrcBranch: "release-3.0.5",
 				Backport:  "releng/release-3-lts",
-				Fwdports:  []string{"release-3.2", "release-3.2.0"},
 			},
 		},
 		{
@@ -121,6 +151,7 @@ func TestPortsPolicy(t *testing.T) {
 			},
 			maVars: maVars{
 				Timestamp: timeStamp,
+				SrcBranch: "release-1.3",
 				MAFiles:   baseFiles,
 			},
 		},
@@ -160,19 +191,19 @@ func TestPortsPolicy(t *testing.T) {
 			if err != nil {
 				t.Errorf("Failed to get source branches for %s: %w", tc.protBranch, err)
 			}
-			assert.ElementsMatch(t, tc.srcBranches, srcBranches)
+			assert.ElementsMatch(t, tc.srcBranches, srcBranches, "srcBranches mismatch for %s", tc.name)
 			prVars, err := rp.getPRVars(tc.name, tc.testBranch, false)
 			if err != nil {
 				t.Errorf("Failed to get prVars for %s (%s): %w", tc.name, tc.protBranch, err)
 			}
-			assert.Equal(t, tc.prVars, prVars)
+			assert.Equal(t, tc.prVars, prVars, "prVars mismatch for %s testBranch: %s", tc.name, tc.testBranch)
 			maVars, err := rp.getMAVars(tc.name, tc.testBranch)
 			if err != nil && err != ErrUnknownBranch {
 				t.Errorf("Failed to get maVars for %s(%s): %w", tc.name, tc.protBranch, err)
 			}
 			// Hack to make the timestamps match
 			maVars.Timestamp = timeStamp
-			assert.Equal(t, tc.maVars, maVars)
+			assert.Equal(t, tc.maVars, maVars, "maVars mismatch for %s testBranch: %s", tc.name, tc.testBranch)
 		})
 	}
 }
