@@ -21,8 +21,6 @@ policy:
         v3.0.1:
           - .github/workflows/int-image.yml
           - bin/integration_build.sh
-      backports:
-        release-3.0.5: releng/release-3-lts
-        release-3.1.2: releng/release-3.1
-        release-3.2.0: releng/release-3.2
+      fwdports:
+        master: [ release-3.2, release-3 ]
 
