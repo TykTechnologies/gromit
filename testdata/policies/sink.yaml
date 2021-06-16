@@ -13,13 +13,10 @@ policy:
     - install/post_install.sh
     - install/post_remove.sh
   repos:
-    tyk-analytics:
-      files:
-        - .github/workflows/update-gomod.yml
-        - .github/workflows/build-assets.yml
+    tyk-sink:
       deprecations:
-        v3.0.1:
+        v1.7.0:
           - .github/workflows/int-image.yml
           - bin/integration_build.sh
       fwdports:
-        master: [ release-3.2, release-3 ]
+        master: [ release-1.7, release-1.8 ]
