@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
+	"github.com/goccy/go-graphviz"
+	"github.com/goccy/go-graphviz/cgraph"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
@@ -124,6 +127,32 @@ func (rp RepoPolicies) String() string {
 	}
 	fmt.Fprintln(w)
 	return w.String()
+}
+
+func (rp RepoPolicies) dotGen(cg *cgraph.Graph) error {
+
+	return nil
+}
+
+// (rp RepoPolicies) Graph returns a graphviz dot format representation of the policy
+func (rp RepoPolicies) Graph(w io.Writer) error {
+	g := graphviz.New()
+	relgraph, err := g.Graph()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := relgraph.Close(); err != nil {
+			log.Fatal().Err(err).Msg("could not close graphviz")
+		}
+		g.Close()
+	}()
+
+	err = rp.dotGen(relgraph)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetPolicyConfig returns the policies as a map of repos to policies

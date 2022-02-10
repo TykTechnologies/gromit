@@ -41,7 +41,7 @@ var policyCmd = &cobra.Command{
 	Long: `Controls the automation that is active in each repo for each branch.
 Operates directly on github and creates PRs for protected branches. Requires an OAuth2 token and a section in the config file describing the policy. `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		err := config.LoadRepoPolicies(&repoPolicies)
+		err := policy.LoadRepoPolicies(&repoPolicies)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not parse repo policies")
 		}
