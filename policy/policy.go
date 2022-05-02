@@ -15,15 +15,15 @@ import (
 
 type RepoPolicies struct {
 	Protected []string
-	Repos     map[string]branchPolicies // map of reponames to branchPolicies
+	Repos     map[string]RepoPolicies // map of reponames to branchPolicies
 	Files     []string
+	Ports     map[string][]string
 }
 
 type maVars struct {
-	Timestamp  string
-	MAFiles    []string
-	SrcBranch  string
-	DestBranch string
+	Timestamp string
+	MAFiles   []string
+	SrcBranch string
 }
 
 var ErrUnknownRepo = errors.New("repo not present in policies")
@@ -35,42 +35,41 @@ func (rp RepoPolicies) getMAVars(repo, srcBranch string) (maVars, error) {
 	if !found {
 		return maVars{}, ErrUnknownRepo
 	}
-	destBranch, err := bps.BackportBranch(srcBranch)
-	if err != nil {
-		return maVars{
-			Timestamp: time.Now().UTC().String(),
-			MAFiles:   append(rp.Files, bps.Files...),
-		}, ErrUnknownBranch
-	}
 	return maVars{
-		Timestamp:  time.Now().UTC().String(),
-		MAFiles:    append(rp.Files, bps.Files...),
-		SrcBranch:  srcBranch,
-		DestBranch: destBranch,
+		Timestamp: time.Now().UTC().String(),
+		MAFiles:   append(rp.Files, bps.Files...),
+		SrcBranch: srcBranch,
 	}, nil
 }
 
 type prVars struct {
-	Files     []string
-	RepoName  string
-	Backports map[string]string
-	Fwdports  map[string]string
-	Branch    string
-	Remove    bool
+	Files        []string
+	RepoName     string
+	SrcBranch    string
+	DestBranches []string
+	Remove       bool
 }
 
 // getMAVars returns the template vars required to render the sync-automation template
 func (rp RepoPolicies) getPRVars(repo, branch string, removal bool) (prVars, error) {
-	bps, found := rp.Repos[repo]
+	r, found := rp.Repos[repo]
 	if !found {
 		return prVars{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
 	}
+	_, err := rp.SrcBranches(repo)
+	if err != nil {
+		return prVars{}, fmt.Errorf("could not get source branches for repo %s: %v", repo, err)
+	}
+	destBranches, err := rp.DestBranches(repo, branch)
+	if err != nil {
+		return prVars{}, fmt.Errorf("could not get dest branches for repo %s: %v", repo, err)
+	}
 	return prVars{
-		RepoName:  repo,
-		Files:     append(rp.Files, bps.Files...),
-		Backports: bps.Backports,
-		Branch:    branch,
-		Remove:    removal,
+		RepoName:     repo,
+		Files:        append(rp.Files, r.Files...),
+		SrcBranch:    branch,
+		DestBranches: destBranches,
+		Remove:       removal,
 	}, nil
 }
 
@@ -90,11 +89,30 @@ func (rp RepoPolicies) IsProtected(repo, branch string) (bool, error) {
 
 // (rp RepoPolicies) SrcBranches returns a list of branches that are sources of commits
 func (rp RepoPolicies) SrcBranches(repo string) ([]string, error) {
-	bps, found := rp.Repos[repo]
+	r, found := rp.Repos[repo]
 	if !found {
 		return []string{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
 	}
-	return bps.SrcBranches(), nil
+	ports := make([]string, len(r.Ports))
+	i := 0
+	for k := range rp.Ports {
+		ports[i] = k
+		i++
+	}
+	return ports, nil
+}
+
+// DestBranches returns the list of destination branches for a given source branch (where commits originate)
+func (rp RepoPolicies) DestBranches(repo, branch string) ([]string, error) {
+	_, found := rp.Repos[repo]
+	if !found {
+		return []string{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
+	}
+	destBranches, found := rp.Repos[repo].Ports[branch]
+	if !found {
+		return []string{}, fmt.Errorf("branch %s unknown for repo %s", branch, repo)
+	}
+	return destBranches, nil
 }
 
 // String representation
@@ -113,15 +131,8 @@ func (rp RepoPolicies) String() string {
 		for _, f := range pols.Files {
 			fmt.Fprintf(w, "   - %s\n", f)
 		}
-		fmt.Fprintln(w, " Deprecations:")
-		for version, files := range pols.Deprecations {
-			fmt.Fprintf(w, "  Version %s\n", version)
-			for _, f := range files {
-				fmt.Fprintf(w, "   - %s\n", f)
-			}
-		}
-		fmt.Fprintln(w, " Backports")
-		for src, dest := range pols.Backports {
+		fmt.Fprintln(w, " Ports")
+		for src, dest := range pols.Ports {
 			fmt.Fprintf(w, "   - %s → %s\n", src, dest)
 		}
 	}
