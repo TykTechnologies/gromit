@@ -50,7 +50,7 @@ type prVars struct {
 	Remove       bool
 }
 
-// getMAVars returns the template vars required to render the sync-automation template
+// getPRVars returns the template vars required to render the sync-automation template
 func (rp RepoPolicies) getPRVars(repo, branch string, removal bool) (prVars, error) {
 	r, found := rp.Repos[repo]
 	if !found {
@@ -95,7 +95,7 @@ func (rp RepoPolicies) SrcBranches(repo string) ([]string, error) {
 	}
 	ports := make([]string, len(r.Ports))
 	i := 0
-	for k := range rp.Ports {
+	for k := range r.Ports {
 		ports[i] = k
 		i++
 	}

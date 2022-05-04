@@ -22,12 +22,14 @@ func TestPortsPolicy(t *testing.T) {
 		prVars       prVars
 		maVars       maVars
 		name         string
+		protected    []string
 	}{
 		{
 			cfgFile:      "../testdata/policies/gateway.yaml",
 			name:         "tyk",
 			srcBranches:  []string{"master"},
 			destBranches: []string{"release-4"},
+			protected:    []string{"master", "release-3-lts"},
 			prVars: prVars{
 				RepoName:     "tyk",
 				Files:        gatewayFiles,
@@ -63,6 +65,13 @@ func TestPortsPolicy(t *testing.T) {
 			maVars, err := rp.getMAVars(tc.name, tc.srcBranches[0])
 			if err != nil && err != ErrUnknownBranch {
 				t.Errorf("Failed to get maVars for %s(%s): %v", tc.name, tc.srcBranches[0], err)
+			}
+			for _, p := range tc.protected {
+				prStatus, err := rp.IsProtected(tc.name, p)
+				if err != nil {
+					t.Errorf("Failed to get IsProtected status for repo %s, branch %s: %v", tc.name, p, err)
+				}
+				assert.Equal(t, prStatus, true)
 			}
 			// Hack to make the timestamps match
 			maVars.Timestamp = timeStamp
