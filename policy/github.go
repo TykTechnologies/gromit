@@ -16,7 +16,7 @@ const ghOrg = "TykTechnologies"
 //go:embed pr-templates
 var ghTemplates embed.FS
 
-func (r *GitRepo) CreatePR(title, templateName string, rp RepoPolicies, removal bool) error {
+func (r *GitRepo) CreatePR(title, templateName string, rp Policy, removal bool) error {
 	if r.branch == "" {
 		return fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
 	}
@@ -27,7 +27,7 @@ func (r *GitRepo) CreatePR(title, templateName string, rp RepoPolicies, removal 
 		New(templateName).
 		Option("missingkey=error").
 		ParseFS(ghTemplates, fmt.Sprintf("pr-templates/%s", templateName)))
-	tv, err := rp.getPRVars(r.Name, r.branch, removal)
+	tv, err := rp.getPRVars(r.Name, r.branch)
 	if err != nil {
 		return fmt.Errorf("template vars: %w", err)
 	}

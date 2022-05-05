@@ -9,4 +9,4 @@ policy:
         - tyk.conf.example
       ports:
         master: [ release-4 ]
-
+        release-3: [release-3-lts]

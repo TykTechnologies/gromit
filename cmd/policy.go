@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var repoPolicies policy.RepoPolicies
+var repoPolicies policy.Policy
 var signingKeyid uint64
 var jsonOutput, dryRun bool
 var ghToken string

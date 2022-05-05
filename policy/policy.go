@@ -11,13 +11,27 @@ import (
 	"github.com/goccy/go-graphviz/cgraph"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+	"golang.org/x/exp/maps"
 )
 
-type RepoPolicies struct {
+type Policy struct {
 	Protected []string
-	Repos     map[string]RepoPolicies // map of reponames to branchPolicies
+	Repos     map[string]repoPolicy // map of reponames to branchPolicies
 	Files     []string
 	Ports     map[string][]string
+}
+
+type repoPolicy struct {
+	Files     []string
+	Ports     map[string][]string
+	Protected []string
+}
+
+type prVars struct {
+	Files        []string
+	RepoName     string
+	SrcBranch    string
+	DestBranches []string
 }
 
 type maVars struct {
@@ -26,11 +40,47 @@ type maVars struct {
 	SrcBranch string
 }
 
+//type port struct {
+//	Src string
+//	Dst []string
+//}
+//
+
 var ErrUnknownRepo = errors.New("repo not present in policies")
 var ErrUnknownBranch = errors.New("branch not present in branch policies of repo")
 
+//func (r repoPolicy) SrcBranches() []string {
+//	var srcs []string
+//	for _, p := range r.Ports {
+//		srcs = append(srcs, p.Src)
+//	}
+//	return srcs
+//}
+//
+//func (r repoPolicy) DstBranches(src string) []string {
+//	var dst []string
+//	for _, p := range r.Ports {
+//		if p.Src == src {
+//			dst = p.Dst
+//			break
+//		}
+//	}
+//	return dst
+//}
+
+func (r repoPolicy) SrcBranches() []string {
+	return maps.Keys(r.Ports)
+}
+
+func (r repoPolicy) DstBranches(src string) []string {
+	if p, ok := r.Ports[src]; ok {
+		return p
+	}
+	return nil
+}
+
 // getMAVars returns the template vars required to render the sync-automation template
-func (rp RepoPolicies) getMAVars(repo, srcBranch string) (maVars, error) {
+func (rp Policy) getMAVars(repo string, srcBranch string) (maVars, error) {
 	bps, found := rp.Repos[repo]
 	if !found {
 		return maVars{}, ErrUnknownRepo
@@ -42,39 +92,36 @@ func (rp RepoPolicies) getMAVars(repo, srcBranch string) (maVars, error) {
 	}, nil
 }
 
-type prVars struct {
-	Files        []string
-	RepoName     string
-	SrcBranch    string
-	DestBranches []string
-	Remove       bool
-}
-
-// getPRVars returns the template vars required to render the sync-automation template
-func (rp RepoPolicies) getPRVars(repo, branch string, removal bool) (prVars, error) {
-	r, found := rp.Repos[repo]
-	if !found {
+func (rp Policy) getPRVars(repo string, branch string) (prVars, error) {
+	r, err := rp.getCombinedRepoPolicy(repo)
+	if err != nil {
 		return prVars{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
 	}
-	_, err := rp.SrcBranches(repo)
-	if err != nil {
-		return prVars{}, fmt.Errorf("could not get source branches for repo %s: %v", repo, err)
-	}
-	destBranches, err := rp.DestBranches(repo, branch)
-	if err != nil {
-		return prVars{}, fmt.Errorf("could not get dest branches for repo %s: %v", repo, err)
-	}
+	dstBranches := r.DstBranches(branch)
 	return prVars{
 		RepoName:     repo,
-		Files:        append(rp.Files, r.Files...),
+		Files:        r.Files,
 		SrcBranch:    branch,
-		DestBranches: destBranches,
-		Remove:       removal,
+		DestBranches: dstBranches,
+	}, nil
+
+}
+
+// getCombinedRepoPolicy returns a repoPolicy objects with all the common policy
+// options merged in.
+func (rp Policy) getCombinedRepoPolicy(repo string) (repoPolicy, error) {
+	r, found := rp.Repos[repo]
+	if !found {
+		return repoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
+	}
+	return repoPolicy{
+		Files: append(rp.Files, r.Files...),
+		Ports: r.Ports,
 	}, nil
 }
 
 // (rp RepoPolicies) IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
-func (rp RepoPolicies) IsProtected(repo, branch string) (bool, error) {
+func (rp Policy) IsProtected(repo, branch string) (bool, error) {
 	bps, found := rp.Repos[repo]
 	if !found {
 		return false, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
@@ -88,35 +135,25 @@ func (rp RepoPolicies) IsProtected(repo, branch string) (bool, error) {
 }
 
 // (rp RepoPolicies) SrcBranches returns a list of branches that are sources of commits
-func (rp RepoPolicies) SrcBranches(repo string) ([]string, error) {
+func (rp Policy) SrcBranches(repo string) ([]string, error) {
 	r, found := rp.Repos[repo]
 	if !found {
 		return []string{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
 	}
-	ports := make([]string, len(r.Ports))
-	i := 0
-	for k := range r.Ports {
-		ports[i] = k
-		i++
-	}
-	return ports, nil
+	return r.SrcBranches(), nil
 }
 
 // DestBranches returns the list of destination branches for a given source branch (where commits originate)
-func (rp RepoPolicies) DestBranches(repo, branch string) ([]string, error) {
-	_, found := rp.Repos[repo]
+func (rp Policy) DestBranches(repo, branch string) ([]string, error) {
+	r, found := rp.Repos[repo]
 	if !found {
 		return []string{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
 	}
-	destBranches, found := rp.Repos[repo].Ports[branch]
-	if !found {
-		return []string{}, fmt.Errorf("branch %s unknown for repo %s", branch, repo)
-	}
-	return destBranches, nil
+	return r.DstBranches(branch), nil
 }
 
 // String representation
-func (rp RepoPolicies) String() string {
+func (rp Policy) String() string {
 	w := new(bytes.Buffer)
 	fmt.Fprintln(w, `Commits landing on the Source branch are automatically sync'd to the list of Destinations. PRs will be created for the protected branch. Other branches will be updated directly.`)
 	fmt.Fprintln(w)
@@ -140,13 +177,13 @@ func (rp RepoPolicies) String() string {
 	return w.String()
 }
 
-func (rp RepoPolicies) dotGen(cg *cgraph.Graph) error {
+func (rp Policy) dotGen(cg *cgraph.Graph) error {
 
 	return nil
 }
 
 // (rp RepoPolicies) Graph returns a graphviz dot format representation of the policy
-func (rp RepoPolicies) Graph(w io.Writer) error {
+func (rp Policy) Graph(w io.Writer) error {
 	g := graphviz.New()
 	relgraph, err := g.Graph()
 	if err != nil {
@@ -168,7 +205,7 @@ func (rp RepoPolicies) Graph(w io.Writer) error {
 
 // GetPolicyConfig returns the policies as a map of repos to policies
 // This will panic if the type assertions fail
-func LoadRepoPolicies(policies *RepoPolicies) error {
+func LoadRepoPolicies(policies *Policy) error {
 	log.Info().Msg("loading repo policies")
 	return viper.UnmarshalKey("policy", policies)
 }

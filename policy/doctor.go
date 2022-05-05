@@ -5,14 +5,15 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/rs/zerolog/log"
 	"embed"
+
+	"github.com/rs/zerolog/log"
 )
 
 const saPath = ".github/workflows/sync-automation.yml"
 
 // CheckMetaAutomation checks if sync-automation is present in this repo
-func (r *GitRepo) CheckMetaAutomation(rp RepoPolicies) error {
+func (r *GitRepo) CheckMetaAutomation(rp Policy) error {
 	srcBranches, err := rp.SrcBranches(r.Name)
 	if err != nil {
 		return fmt.Errorf("fetch src branches: %w", err)
@@ -104,7 +105,7 @@ func (r *GitRepo) RemoveMetaAutomation(commitMsg string) error {
 var maTemplates embed.FS
 
 // AddMetaAutomation generates the backport meta-automation .g/w/sync-automation.yml
-func (r *GitRepo) AddMetaAutomation(commitMsg string, rp RepoPolicies) error {
+func (r *GitRepo) AddMetaAutomation(commitMsg string, rp Policy) error {
 	log.Info().Msg("generating sync-automation.yml")
 
 	opFile := filepath.Join(".github", "workflows", "sync-automation.yml")
