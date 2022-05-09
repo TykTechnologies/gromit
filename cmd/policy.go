@@ -17,20 +17,19 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/TykTechnologies/gromit/config"
 	"github.com/TykTechnologies/gromit/policy"
-	"github.com/TykTechnologies/gromit/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var repoPolicies policy.Policy
-var signingKeyid uint64
+var repoPolicies policy.Policies
+var repos []string
+var branch string
 var jsonOutput, dryRun bool
 var ghToken string
 
@@ -61,72 +60,42 @@ Operates directly on github and creates PRs for protected branches. Requires an 
 
 // genSubCmd generates a set of files in an in-memory git repo and pushes it to origin.
 var genSubCmd = &cobra.Command{
-	Use:     "generate <repo> <commit msg> [commit_msg...]",
+	Use:     "generate <bundle> <commit msg> [commit_msg...]",
 	Aliases: []string{"gen", "add", "new"},
 	Args:    cobra.MinimumNArgs(2),
-	Short:   "generate the meta-automation for a given repo and branch",
-	Long: `Will create .g/w/sync-automation.yml, overlaid onto an in-memory git repo. 
+	Short:   "(re-)generate the template bundle and update git",
+	Long: `Will render templates, overlaid onto an in-memory git repo. 
 If the branch is marked protected in the repo policies, a draft PR will be created with the changes and @devops will be asked for a review.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		repoName := args[0]
+		bundle := args[0]
 		commitMsg := strings.Join(args[1:], "\n")
-		fqdnRepo := fmt.Sprintf("%s/%s", config.RepoURLPrefix, repoName)
-
-		log.Logger = log.With().Str("repo", repoName).Str("branch", config.Branch).Logger()
-
-		r, err := policy.FetchRepo(repoName, fqdnRepo, dir, ghToken, 1)
-		if err != nil {
-			log.Fatal().Err(err).Str("repo", fqdnRepo).Msg("could not fetch")
-		}
-		signKeyid := viper.GetUint64("signingkey")
-		if signKeyid != 0 {
-			signer, err := util.GetSigningEntity(signingKeyid)
+		signingKeyid := viper.GetUint64("signingkey")
+		for _, repoName := range repos {
+			repo, err := repoPolicies.GetRepo(repoName, config.RepoURLPrefix, branch)
 			if err != nil {
-				log.Fatal().Err(err).Uint64("keyid", signingKeyid).Msg("could not obtain signing key")
+				log.Fatal().Err(err).Msg("getting repo")
 			}
-			err = r.EnableSigning(signer)
+			err = repo.InitGit(1, signingKeyid, dir, ghToken)
 			if err != nil {
-				log.Warn().Err(err).Msg("commits will not be signed")
+				log.Fatal().Err(err).Msg("initialising git")
 			}
-		}
-		branches, err := repoPolicies.SrcBranches(repoName)
-		if err != nil {
-			log.Fatal().Err(err).Msg("backport branches")
-		}
-		if config.Branch != "" {
-			branches = []string{config.Branch}
-		}
-		log.Trace().Strs("branches", branches).Msg("to generate")
-		for _, b := range branches {
-			r.Checkout(b)
-			log.Logger = log.With().Str("repo", r.Name).Str("branch", b).Logger()
-			err = r.AddMetaAutomation(commitMsg, repoPolicies)
+			err = repo.GenTemplate(bundle, commitMsg)
 			if err != nil {
-				log.Fatal().Err(err).Msg("could not generate meta-automation")
+				log.Fatal().Err(err).Msg("template generation")
 			}
-			var remoteBranch string
-			isProtected, err := repoPolicies.IsProtected(r.Name, b)
-			if err != nil {
-				log.Fatal().Err(err).Msg("getting protected status")
-			}
-			if isProtected {
-				remoteBranch = fmt.Sprintf("releng/%s", b)
-			} else {
-				remoteBranch = b
-			}
-			err = r.Push(b, remoteBranch)
-			log.Info().Str("origin", remoteBranch).Msg("pushed to origin")
+			remoteBranch, err := repo.Push()
+			log.Info().Str("origin", remoteBranch).Msg("pushed")
 		}
 	},
 }
 
 // docSubCmd represents the doctor subcommand
 var docSubCmd = &cobra.Command{
-	Use:     "doctor <repo>",
+	Use:     "doctor",
 	Aliases: []string{"doc", "fix"},
 	Args:    cobra.MinimumNArgs(1),
-	Short:   "Diagnose and fix problems with the release engineering code",
+	Short:   "Diagnose problems with the release engineering code",
 	Long: `For the supplied repo, release engineering branches release-* and master. For each of these branches, the checks are:
 - sync-automation.yml only exists on the branches defined as a source for the backport branches in the config
   + if found on an inactive branch, it is removed
@@ -134,42 +103,7 @@ var docSubCmd = &cobra.Command{
 - if deprecated code is found, it is removed (not implemented)
   + if on a protected branch a draft PR is created`,
 	Run: func(cmd *cobra.Command, args []string) {
-		repoName := args[0]
-		log.Logger = log.With().Str("repo", repoName).Logger()
-
-		fqrn := fmt.Sprintf("%s/%s", config.RepoURLPrefix, repoName)
-		// Shallow clones cause all sorts of transient faults
-		r, err := policy.FetchRepo(repoName, fqrn, dir, ghToken, 0)
-		if err != nil {
-			log.Fatal().Err(err).Str("fqrn", fqrn).Msg("could not fetch")
-		}
-		r.SetDryRun(dryRun)
-		pattern, _ := cmd.Flags().GetString("pattern")
-		relBranches, err := r.Branches(pattern)
-		if err != nil {
-			log.Fatal().Err(err).Msg("could not fetch branches")
-		}
-		if config.Branch != "" {
-			relBranches = []string{config.Branch}
-		}
-		log.Trace().Strs("branches", relBranches).Msg("to minister")
-
-		srcBranches, err := repoPolicies.SrcBranches(repoName)
-		if err != nil {
-			log.Fatal().Err(err).Msg("fetching src branches")
-		}
-		log.Trace().Strs("relBranches", relBranches).Strs("srcBranches", srcBranches).Msg("starting examination")
-		for _, b := range relBranches {
-			log.Logger = log.With().Str("branch", b).Logger()
-			err = r.Checkout(b)
-			if err != nil {
-				log.Fatal().Err(err).Msg("checkout")
-			}
-			err = r.CheckMetaAutomation(repoPolicies)
-			if err != nil {
-				log.Fatal().Err(err).Msg("checking meta-automation")
-			}
-		}
+		log.Fatal().Msg("not implemented")
 	},
 }
 
@@ -179,11 +113,12 @@ func init() {
 	docSubCmd.Flags().String("pattern", "^(release-[[:digit:].]+|master)", "Regexp to match release engineering branches")
 	policyCmd.AddCommand(docSubCmd)
 
-	policyCmd.PersistentFlags().StringVarP(&config.Branch, "branch", "b", "", "Restrict operations to this branch")
-	policyCmd.PersistentFlags().Bool("sign", true, "Sign commits, requires -k/--key. gpgconf and an active gpg-agent are required if the key is protected by a passphrase.")
+	policyCmd.PersistentFlags().StringSliceVar(&repos, "repos", []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"}, "Repos to operate upon, comma separated values accepted.")
+	policyCmd.PersistentFlags().StringVar(&branch, "branch", "", "Restrict operations to this branch")
+	policyCmd.PersistentFlags().Bool("sign", false, "Sign commits, requires -k/--key. gpgconf and an active gpg-agent are required if the key is protected by a passphrase.")
 	policyCmd.PersistentFlags().StringVarP(&config.RepoURLPrefix, "prefix", "u", "https://github.com/TykTechnologies", "Prefix to derive the fqdn repo")
 	policyCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output in JSON")
-	policyCmd.PersistentFlags().BoolVarP(&dryRun, "dry", "d", false, "Output in JSON")
+	policyCmd.PersistentFlags().BoolVarP(&dryRun, "dry", "d", false, "Will not make any changes")
 	policyCmd.PersistentFlags().StringVar(&ghToken, "token", os.Getenv("GITHUB_TOKEN"), "Github token for private repositories")
 	policyCmd.PersistentFlags().StringVar(&dir, "dir", "", "Use dir for git operations, instead of an in-memory fs")
 	rootCmd.AddCommand(policyCmd)

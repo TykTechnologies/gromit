@@ -2,11 +2,14 @@ package policy
 
 import (
 	"bytes"
+	"embed"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
-	"time"
 
+	"github.com/TykTechnologies/gromit/git"
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/goccy/go-graphviz"
 	"github.com/goccy/go-graphviz/cgraph"
 	"github.com/rs/zerolog/log"
@@ -14,146 +17,177 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-type Policy struct {
-	Protected []string
-	Repos     map[string]repoPolicy // map of reponames to branchPolicies
-	Files     []string
-	Ports     map[string][]string
-}
-
-type repoPolicy struct {
-	Files     []string
-	Ports     map[string][]string
-	Protected []string
-}
-
-type prVars struct {
-	Files        []string
-	RepoName     string
-	SrcBranch    string
-	DestBranches []string
-}
-
-type maVars struct {
-	Timestamp string
-	MAFiles   []string
-	SrcBranch string
-}
-
-//type port struct {
-//	Src string
-//	Dst []string
-//}
-//
-
 var ErrUnknownRepo = errors.New("repo not present in policies")
 var ErrUnknownBranch = errors.New("branch not present in branch policies of repo")
 
-//func (r repoPolicy) SrcBranches() []string {
-//	var srcs []string
-//	for _, p := range r.Ports {
-//		srcs = append(srcs, p.Src)
-//	}
-//	return srcs
-//}
-//
-//func (r repoPolicy) DstBranches(src string) []string {
-//	var dst []string
-//	for _, p := range r.Ports {
-//		if p.Src == src {
-//			dst = p.Dst
-//			break
-//		}
-//	}
-//	return dst
-//}
-
-func (r repoPolicy) SrcBranches() []string {
-	return maps.Keys(r.Ports)
+// Policies models the config file structure. The config file may contain one or more repos.
+type Policies struct {
+	Protected []string
+	Repos     map[string]Policies // map of reponames to branchPolicies
+	Files     map[string][]string
+	Ports     map[string][]string
 }
 
-func (r repoPolicy) DstBranches(src string) []string {
-	if p, ok := r.Ports[src]; ok {
-		return p
+// GetRepo will give you a repoVars type for a repo which can be used to feed templates
+// Though Ports can be defined at the global level they are not practically used and if defined will be ignored.
+func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
+	r, found := p.Repos[repo]
+	if !found {
+		return RepoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, p.Repos)
+	}
+	var combinedFiles = make(map[string][]string)
+	var temp = make(map[string][]string)
+	// Merge two maps, avoiding duplication and merging the values
+	for bundle, rFiles := range r.Files {
+		if pFiles, found := p.Files[bundle]; found {
+			temp[bundle] = append(pFiles, rFiles...)
+		} else {
+			temp[bundle] = rFiles
+		}
+	}
+	maps.Copy(combinedFiles, p.Files)
+	maps.Copy(combinedFiles, temp)
+	fmt.Println(combinedFiles, temp)
+	return RepoPolicy{
+		Name:      repo,
+		Protected: append(p.Protected, r.Protected...),
+		Files:     combinedFiles,
+		Ports:     r.Ports,
+		branch:    branch,
+		prefix:    prefix,
+	}, nil
+}
+
+// RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
+type RepoPolicy struct {
+	Name      string
+	Protected []string
+	Files     map[string][]string
+	Ports     map[string][]string
+	gitRepo   *git.GitRepo
+	branch    string
+	prefix    string
+}
+
+// Returns the destination branches for a given source branch
+func (r RepoPolicy) DestBranches(srcBranch string) ([]string, error) {
+	b, found := r.Ports[srcBranch]
+	if !found {
+		return []string{}, fmt.Errorf("branch %s unknown among %v", srcBranch, r.Ports)
+	}
+	return b, nil
+}
+
+// IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
+func (r RepoPolicy) IsProtected(branch string) bool {
+	for _, pb := range r.Protected {
+		if pb == branch {
+			return true
+		}
+	}
+	return false
+}
+
+// InitGit initialises the corresponding git repo by fetching it
+func (r RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string) error {
+	log.Logger = log.With().Str("repo", r.Name).Str("branch", r.branch).Logger()
+	fqdnRepo := fmt.Sprintf("%s/%s", r.prefix, r.Name)
+
+	var err error
+	r.gitRepo, err = git.FetchRepo(fqdnRepo, dir, ghToken, depth)
+	if err != nil {
+		return err
+	}
+	if signingKeyid != 0 {
+		signer, err := util.GetSigningEntity(signingKeyid)
+		if err != nil {
+			return err
+		}
+		err = r.gitRepo.EnableSigning(signer)
+		if err != nil {
+			log.Warn().Err(err).Msg("commits will not be signed")
+		}
 	}
 	return nil
 }
 
-// getMAVars returns the template vars required to render the sync-automation template
-func (rp Policy) getMAVars(repo string, srcBranch string) (maVars, error) {
-	bps, found := rp.Repos[repo]
-	if !found {
-		return maVars{}, ErrUnknownRepo
-	}
-	return maVars{
-		Timestamp: time.Now().UTC().String(),
-		MAFiles:   append(rp.Files, bps.Files...),
-		SrcBranch: srcBranch,
-	}, nil
-}
+//go:embed templates
+var templates embed.FS
 
-func (rp Policy) getPRVars(repo string, branch string) (prVars, error) {
-	r, err := rp.getCombinedRepoPolicy(repo)
-	if err != nil {
-		return prVars{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
-	}
-	dstBranches := r.DstBranches(branch)
-	return prVars{
-		RepoName:     repo,
-		Files:        r.Files,
-		SrcBranch:    branch,
-		DestBranches: dstBranches,
-	}, nil
+// GenTemplate will render a template bundle from a directory tree rooted at name.
+func (r *RepoPolicy) GenTemplate(bundle, commitMsg string) error {
+	log.Logger = log.With().Str("bundle", bundle).Interface("repo", r.Name).Logger()
+	log.Info().Msg("rendering")
 
-}
-
-// getCombinedRepoPolicy returns a repoPolicy objects with all the common policy
-// options merged in.
-func (rp Policy) getCombinedRepoPolicy(repo string) (repoPolicy, error) {
-	r, found := rp.Repos[repo]
-	if !found {
-		return repoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
-	}
-	return repoPolicy{
-		Files: append(rp.Files, r.Files...),
-		Ports: r.Ports,
-	}, nil
-}
-
-// (rp RepoPolicies) IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
-func (rp Policy) IsProtected(repo, branch string) (bool, error) {
-	bps, found := rp.Repos[repo]
-	if !found {
-		return false, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
-	}
-	for _, pb := range append(bps.Protected, rp.Protected...) {
-		if pb == branch {
-			return true, nil
+	for _, f := range r.Files[bundle] {
+		op, err := r.gitRepo.CreateFile(f)
+		if err != nil {
+			return err
 		}
+		defer op.Close()
+
+		t := template.Must(template.
+			New(bundle).
+			Option("missingkey=error").
+			ParseFS(templates, f))
+		if err != nil {
+			return err
+		}
+		log.Trace().Interface("vars", r).Msg("template vars")
+		err = t.Execute(op, r)
+
+		log.Debug().Str("path", f).Msg("wrote")
+		hash, err := r.gitRepo.AddFile(f, commitMsg, true)
+		log.Debug().Str("hash", hash.String()).Str("path", f).Msg("committed")
 	}
-	return false, nil
+	return nil
 }
 
-// (rp RepoPolicies) SrcBranches returns a list of branches that are sources of commits
-func (rp Policy) SrcBranches(repo string) ([]string, error) {
-	r, found := rp.Repos[repo]
-	if !found {
-		return []string{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
+// Push will push the current state of the repo to github
+// If the branch is protected, it will be pushed to a branch prefixed with releng/
+func (r RepoPolicy) Push() (string, error) {
+	var remoteBranch string
+	if r.IsProtected(r.branch) {
+		remoteBranch = fmt.Sprintf("releng/%s", r.branch)
+	} else {
+		remoteBranch = r.branch
 	}
-	return r.SrcBranches(), nil
+	return remoteBranch, r.gitRepo.Push(r.branch, remoteBranch)
 }
 
-// DestBranches returns the list of destination branches for a given source branch (where commits originate)
-func (rp Policy) DestBranches(repo, branch string) ([]string, error) {
-	r, found := rp.Repos[repo]
-	if !found {
-		return []string{}, fmt.Errorf("repo %s unknown among %v", repo, rp.Repos)
+func (r *RepoPolicy) CreatePR(bundle, title, remoteBranch string, dryRun bool) error {
+	if r.branch == "" {
+		return fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
 	}
-	return r.DstBranches(branch), nil
+	t := template.Must(template.
+		New(bundle).
+		Option("missingkey=error").
+		ParseFS(templates, fmt.Sprintf("pr-templates/%s/pr.tmpl", bundle)))
+	var b bytes.Buffer
+	err := t.Execute(&b, r)
+	if err != nil {
+		return fmt.Errorf("rendering template: %w", err)
+	}
+	// prOpts := &github.NewPullRequest{
+	// 	Title: github.String(title),
+	// 	Head:  github.String(remoteBranch),
+	// 	Base:  github.String(r.branch),
+	// 	Body:  github.String(b.String()),
+	// }
+	// if dryRun {
+	// 	log.Warn().Msg("only dry-run, not really creating PR")
+	// } else {
+	// 	pr, _, err := r.gitRepo.gh.PullRequests.Create(context.Background(), ghOrg, r.Name, prOpts)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	r.prs = append(r.prs, pr.GetHTMLURL())
+	// }
+	return nil
 }
 
 // String representation
-func (rp Policy) String() string {
+func (rp Policies) String() string {
 	w := new(bytes.Buffer)
 	fmt.Fprintln(w, `Commits landing on the Source branch are automatically sync'd to the list of Destinations. PRs will be created for the protected branch. Other branches will be updated directly.`)
 	fmt.Fprintln(w)
@@ -177,13 +211,12 @@ func (rp Policy) String() string {
 	return w.String()
 }
 
-func (rp Policy) dotGen(cg *cgraph.Graph) error {
-
+func (rp Policies) dotGen(cg *cgraph.Graph) error {
 	return nil
 }
 
 // (rp RepoPolicies) Graph returns a graphviz dot format representation of the policy
-func (rp Policy) Graph(w io.Writer) error {
+func (rp Policies) Graph(w io.Writer) error {
 	g := graphviz.New()
 	relgraph, err := g.Graph()
 	if err != nil {
@@ -205,7 +238,7 @@ func (rp Policy) Graph(w io.Writer) error {
 
 // GetPolicyConfig returns the policies as a map of repos to policies
 // This will panic if the type assertions fail
-func LoadRepoPolicies(policies *Policy) error {
+func LoadRepoPolicies(policies *Policies) error {
 	log.Info().Msg("loading repo policies")
 	return viper.UnmarshalKey("policy", policies)
 }

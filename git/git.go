@@ -1,4 +1,4 @@
-package policy
+package git
 
 import (
 	"context"
@@ -26,13 +26,13 @@ import (
 )
 
 type GitRepo struct {
+	Name         string
 	commitOpts   *git.CommitOptions
 	repo         *git.Repository
 	branch       string // local branch
 	remoteBranch string // remote branch
 	worktree     *git.Worktree
 	fs           billy.Filesystem
-	Name         string
 	auth         transport.AuthMethod
 	gh           *github.Client
 	prs          []string
@@ -44,8 +44,8 @@ const defaultRemote = "origin"
 // FetchRepo clones a repo into the given dir or an in-memory fs
 // pass depth=0 for full clone
 // if an authtoken is passed am authenticated github client is enabled
-func FetchRepo(repoName, fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
-	log.Debug().Str("repo", repoName).Str("dir", dir).Int("depth", depth).Msg("fetching repo")
+func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
+	log.Debug().Str("repo", fqdnRepo).Str("dir", dir).Int("depth", depth).Msg("fetching repo")
 	opts := &git.CloneOptions{
 		URL:      fqdnRepo,
 		Progress: os.Stdout,
@@ -90,7 +90,7 @@ func FetchRepo(repoName, fqdnRepo, dir, authToken string, depth int) (*GitRepo, 
 		return nil, err
 	}
 	return &GitRepo{
-		Name:     repoName,
+		Name:     fqdnRepo,
 		auth:     opts.Auth,
 		repo:     repo,
 		worktree: w,
@@ -111,7 +111,7 @@ func FetchRepo(repoName, fqdnRepo, dir, authToken string, depth int) (*GitRepo, 
 // The file is assumed to have been updated prior to calling this function.
 // It will show the changes commited in the form of a patch to stdout and wait for user confirmation.
 // Note that this commit will be lost if it is not pushed to a remote.
-func (r *GitRepo) addFile(path, msg string, confirm bool) (plumbing.Hash, error) {
+func (r *GitRepo) AddFile(path, msg string, confirm bool) (plumbing.Hash, error) {
 	origRef, err := r.repo.Head()
 	if err != nil {
 		return plumbing.ZeroHash, fmt.Errorf("getting hash for original head: %w", err)

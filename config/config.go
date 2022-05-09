@@ -14,7 +14,7 @@ import (
 
 // Global vars that are available to appropriate commands
 // Loaded by loadConfig()
-var ZoneID, Domain, TableName, RegistryID, Branch, RepoURLPrefix string
+var ZoneID, Domain, TableName, RegistryID, RepoURLPrefix string
 var Repos []string
 
 // LoadConfig is a helper function that loads the environment into the
