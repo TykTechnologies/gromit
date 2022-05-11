@@ -76,7 +76,7 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 	if dir == "" {
 		log.Info().Msg("using in-memory clone")
 		fs = memfs.New()
-		repo, err = git.Clone(memory.NewStorage(), memfs.New(), opts)
+		repo, err = git.Clone(memory.NewStorage(), fs, opts)
 	} else {
 		log.Info().Str("dir", dir).Msg("using existing clone")
 		fs = osfs.New(dir)
