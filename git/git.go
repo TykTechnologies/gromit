@@ -78,9 +78,9 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 		fs = memfs.New()
 		repo, err = git.Clone(memory.NewStorage(), fs, opts)
 	} else {
-		log.Info().Str("dir", dir).Msg("using existing clone")
+		log.Info().Str("dir", dir).Msg("using plain os filesystem clone")
 		fs = osfs.New(dir)
-		repo, err = git.PlainOpen(dir)
+		repo, err = git.PlainClone(dir, false, opts)
 	}
 	if err != nil {
 		return nil, err

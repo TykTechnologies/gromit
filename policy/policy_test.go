@@ -17,11 +17,11 @@ func TestPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load policy: %v", err)
 	}
-	repo, err := rp.GetRepo("git-tests", "https://github.com/asutosh", "main")
+	repo, err := rp.GetRepo("git-tests", "https://github.com/tyklabs", "main")
 	if err != nil {
 		t.Fatalf("Could not get a repo: %v", err)
 	}
-	err = repo.InitGit(1, 0, "/tmp/q", "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")
+	err = repo.InitGit(1, 0, "/tmp/gt", "")
 	if err != nil {
 		t.Fatalf("Could not init: %v", err)
 	}
