@@ -80,7 +80,11 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 	} else {
 		log.Info().Str("dir", dir).Msg("using plain os filesystem clone")
 		fs = osfs.New(dir)
-		repo, err = git.PlainClone(dir, false, opts)
+		repo, err = git.PlainOpen(dir)
+		if err == git.ErrRepositoryNotExists {
+			log.Warn().Str("dir", dir).Msg("existing clone not available - initiating fresh clone")
+			repo, err = git.PlainClone(dir, false, opts)
+		}
 	}
 	if err != nil {
 		return nil, err
