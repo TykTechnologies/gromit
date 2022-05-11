@@ -88,6 +88,11 @@ func (r RepoPolicy) IsProtected(branch string) bool {
 	return false
 }
 
+// GetFile returns a handle to a file from a billy filesystem which abstracts over the in-mem and disk based fs
+//func GetFile(name string) (billy.File, error) {
+//	return billy.File{}, nil
+//}
+
 // InitGit initialises the corresponding git repo by fetching it
 func (r RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string) error {
 	log.Logger = log.With().Str("repo", r.Name).Str("branch", r.branch).Logger()
@@ -129,7 +134,7 @@ func (r *RepoPolicy) GenTemplate(bundle, commitMsg string) error {
 		t := template.Must(template.
 			New(bundle).
 			Option("missingkey=error").
-			ParseFS(templates, f))
+			ParseFS(templates, f+".tmpl"))
 		if err != nil {
 			return err
 		}

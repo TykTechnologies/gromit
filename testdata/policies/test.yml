@@ -1,0 +1,18 @@
+policy:
+  protected: [ master ]
+  files:
+    releng:
+      - ci/*
+    sync:
+      - .github/workflows/sync-automation.yml
+    dependabot:
+      - .github/dependabot.yml
+  repos:
+    git-tests:
+      protected: [ release-3-lts ]
+      files:
+        config:
+          - tyk.conf.example
+      ports:
+        master: [ release-4 ]
+        release-3: [release-3-lts]
