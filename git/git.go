@@ -241,6 +241,32 @@ func (r *GitRepo) Push(branch, remoteBranch string) error {
 	return nil
 }
 
+func (r *GitRepo) DeleteRemoteBranch(remoteBranch string) error {
+	if remoteBranch == "" {
+		return git.ErrBranchNotFound
+	}
+	remote, err := r.repo.Remote("origin")
+	if err != nil {
+		return err
+	}
+	rs := fmt.Sprintf(":refs/heads/%s", remoteBranch)
+	err = config.RefSpec(rs).Validate()
+	if err != nil {
+		return err
+	}
+	err = remote.Push(&git.PushOptions{
+		RefSpecs:        []config.RefSpec{config.RefSpec(rs)},
+		Auth:            r.auth,
+		Progress:        os.Stdout,
+		Force:           false,
+		InsecureSkipTLS: false,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // (r *GitRepo) Branches will return a list of branches matching the supplied regexp for the repo
 func (r *GitRepo) Branches(re string) ([]string, error) {
 	remote, err := r.repo.Remote(defaultRemote)
