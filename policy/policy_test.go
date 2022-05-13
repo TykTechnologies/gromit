@@ -12,12 +12,12 @@ func TestPolicy(t *testing.T) {
 	//timeStamp := "2021-06-02 06:47:55.826883255 +0000 UTC"
 
 	var rp Policies
-	config.LoadConfig("../testdata/policies/test.yml")
+	config.LoadConfig("../testdata/policies/repos.yaml")
 	err := LoadRepoPolicies(&rp)
 	if err != nil {
 		t.Fatalf("Could not load policy: %v", err)
 	}
-	repo, err := rp.GetRepo("git-tests", "https://github.com/tyklabs", "main")
+	repo, err := rp.GetRepo("tyk", "https://github.com/tyklabs", "master")
 	if err != nil {
 		t.Fatalf("Could not get a repo: %v", err)
 	}
@@ -41,6 +41,10 @@ func TestPolicy(t *testing.T) {
 	})
 	// Test template generation
 	t.Run("gentemplate", func(t *testing.T) {
-		repo.GenTemplate("sync-automation", "first commit from test")
+		err := repo.GenTemplate("sync-automation", "first commit from test")
+		if err != nil {
+			t.Fatalf("Error generating template:  sync-automation: %v", err)
+		}
+
 	})
 }

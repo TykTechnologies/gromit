@@ -9,6 +9,14 @@ policy:
     dependabot:
       - .github/dependabot.yml
   repos:
+    tyk:
+      protected: [ release-3-lts ]
+      files:
+        config:
+          - tyk.conf.example
+      ports:
+        master: [ release-4 ]
+        release-3: [release-3-lts]
     tyk-analytics:
       protected: [ release-3-lts ]
       files:

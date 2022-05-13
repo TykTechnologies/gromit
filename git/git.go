@@ -111,51 +111,38 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 	}, err
 }
 
-// AddFile adds a file in the worktree to the index and then displays the resulting changeset as a patch.
+// AddFile adds a file in the worktree to the index.
 // The file is assumed to have been updated prior to calling this function.
-// It will show the changes commited in the form of a patch to stdout and wait for user confirmation.
-// Note that this commit will be lost if it is not pushed to a remote.
-func (r *GitRepo) AddFile(path, msg string, confirm bool) (plumbing.Hash, error) {
-	origRef, err := r.repo.Head()
-	if err != nil {
-		return plumbing.ZeroHash, fmt.Errorf("getting hash for original head: %w", err)
-	}
-	log.Trace().Str("ref", origRef.String()).Msg("HEAD")
-	origHead, err := r.repo.CommitObject(origRef.Hash())
-	if err != nil {
-		return plumbing.ZeroHash, fmt.Errorf("getting original head: %w", err)
-	}
-	log.Trace().Str("hash", origHead.String()).Msg("HEAD")
+func (r *GitRepo) AddFile(path string) (plumbing.Hash, error) {
 	hash, err := r.worktree.Add(path)
 	if err != nil {
 		return plumbing.ZeroHash, fmt.Errorf("adding to worktree: %w", err)
 	}
-	log.Trace().Str("hash", hash.String()).Msg("add")
+	return hash, nil
+}
+
+func (r *GitRepo) Head() (*object.Commit, error) {
+	origRef, err := r.repo.Head()
+	if err != nil {
+		return nil, fmt.Errorf("getting hash for original head: %w", err)
+	}
+	return r.repo.CommitObject(origRef.Hash())
+}
+
+// Commit commits the current worktree
+// Note that this commit will be lost if it is not pushed to a remote.
+func (r *GitRepo) Commit(msg string) (*object.Commit, error) {
 	newCommitHash, err := r.worktree.Commit(msg, r.commitOpts)
 	if err != nil {
-		return plumbing.ZeroHash, fmt.Errorf("committing to worktree: %w", err)
+		return nil, err
 	}
-	log.Trace().Str("hash", newCommitHash.String()).Msg("add to worktree")
+	log.Trace().Str("hash", newCommitHash.String()).Msg("worktree hash")
 	newCommit, err := r.repo.CommitObject(newCommitHash)
 	if err != nil {
-		return plumbing.ZeroHash, fmt.Errorf("getting new commit: %w", err)
+		return nil, fmt.Errorf("getting new commit: %w", err)
 	}
 	log.Trace().Str("hash", newCommit.String()).Msg("new commit")
-
-	patch, err := origHead.Patch(newCommit)
-	if err != nil {
-		return plumbing.ZeroHash, fmt.Errorf("getting diff: %w", err)
-	}
-	err = patch.Encode(os.Stdout)
-	if err != nil {
-		return plumbing.ZeroHash, fmt.Errorf("encoding diff: %w", err)
-	}
-	if confirm {
-		fmt.Printf("\n----End of diff for %s. Control-C to abort, ⏎/Enter to continue.", r.Name)
-		fmt.Scanln()
-	}
-
-	return newCommitHash, nil
+	return newCommit, nil
 }
 
 // (r *GitRepo) Checkout fetches the given ref and then checks it out to the worktree
@@ -241,6 +228,10 @@ func (r *GitRepo) Push(branch, remoteBranch string) error {
 	return nil
 }
 
+// DeleteRemoteBranch deletes the given branch from the remote origin,
+// this is mainly used in the test functions to delete the test branches,
+// but can also be called from other contexts.
+// Please note that it operates only on the origin remote.
 func (r *GitRepo) DeleteRemoteBranch(remoteBranch string) error {
 	if remoteBranch == "" {
 		return git.ErrBranchNotFound

@@ -1,5 +1,6 @@
 policy:
   protected: [ master ]
+  goversion: 1.15
   files:
     releng:
       - ci/*

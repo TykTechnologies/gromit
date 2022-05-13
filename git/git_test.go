@@ -30,11 +30,11 @@ var fetchDepth int = 1
 
 func TestGitFunctions(t *testing.T) {
 	token := os.Getenv("GH_TOKEN")
-	repo, err := FetchRepo(testRepo["fqdn"], testRepo["dir"], token, fetchDepth)
+	src, err := FetchRepo(testRepo["fqdn"], testRepo["dir"], token, fetchDepth)
 	if err != nil {
 		t.Fatalf("Could not fetch repo: %s, with fqdn: %s, with depth: %d to dir %s: (%v)", testRepo["repo"], testRepo["fqdn"], fetchDepth, testRepo["dir"], err)
 	}
-	err = repo.Checkout(testRepo["branch"])
+	err = src.Checkout(testRepo["branch"])
 	if err != nil {
 		t.Fatalf("Error checking out branch %s: %v", testRepo["branch"], err)
 	}
@@ -46,23 +46,23 @@ func TestGitFunctions(t *testing.T) {
 	}
 
 	// Create a new branch, switch and do the test commit there.
-	head, err := repo.repo.Head()
+	head, err := src.repo.Head()
 	if err != nil {
 		t.Fatalf("Can not get head ref: %v", err)
 	}
 	nbrefName := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", testRepo["newbranch"]))
 	nbRef := plumbing.NewHashReference(nbrefName, head.Hash())
-	err = repo.repo.Storer.SetReference(nbRef)
+	err = src.repo.Storer.SetReference(nbRef)
 	if err != nil {
 		t.Fatalf("Can't set reference: %v", err)
 	}
-	err = repo.worktree.Checkout(&git.CheckoutOptions{
+	err = src.worktree.Checkout(&git.CheckoutOptions{
 		Branch: plumbing.ReferenceName(nbrefName),
 		Force:  true,
 	})
 
 	// Create a test file, and add and commit it.
-	tFile, err := repo.CreateFile(testRepo["filepath"])
+	tFile, err := src.CreateFile(testRepo["filepath"])
 	if err != nil {
 		t.Fatalf("Error creating file %s: %v", testRepo["filepath"], err)
 	}
@@ -82,38 +82,42 @@ func TestGitFunctions(t *testing.T) {
 	tfh.Close()
 	startCsums[testRepo["filepath"]] = hex.EncodeToString(sh.Sum(nil))
 
-	h, err := repo.worktree.Add(testRepo["filepath"])
+	h, err := src.worktree.Add(testRepo["filepath"])
 	if err != nil {
 		t.Fatalf("Error adding file %s to worktree: %v", testRepo["filepath"], err)
 	}
 	t.Logf("worktree hash: %s", h.String())
-	hash, err := repo.AddFile(testRepo["filepath"], testRepo["commitmsg"], false)
+	_, err = src.AddFile(testRepo["filepath"])
+	if err != nil {
+		t.Fatalf("Unable to add  file %s: %v", testRepo["filepath"], err)
+	}
+	commitObj, err := src.Commit(testRepo["commitmsg"])
 	if err != nil {
 		t.Fatalf("Unable to commit  file %s: %v", testRepo["filepath"], err)
 	}
-	t.Logf("Commit hash: %s", hash.String())
+	t.Logf("Commit hash: %s", commitObj.Hash.String())
 
 	committedCsums, err := GetDirChecksums(testRepo["dir"])
 	if err != nil {
 		t.Fatalf("Can't get checksums for dir: %s. %v", testRepo["dir"], err)
 	}
 
-	err = repo.Push(testRepo["newbranch"], testRepo["newbranch"])
+	err = src.Push(testRepo["newbranch"], testRepo["newbranch"])
 	if err != nil {
 		t.Fatalf("error in pushig to remote: %v", err)
 	}
 	t.Logf("Pushed our test chenges to remote")
 
 	t.Logf("Now verifying by pulling the changes..")
-	vRepo, err := FetchRepo(testRepo["fqdn"], testRepo["vdir"], token, fetchDepth)
+	vSrc, err := FetchRepo(testRepo["fqdn"], testRepo["vdir"], token, fetchDepth)
 	if err != nil {
 		t.Fatalf("Could not fetch repo: %s, with fqdn: %s, with depth: %d to dir %s: (%v)", testRepo["repo"], testRepo["fqdn"], fetchDepth, testRepo["vdir"], err)
 	}
-	err = vRepo.Checkout(testRepo["newbranch"])
+	err = vSrc.Checkout(testRepo["newbranch"])
 	if err != nil {
 		t.Fatalf("Error checking out branch %s: %v", testRepo["newbranch"], err)
 	}
-	head, err = vRepo.repo.Head()
+	head, err = vSrc.repo.Head()
 	if err != nil {
 		t.Fatalf("Can not get head ref: %v", err)
 	}
@@ -133,7 +137,7 @@ func TestGitFunctions(t *testing.T) {
 	t.Log("Csum post commit:  ", committedCsums)
 	t.Log("Csum after pulling the changes ", pulledCsums)
 
-	err = vRepo.DeleteRemoteBranch(testRepo["newbranch"])
+	err = vSrc.DeleteRemoteBranch(testRepo["newbranch"])
 	if err != nil {
 		t.Fatalf("error in deleting  remote branch: %v", err)
 	}

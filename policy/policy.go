@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"os"
 
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/util"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/goccy/go-graphviz"
 	"github.com/goccy/go-graphviz/cgraph"
 	"github.com/rs/zerolog/log"
@@ -23,6 +25,7 @@ var ErrUnknownBranch = errors.New("branch not present in branch policies of repo
 // Policies models the config file structure. The config file may contain one or more repos.
 type Policies struct {
 	Protected []string
+	Goversion string
 	Repos     map[string]Policies // map of reponames to branchPolicies
 	Files     map[string][]string
 	Ports     map[string][]string
@@ -146,6 +149,33 @@ func (r *RepoPolicy) GenTemplate(bundle, commitMsg string) error {
 		log.Debug().Str("hash", hash.String()).Str("path", f).Msg("committed")
 	}
 	return nil
+}
+
+// Commit commits the current worktree and then displays the resulting change as a patch,
+// and returns the hash of the commit object that was committed.
+// It will show the changes commited in the form of a patch to stdout and wait for user confirmation.
+func (r RepoPolicy) Commit(msg string, confirm bool) (plumbing.Hash, error) {
+	origHead, err := r.gitRepo.Head()
+	if err != nil {
+		return plumbing.ZeroHash, fmt.Errorf("getting hash for original head: %w", err)
+	}
+	newCommit, err := r.gitRepo.Commit(msg)
+	if err != nil {
+		return plumbing.ZeroHash, err
+	}
+	patch, err := origHead.Patch(newCommit)
+	if err != nil {
+		return plumbing.ZeroHash, fmt.Errorf("getting diff: %w", err)
+	}
+	err = patch.Encode(os.Stdout)
+	if err != nil {
+		return plumbing.ZeroHash, fmt.Errorf("encoding diff: %w", err)
+	}
+	if confirm {
+		fmt.Printf("\n----End of diff for %s. Control-C to abort, ⏎/Enter to continue.", r.Name)
+		fmt.Scanln()
+	}
+	return newCommit.Hash, nil
 }
 
 // Push will push the current state of the repo to github
