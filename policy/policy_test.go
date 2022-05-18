@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"os"
 	"testing"
 
 	"github.com/TykTechnologies/gromit/config"
@@ -12,6 +13,7 @@ func TestPolicy(t *testing.T) {
 	//timeStamp := "2021-06-02 06:47:55.826883255 +0000 UTC"
 
 	var rp Policies
+
 	config.LoadConfig("../testdata/policies/repos.yaml")
 	err := LoadRepoPolicies(&rp)
 	if err != nil {
@@ -21,7 +23,8 @@ func TestPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get a repo: %v", err)
 	}
-	err = repo.InitGit(1, 0, "/tmp/gt", "")
+	testDir := "/tmp/pt-" + repo.Name
+	err = repo.InitGit(1, 0, testDir, "")
 	if err != nil {
 		t.Fatalf("Could not init: %v", err)
 	}
@@ -41,10 +44,16 @@ func TestPolicy(t *testing.T) {
 	})
 	// Test template generation
 	t.Run("gentemplate", func(t *testing.T) {
-		err := repo.GenTemplate("sync-automation", "first commit from test")
+		pwd := os.Getenv("PWD")
+		f, err := repo.GenTemplate("sync", pwd+"/templates/sync-automation")
 		if err != nil {
 			t.Fatalf("Error generating template:  sync-automation: %v", err)
 		}
-
+		t.Log("Files generated: ", f)
+		hash, err := repo.Commit("First commit from test", false)
+		if err != nil {
+			t.Fatalf("Error commiting after gentemplate:  sync-automation: %v", err)
+		}
+		t.Logf("Commit made successfully: %s", hash)
 	})
 }

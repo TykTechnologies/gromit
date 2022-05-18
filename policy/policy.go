@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/util"
@@ -21,6 +22,7 @@ import (
 
 var ErrUnknownRepo = errors.New("repo not present in policies")
 var ErrUnknownBranch = errors.New("branch not present in branch policies of repo")
+var ErrUnKnownBundle = errors.New("bundle not present in loaded policy")
 
 // Policies models the config file structure. The config file may contain one or more repos.
 type Policies struct {
@@ -97,7 +99,7 @@ func (r RepoPolicy) IsProtected(branch string) bool {
 //}
 
 // InitGit initialises the corresponding git repo by fetching it
-func (r RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string) error {
+func (r *RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string) error {
 	log.Logger = log.With().Str("repo", r.Name).Str("branch", r.branch).Logger()
 	fqdnRepo := fmt.Sprintf("%s/%s", r.prefix, r.Name)
 
@@ -123,32 +125,44 @@ func (r RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string)
 var templates embed.FS
 
 // GenTemplate will render a template bundle from a directory tree rooted at name.
-func (r *RepoPolicy) GenTemplate(bundle, commitMsg string) error {
+func (r *RepoPolicy) GenTemplate(bundle string, templateRoot string) ([]string, error) {
 	log.Logger = log.With().Str("bundle", bundle).Interface("repo", r.Name).Logger()
 	log.Info().Msg("rendering")
+	var fileList []string
 
+	// Check if the given bundle is valid.
+	if _, ok := r.Files[bundle]; !ok {
+		return fileList, ErrUnKnownBundle
+	}
 	for _, f := range r.Files[bundle] {
 		op, err := r.gitRepo.CreateFile(f)
 		if err != nil {
-			return err
+			return fileList, err
 		}
 		defer op.Close()
 
+		templatePath := templateRoot + "/" + f
 		t := template.Must(template.
-			New(bundle).
+			New(filepath.Base(f) + ".tmpl").
 			Option("missingkey=error").
-			ParseFS(templates, f+".tmpl"))
+			ParseFiles(templatePath + ".tmpl"))
 		if err != nil {
-			return err
+			return fileList, err
 		}
 		log.Trace().Interface("vars", r).Msg("template vars")
 		err = t.Execute(op, r)
-
+		if err != nil {
+			return fileList, err
+		}
 		log.Debug().Str("path", f).Msg("wrote")
-		hash, err := r.gitRepo.AddFile(f, commitMsg, true)
-		log.Debug().Str("hash", hash.String()).Str("path", f).Msg("committed")
+		hash, err := r.gitRepo.AddFile(f)
+		if err != nil {
+			return fileList, err
+		}
+		fileList = append(fileList, f)
+		log.Debug().Str("hash", hash.String()).Str("file", f).Msg("added file to worktree")
 	}
-	return nil
+	return fileList, nil
 }
 
 // Commit commits the current worktree and then displays the resulting change as a patch,
