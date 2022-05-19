@@ -1,0 +1,45 @@
+
+# This workflow will silently ignore FILES that are missing in master
+# Most of the time this is what we want, older repos may not have some files
+
+name: Sync automation
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - .github/workflows/release.yml
+      - .github/workflows/api-tests.yml
+      - .github/workflows/ui-tests.yml
+      - ci/**
+
+env:
+  FILES: ci .github/workflows/release.yml .github/dependabot.yml .github/workflows/del-env.yml .github/workflows/api-tests.yml .github/workflows/ui-tests.yml
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [ release-3.2.3, release-4 ]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{matrix.branch}}
+          token: ${{ secrets.ORG_GH_TOKEN }}
+
+      - name: sync ${{matrix.branch}} from master
+        run: |
+          git fetch origin master
+          git config --local user.email "wf-gen@tyk-ci"
+          git config --local user.name "Bender"
+          for f in $FILES; do 
+            git checkout --theirs origin/master -- $f || true
+          done
+          git commit -a -m "[CI] Syncing release automation from master"
+          git push origin
+          echo "::debug::${FILES} syncd for ${{matrix.branch}}"

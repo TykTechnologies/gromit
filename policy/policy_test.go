@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
@@ -44,8 +45,8 @@ func TestPolicy(t *testing.T) {
 	})
 	// Test template generation
 	t.Run("gentemplate", func(t *testing.T) {
-		pwd := os.Getenv("PWD")
-		f, err := repo.GenTemplate("sync", pwd+"/templates/sync-automation")
+		//pwd := os.Getenv("PWD")
+		f, err := repo.GenTemplate("sync")
 		if err != nil {
 			t.Fatalf("Error generating template:  sync-automation: %v", err)
 		}
@@ -55,5 +56,17 @@ func TestPolicy(t *testing.T) {
 			t.Fatalf("Error commiting after gentemplate:  sync-automation: %v", err)
 		}
 		t.Logf("Commit made successfully: %s", hash)
+		// Check if the sync-automation file is parsed correctly.
+		testFile, err := os.ReadFile("testdata/sync-automation/sync-automation.yml")
+		if err != nil {
+			t.Fatalf("Error reading sync-automation file from testdata: %v", err)
+		}
+		// Sync bundle generates only one file as of now.
+		genFile, err := repo.gitRepo.ReadFile(f[0])
+		if err != nil {
+			t.Fatalf("Error reading generated sync-automation file from git: %v", err)
+		}
+		assert.True(t, bytes.Equal(testFile, genFile), "Comparing generated file, and test file(sync-automation)")
+
 	})
 }

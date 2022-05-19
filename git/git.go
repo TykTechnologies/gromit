@@ -12,6 +12,7 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/go-git/go-billy/v5/util"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -285,6 +286,12 @@ func (r *GitRepo) Branches(re string) ([]string, error) {
 		}
 	}
 	return branches, nil
+}
+
+// Readfile reads the corresponding file from the repo and returns
+// the contents as a byte array.
+func (r *GitRepo) ReadFile(path string) ([]byte, error) {
+	return util.ReadFile(r.fs, path)
 }
 
 // CreateFile will create a file in a directory, truncating it if it already exists with the embedded git worktree.
