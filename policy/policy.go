@@ -121,11 +121,11 @@ func (r *RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string
 	return nil
 }
 
-//go:embed templates
+//go:embed templates/*/*
 var templates embed.FS
 
 // GenTemplate will render a template bundle from a directory tree rooted at name.
-func (r *RepoPolicy) GenTemplate(bundle string, templateRoot string) ([]string, error) {
+func (r *RepoPolicy) GenTemplate(bundle string) ([]string, error) {
 	log.Logger = log.With().Str("bundle", bundle).Interface("repo", r.Name).Logger()
 	log.Info().Msg("rendering")
 	var fileList []string
@@ -140,12 +140,17 @@ func (r *RepoPolicy) GenTemplate(bundle string, templateRoot string) ([]string, 
 			return fileList, err
 		}
 		defer op.Close()
-
-		templatePath := templateRoot + "/" + f
+		// fs.WalkDir(templates, ".", func(path string, d fs.DirEntry, err error) error {
+		// 	if err != nil {
+		// 		fmt.Println("err: ", err)
+		// 	}
+		// 	fmt.Println(path)
+		// 	return nil
+		// })
 		t := template.Must(template.
-			New(filepath.Base(f) + ".tmpl").
+			New(filepath.Base(f)).
 			Option("missingkey=error").
-			ParseFiles(templatePath + ".tmpl"))
+			ParseFS(templates, filepath.Join("templates", bundle, f)))
 		if err != nil {
 			return fileList, err
 		}
