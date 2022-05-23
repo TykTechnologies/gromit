@@ -9,6 +9,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/util"
@@ -47,6 +49,24 @@ type Policies struct {
 	Ports       map[string][]string
 	Branches    []branchVals
 }
+
+// RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
+type RepoPolicy struct {
+	Name       string
+	Protected  []string
+	Files      map[string][]string
+	Ports      map[string][]string
+	gitRepo    *git.GitRepo
+	branch     string
+	branchvals branchVals
+	prefix     string
+}
+
+type Template struct {
+	fields Fields
+}
+
+type Fields map[string]interface{}
 
 // GetRepo will give you a repoVars type for a repo which can be used to feed templates
 // Though Ports can be defined at the global level they are not practically used and if defined will be ignored.
@@ -91,18 +111,6 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	}, nil
 }
 
-// RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
-type RepoPolicy struct {
-	Name       string
-	Protected  []string
-	Files      map[string][]string
-	Ports      map[string][]string
-	gitRepo    *git.GitRepo
-	branch     string
-	branchvals branchVals
-	prefix     string
-}
-
 // Returns the destination branches for a given source branch
 func (r RepoPolicy) DestBranches(srcBranch string) ([]string, error) {
 	b, found := r.Ports[srcBranch]
@@ -110,6 +118,31 @@ func (r RepoPolicy) DestBranches(srcBranch string) ([]string, error) {
 		return []string{}, fmt.Errorf("branch %s unknown among %v", srcBranch, r.Ports)
 	}
 	return b, nil
+}
+
+func getSyncTemplate(r *RepoPolicy, bundle string) (*Template, error) {
+	t := time.Now().UTC()
+	dstBranches, err := r.DestBranches(r.branch)
+	if err != nil {
+		return nil, err
+	}
+	var files []string
+	// iterate through all bundles, fill in everything except for the
+	// sync bundle.
+	for b, flist := range r.Files {
+		if b == bundle {
+			continue
+		}
+		files = append(files, flist...)
+	}
+	return &Template{
+		fields: Fields{
+			"Timestamp":  t.Format(time.UnixDate),
+			"SrcBranch":  r.branch,
+			"DestBranch": dstBranches,
+			"Files":      files,
+		},
+	}, nil
 }
 
 // IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
@@ -158,6 +191,10 @@ func (r *RepoPolicy) GenTemplate(bundle string) ([]string, error) {
 	if _, ok := r.Files[bundle]; !ok {
 		return fileList, ErrUnKnownBundle
 	}
+	// bundle to template function mapping.
+	tmplFnMap := map[string]func(*RepoPolicy, string) (*Template, error){
+		"sync": getSyncTemplate,
+	}
 	for _, f := range r.Files[bundle] {
 		op, err := r.gitRepo.CreateFile(f)
 		if err != nil {
@@ -174,12 +211,23 @@ func (r *RepoPolicy) GenTemplate(bundle string) ([]string, error) {
 		t := template.Must(template.
 			New(filepath.Base(f)).
 			Option("missingkey=error").
+			Funcs(template.FuncMap{
+				"join":     join,
+				"populate": populate,
+			}).
 			ParseFS(templates, filepath.Join("templates", bundle, f)))
 		if err != nil {
 			return fileList, err
 		}
 		log.Trace().Interface("vars", r).Msg("template vars")
-		err = t.Execute(op, r)
+		// Call the function corresponding to the given bundle to get the
+		// correct Template interface.
+		fn := tmplFnMap[bundle]
+		tmpl, err := fn(r, bundle)
+		if err != nil {
+			return fileList, err
+		}
+		err = t.Execute(op, tmpl.fields)
 		if err != nil {
 			return fileList, err
 		}
@@ -192,6 +240,21 @@ func (r *RepoPolicy) GenTemplate(bundle string) ([]string, error) {
 		log.Debug().Str("hash", hash.String()).Str("file", f).Msg("added file to worktree")
 	}
 	return fileList, nil
+}
+
+func populate(files []string) string {
+	var ret []string
+	for _, f := range files {
+		f = strings.TrimSuffix(f, "/**")
+		f = strings.TrimSuffix(f, "/*")
+		f = strings.TrimSuffix(f, "/")
+		ret = append(ret, f)
+	}
+	return strings.Join(ret, " ")
+}
+
+func join(files []string) string {
+	return strings.Join(files, " ")
 }
 
 // Commit commits the current worktree and then displays the resulting change as a patch,

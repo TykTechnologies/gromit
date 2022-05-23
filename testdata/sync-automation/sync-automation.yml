@@ -9,13 +9,14 @@ on:
     branches:
       - master
     paths:
+      - .github/dependabot.yml
       - .github/workflows/release.yml
       - .github/workflows/api-tests.yml
       - .github/workflows/ui-tests.yml
       - ci/**
 
 env:
-  FILES: ci .github/workflows/release.yml .github/dependabot.yml .github/workflows/del-env.yml .github/workflows/api-tests.yml .github/workflows/ui-tests.yml
+  FILES: ci .github/workflows/release.yml .github/dependabot.yml .github/workflows/api-tests.yml .github/workflows/ui-tests.yml
 
 jobs:
   sync:

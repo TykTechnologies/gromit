@@ -10,27 +10,36 @@ name: Sync automation
 on:
   push:
     paths:
-    {{- range $file := .MAFiles }}
+    {{- range $file := .Files }}
       - {{ $file }}
     {{- end }}
+
+env:
+  FILES: {{ populate .Files }}
 
 jobs:
   sync:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [ {{ join .DestBranch }} ]
+
     steps:
       - uses: actions/checkout@v2
         with:
-          depth: 1
+          ref: ${{"{{"}} matrix.branch {{"}}"}}
+          token: ${{"{{"}} secrets.ORG_GH_TOKEN {{"}}"}}
 
-      - name: sync {{ .SrcBranch }} → {{ .DestBranch }}
+      - name: sync ${{"{{"}} matrix.branch {{"}}"}} from {{ .SrcBranch }}
         run: |
-          git fetch origin +refs/heads/{{ .DestBranch }}:refs/heads/{{ .DestBranch }} && git checkout {{ .DestBranch }}
+          git fetch origin {{ .SrcBranch }}
           git config --local user.email "policy@gromit"
           git config --local user.name "Bender"
-          {{- range $file := .MAFiles }}
-          git checkout --theirs origin/{{ $.SrcBranch }} -- {{ $file }}
-	  {{- end }}
-          git commit -m "[CI] Backport release automation from {{ .SrcBranch }}" -m "{{ `${{ github.event.head_commit.message }}` }}"
-          git push origin {{ .DestBranch }}
-          echo "::debug::syncd from {{ .SrcBranch }} to {{ .DestBranch }}"
+          for f in $FILES; do 
+            git checkout --theirs origin/{{ .SrcBranch }} -- $f || true
+          done
+          git commit -a -m "[CI] Syncing release automation from {{ .SrcBranch }}"
+          git push origin
+          echo "::debug::${FILES} syncd for ${{"{{"}} matrix.branch {{"}}"}}"

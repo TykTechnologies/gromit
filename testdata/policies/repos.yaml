@@ -3,11 +3,15 @@ policy:
   master: master
   files:
     releng:
-      - ci/*
+      - ci/**
+      - .github/workflows/release.yml
     sync:
       - .github/workflows/sync-automation.yml
     dependabot:
       - .github/dependabot.yml
+    test:
+      - .github/workflows/api-tests.yml
+      - .github/workflows/ui-tests.yml
   repos:
     tyk:
       description: |
