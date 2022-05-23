@@ -24,13 +24,28 @@ var ErrUnknownRepo = errors.New("repo not present in policies")
 var ErrUnknownBranch = errors.New("branch not present in branch policies of repo")
 var ErrUnKnownBundle = errors.New("bundle not present in loaded policy")
 
+// branchVals contains the parameters that are specific to a particular branch in a repo
+type branchVals struct {
+	Name           string // Branch name
+	GoVersion      string
+	Cgo            bool
+	ConfigFile     string
+	UpgradeFromVer string // Versions to test package upgrades from
+}
+
 // Policies models the config file structure. The config file may contain one or more repos.
 type Policies struct {
-	Protected []string
-	Goversion string
-	Repos     map[string]Policies // map of reponames to branchPolicies
-	Files     map[string][]string
-	Ports     map[string][]string
+	Description string
+	PCRepo      string
+	DHRepo      string
+	ExposePorts string
+	Protected   []string
+	Goversion   string
+	Master      string              // The equivalent of the master branch
+	Repos       map[string]Policies // map of reponames to branchPolicies
+	Files       map[string][]string
+	Ports       map[string][]string
+	Branches    []branchVals
 }
 
 // GetRepo will give you a repoVars type for a repo which can be used to feed templates
@@ -53,25 +68,39 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	maps.Copy(combinedFiles, p.Files)
 	maps.Copy(combinedFiles, temp)
 	fmt.Println(combinedFiles, temp)
+
+	found = false
+	var b branchVals
+	for _, b = range r.Branches {
+		if b.Name == branch {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return RepoPolicy{}, fmt.Errorf("branch %s unknown for repo %s", branch, repo)
+	}
 	return RepoPolicy{
-		Name:      repo,
-		Protected: append(p.Protected, r.Protected...),
-		Files:     combinedFiles,
-		Ports:     r.Ports,
-		branch:    branch,
-		prefix:    prefix,
+		Name:       repo,
+		Protected:  append(p.Protected, r.Protected...),
+		Files:      combinedFiles,
+		Ports:      r.Ports,
+		branch:     branch,
+		prefix:     prefix,
+		branchvals: b,
 	}, nil
 }
 
 // RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
 type RepoPolicy struct {
-	Name      string
-	Protected []string
-	Files     map[string][]string
-	Ports     map[string][]string
-	gitRepo   *git.GitRepo
-	branch    string
-	prefix    string
+	Name       string
+	Protected  []string
+	Files      map[string][]string
+	Ports      map[string][]string
+	gitRepo    *git.GitRepo
+	branch     string
+	branchvals branchVals
+	prefix     string
 }
 
 // Returns the destination branches for a given source branch
@@ -92,11 +121,6 @@ func (r RepoPolicy) IsProtected(branch string) bool {
 	}
 	return false
 }
-
-// GetFile returns a handle to a file from a billy filesystem which abstracts over the in-mem and disk based fs
-//func GetFile(name string) (billy.File, error) {
-//	return billy.File{}, nil
-//}
 
 // InitGit initialises the corresponding git repo by fetching it
 func (r *RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string) error {

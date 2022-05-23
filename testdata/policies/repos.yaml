@@ -1,6 +1,6 @@
 policy:
   protected: [ master ]
-  goversion: 1.15
+  master: master
   files:
     releng:
       - ci/*
@@ -10,10 +10,25 @@ policy:
       - .github/dependabot.yml
   repos:
     tyk:
+      description: |
+        Tyk API Gateway
+      pc_repo: tyk-gateway
+      dh_repo: tyk-gateway
       protected: [ release-3-lts ]
+      exposeports: "8080"
       files:
         config:
           - tyk.conf.example
+      branches:
+        - name: release-3-lts
+          goversion: 1.12
+          cgo: true
+          configfile: tyk.conf.example
+          upgradefromver: 3.0.4
+        - name: master
+          configfile: tyk.conf.example
+          cgo: true
+          upgradefromver: 3.0.9
       ports:
         master: [ release-4 ]
         release-3: [release-3-lts]
