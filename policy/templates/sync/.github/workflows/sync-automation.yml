@@ -9,6 +9,8 @@ name: Sync automation
 
 on:
   push:
+    branches:
+      - {{ .SrcBranch }}
     paths:
     {{- range $file := .Files }}
       - {{ $file }}

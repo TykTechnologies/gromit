@@ -28,11 +28,12 @@ var ErrUnKnownBundle = errors.New("bundle not present in loaded policy")
 
 // branchVals contains the parameters that are specific to a particular branch in a repo
 type branchVals struct {
-	Name           string // Branch name
-	GoVersion      string
-	Cgo            bool
-	ConfigFile     string
-	UpgradeFromVer string // Versions to test package upgrades from
+	Name               string // Branch name
+	GoVersion          string
+	Cgo                bool
+	ConfigFile         string
+	UpgradeFromVer     string // Versions to test package upgrades from
+	SyncExcludeBundles []string
 }
 
 // Policies models the config file structure. The config file may contain one or more repos.
@@ -127,10 +128,14 @@ func getSyncTemplate(r *RepoPolicy, bundle string) (*Template, error) {
 		return nil, err
 	}
 	var files []string
+	excludedBundles := make(map[string]bool)
+	for _, b := range r.branchvals.SyncExcludeBundles {
+		excludedBundles[b] = true
+	}
 	// iterate through all bundles, fill in everything except for the
-	// sync bundle.
+	// bundles excluded by `syncexcludebundles`
 	for b, flist := range r.Files {
-		if b == bundle {
+		if excludedBundles[b] {
 			continue
 		}
 		files = append(files, flist...)
@@ -192,7 +197,7 @@ func (r *RepoPolicy) GenTemplate(bundle string) ([]string, error) {
 		return fileList, ErrUnKnownBundle
 	}
 	// bundle to template function mapping.
-	tmplFnMap := map[string]func(*RepoPolicy, string) (*Template, error){
+	bundleTmplMapping := map[string]func(*RepoPolicy, string) (*Template, error){
 		"sync": getSyncTemplate,
 	}
 	for _, f := range r.Files[bundle] {
@@ -222,7 +227,7 @@ func (r *RepoPolicy) GenTemplate(bundle string) ([]string, error) {
 		log.Trace().Interface("vars", r).Msg("template vars")
 		// Call the function corresponding to the given bundle to get the
 		// correct Template interface.
-		fn := tmplFnMap[bundle]
+		fn := bundleTmplMapping[bundle]
 		tmpl, err := fn(r, bundle)
 		if err != nil {
 			return fileList, err

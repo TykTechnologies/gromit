@@ -9,7 +9,7 @@ policy:
       - .github/workflows/sync-automation.yml
     dependabot:
       - .github/dependabot.yml
-    test:
+    tests:
       - .github/workflows/api-tests.yml
       - .github/workflows/ui-tests.yml
   repos:
@@ -29,10 +29,12 @@ policy:
           cgo: true
           configfile: tyk.conf.example
           upgradefromver: 3.0.4
+          syncexcludebundles: ["config","sync"]
         - name: master
           configfile: tyk.conf.example
           cgo: true
           upgradefromver: 3.0.9
+          syncexcludebundles: ["config","sync"]
       ports:
         master: [ release-4 ]
         release-3: [release-3-lts]

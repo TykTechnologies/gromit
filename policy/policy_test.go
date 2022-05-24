@@ -25,6 +25,11 @@ func TestPolicy(t *testing.T) {
 		t.Fatalf("Could not get a repo: %v", err)
 	}
 	testDir := "/tmp/pt-" + repo.Name
+	// delete the temp dir as soon as the tests finish.
+	defer func() {
+		t.Log("Deleting temporary files..")
+		os.RemoveAll(testDir)
+	}()
 	err = repo.InitGit(1, 0, testDir, "")
 	if err != nil {
 		t.Fatalf("Could not init: %v", err)
@@ -33,10 +38,11 @@ func TestPolicy(t *testing.T) {
 	// Test config merging
 	t.Run("config", func(t *testing.T) {
 		files := map[string][]string{
-			"releng":     {"ci/*"},
+			"releng":     {"ci/**", ".github/workflows/release.yml"},
 			"sync":       {".github/workflows/sync-automation.yml"},
 			"dependabot": {".github/dependabot.yml"},
 			"config":     {"tyk.conf.example"},
+			"tests":      {".github/workflows/api-tests.yml", ".github/workflows/ui-tests.yml"},
 		}
 		assert.EqualValues(t, repo.Protected, []string{"master", "release-3-lts"})
 		for key := range files {
@@ -57,7 +63,7 @@ func TestPolicy(t *testing.T) {
 		}
 		t.Logf("Commit made successfully: %s", hash)
 		// Check if the sync-automation file is parsed correctly.
-		testFile, err := os.ReadFile("testdata/sync-automation/sync-automation.yml")
+		testFile, err := os.ReadFile("../testdata/sync-automation/sync-automation.yml")
 		if err != nil {
 			t.Fatalf("Error reading sync-automation file from testdata: %v", err)
 		}
