@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/TykTechnologies/gromit/config"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -63,6 +64,8 @@ func TestPolicy(t *testing.T) {
 		}
 		t.Logf("Commit made successfully: %s", hash)
 		// Check if the sync-automation file is parsed correctly.
+		// NOTE: in the test file, the files tracked by sync-automation should always
+		// be given in alphabetical order. - to avoid order related failure of test.
 		testFile, err := os.ReadFile("../testdata/sync-automation/sync-automation.yml")
 		if err != nil {
 			t.Fatalf("Error reading sync-automation file from testdata: %v", err)
@@ -72,7 +75,23 @@ func TestPolicy(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error reading generated sync-automation file from git: %v", err)
 		}
-		assert.True(t, bytes.Equal(testFile, genFile), "Comparing generated file, and test file(sync-automation)")
-
+		t.Logf("Comparing generated file with the test file..")
+		diff := cmp.Diff(testFile, genFile)
+		if diff != "" {
+			t.Logf("Diff before stripping timestamp: \n%s", diff)
+		}
+		// Hack to make the tests pass. Strip bytes containing the timestamp line.
+		// This should be changed if the test file changes, or the template changes.
+		tsStart := 32
+		tsEnd := 76
+		tfTs := testFile[tsStart:tsEnd]
+		gfTs := genFile[tsStart:tsEnd]
+		// t.Logf("\n\n\n%s", bytes.Replace(testFile, tfTs, []byte(""), 1))
+		// t.Logf("\n\n\n%s", bytes.Replace(genFile, gfTs, []byte(""), 1))
+		diff = cmp.Diff(bytes.Replace(testFile, tfTs, []byte(""), 1), bytes.Replace(genFile, gfTs, []byte(""), 1))
+		if diff != "" {
+			t.Fatalf("Diff after stripping timestamp: \n%s", diff)
+		}
+		// assert.True(t, bytes.Equal(testFile, genFile), "Comparing generated file, and test file(sync-automation)")
 	})
 }

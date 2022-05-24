@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -140,6 +141,8 @@ func getSyncTemplate(r *RepoPolicy, bundle string) (*Template, error) {
 		}
 		files = append(files, flist...)
 	}
+	// Always keep a deterministic order of files - this also helps in tests.
+	sort.Strings(files)
 	return &Template{
 		fields: Fields{
 			"Timestamp":  t.Format(time.UnixDate),

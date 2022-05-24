@@ -9,6 +9,7 @@ require (
 	github.com/go-git/go-git/v5 v5.3.0
 	github.com/go-redis/redis/v8 v8.7.1
 	github.com/goccy/go-graphviz v0.0.9
+	github.com/google/go-cmp v0.5.4
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/gorilla/mux v1.7.4
 	github.com/mongodb/mongo-tools v0.0.0-20200911144454-4ba3e828ed5c
