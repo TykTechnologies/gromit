@@ -37,7 +37,7 @@ policy:
           syncexcludebundles: ["config","sync"]
       ports:
         master: [ release-4 ]
-        release-3: [release-3-lts]
+        release-3-lts: [release-3.0.11]
     tyk-analytics:
       protected: [ release-3-lts ]
       files:
