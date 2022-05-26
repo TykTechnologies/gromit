@@ -28,8 +28,8 @@ func (r *RepoPolicy) GenTemplate(bundle string) error {
 }
 
 // renderTemplates walks a bundle tree and calls renderTemplate for each file
-func (r *RepoPolicy) renderTemplates(dir string) error {
-	return fs.WalkDir(templates, dir, func(path string, d fs.DirEntry, err error) error {
+func (r *RepoPolicy) renderTemplates(bundleDir string) error {
+	return fs.WalkDir(templates, bundleDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("Walk error: (%s): %v ", path, err)
 		}
