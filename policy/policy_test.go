@@ -39,34 +39,21 @@ func TestPolicy(t *testing.T) {
 		t.Fatalf("Could not init: %v", err)
 	}
 
-	// Test config merging
+	// Test config parsing
 	t.Run("config", func(t *testing.T) {
-		files := map[string][]string{
-			"releng":     {"ci/**", ".github/workflows/release.yml"},
-			"sync":       {".github/workflows/sync-automation.yml"},
-			"dependabot": {".github/dependabot.yml"},
-			"config":     {"tyk.conf.example"},
-			"tests":      {".github/workflows/api-tests.yml", ".github/workflows/ui-tests.yml"},
-		}
 		assert.EqualValues(t, repo.Protected, []string{"master", "release-3-lts"})
-		for key := range files {
-			assert.ElementsMatch(t, repo.Files[key], files[key])
-		}
 	})
 	// Test template generation
 	t.Run("gentemplate", func(t *testing.T) {
-		//pwd := os.Getenv("PWD")
-		// Checkout a new branch so that changes can be made in to a PR.
 		tgtBranch := "pr-test"
 		err := repo.gitRepo.SwitchBranch(tgtBranch)
 		if err != nil {
 			t.Fatalf("Error checking out a new branch: %s : %v", tgtBranch, err)
 		}
-		f, err := repo.GenTemplate("sync")
+		err = repo.GenTemplate("sync")
 		if err != nil {
 			t.Fatalf("Error generating template:  sync-automation: %v", err)
 		}
-		t.Log("Files generated: ", f)
 		hash, err := repo.Commit("First commit from test", false)
 		if err != nil {
 			// Need GH token for
@@ -80,46 +67,17 @@ func TestPolicy(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error reading sync-automation file from testdata: %v", err)
 		}
-		// Sync bundle generates only one file as of now.
-		genFile, err := repo.gitRepo.ReadFile(f[0])
+		// FIXME: Sync bundle generates only one file as of now.
+		genFile, err := repo.gitRepo.ReadFile(".github/workflows/sync-automation.yml")
 		if err != nil {
 			t.Fatalf("Error reading generated sync-automation file from git: %v", err)
 		}
-		// Display the generated PR template, for debug purposes.
-		prFile, err := repo.gitRepo.ReadFile("pr.tmpl")
-		if err != nil {
-			t.Fatalf("PR file was not generated: %v", err)
-		}
-		t.Logf("Generated PR file:\n\n%s", prFile)
 
 		t.Logf("Comparing generated file with the test file..")
 		diff := cmp.Diff(testFile, genFile)
 		if diff != "" {
 			t.Logf("Diff before stripping timestamp: \n%s", diff)
 		}
-		// Hack to make the tests pass. Strip bytes containing the timestamp line.
-		// This should be changed if the test file changes, or the template changes.
-		tsStart := 32
-		tsEnd := 76
-		tfTs := testFile[tsStart:tsEnd]
-		gfTs := genFile[tsStart:tsEnd]
-		// t.Logf("\n\n\n%s", bytes.Replace(testFile, tfTs, []byte(""), 1))
-		// t.Logf("\n\n\n%s", bytes.Replace(genFile, gfTs, []byte(""), 1))
-		// Compare both files after removing timestamp bit from both - should be zero diff to pass.
-		diff = cmp.Diff(bytes.Replace(testFile, tfTs, []byte(""), 1), bytes.Replace(genFile, gfTs, []byte(""), 1))
-		if diff != "" {
-			t.Fatalf("Diff after stripping timestamp: \n%s", diff)
-		}
-		// Test dry-run first.
-		_, err = repo.CreatePR("sync", "New sync-automation", "master", true)
-		if err != nil {
-			t.Fatalf("PR Dry run failed: %v", err)
-		}
-		// Now test actual CreatePR
-		_, err = repo.CreatePR("sync", "New sync-automation", "master", false)
-		if err != nil {
-			t.Fatalf("PR actual run failed: %v", err)
-		}
-		// assert.True(t, bytes.Equal(testFile, genFile), "Comparing generated file, and test file(sync-automation)")
+		assert.True(t, bytes.Equal(testFile, genFile), "Comparing generated file, and test file(sync-automation)")
 	})
 }

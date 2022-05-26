@@ -2,17 +2,14 @@ package policy
 
 import (
 	"bytes"
-	"embed"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
+	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
-	"time"
 
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/util"
@@ -21,7 +18,6 @@ import (
 	"github.com/goccy/go-graphviz/cgraph"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/maps"
 )
 
 var ErrUnknownRepo = errors.New("repo not present in policies")
@@ -48,7 +44,6 @@ type Policies struct {
 	Goversion   string
 	Master      string              // The equivalent of the master branch
 	Repos       map[string]Policies // map of reponames to branchPolicies
-	Files       map[string][]string
 	Ports       map[string][]string
 	Branches    []branchVals
 }
@@ -60,16 +55,10 @@ type RepoPolicy struct {
 	Files      map[string][]string
 	Ports      map[string][]string
 	gitRepo    *git.GitRepo
-	branch     string
+	Branch     string
 	branchvals branchVals
 	prefix     string
 }
-
-type Template struct {
-	fields Fields
-}
-
-type Fields map[string]interface{}
 
 // GetRepo will give you a repoVars type for a repo which can be used to feed templates
 // Though Ports can be defined at the global level they are not practically used and if defined will be ignored.
@@ -78,20 +67,6 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	if !found {
 		return RepoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, p.Repos)
 	}
-	var combinedFiles = make(map[string][]string)
-	var temp = make(map[string][]string)
-	// Merge two maps, avoiding duplication and merging the values
-	for bundle, rFiles := range r.Files {
-		if pFiles, found := p.Files[bundle]; found {
-			temp[bundle] = append(pFiles, rFiles...)
-		} else {
-			temp[bundle] = rFiles
-		}
-	}
-	maps.Copy(combinedFiles, p.Files)
-	maps.Copy(combinedFiles, temp)
-	fmt.Println(combinedFiles, temp)
-
 	found = false
 	var b branchVals
 	for _, b = range r.Branches {
@@ -106,9 +81,8 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	return RepoPolicy{
 		Name:       repo,
 		Protected:  append(p.Protected, r.Protected...),
-		Files:      combinedFiles,
 		Ports:      r.Ports,
-		branch:     branch,
+		Branch:     branch,
 		prefix:     prefix,
 		branchvals: b,
 	}, nil
@@ -123,40 +97,6 @@ func (r RepoPolicy) DestBranches(srcBranch string) ([]string, error) {
 	return b, nil
 }
 
-func getSyncTemplate(r *RepoPolicy, bundle string) (*Template, error) {
-	t := time.Now().UTC()
-	dstBranches, err := r.DestBranches(r.branch)
-	if err != nil {
-		return nil, err
-	}
-	var files []string
-	excludedBundles := make(map[string]bool)
-	for _, b := range r.branchvals.SyncExcludeBundles {
-		excludedBundles[b] = true
-	}
-	// iterate through all bundles, fill in everything except for the
-	// bundles excluded by `syncexcludebundles`
-	for b, flist := range r.Files {
-		if excludedBundles[b] {
-			continue
-		}
-		files = append(files, flist...)
-	}
-	// Always keep a deterministic order of files - this also helps in tests.
-	sort.Strings(files)
-	return &Template{
-		fields: Fields{
-			"Timestamp":  t.Format(time.UnixDate),
-			"SrcBranch":  r.branch,
-			"DestBranch": dstBranches,
-			"Files":      files,
-			"RepoName":   r.Name,
-			"Remove":     false, // Just for now, needs to inherit values from repo
-			// policy once removal support is added.
-		},
-	}, nil
-}
-
 // IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
 func (r RepoPolicy) IsProtected(branch string) bool {
 	for _, pb := range r.Protected {
@@ -169,7 +109,7 @@ func (r RepoPolicy) IsProtected(branch string) bool {
 
 // InitGit initialises the corresponding git repo by fetching it
 func (r *RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string) error {
-	log.Logger = log.With().Str("repo", r.Name).Str("branch", r.branch).Logger()
+	log.Logger = log.With().Str("repo", r.Name).Str("branch", r.Branch).Logger()
 	fqdnRepo := fmt.Sprintf("%s/%s", r.prefix, r.Name)
 
 	var err error
@@ -190,94 +130,17 @@ func (r *RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string
 	return nil
 }
 
-//go:embed templates/*/*
-var templates embed.FS
-
 // GenTemplate will render a template bundle from a directory tree rooted at name.
-func (r *RepoPolicy) GenTemplate(bundle string) ([]string, error) {
+func (r *RepoPolicy) GenTemplate(bundle string) error {
 	log.Logger = log.With().Str("bundle", bundle).Interface("repo", r.Name).Logger()
 	log.Info().Msg("rendering")
-	var fileList []string
 
 	// Check if the given bundle is valid.
-	if _, ok := r.Files[bundle]; !ok {
-		return fileList, ErrUnKnownBundle
+	_, err := fs.Stat(templates, filepath.Join("templates", bundle))
+	if err != nil {
+		return ErrUnKnownBundle
 	}
-	// bundle to template function mapping.
-	bundleTmplMapping := map[string]func(*RepoPolicy, string) (*Template, error){
-		"sync": getSyncTemplate,
-	}
-	// Add PR template to the templates to be parsed.
-	// The PR template will be rendered, but will not be added to the work tree
-	// or to the returned file list - since it neednn't be checked in.
-	// Also, the assumption is that, it will always be named pr.tmpl, and will
-	// be at the root of the bundle directory tree.
-	files := append(r.Files[bundle], "pr.tmpl")
-	for _, f := range files {
-		op, err := r.gitRepo.CreateFile(f)
-		if err != nil {
-			return fileList, err
-		}
-		defer op.Close()
-		// fs.WalkDir(templates, ".", func(path string, d fs.DirEntry, err error) error {
-		// 	if err != nil {
-		// 		fmt.Println("err: ", err)
-		// 	}
-		// 	fmt.Println(path)
-		// 	return nil
-		// })
-		t := template.Must(template.
-			New(filepath.Base(f)).
-			Option("missingkey=error").
-			Funcs(template.FuncMap{
-				"join":     join,
-				"populate": populate,
-			}).
-			ParseFS(templates, filepath.Join("templates", bundle, f)))
-		if err != nil {
-			return fileList, err
-		}
-		log.Trace().Interface("vars", r).Msg("template vars")
-		// Call the function corresponding to the given bundle to get the
-		// correct Template interface.
-		fn := bundleTmplMapping[bundle]
-		tmpl, err := fn(r, bundle)
-		if err != nil {
-			return fileList, err
-		}
-		err = t.Execute(op, tmpl.fields)
-		if err != nil {
-			return fileList, err
-		}
-		log.Debug().Str("path", f).Msg("wrote")
-		// Do not add pr.tmpl to the file list and git tree, use it at later
-		// stage for PR creation by reading in from the default path. (<bundle-dir-tree>/pr.tmpl)
-		if f == "pr.tmpl" {
-			continue
-		}
-		hash, err := r.gitRepo.AddFile(f)
-		if err != nil {
-			return fileList, err
-		}
-		fileList = append(fileList, f)
-		log.Debug().Str("hash", hash.String()).Str("file", f).Msg("added file to worktree")
-	}
-	return fileList, nil
-}
-
-func populate(files []string) string {
-	var ret []string
-	for _, f := range files {
-		f = strings.TrimSuffix(f, "/**")
-		f = strings.TrimSuffix(f, "/*")
-		f = strings.TrimSuffix(f, "/")
-		ret = append(ret, f)
-	}
-	return strings.Join(ret, " ")
-}
-
-func join(files []string) string {
-	return strings.Join(files, " ")
+	return r.renderTemplates(bundle)
 }
 
 // Commit commits the current worktree and then displays the resulting change as a patch,
@@ -311,12 +174,12 @@ func (r RepoPolicy) Commit(msg string, confirm bool) (plumbing.Hash, error) {
 // If the branch is protected, it will be pushed to a branch prefixed with releng/
 func (r RepoPolicy) Push() (string, error) {
 	var remoteBranch string
-	if r.IsProtected(r.branch) {
-		remoteBranch = fmt.Sprintf("releng/%s", r.branch)
+	if r.IsProtected(r.Branch) {
+		remoteBranch = fmt.Sprintf("releng/%s", r.Branch)
 	} else {
-		remoteBranch = r.branch
+		remoteBranch = r.Branch
 	}
-	return remoteBranch, r.gitRepo.Push(r.branch, remoteBranch)
+	return remoteBranch, r.gitRepo.Push(r.Branch, remoteBranch)
 }
 
 // CreatePR creates a PR on the given github repo for the specified bundle, against the
@@ -325,7 +188,7 @@ func (r RepoPolicy) Push() (string, error) {
 // Returns an empty string and no error on a successful dry run.
 func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (string, error) {
 	prURL := ""
-	if r.branch == "" {
+	if r.Branch == "" {
 		return prURL, fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
 	}
 	// Check if bundle templates are rendered, and get the contents.
@@ -368,15 +231,9 @@ func (rp Policies) String() string {
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "Protected branches: %v\n", rp.Protected)
 	fmt.Fprintln(w, "Common Files:")
-	for _, file := range rp.Files {
-		fmt.Fprintf(w, " - %s\n", file)
-	}
 	for repo, pols := range rp.Repos {
 		fmt.Fprintf(w, "%s\n", repo)
 		fmt.Fprintln(w, " Extra files:")
-		for _, f := range pols.Files {
-			fmt.Fprintf(w, "   - %s\n", f)
-		}
 		fmt.Fprintln(w, " Ports")
 		for src, dest := range pols.Ports {
 			fmt.Fprintf(w, "   - %s → %s\n", src, dest)

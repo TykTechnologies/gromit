@@ -1,17 +1,6 @@
 policy:
   protected: [ master ]
   master: master
-  files:
-    releng:
-      - ci/**
-      - .github/workflows/release.yml
-    sync:
-      - .github/workflows/sync-automation.yml
-    dependabot:
-      - .github/dependabot.yml
-    tests:
-      - .github/workflows/api-tests.yml
-      - .github/workflows/ui-tests.yml
   repos:
     tyk:
       description: |
@@ -20,9 +9,6 @@ policy:
       dh_repo: tyk-gateway
       protected: [ release-3-lts ]
       exposeports: "8080"
-      files:
-        config:
-          - tyk.conf.example
       branches:
         - name: release-3-lts
           goversion: 1.12
@@ -40,9 +26,6 @@ policy:
         release-3-lts: [release-3.0.11]
     tyk-analytics:
       protected: [ release-3-lts ]
-      files:
-        config:
-          - tyk_config_sample.config
       ports:
         master: [ release-4 ]
         release-3: [release-3-lts]
