@@ -136,11 +136,12 @@ func (r *RepoPolicy) GenTemplate(bundle string) error {
 	log.Info().Msg("rendering")
 
 	// Check if the given bundle is valid.
-	_, err := fs.Stat(templates, filepath.Join("templates", bundle))
+	bundlePath := filepath.Join("templates", bundle)
+	_, err := fs.Stat(templates, bundlePath)
 	if err != nil {
 		return ErrUnKnownBundle
 	}
-	return r.renderTemplates(bundle)
+	return r.renderTemplates(bundlePath)
 }
 
 // Commit commits the current worktree and then displays the resulting change as a patch,

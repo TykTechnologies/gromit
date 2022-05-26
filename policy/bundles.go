@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io/fs"
 	"path/filepath"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 )
@@ -15,23 +16,22 @@ var templates embed.FS
 
 // renderTemplates walks a bundle tree and calls renderTemplate for each path
 func (r *RepoPolicy) renderTemplates(dir string) error {
-	fs.WalkDir(templates, dir, func(path string, d fs.DirEntry, err error) error {
+	return fs.WalkDir(templates, dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Println("err: ", err)
+			return fmt.Errorf("Walk error: (%s): %v ", path, err)
 		}
-		if d.IsDir() != true {
-			return r.renderTemplate(path)
+		if d.IsDir() {
+			return nil
 		}
-		return nil
+		return r.renderTemplate(path)
 	})
-	return nil
 }
 
 // renderTemplate will render one template into its corresponding path in the git tree
 // The first two elements of the supplied path will be stripped to remove the templates/<bundle> to derive the
 // path that should be written to in the git repo.
 func (r *RepoPolicy) renderTemplate(path string) error {
-	pathElems := filepath.SplitList(path)
+	pathElems := strings.Split(path, string(filepath.Separator))
 	opFile := filepath.Join(pathElems[2:]...)
 
 	op, err := r.gitRepo.CreateFile(opFile)
