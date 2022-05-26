@@ -16,6 +16,9 @@ func TestPolicy(t *testing.T) {
 
 	var rp Policies
 
+	// Need to have github token for PR test
+	ghToken := os.Getenv("GH_TOKEN")
+
 	config.LoadConfig("../testdata/policies/repos.yaml")
 	err := LoadRepoPolicies(&rp)
 	if err != nil {
@@ -27,11 +30,11 @@ func TestPolicy(t *testing.T) {
 	}
 	testDir := "/tmp/pt-" + repo.Name
 	// delete the temp dir as soon as the tests finish.
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("Deleting temporary files..")
 		os.RemoveAll(testDir)
-	}()
-	err = repo.InitGit(1, 0, testDir, "")
+	})
+	err = repo.InitGit(1, 0, testDir, ghToken)
 	if err != nil {
 		t.Fatalf("Could not init: %v", err)
 	}
@@ -53,6 +56,12 @@ func TestPolicy(t *testing.T) {
 	// Test template generation
 	t.Run("gentemplate", func(t *testing.T) {
 		//pwd := os.Getenv("PWD")
+		// Checkout a new branch so that changes can be made in to a PR.
+		tgtBranch := "pr-test"
+		err := repo.gitRepo.SwitchBranch(tgtBranch)
+		if err != nil {
+			t.Fatalf("Error checking out a new branch: %s : %v", tgtBranch, err)
+		}
 		f, err := repo.GenTemplate("sync")
 		if err != nil {
 			t.Fatalf("Error generating template:  sync-automation: %v", err)
@@ -60,6 +69,7 @@ func TestPolicy(t *testing.T) {
 		t.Log("Files generated: ", f)
 		hash, err := repo.Commit("First commit from test", false)
 		if err != nil {
+			// Need GH token for
 			t.Fatalf("Error commiting after gentemplate:  sync-automation: %v", err)
 		}
 		t.Logf("Commit made successfully: %s", hash)
@@ -75,6 +85,13 @@ func TestPolicy(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error reading generated sync-automation file from git: %v", err)
 		}
+		// Display the generated PR template, for debug purposes.
+		prFile, err := repo.gitRepo.ReadFile("pr.tmpl")
+		if err != nil {
+			t.Fatalf("PR file was not generated: %v", err)
+		}
+		t.Logf("Generated PR file:\n\n%s", prFile)
+
 		t.Logf("Comparing generated file with the test file..")
 		diff := cmp.Diff(testFile, genFile)
 		if diff != "" {
@@ -88,9 +105,20 @@ func TestPolicy(t *testing.T) {
 		gfTs := genFile[tsStart:tsEnd]
 		// t.Logf("\n\n\n%s", bytes.Replace(testFile, tfTs, []byte(""), 1))
 		// t.Logf("\n\n\n%s", bytes.Replace(genFile, gfTs, []byte(""), 1))
+		// Compare both files after removing timestamp bit from both - should be zero diff to pass.
 		diff = cmp.Diff(bytes.Replace(testFile, tfTs, []byte(""), 1), bytes.Replace(genFile, gfTs, []byte(""), 1))
 		if diff != "" {
 			t.Fatalf("Diff after stripping timestamp: \n%s", diff)
+		}
+		// Test dry-run first.
+		_, err = repo.CreatePR("sync", "New sync-automation", "master", true)
+		if err != nil {
+			t.Fatalf("PR Dry run failed: %v", err)
+		}
+		// Now test actual CreatePR
+		_, err = repo.CreatePR("sync", "New sync-automation", "master", false)
+		if err != nil {
+			t.Fatalf("PR actual run failed: %v", err)
 		}
 		// assert.True(t, bytes.Equal(testFile, genFile), "Comparing generated file, and test file(sync-automation)")
 	})

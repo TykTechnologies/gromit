@@ -2,7 +2,9 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -130,6 +132,25 @@ func (r *GitRepo) Head() (*object.Commit, error) {
 	return r.repo.CommitObject(origRef.Hash())
 }
 
+// GithubRepoComponents returns the owner and reponame of the
+// github fqdn, returns error if invalid fqdn or if it's not a
+// github URL.
+func (r *GitRepo) GithubRepoComponents() (string, string, error) {
+	u, err := url.Parse(r.Name)
+	if err != nil {
+		return "", "", fmt.Errorf("URL parse error:(%s): %v", r.Name, err)
+	}
+	if u.Hostname() != "github.com" {
+		return "", "", fmt.Errorf("not github prefix: %s", u.Hostname())
+	}
+	s := strings.Split(u.Path, "/")
+	repo := s[len(s)-1]
+	owner := s[1]
+	//owner := strings.TrimPrefix(u.Path, "/")
+	//repo := strings.TrimPrefix(u.Path, owner+"/")
+	return owner, repo, nil
+}
+
 // Commit commits the current worktree
 // Note that this commit will be lost if it is not pushed to a remote.
 func (r *GitRepo) Commit(msg string) (*object.Commit, error) {
@@ -144,6 +165,30 @@ func (r *GitRepo) Commit(msg string) (*object.Commit, error) {
 	}
 	log.Trace().Str("hash", newCommit.String()).Msg("new commit")
 	return newCommit, nil
+}
+
+// SwitchBranch will create a new branch and witch the
+// worktree to it.
+func (r *GitRepo) SwitchBranch(branch string) error {
+	head, err := r.repo.Head()
+	if err != nil {
+		return err
+	}
+	nbrefName := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch))
+	nbRef := plumbing.NewHashReference(nbrefName, head.Hash())
+	err = r.repo.Storer.SetReference(nbRef)
+	if err != nil {
+		return err
+	}
+	err = r.worktree.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.ReferenceName(nbrefName),
+		Force:  true,
+	})
+	if err != nil {
+		return err
+	}
+	r.branch = branch
+	return err
 }
 
 // (r *GitRepo) Checkout fetches the given ref and then checks it out to the worktree
@@ -317,6 +362,43 @@ func (r *GitRepo) EnableSigning(key *openpgp.Entity) error {
 // (r *GitRepo) PRs returns the URLs of any PRs created so far
 func (r *GitRepo) PRs() []string {
 	return r.prs
+}
+
+// CurrentBranch returns the current branch the worktree points to.
+func (r GitRepo) CurrentBranch() string {
+	return r.branch
+}
+
+// HasGithub returns the status of the github object, if it's initialized, it
+// returns true, otherwise false.
+func (r GitRepo) HasGithub() bool {
+	if r.gh != nil {
+		return true
+	}
+	return false
+}
+
+func (r *GitRepo) CreatePR(targetBranch string, title string, body string) (string, error) {
+	if !r.HasGithub() {
+		return "", errors.New("github object not initialized")
+	}
+	prOpts := &github.NewPullRequest{
+		Title: github.String(title),
+		Head:  github.String(r.CurrentBranch()),
+		Base:  github.String(targetBranch),
+		Body:  github.String(body),
+	}
+	owner, repo, err := r.GithubRepoComponents()
+	if err != nil {
+		return "", fmt.Errorf("Error getting github comps from fqdn: (%s) : %v", r.Name, err)
+	}
+	pr, _, err := r.gh.PullRequests.Create(context.Background(), owner, repo, prOpts)
+	if err != nil {
+		return "", fmt.Errorf("Error creating PR:(o: %s, n: %s,  %v", owner, repo, err)
+	}
+	url := pr.GetHTMLURL()
+	r.prs = append(r.prs, url)
+	return url, nil
 }
 
 // (r *GitRepo) SetDryRun(true) will make this repo not perform any destructive action

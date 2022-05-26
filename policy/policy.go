@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -149,6 +150,9 @@ func getSyncTemplate(r *RepoPolicy, bundle string) (*Template, error) {
 			"SrcBranch":  r.branch,
 			"DestBranch": dstBranches,
 			"Files":      files,
+			"RepoName":   r.Name,
+			"Remove":     false, // Just for now, needs to inherit values from repo
+			// policy once removal support is added.
 		},
 	}, nil
 }
@@ -203,7 +207,13 @@ func (r *RepoPolicy) GenTemplate(bundle string) ([]string, error) {
 	bundleTmplMapping := map[string]func(*RepoPolicy, string) (*Template, error){
 		"sync": getSyncTemplate,
 	}
-	for _, f := range r.Files[bundle] {
+	// Add PR template to the templates to be parsed.
+	// The PR template will be rendered, but will not be added to the work tree
+	// or to the returned file list - since it neednn't be checked in.
+	// Also, the assumption is that, it will always be named pr.tmpl, and will
+	// be at the root of the bundle directory tree.
+	files := append(r.Files[bundle], "pr.tmpl")
+	for _, f := range files {
 		op, err := r.gitRepo.CreateFile(f)
 		if err != nil {
 			return fileList, err
@@ -240,6 +250,11 @@ func (r *RepoPolicy) GenTemplate(bundle string) ([]string, error) {
 			return fileList, err
 		}
 		log.Debug().Str("path", f).Msg("wrote")
+		// Do not add pr.tmpl to the file list and git tree, use it at later
+		// stage for PR creation by reading in from the default path. (<bundle-dir-tree>/pr.tmpl)
+		if f == "pr.tmpl" {
+			continue
+		}
 		hash, err := r.gitRepo.AddFile(f)
 		if err != nil {
 			return fileList, err
@@ -304,35 +319,46 @@ func (r RepoPolicy) Push() (string, error) {
 	return remoteBranch, r.gitRepo.Push(r.branch, remoteBranch)
 }
 
-func (r *RepoPolicy) CreatePR(bundle, title, remoteBranch string, dryRun bool) error {
+// CreatePR creates a PR on the given github repo for the specified bundle, against the
+// gien baseBranch and title. If dryRun is enabled, it prints out the parameters with
+// which the PR will be generated to stdout. It returns the URL of the PR on success.
+// Returns an empty string and no error on a successful dry run.
+func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (string, error) {
+	prURL := ""
 	if r.branch == "" {
-		return fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
+		return prURL, fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
 	}
-	t := template.Must(template.
-		New(bundle).
-		Option("missingkey=error").
-		ParseFS(templates, fmt.Sprintf("pr-templates/%s/pr.tmpl", bundle)))
-	var b bytes.Buffer
-	err := t.Execute(&b, r)
+	// Check if bundle templates are rendered, and get the contents.
+	body, err := r.gitRepo.ReadFile("pr.tmpl")
 	if err != nil {
-		return fmt.Errorf("rendering template: %w", err)
+		return prURL, fmt.Errorf("Can't read pr.tmpl/not rendered for the bundle: %s: %v", bundle, err)
 	}
-	// prOpts := &github.NewPullRequest{
-	// 	Title: github.String(title),
-	// 	Head:  github.String(remoteBranch),
-	// 	Base:  github.String(r.branch),
-	// 	Body:  github.String(b.String()),
-	// }
-	// if dryRun {
-	// 	log.Warn().Msg("only dry-run, not really creating PR")
-	// } else {
-	// 	pr, _, err := r.gitRepo.gh.PullRequests.Create(context.Background(), ghOrg, r.Name, prOpts)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	r.prs = append(r.prs, pr.GetHTMLURL())
-	// }
-	return nil
+
+	owner, err := r.GetOwner()
+	if err != nil {
+		return prURL, err
+	}
+	if dryRun {
+		log.Warn().Msg("only dry-run, not really creating PR")
+		fmt.Println("Only dry-run, not creating actual PR")
+		fmt.Printf("\nPR will be created in \n\tOrg: %s\n\tWith branch: %s\n\tAgainst base Branch: %s\n\tWith title: %s\n", owner, r.gitRepo.CurrentBranch(), baseBranch, title)
+		fmt.Printf("\tWith PR Body: \n%s\n", string(body))
+	} else {
+		prURL, err = r.gitRepo.CreatePR(baseBranch, title, string(body))
+	}
+	return prURL, err
+}
+
+func (r RepoPolicy) GetOwner() (string, error) {
+	u, err := url.Parse(r.prefix)
+	if err != nil {
+		return "", err
+	}
+	if u.Hostname() != "github.com" {
+		return "", fmt.Errorf("not github prefix: %s", u.Hostname())
+	}
+	owner := strings.TrimPrefix(u.Path, "/")
+	return owner, nil
 }
 
 // String representation
