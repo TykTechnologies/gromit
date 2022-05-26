@@ -34,12 +34,11 @@ func (r *RepoPolicy) renderTemplate(bundleDir, path string) error {
 	if err != nil {
 		return err
 	}
-	_, tName := filepath.Split(path)
 
 	op, err := r.gitRepo.CreateFile(opFile)
 	defer op.Close()
 	t := template.Must(template.
-		New(tName).
+		New(filepath.Base(path)).
 		Option("missingkey=error").
 		ParseFS(templates, path))
 	if err != nil {
