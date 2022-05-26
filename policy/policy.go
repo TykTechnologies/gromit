@@ -5,11 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/util"
@@ -58,9 +57,10 @@ type RepoPolicy struct {
 	Branch     string
 	branchvals branchVals
 	prefix     string
+	Timestamp  time.Time //FIXME: this needs to be populated in the test case with a known timestamp
 }
 
-// GetRepo will give you a repoVars type for a repo which can be used to feed templates
+// GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates
 // Though Ports can be defined at the global level they are not practically used and if defined will be ignored.
 func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	r, found := p.Repos[repo]
@@ -128,20 +128,6 @@ func (r *RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string
 		}
 	}
 	return nil
-}
-
-// GenTemplate will render a template bundle from a directory tree rooted at name.
-func (r *RepoPolicy) GenTemplate(bundle string) error {
-	log.Logger = log.With().Str("bundle", bundle).Interface("repo", r.Name).Logger()
-	log.Info().Msg("rendering")
-
-	// Check if the given bundle is valid.
-	bundlePath := filepath.Join("templates", bundle)
-	_, err := fs.Stat(templates, bundlePath)
-	if err != nil {
-		return ErrUnKnownBundle
-	}
-	return r.renderTemplates(bundlePath)
 }
 
 // Commit commits the current worktree and then displays the resulting change as a patch,

@@ -38,7 +38,7 @@ jobs:
           ref: ${{"{{"}} matrix.branch {{"}}"}}
           token: ${{"{{"}} secrets.ORG_GH_TOKEN {{"}}"}}
 
-      - name: sync ${{"{{"}} matrix.branch {{"}}"}} from {{ .SrcBranch }}
+      - name: sync ${{"{{"}} matrix.branch {{"}}"}} from {{ .Branch }}
         run: |
           git fetch origin {{ .Branch }}
           git config --local user.email "policy@gromit"

@@ -13,9 +13,23 @@ import (
 //go:embed templates/*/*
 var templates embed.FS
 
-// renderTemplates walks a bundle tree and calls renderTemplate for each path
-func (r *RepoPolicy) renderTemplates(bundleDir string) error {
-	return fs.WalkDir(templates, bundleDir, func(path string, d fs.DirEntry, err error) error {
+// GenTemplate will render a template bundle from a directory tree rooted at `templates/<bundle>`.
+func (r *RepoPolicy) GenTemplate(bundle string) error {
+	log.Logger = log.With().Str("bundle", bundle).Interface("repo", r.Name).Logger()
+	log.Info().Msg("rendering")
+
+	// Check if the given bundle is valid.
+	bundlePath := filepath.Join("templates", bundle)
+	_, err := fs.Stat(templates, bundlePath)
+	if err != nil {
+		return ErrUnKnownBundle
+	}
+	return r.renderTemplates(bundlePath)
+}
+
+// renderTemplates walks a bundle tree and calls renderTemplate for each file
+func (r *RepoPolicy) renderTemplates(dir string) error {
+	return fs.WalkDir(templates, dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("Walk error: (%s): %v ", path, err)
 		}
@@ -35,15 +49,13 @@ func (r *RepoPolicy) renderTemplate(bundleDir, path string) error {
 		return err
 	}
 
+	log.Trace().Str("templatePath", path).Str("outputPath", opFile).Msg("rendering")
 	op, err := r.gitRepo.CreateFile(opFile)
 	defer op.Close()
 	t := template.Must(template.
 		New(filepath.Base(path)).
 		Option("missingkey=error").
 		ParseFS(templates, path))
-	if err != nil {
-		return err
-	}
 	log.Trace().Interface("vars", r).Msg("template vars")
 	err = t.Execute(op, r)
 	if err != nil {
