@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/TykTechnologies/gromit/config"
 	"github.com/google/go-cmp/cmp"
@@ -12,15 +13,20 @@ import (
 
 // TestPolicyConfig can test a repo with back/forward ports
 func TestPolicy(t *testing.T) {
-	//timeStamp := "2021-06-02 06:47:55.826883255 +0000 UTC"
 
 	var rp Policies
+
+	//timeStamp := "2021-06-02 06:47:55.826883255 +0000 UTC"
+	timeStamp, err := time.Parse(time.UnixDate, "Tue May 24 08:30:46 UTC 2022")
+	if err != nil {
+		t.Fatalf("Can't parse the test timestamp: %v", err)
+	}
 
 	// Need to have github token for PR test
 	ghToken := os.Getenv("GH_TOKEN")
 
 	config.LoadConfig("../testdata/policies/repos.yaml")
-	err := LoadRepoPolicies(&rp)
+	err = LoadRepoPolicies(&rp)
 	if err != nil {
 		t.Fatalf("Could not load policy: %v", err)
 	}
@@ -45,10 +51,15 @@ func TestPolicy(t *testing.T) {
 	})
 	// Test template generation
 	t.Run("gentemplate", func(t *testing.T) {
-		tgtBranch := "pr-test"
-		err := repo.gitRepo.SwitchBranch(tgtBranch)
+		// to set current timestamp - uncomment below line
+		// timeStamp = time.Time{}
+		// set test timestamp
+		repo.SetTimestamp(timeStamp)
+		// repo.SetTimestamp(timeStamp)
+		newBranch := "pr-test"
+		err := repo.gitRepo.SwitchBranch(newBranch)
 		if err != nil {
-			t.Fatalf("Error checking out a new branch: %s : %v", tgtBranch, err)
+			t.Fatalf("Error checking out a new branch: %s : %v", newBranch, err)
 		}
 		err = repo.GenTemplate("sync")
 		if err != nil {

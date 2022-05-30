@@ -57,7 +57,7 @@ type RepoPolicy struct {
 	Branch     string
 	branchvals branchVals
 	prefix     string
-	Timestamp  time.Time //FIXME: this needs to be populated in the test case with a known timestamp
+	Timestamp  string
 }
 
 // GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates
@@ -88,6 +88,24 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	}, nil
 }
 
+// SetTimestamp Sets the given time as the repopolicy timestamp. If called with zero time
+// sets the current time in UTC
+func (rp *RepoPolicy) SetTimestamp(ts time.Time) {
+	if ts.IsZero() {
+		ts = time.Now().UTC()
+	}
+	rp.Timestamp = ts.Format(time.UnixDate)
+
+}
+
+// GetTimeStamp returns the timestamp currently set for the given repopolicy.
+func (rp RepoPolicy) GetTimeStamp() (time.Time, error) {
+	var ts time.Time
+	var err error
+	ts, err = time.Parse(time.UnixDate, rp.Timestamp)
+	return ts, err
+}
+
 // Returns the destination branches for a given source branch
 func (r RepoPolicy) DestBranches(srcBranch string) ([]string, error) {
 	b, found := r.Ports[srcBranch]
@@ -98,8 +116,8 @@ func (r RepoPolicy) DestBranches(srcBranch string) ([]string, error) {
 }
 
 // IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
-func (r RepoPolicy) IsProtected(branch string) bool {
-	for _, pb := range r.Protected {
+func (rp RepoPolicy) IsProtected(branch string) bool {
+	for _, pb := range rp.Protected {
 		if pb == branch {
 			return true
 		}
