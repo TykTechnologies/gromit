@@ -45,6 +45,7 @@ func TestPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not init: %v", err)
 	}
+	// Create ans switch to a new branch for the PR.
 	newBranch := "pr-test"
 	err = repo.gitRepo.SwitchBranch(newBranch)
 	if err != nil {
@@ -106,5 +107,10 @@ func TestPolicy(t *testing.T) {
 		}
 		t.Logf("PR URL: %s", url)
 
+		// Delete the remote branch(which also closes the PR)
+		err = repo.gitRepo.DeleteRemoteBranch(newBranch)
+		if err != nil {
+			t.Fatalf("Unable to delete test banch on remote: %v", err)
+		}
 	})
 }

@@ -55,6 +55,7 @@ type RepoPolicy struct {
 	Ports      map[string][]string
 	gitRepo    *git.GitRepo
 	Branch     string
+	prBranch   string
 	branchvals branchVals
 	prefix     string
 	Timestamp  string
@@ -86,6 +87,18 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 		prefix:     prefix,
 		branchvals: b,
 	}, nil
+}
+
+// SwitchBranch calls the SwitchBranch method of gitRepo and creates a new
+// branch and switches the underlying git repo to the given branch - also
+// sets prBranch to the newly checked out branch.
+func (rp *RepoPolicy) SwitchBranch(branch string) error {
+	err := rp.gitRepo.SwitchBranch(branch)
+	if err != nil {
+		return err
+	}
+	rp.prBranch = branch
+	return nil
 }
 
 // SetTimestamp Sets the given time as the repopolicy timestamp. If called with zero time
@@ -203,6 +216,10 @@ func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (st
 	if r.Branch == "" {
 		return prURL, fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
 	}
+	if r.Timestamp == "" {
+		r.SetTimestamp(time.Time{})
+	}
+
 	// Check if bundle templates are rendered, and get the contents.
 	body, err := r.renderPR(bundle)
 	if err != nil {
