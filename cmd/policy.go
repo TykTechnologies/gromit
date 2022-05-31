@@ -32,6 +32,7 @@ var repos []string
 var branch string
 var jsonOutput, dryRun bool
 var ghToken string
+var prBranch string
 
 // policyCmd represents the policy command
 var policyCmd = &cobra.Command{
@@ -71,6 +72,8 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 		bundle := args[0]
 		commitMsg := strings.Join(args[1:], "\n")
 		signingKeyid := viper.GetUint64("signingkey")
+		cmd.Printf("Generating\n\tbundle: %s\n\tusing branch: %s\n\twith the message: %s\n",
+			bundle, prBranch, commitMsg)
 		for _, repoName := range repos {
 			repo, err := repoPolicies.GetRepo(repoName, config.RepoURLPrefix, branch)
 			if err != nil {
@@ -80,12 +83,29 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			if err != nil {
 				log.Fatal().Err(err).Msg("initialising git")
 			}
-			err = repo.GenTemplate(bundle, commitMsg)
+
+			err = repo.SwitchBranch(prBranch)
+			if err != nil {
+				log.Fatal().Err(err).Msg("creating and switching to new branch for pr")
+			}
+			log.Info().Str("prbranch", prBranch).Msg("Switched to branch")
+			err = repo.GenTemplate(bundle)
 			if err != nil {
 				log.Fatal().Err(err).Msg("template generation")
 			}
-			remoteBranch, err := repo.Push()
-			log.Info().Str("origin", remoteBranch).Msg("pushed")
+			// Commit after we generate the files from templates.
+			confirmBeforeCommit := false
+			hash, err := repo.Commit(commitMsg, confirmBeforeCommit)
+			if err != nil {
+				log.Fatal().Err(err).Msg("Unable to commit the changes.")
+			}
+			log.Info().Str("hash", hash.String()).Msg("Commited the changes")
+
+			prURL, err := repo.CreatePR(bundle, commitMsg, branch, dryRun)
+			if err != nil {
+				log.Fatal().Err(err).Msg("unable to create PR")
+			}
+			log.Info().Str("prurl", prURL).Msg("created PR")
 		}
 	},
 }
@@ -108,18 +128,24 @@ var docSubCmd = &cobra.Command{
 }
 
 func init() {
+
+	genSubCmd.Flags().StringVar(&prBranch, "prbranch", "", "The branch that will be used for creating the PR - this is the branch that gets pushed to remote")
+	genSubCmd.MarkFlagRequired("prbranch")
 	policyCmd.AddCommand(genSubCmd)
 
 	docSubCmd.Flags().String("pattern", "^(release-[[:digit:].]+|master)", "Regexp to match release engineering branches")
 	policyCmd.AddCommand(docSubCmd)
 
 	policyCmd.PersistentFlags().StringSliceVar(&repos, "repos", []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"}, "Repos to operate upon, comma separated values accepted.")
-	policyCmd.PersistentFlags().StringVar(&branch, "branch", "", "Restrict operations to this branch")
+	policyCmd.PersistentFlags().StringVar(&branch, "branch", "", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
 	policyCmd.PersistentFlags().Bool("sign", false, "Sign commits, requires -k/--key. gpgconf and an active gpg-agent are required if the key is protected by a passphrase.")
 	policyCmd.PersistentFlags().StringVarP(&config.RepoURLPrefix, "prefix", "u", "https://github.com/TykTechnologies", "Prefix to derive the fqdn repo")
 	policyCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output in JSON")
 	policyCmd.PersistentFlags().BoolVarP(&dryRun, "dry", "d", false, "Will not make any changes")
 	policyCmd.PersistentFlags().StringVar(&ghToken, "token", os.Getenv("GITHUB_TOKEN"), "Github token for private repositories")
 	policyCmd.PersistentFlags().StringVar(&dir, "dir", "", "Use dir for git operations, instead of an in-memory fs")
+	policyCmd.MarkPersistentFlagRequired("repos")
+	policyCmd.MarkPersistentFlagRequired("branch")
+	policyCmd.MarkPersistentFlagRequired("prefix")
 	rootCmd.AddCommand(policyCmd)
 }

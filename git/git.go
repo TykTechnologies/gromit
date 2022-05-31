@@ -167,7 +167,7 @@ func (r *GitRepo) Commit(msg string) (*object.Commit, error) {
 	return newCommit, nil
 }
 
-// SwitchBranch will create a new branch and witch the
+// SwitchBranch will create a new branch and switch the
 // worktree to it.
 func (r *GitRepo) SwitchBranch(branch string) error {
 	head, err := r.repo.Head()

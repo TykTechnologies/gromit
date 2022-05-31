@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"path/filepath"
+	"time"
 
 	"github.com/rs/zerolog/log"
 )
@@ -19,6 +20,10 @@ var templates embed.FS
 func (r *RepoPolicy) GenTemplate(bundle string) error {
 	log.Logger = log.With().Str("bundle", bundle).Interface("repo", r.Name).Logger()
 	log.Info().Msg("rendering")
+	// Set current timeatamp if not set already
+	if r.Timestamp == "" {
+		r.SetTimestamp(time.Time{})
+	}
 
 	// Check if the given bundle is valid.
 	bundlePath := filepath.Join("templates", bundle)

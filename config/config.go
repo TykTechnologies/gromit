@@ -60,13 +60,14 @@ func LoadConfig(cfgFile string) {
 	TableName = viper.GetString("tablename")
 
 	// Setup logging as per config file, overriding the command line options
-	logLevel := viper.GetString("loglevel")
-	ll, err := zerolog.ParseLevel(logLevel)
-	if err != nil {
-		log.Warn().Str("level", logLevel).Msg("Could not parse, defaulting to debug.")
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(ll)
+	if logLevel := viper.GetString("loglevel"); logLevel != "" {
+		ll, err := zerolog.ParseLevel(logLevel)
+		if err != nil {
+			log.Warn().Str("level", logLevel).Msg("Could not parse, defaulting to debug.")
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		} else {
+			zerolog.SetGlobalLevel(ll)
+		}
 	}
 	if viper.GetBool("textlogs") {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})

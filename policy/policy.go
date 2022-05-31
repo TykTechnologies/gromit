@@ -225,6 +225,7 @@ func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (st
 	if err != nil {
 		return prURL, fmt.Errorf("Error rendering PR for the bundle: %s: %v", bundle, err)
 	}
+	log.Info().Msg("successfully rendered pr template")
 
 	owner, err := r.GetOwner()
 	if err != nil {
@@ -241,9 +242,14 @@ func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (st
 		if err != nil {
 			return "", err
 		}
+		log.Info().Str("baseBranch", baseBranch).
+			Str("title", title).Msg("calling CreatePR on github")
 		prURL, err = r.gitRepo.CreatePR(baseBranch, title, string(body))
+		if err != nil {
+			return "", err
+		}
 	}
-	return prURL, err
+	return prURL, nil
 }
 
 func (r RepoPolicy) GetOwner() (string, error) {
