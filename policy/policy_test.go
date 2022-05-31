@@ -17,7 +17,8 @@ func TestPolicy(t *testing.T) {
 	var rp Policies
 
 	//timeStamp := "2021-06-02 06:47:55.826883255 +0000 UTC"
-	timeStamp, err := time.Parse(time.UnixDate, "Tue May 24 08:30:46 UTC 2022")
+	testTimeStr := "Tue May 24 08:30:46 UTC 2022"
+	timeStamp, err := time.Parse(time.UnixDate, testTimeStr)
 	if err != nil {
 		t.Fatalf("Can't parse the test timestamp: %v", err)
 	}
@@ -44,6 +45,11 @@ func TestPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not init: %v", err)
 	}
+	newBranch := "pr-test"
+	err = repo.gitRepo.SwitchBranch(newBranch)
+	if err != nil {
+		t.Fatalf("Error checking out a new branch: %s : %v", newBranch, err)
+	}
 
 	// Test config parsing
 	t.Run("config", func(t *testing.T) {
@@ -56,11 +62,6 @@ func TestPolicy(t *testing.T) {
 		// set test timestamp
 		repo.SetTimestamp(timeStamp)
 		// repo.SetTimestamp(timeStamp)
-		newBranch := "pr-test"
-		err := repo.gitRepo.SwitchBranch(newBranch)
-		if err != nil {
-			t.Fatalf("Error checking out a new branch: %s : %v", newBranch, err)
-		}
 		err = repo.GenTemplate("sync")
 		if err != nil {
 			t.Fatalf("Error generating template:  sync-automation: %v", err)
@@ -71,9 +72,6 @@ func TestPolicy(t *testing.T) {
 			t.Fatalf("Error commiting after gentemplate:  sync-automation: %v", err)
 		}
 		t.Logf("Commit made successfully: %s", hash)
-		// Check if the sync-automation file is parsed correctly.
-		// NOTE: in the test file, the files tracked by sync-automation should always
-		// be given in alphabetical order. - to avoid order related failure of test.
 		testFile, err := os.ReadFile("../testdata/sync-automation/sync-automation.yml")
 		if err != nil {
 			t.Fatalf("Error reading sync-automation file from testdata: %v", err)
@@ -90,5 +88,23 @@ func TestPolicy(t *testing.T) {
 			t.Logf("Diff before stripping timestamp: \n%s", diff)
 		}
 		assert.True(t, bytes.Equal(testFile, genFile), "Comparing generated file, and test file(sync-automation)")
+	})
+	// Test push to GH and creating PR.
+	t.Run("createpr", func(t *testing.T) {
+		bundle := "sync"
+		title := "Testing sync-automation"
+		base := "master"
+		// Test dry run first.
+		_, err := repo.CreatePR(bundle, title, base, true)
+		if err != nil {
+			t.Fatalf("Error running CreatePR in dryrun mode: (bundle-%s): %v", bundle, err)
+		}
+		// Push the current changes and create a PR.
+		url, err := repo.CreatePR(bundle, title, base, false)
+		if err != nil {
+			t.Fatalf("PR actual run failed: %v", err)
+		}
+		t.Logf("PR URL: %s", url)
+
 	})
 }

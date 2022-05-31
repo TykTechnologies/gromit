@@ -107,12 +107,12 @@ func (rp RepoPolicy) GetTimeStamp() (time.Time, error) {
 }
 
 // Returns the destination branches for a given source branch
-func (r RepoPolicy) DestBranches(srcBranch string) ([]string, error) {
+func (r RepoPolicy) DestBranches(srcBranch string) []string {
 	b, found := r.Ports[srcBranch]
 	if !found {
-		return []string{}, fmt.Errorf("branch %s unknown among %v", srcBranch, r.Ports)
+		return []string{}
 	}
-	return b, nil
+	return b
 }
 
 // IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
@@ -177,14 +177,21 @@ func (r RepoPolicy) Commit(msg string, confirm bool) (plumbing.Hash, error) {
 
 // Push will push the current state of the repo to github
 // If the branch is protected, it will be pushed to a branch prefixed with releng/
-func (r RepoPolicy) Push() (string, error) {
-	var remoteBranch string
-	if r.IsProtected(r.Branch) {
-		remoteBranch = fmt.Sprintf("releng/%s", r.Branch)
-	} else {
-		remoteBranch = r.Branch
+// Push should ideally be called only from CreatePR for pushing the changes
+// before creating a PR from the current branch against a base branch.
+func (r RepoPolicy) Push() error {
+	// Never push directly to the base branch. r.Branch has the
+	// base branch for which the policy is applicable for(eg: master, release-4
+	// etc.) Check if current branch is not base branch and it's not protected
+	// before pushing.
+	remoteBranch := r.gitRepo.CurrentBranch()
+	if remoteBranch == r.Branch {
+		return fmt.Errorf("Pushing to the same branch as base branch not supported, remote: %s, base: %s", remoteBranch, r.Branch)
 	}
-	return remoteBranch, r.gitRepo.Push(r.Branch, remoteBranch)
+	if r.IsProtected(remoteBranch) {
+		return fmt.Errorf("given remote: %s is a protected branch", remoteBranch)
+	}
+	return r.gitRepo.Push(remoteBranch, remoteBranch)
 }
 
 // CreatePR creates a PR on the given github repo for the specified bundle, against the
@@ -197,9 +204,9 @@ func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (st
 		return prURL, fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
 	}
 	// Check if bundle templates are rendered, and get the contents.
-	body, err := r.gitRepo.ReadFile("pr.tmpl")
+	body, err := r.renderPR(bundle)
 	if err != nil {
-		return prURL, fmt.Errorf("Can't read pr.tmpl/not rendered for the bundle: %s: %v", bundle, err)
+		return prURL, fmt.Errorf("Error rendering PR for the bundle: %s: %v", bundle, err)
 	}
 
 	owner, err := r.GetOwner()
@@ -212,6 +219,11 @@ func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (st
 		fmt.Printf("\nPR will be created in \n\tOrg: %s\n\tWith branch: %s\n\tAgainst base Branch: %s\n\tWith title: %s\n", owner, r.gitRepo.CurrentBranch(), baseBranch, title)
 		fmt.Printf("\tWith PR Body: \n%s\n", string(body))
 	} else {
+		// Push and then create PR.
+		err = r.Push()
+		if err != nil {
+			return "", err
+		}
 		prURL, err = r.gitRepo.CreatePR(baseBranch, title, string(body))
 	}
 	return prURL, err

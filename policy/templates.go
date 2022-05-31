@@ -1,10 +1,12 @@
 package policy
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
 	"html/template"
 	"io/fs"
+	"io/ioutil"
 	"path/filepath"
 
 	"github.com/rs/zerolog/log"
@@ -67,4 +69,24 @@ func (r *RepoPolicy) renderTemplate(bundleDir, path string) error {
 		return err
 	}
 	return nil
+}
+
+func (r *RepoPolicy) renderPR(bundle string) ([]byte, error) {
+	prFile := bundle + ".tmpl"
+	path := filepath.Join("templates", "prs", prFile)
+	log.Trace().Str("PRFilePath", path).Msg("rendering PRs")
+
+	t := template.Must(template.
+		New(prFile).
+		Option("missingkey=error").
+		ParseFS(templates, path))
+
+	rendered := new(bytes.Buffer)
+	err := t.Execute(rendered, r)
+	if err != nil {
+		return []byte{}, err
+	}
+	log.Debug().Str("tmplpath:", path).Msg("successfully wrote template")
+	body, err := ioutil.ReadAll(rendered)
+	return body, err
 }

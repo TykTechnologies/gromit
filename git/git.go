@@ -378,23 +378,24 @@ func (r GitRepo) HasGithub() bool {
 	return false
 }
 
-func (r *GitRepo) CreatePR(targetBranch string, title string, body string) (string, error) {
+func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (string, error) {
 	if !r.HasGithub() {
 		return "", errors.New("github object not initialized")
-	}
-	prOpts := &github.NewPullRequest{
-		Title: github.String(title),
-		Head:  github.String(r.CurrentBranch()),
-		Base:  github.String(targetBranch),
-		Body:  github.String(body),
 	}
 	owner, repo, err := r.GithubRepoComponents()
 	if err != nil {
 		return "", fmt.Errorf("Error getting github comps from fqdn: (%s) : %v", r.Name, err)
 	}
+	head := owner + ":" + r.CurrentBranch()
+	prOpts := &github.NewPullRequest{
+		Title: github.String(title),
+		Head:  github.String(head),
+		Base:  github.String(baseBranch),
+		Body:  github.String(body),
+	}
 	pr, _, err := r.gh.PullRequests.Create(context.Background(), owner, repo, prOpts)
 	if err != nil {
-		return "", fmt.Errorf("Error creating PR:(o: %s, n: %s,  %v", owner, repo, err)
+		return "", fmt.Errorf("Error creating PR:(owner: %s, repo: %s, head: %s,  %v", owner, repo, head, err)
 	}
 	url := pr.GetHTMLURL()
 	r.prs = append(r.prs, url)
