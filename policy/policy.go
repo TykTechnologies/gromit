@@ -2,13 +2,13 @@ package policy
 
 import (
 	"bytes"
-	"embed"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
+	"net/url"
 	"os"
-	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/util"
@@ -17,75 +17,120 @@ import (
 	"github.com/goccy/go-graphviz/cgraph"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/maps"
 )
 
 var ErrUnknownRepo = errors.New("repo not present in policies")
 var ErrUnknownBranch = errors.New("branch not present in branch policies of repo")
 var ErrUnKnownBundle = errors.New("bundle not present in loaded policy")
 
-// Policies models the config file structure. The config file may contain one or more repos.
-type Policies struct {
-	Protected []string
-	Goversion string
-	Repos     map[string]Policies // map of reponames to branchPolicies
-	Files     map[string][]string
-	Ports     map[string][]string
+// branchVals contains the parameters that are specific to a particular branch in a repo
+type branchVals struct {
+	Name               string // Branch name
+	GoVersion          string
+	Cgo                bool
+	ConfigFile         string
+	UpgradeFromVer     string // Versions to test package upgrades from
+	SyncExcludeBundles []string
 }
 
-// GetRepo will give you a repoVars type for a repo which can be used to feed templates
+// Policies models the config file structure. The config file may contain one or more repos.
+type Policies struct {
+	Description string
+	PCRepo      string
+	DHRepo      string
+	ExposePorts string
+	Protected   []string
+	Goversion   string
+	Master      string              // The equivalent of the master branch
+	Repos       map[string]Policies // map of reponames to branchPolicies
+	Ports       map[string][]string
+	Branches    []branchVals
+}
+
+// RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
+type RepoPolicy struct {
+	Name       string
+	Protected  []string
+	Files      map[string][]string
+	Ports      map[string][]string
+	gitRepo    *git.GitRepo
+	Branch     string
+	prBranch   string
+	branchvals branchVals
+	prefix     string
+	Timestamp  string
+}
+
+// GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates
 // Though Ports can be defined at the global level they are not practically used and if defined will be ignored.
 func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	r, found := p.Repos[repo]
 	if !found {
 		return RepoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, p.Repos)
 	}
-	var combinedFiles = make(map[string][]string)
-	var temp = make(map[string][]string)
-	// Merge two maps, avoiding duplication and merging the values
-	for bundle, rFiles := range r.Files {
-		if pFiles, found := p.Files[bundle]; found {
-			temp[bundle] = append(pFiles, rFiles...)
-		} else {
-			temp[bundle] = rFiles
+	found = false
+	var b branchVals
+	for _, b = range r.Branches {
+		if b.Name == branch {
+			found = true
+			break
 		}
 	}
-	maps.Copy(combinedFiles, p.Files)
-	maps.Copy(combinedFiles, temp)
-	fmt.Println(combinedFiles, temp)
+	if !found {
+		return RepoPolicy{}, fmt.Errorf("branch %s unknown for repo %s", branch, repo)
+	}
 	return RepoPolicy{
-		Name:      repo,
-		Protected: append(p.Protected, r.Protected...),
-		Files:     combinedFiles,
-		Ports:     r.Ports,
-		branch:    branch,
-		prefix:    prefix,
+		Name:       repo,
+		Protected:  append(p.Protected, r.Protected...),
+		Ports:      r.Ports,
+		Branch:     branch,
+		prefix:     prefix,
+		branchvals: b,
 	}, nil
 }
 
-// RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
-type RepoPolicy struct {
-	Name      string
-	Protected []string
-	Files     map[string][]string
-	Ports     map[string][]string
-	gitRepo   *git.GitRepo
-	branch    string
-	prefix    string
+// SwitchBranch calls the SwitchBranch method of gitRepo and creates a new
+// branch and switches the underlying git repo to the given branch - also
+// sets prBranch to the newly checked out branch.
+func (rp *RepoPolicy) SwitchBranch(branch string) error {
+	err := rp.gitRepo.SwitchBranch(branch)
+	if err != nil {
+		return err
+	}
+	rp.prBranch = branch
+	return nil
+}
+
+// SetTimestamp Sets the given time as the repopolicy timestamp. If called with zero time
+// sets the current time in UTC
+func (rp *RepoPolicy) SetTimestamp(ts time.Time) {
+	if ts.IsZero() {
+		ts = time.Now().UTC()
+	}
+	rp.Timestamp = ts.Format(time.UnixDate)
+
+}
+
+// GetTimeStamp returns the timestamp currently set for the given repopolicy.
+func (rp RepoPolicy) GetTimeStamp() (time.Time, error) {
+	var ts time.Time
+	var err error
+	ts, err = time.Parse(time.UnixDate, rp.Timestamp)
+	return ts, err
 }
 
 // Returns the destination branches for a given source branch
-func (r RepoPolicy) DestBranches(srcBranch string) ([]string, error) {
+func (r RepoPolicy) DestBranches(srcBranch string) []string {
 	b, found := r.Ports[srcBranch]
 	if !found {
-		return []string{}, fmt.Errorf("branch %s unknown among %v", srcBranch, r.Ports)
+		return []string{}
 	}
-	return b, nil
+	return b
 }
 
 // IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
-func (r RepoPolicy) IsProtected(branch string) bool {
-	for _, pb := range r.Protected {
+func (rp RepoPolicy) IsProtected(branch string) bool {
+	for _, pb := range rp.Protected {
 		if pb == branch {
 			return true
 		}
@@ -93,14 +138,9 @@ func (r RepoPolicy) IsProtected(branch string) bool {
 	return false
 }
 
-// GetFile returns a handle to a file from a billy filesystem which abstracts over the in-mem and disk based fs
-//func GetFile(name string) (billy.File, error) {
-//	return billy.File{}, nil
-//}
-
 // InitGit initialises the corresponding git repo by fetching it
 func (r *RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string) error {
-	log.Logger = log.With().Str("repo", r.Name).Str("branch", r.branch).Logger()
+	log.Logger = log.With().Str("repo", r.Name).Str("branch", r.Branch).Logger()
 	fqdnRepo := fmt.Sprintf("%s/%s", r.prefix, r.Name)
 
 	var err error
@@ -119,55 +159,6 @@ func (r *RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string
 		}
 	}
 	return nil
-}
-
-//go:embed templates/*/*
-var templates embed.FS
-
-// GenTemplate will render a template bundle from a directory tree rooted at name.
-func (r *RepoPolicy) GenTemplate(bundle string) ([]string, error) {
-	log.Logger = log.With().Str("bundle", bundle).Interface("repo", r.Name).Logger()
-	log.Info().Msg("rendering")
-	var fileList []string
-
-	// Check if the given bundle is valid.
-	if _, ok := r.Files[bundle]; !ok {
-		return fileList, ErrUnKnownBundle
-	}
-	for _, f := range r.Files[bundle] {
-		op, err := r.gitRepo.CreateFile(f)
-		if err != nil {
-			return fileList, err
-		}
-		defer op.Close()
-		// fs.WalkDir(templates, ".", func(path string, d fs.DirEntry, err error) error {
-		// 	if err != nil {
-		// 		fmt.Println("err: ", err)
-		// 	}
-		// 	fmt.Println(path)
-		// 	return nil
-		// })
-		t := template.Must(template.
-			New(filepath.Base(f)).
-			Option("missingkey=error").
-			ParseFS(templates, filepath.Join("templates", bundle, f)))
-		if err != nil {
-			return fileList, err
-		}
-		log.Trace().Interface("vars", r).Msg("template vars")
-		err = t.Execute(op, r)
-		if err != nil {
-			return fileList, err
-		}
-		log.Debug().Str("path", f).Msg("wrote")
-		hash, err := r.gitRepo.AddFile(f)
-		if err != nil {
-			return fileList, err
-		}
-		fileList = append(fileList, f)
-		log.Debug().Str("hash", hash.String()).Str("file", f).Msg("added file to worktree")
-	}
-	return fileList, nil
 }
 
 // Commit commits the current worktree and then displays the resulting change as a patch,
@@ -199,45 +190,78 @@ func (r RepoPolicy) Commit(msg string, confirm bool) (plumbing.Hash, error) {
 
 // Push will push the current state of the repo to github
 // If the branch is protected, it will be pushed to a branch prefixed with releng/
-func (r RepoPolicy) Push() (string, error) {
-	var remoteBranch string
-	if r.IsProtected(r.branch) {
-		remoteBranch = fmt.Sprintf("releng/%s", r.branch)
-	} else {
-		remoteBranch = r.branch
+// Push should ideally be called only from CreatePR for pushing the changes
+// before creating a PR from the current branch against a base branch.
+func (r RepoPolicy) Push() error {
+	// Never push directly to the base branch. r.Branch has the
+	// base branch for which the policy is applicable for(eg: master, release-4
+	// etc.) Check if current branch is not base branch and it's not protected
+	// before pushing.
+	remoteBranch := r.gitRepo.CurrentBranch()
+	if remoteBranch == r.Branch {
+		return fmt.Errorf("Pushing to the same branch as base branch not supported, remote: %s, base: %s", remoteBranch, r.Branch)
 	}
-	return remoteBranch, r.gitRepo.Push(r.branch, remoteBranch)
+	if r.IsProtected(remoteBranch) {
+		return fmt.Errorf("given remote: %s is a protected branch", remoteBranch)
+	}
+	return r.gitRepo.Push(remoteBranch, remoteBranch)
 }
 
-func (r *RepoPolicy) CreatePR(bundle, title, remoteBranch string, dryRun bool) error {
-	if r.branch == "" {
-		return fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
+// CreatePR creates a PR on the given github repo for the specified bundle, against the
+// gien baseBranch and title. If dryRun is enabled, it prints out the parameters with
+// which the PR will be generated to stdout. It returns the URL of the PR on success.
+// Returns an empty string and no error on a successful dry run.
+func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (string, error) {
+	prURL := ""
+	if r.Branch == "" {
+		return prURL, fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
 	}
-	t := template.Must(template.
-		New(bundle).
-		Option("missingkey=error").
-		ParseFS(templates, fmt.Sprintf("pr-templates/%s/pr.tmpl", bundle)))
-	var b bytes.Buffer
-	err := t.Execute(&b, r)
+	if r.Timestamp == "" {
+		r.SetTimestamp(time.Time{})
+	}
+
+	// Check if bundle templates are rendered, and get the contents.
+	body, err := r.renderPR(bundle)
 	if err != nil {
-		return fmt.Errorf("rendering template: %w", err)
+		return prURL, fmt.Errorf("Error rendering PR for the bundle: %s: %v", bundle, err)
 	}
-	// prOpts := &github.NewPullRequest{
-	// 	Title: github.String(title),
-	// 	Head:  github.String(remoteBranch),
-	// 	Base:  github.String(r.branch),
-	// 	Body:  github.String(b.String()),
-	// }
-	// if dryRun {
-	// 	log.Warn().Msg("only dry-run, not really creating PR")
-	// } else {
-	// 	pr, _, err := r.gitRepo.gh.PullRequests.Create(context.Background(), ghOrg, r.Name, prOpts)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	r.prs = append(r.prs, pr.GetHTMLURL())
-	// }
-	return nil
+	log.Info().Msg("successfully rendered pr template")
+
+	owner, err := r.GetOwner()
+	if err != nil {
+		return prURL, err
+	}
+	if dryRun {
+		log.Warn().Msg("only dry-run, not really creating PR")
+		fmt.Println("Only dry-run, not creating actual PR")
+		fmt.Printf("\nPR will be created in \n\tOrg: %s\n\tWith branch: %s\n\tAgainst base Branch: %s\n\tWith title: %s\n", owner, r.gitRepo.CurrentBranch(), baseBranch, title)
+		fmt.Printf("\tWith PR Body: \n%s\n", string(body))
+	} else {
+		// Push and then create PR.
+		err = r.Push()
+		if err != nil {
+			return "", err
+		}
+		log.Info().Str("baseBranch", baseBranch).
+			Str("title", title).Msg("calling CreatePR on github")
+		prURL, err = r.gitRepo.CreatePR(baseBranch, title, string(body))
+		if err != nil {
+			return "", err
+		}
+	}
+	return prURL, nil
+}
+
+func (r RepoPolicy) GetOwner() (string, error) {
+	u, err := url.Parse(r.prefix)
+	if err != nil {
+		return "", err
+	}
+	if u.Hostname() != "github.com" {
+		return "", fmt.Errorf("not github prefix: %s", u.Hostname())
+	}
+	owner := strings.TrimPrefix(u.Path, "/")
+	return owner, nil
 }
 
 // String representation
@@ -247,15 +271,9 @@ func (rp Policies) String() string {
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "Protected branches: %v\n", rp.Protected)
 	fmt.Fprintln(w, "Common Files:")
-	for _, file := range rp.Files {
-		fmt.Fprintf(w, " - %s\n", file)
-	}
 	for repo, pols := range rp.Repos {
 		fmt.Fprintf(w, "%s\n", repo)
 		fmt.Fprintln(w, " Extra files:")
-		for _, f := range pols.Files {
-			fmt.Fprintf(w, "   - %s\n", f)
-		}
 		fmt.Fprintln(w, " Ports")
 		for src, dest := range pols.Ports {
 			fmt.Fprintf(w, "   - %s → %s\n", src, dest)

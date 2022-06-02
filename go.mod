@@ -9,6 +9,7 @@ require (
 	github.com/go-git/go-git/v5 v5.3.0
 	github.com/go-redis/redis/v8 v8.7.1
 	github.com/goccy/go-graphviz v0.0.9
+	github.com/google/go-cmp v0.5.4
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/gorilla/mux v1.7.4
 	github.com/mongodb/mongo-tools v0.0.0-20200911144454-4ba3e828ed5c
@@ -18,7 +19,6 @@ require (
 	github.com/spf13/viper v1.7.2-0.20210422093502-50f933027707
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
-	golang.org/x/exp v0.0.0-20220428152302-39d4317da171
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 )

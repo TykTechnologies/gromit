@@ -2,11 +2,14 @@ policy:
   protected: [ master ]
   files:
     releng:
-      - ci/*
+      common:
+        - ci/*
     sync:
-      - .github/workflows/sync-automation.yml
+      common:
+        - .github/workflows/sync-automation.yml
     dependabot:
-      - .github/dependabot.yml
+      common:
+        - .github/dependabot.yml
   repos:
     git-tests:
       protected: [ release-3-lts ]
