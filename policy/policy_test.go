@@ -55,6 +55,11 @@ func TestPolicy(t *testing.T) {
 	// Test config parsing
 	t.Run("config", func(t *testing.T) {
 		assert.EqualValues(t, repo.Protected, []string{"master", "release-3-lts"})
+		// test if branch policy for master is set correctly.
+		assert.EqualValues(t, repo.Branchvals.UpgradeFromVer, "3.0.9")
+		t.Logf("Branchvals: %+v", repo.Branchvals)
+		// test if global branch policy is set correctly.
+		assert.EqualValues(t, repo.Branchvals.GoVersion, "1.15")
 	})
 	// Test template generation
 	t.Run("gentemplate", func(t *testing.T) {
@@ -92,6 +97,9 @@ func TestPolicy(t *testing.T) {
 	})
 	// Test push to GH and creating PR.
 	t.Run("createpr", func(t *testing.T) {
+		if ghToken == "" {
+			t.Skip("set GH_TOKEN to a valid gitgub PAT to  run this test.")
+		}
 		bundle := "sync"
 		title := "Testing sync-automation"
 		base := "master"

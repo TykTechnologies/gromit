@@ -15,6 +15,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/goccy/go-graphviz"
 	"github.com/goccy/go-graphviz/cgraph"
+	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
@@ -25,12 +26,12 @@ var ErrUnKnownBundle = errors.New("bundle not present in loaded policy")
 
 // branchVals contains the parameters that are specific to a particular branch in a repo
 type branchVals struct {
-	Name               string // Branch name
-	GoVersion          string
-	Cgo                bool
-	ConfigFile         string
-	UpgradeFromVer     string // Versions to test package upgrades from
-	SyncExcludeBundles []string
+	GoVersion      string
+	Cgo            bool
+	ConfigFile     string
+	VersionPackage string                // The package containing version.go
+	UpgradeFromVer string                // Versions to test package upgrades from
+	Branch         map[string]branchVals `copier:"-"`
 }
 
 // Policies models the config file structure. The config file may contain one or more repos.
@@ -39,12 +40,13 @@ type Policies struct {
 	PCRepo      string
 	DHRepo      string
 	ExposePorts string
+	Binary      string
 	Protected   []string
 	Goversion   string
 	Master      string              // The equivalent of the master branch
 	Repos       map[string]Policies // map of reponames to branchPolicies
 	Ports       map[string][]string
-	Branches    []branchVals
+	Branches    branchVals
 }
 
 // RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
@@ -56,7 +58,7 @@ type RepoPolicy struct {
 	gitRepo    *git.GitRepo
 	Branch     string
 	prBranch   string
-	branchvals branchVals
+	Branchvals branchVals
 	prefix     string
 	Timestamp  string
 }
@@ -68,16 +70,10 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	if !found {
 		return RepoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, p.Repos)
 	}
-	found = false
 	var b branchVals
-	for _, b = range r.Branches {
-		if b.Name == branch {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return RepoPolicy{}, fmt.Errorf("branch %s unknown for repo %s", branch, repo)
+	copier.Copy(&b, r.Branches)
+	if ib, found := r.Branches.Branch[branch]; found {
+		copier.CopyWithOption(&b, &ib, copier.Option{IgnoreEmpty: true})
 	}
 	return RepoPolicy{
 		Name:       repo,
@@ -85,7 +81,7 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 		Ports:      r.Ports,
 		Branch:     branch,
 		prefix:     prefix,
-		branchvals: b,
+		Branchvals: b,
 	}, nil
 }
 
