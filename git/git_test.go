@@ -30,6 +30,9 @@ var fetchDepth int = 1
 
 func TestGitFunctions(t *testing.T) {
 	token := os.Getenv("GH_TOKEN")
+	if token == "" {
+		t.Skip("Requires GH_TOKEN be set to a valid gihub PAT to run this test.")
+	}
 	src, err := FetchRepo(testRepo["fqdn"], testRepo["dir"], token, fetchDepth)
 	if err != nil {
 		t.Fatalf("Could not fetch repo: %s, with fqdn: %s, with depth: %d to dir %s: (%v)", testRepo["repo"], testRepo["fqdn"], fetchDepth, testRepo["dir"], err)
