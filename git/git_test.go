@@ -1,3 +1,6 @@
+//go:build githubtests
+// +build githubtests
+
 package git
 
 import (
