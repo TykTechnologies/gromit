@@ -113,7 +113,7 @@ The environment in ECS will continue to run. Gromit run will no longer be aware 
 func init() {
 	rootCmd.AddCommand(envCmd)
 
-	replaceSubCmd.PersistentFlags().StringP("file", "f", "-", "File to use as input - reads from stdin")
+	replaceSubCmd.PersistentFlags().StringP("file", "", "-", "File to use as input - reads from stdin")
 	envCmd.AddCommand(replaceSubCmd)
 	envCmd.AddCommand(deleteSubCmd)
 
