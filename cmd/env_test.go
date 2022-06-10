@@ -17,7 +17,8 @@ type cmdTestCase struct {
 }
 
 func runEnvTests(t *testing.T, cases []cmdTestCase) {
-	server.StartTestServer("testdata/env-config.yaml")
+	s, _ := server.StartTestServer("../testdata/env-config.yaml")
+	defer s.Close()
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			response, err := executeMockCmd(tc.Args...)
@@ -38,7 +39,7 @@ func TestEnvCmd(t *testing.T) {
 	cases := []cmdTestCase{
 		{
 			Name:    "NewTestEnv",
-			Args:    []string{"env", "-eenv-test", "new", "-f../testdata/env/new.json"},
+			Args:    []string{"env", "-eenv-test", "new", "--file ../testdata/env/new.json"},
 			RetCode: 0,
 		},
 		{

@@ -10,11 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var a *App
+var testApp *App
 
 // setup environment for the test run and cleanup after
 func TestMain(m *testing.M) {
-	StartTestServer("testdata/env-config.yaml")
+	var s *httptest.Server
+	s, testApp = StartTestServer("../testdata/env-config.yaml")
+	defer s.Close()
 	code := m.Run()
 	os.Exit(code)
 }
@@ -33,7 +35,7 @@ type APITestCase struct {
 // executeMockRequest will make a mock http request
 func executeMockRequest(req *http.Request) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
-	a.Router.ServeHTTP(rr, req)
+	testApp.Router.ServeHTTP(rr, req)
 
 	return rr
 }
