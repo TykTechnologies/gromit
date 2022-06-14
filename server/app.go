@@ -134,7 +134,6 @@ func StartTestServer(confFile string) (*httptest.Server, *App) {
 
 	ts := a.Test()
 	os.Setenv("GROMIT_SERVE_URL", ts.URL)
-	a.initRoutes()
 	return ts, &a
 }
 
