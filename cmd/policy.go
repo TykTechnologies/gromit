@@ -72,14 +72,20 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 		bundle := args[0]
 		commitMsg := strings.Join(args[1:], "\n")
 		signingKeyid := viper.GetUint64("signingkey")
-		cmd.Printf("Generating\n\tbundle: %s\n\tusing branch: %s\n\twith the message: %s\n",
-			bundle, prBranch, commitMsg)
+		cmd.Printf("Generating\n\tbundle: %s\n\tusing branch: %s\n\twith the message: %s\n\tRepos: %s\n",
+			bundle, prBranch, commitMsg, repos)
 		for _, repoName := range repos {
 			repo, err := repoPolicies.GetRepo(repoName, config.RepoURLPrefix, branch)
 			if err != nil {
 				log.Fatal().Err(err).Msg("getting repo")
 			}
-			err = repo.InitGit(1, signingKeyid, dir, ghToken)
+			// use dir as prefix if operating on multiple repos, append the repo
+			// name to have different directories for different repos.
+			checkoutDir := dir
+			if len(repos) > 1 {
+				checkoutDir = dir + "-" + repoName
+			}
+			err = repo.InitGit(1, signingKeyid, checkoutDir, ghToken)
 			if err != nil {
 				log.Fatal().Err(err).Msg("initialising git")
 			}
@@ -143,7 +149,7 @@ func init() {
 	policyCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output in JSON")
 	policyCmd.PersistentFlags().BoolVarP(&dryRun, "dry", "d", false, "Will not make any changes")
 	policyCmd.PersistentFlags().StringVar(&ghToken, "token", os.Getenv("GITHUB_TOKEN"), "Github token for private repositories")
-	policyCmd.PersistentFlags().StringVar(&dir, "dir", "", "Use dir for git operations, instead of an in-memory fs")
+	policyCmd.PersistentFlags().StringVar(&dir, "dir", "", "Use dir for git operations, instead of an in-memory fs, if more than one repos are speified in repos, this will be used as a prefix for dirs.")
 	policyCmd.MarkPersistentFlagRequired("repos")
 	policyCmd.MarkPersistentFlagRequired("branch")
 	policyCmd.MarkPersistentFlagRequired("prefix")

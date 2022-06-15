@@ -12,6 +12,7 @@ require (
 	github.com/google/go-cmp v0.5.4
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/gorilla/mux v1.7.4
+	github.com/jinzhu/copier v0.3.5
 	github.com/mongodb/mongo-tools v0.0.0-20200911144454-4ba3e828ed5c
 	github.com/mongodb/mongo-tools-common v4.0.6+incompatible
 	github.com/rs/zerolog v1.19.0

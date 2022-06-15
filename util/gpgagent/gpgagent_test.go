@@ -26,9 +26,9 @@ import (
 func TestPrompt(t *testing.T) {
 	if os.Getenv("TEST_GPGAGENT_LIB") != "1" {
 		t.Logf("skipping TestPrompt without $TEST_GPGAGENT_LIB == 1")
-		return
+		t.Skip()
 	}
-	conn, err := NewGpgAgentConn()
+	conn, err := NewGpgAgentConn("")
 	if err != nil {
 		t.Fatal(err)
 	}

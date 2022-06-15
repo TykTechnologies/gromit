@@ -5,7 +5,7 @@ import (
 )
 
 func TestTerraform(t *testing.T) {
-	response, err := executeMockCmd("env", "-ecluster-test", "new", "-f../testdata/env/new.json")
+	response, err := executeMockCmd("env", "-ecluster-test", "new", "--file ../testdata/env/new.json")
 	if err != nil {
 		t.Fatal(err)
 	}

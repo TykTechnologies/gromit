@@ -7,25 +7,36 @@ policy:
         Tyk API Gateway
       pc_repo: tyk-gateway
       dh_repo: tyk-gateway
+      binary: tyk
       protected: [ release-3-lts ]
       exposeports: "8080"
       branches:
-        - name: release-3-lts
-          goversion: 1.12
           cgo: true
+          goversion: 1.15
+          upgradefromver: 3.0.1
           configfile: tyk.conf.example
-          upgradefromver: 3.0.4
-          syncexcludebundles: ["config","sync"]
-        - name: master
-          configfile: tyk.conf.example
-          cgo: true
-          upgradefromver: 3.0.9
-          syncexcludebundles: ["config","sync"]
+          versionpackage: github.com/TykTechnologies/tyk/gateway
+          branch:
+            release-3-lts:
+              goversion: 1.12
+              upgradefromver: 3.0.4
+            master:
+              upgradefromver: 3.0.9
       ports:
         master: [ release-4 ]
         release-3-lts: [release-3.0.11]
     tyk-analytics:
+      pc_repo: tyk-dashboard
+      dh_repo: tyk-dashboard
+      exposeports: "3000 5000"
+      binary: tyk-analytics
       protected: [ release-3-lts ]
+      branches:
+          cgo: true
+          goversion: 1.15
+          upgradefromver: 3.0.9
+          configfile: tyk_analytics.conf
+          versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
       ports:
         master: [ release-4 ]
         release-3: [release-3-lts]

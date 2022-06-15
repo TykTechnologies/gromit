@@ -115,8 +115,8 @@ func (a *App) Test() *httptest.Server {
 }
 
 // StartTestServer starts an HttpTest server that is suitable for testing
-func StartTestServer(confFile string) {
-	config.LoadConfig("testdata/env-config.yaml")
+func StartTestServer(confFile string) (*httptest.Server, *App) {
+	config.LoadConfig(confFile)
 	a := App{
 		TableName:  config.TableName,
 		RegistryID: config.RegistryID,
@@ -133,8 +133,8 @@ func StartTestServer(confFile string) {
 	}
 
 	ts := a.Test()
-	defer ts.Close()
 	os.Setenv("GROMIT_SERVE_URL", ts.URL)
+	return ts, &a
 }
 
 func (a *App) initRoutes() {
