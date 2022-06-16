@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -41,28 +42,54 @@ func (r *RepoPolicy) renderTemplates(bundleDir string) error {
 			return fmt.Errorf("Walk error: (%s): %v ", path, err)
 		}
 		if d.IsDir() {
+			if strings.HasSuffix(path, ".d") {
+				err := r.renderTemplate(bundleDir, path, true)
+				if err != nil {
+					return err
+				}
+				// Skip directory entirely if ".d" directory
+				return fs.SkipDir
+			}
 			return nil
 		}
-		return r.renderTemplate(bundleDir, path)
+		// check if <file>.d exists, if exists, then already parsed/ will be parsed
+		// as part of the dir parse call.
+		_, statErr := fs.Stat(templates, path+".d")
+		if statErr == nil {
+			log.Info().Str("dir_path", path).Msg(".d directory exists, so not rendering independently")
+			return nil
+		}
+		return r.renderTemplate(bundleDir, path, false)
 	})
 }
 
 // renderTemplate will render one template into its corresponding path in the git tree
 // The first two elements of the supplied path will be stripped to remove the templates/<bundle> to derive the
 // path that should be written to in the git repo.
-func (r *RepoPolicy) renderTemplate(bundleDir, path string) error {
+func (r *RepoPolicy) renderTemplate(bundleDir, path string, isDir bool) error {
+
+	var parsePaths []string
+	if isDir {
+		dir := path
+		path = strings.TrimSuffix(path, ".d")
+		parsePaths = append(parsePaths, dir+"/**", path)
+		log.Info().Strs("parsePaths", parsePaths).Msg(".d exists, so parsing the file as well as dir contents")
+	} else {
+		parsePaths = append(parsePaths, path)
+	}
 	opFile, err := filepath.Rel(bundleDir, path)
 	if err != nil {
 		return err
 	}
 
 	log.Trace().Str("templatePath", path).Str("outputPath", opFile).Msg("rendering")
+
 	op, err := r.gitRepo.CreateFile(opFile)
 	defer op.Close()
 	t := template.Must(template.
 		New(filepath.Base(path)).
 		Option("missingkey=error").
-		ParseFS(templates, path))
+		ParseFS(templates, parsePaths...))
 	log.Trace().Interface("vars", r).Msg("template vars")
 	err = t.Execute(op, r)
 	if err != nil {
