@@ -1,3 +1,121 @@
 {{define "dockers"}}
-    dockers
-{{end}}
+  {{/* range over all the supported archs.
+    Except for the archs, everything else stays the same for docker templates */}}
+  {{ $r := . }}
+  {{range $arch := .Archs}}
+# Build {{$r.DHRepo}}, {{$r.CSRepo}} ({{ $arch }})
+- ids:
+    - std
+  image_templates:
+    - "{{$r.DHRepo}}:{{`{{ .Tag }}`}}-{{ $arch }}"
+    - "{{$r.CSRepo}}:{{`{{ .Tag }}`}}-{{ $arch }}"
+  build_flag_templates:
+    - "--build-arg=PORTS={{ $r.ExposePorts }}"
+    - "--platform=linux/{{ $arch }}"
+    - "--label=org.opencontainers.image.created={{`{{.Date}}`}}"
+    - "--label=org.opencontainers.image.title={{`{{.ProjectName}}`}}"
+    - "--label=org.opencontainers.image.revision={{`{{.FullCommit}}`}}"
+    - "--label=org.opencontainers.image.version={{`{{.Version}}`}}"
+  use: buildx
+  goarch: {{ $arch }}
+  goos: linux
+  dockerfile: ci/Dockerfile.std
+  extra_files:
+    - "ci/install/"
+    - "README.md"
+
+     {{- if (eq $r.Name "tyk-analytics") }}
+    - "EULA.md"
+    - "portal"
+    - "schemas"
+    - "webclient/lang"
+    - "tyk_config_sample.config"
+     {{- end}}
+
+     {{- if (eq $r.Name "tyk") }}
+    - "LICENSE.md"
+    - "apps/app_sample.json"
+    - "templates"
+    - "middleware"
+    - "event_handlers/sample"
+    - "policies"
+    - "coprocess"
+    - "tyk.conf.example"
+     {{- end}}
+
+     {{- if (eq $r.Name "tyk-pump") }}
+    - "LICENSE.md"
+    - "pump.example.conf"
+     {{- end}}
+
+     {{- if (eq $r.Name "tyk") }}
+
+# Build gateway hybrid container {{ $arch }}
+- ids:
+    - std
+  image_templates:
+    - "tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-{{ $arch }}"
+  build_flag_templates:
+    - "--platform=linux/{{ $arch }}"
+    - "--label=org.opencontainers.image.created={{`{{.Date}}`}}"
+    - "--label=org.opencontainers.image.title={{`{{.ProjectName}}`}}-hybrid"
+    - "--label=org.opencontainers.image.revision={{`{{.FullCommit}}`}}"
+    - "--label=org.opencontainers.image.version={{`{{.Version}}`}}"
+  use: buildx
+  goarch: {{ $arch }}
+  goos: linux
+  dockerfile: ci/images/hybrid/Dockerfile
+  extra_files:
+    - "ci/images/hybrid/"
+
+    {{- end}}{{/* hybrid definition end */}}
+
+  {{- end}}{{/* range end */}}
+
+  {{- if (eq $r.Name "tyk") }}
+
+# Build plugin-compiler
+- ids:
+    - std
+  image_templates:
+    - tykio/tyk-plugin-compiler:{{`{{ .Tag }}`}}
+    - tykio/tyk-plugin-compiler:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}
+  build_flag_templates:
+    - "--label=org.opencontainers.image.created={{`{{.Date}}`}}"
+    - "--label=org.opencontainers.image.title=tyk-plugin-compiler"
+    - "--label=org.opencontainers.image.revision={{`{{.FullCommit}}`}}"
+    - "--label=org.opencontainers.image.version={{`{{.Version}}`}}"
+    - "--build-arg=TYK_GW_TAG={{`{{ .Tag }}`}}"
+    - "--build-arg=GOLANG_CROSS={{`{{ .Env.GOLANG_CROSS }}`}}"
+  goarch: amd64
+  goos: linux
+  dockerfile: ci/images/plugin-compiler/Dockerfile
+  extra_files:
+    - ci/images/plugin-compiler
+    - go.mod
+    - apidef
+    - certs
+    - checkup
+    - cli
+    - config
+    - coprocess
+    - ctx
+    - dlpython
+    - dnscache
+    - gateway
+    - goplugin
+    - headers
+    - log
+    - regexp
+    - request
+    - rpc
+    - signature_validator
+    - storage
+    - tcp
+    - templates
+    - test
+    - testdata
+    - trace
+    - user
+  {{- end}}
+{{end}}{{/* end of definition */}}

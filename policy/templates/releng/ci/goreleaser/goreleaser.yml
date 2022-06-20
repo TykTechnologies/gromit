@@ -6,21 +6,21 @@
 # - arm64
 # - amd64
 
-{{ template "before_hooks" }}
+{{- template "before_hooks" . }}
 
-{{ if .Branchvals.Cgo }}
-{{ template "cgo_builds" }}
-{{ else }}
-{{ template "builds" }}
-{{ end }}
+{{- if .Branchvals.Cgo }}
+{{- template "cgo_builds" . }}
+{{- else }}
+{{- template "builds" . }}
+{{- end }}
 
-{{ template "dockers" }}
+{{- template "dockers" . }}
 
-{{ template "nfpm" }}
+{{- template "nfpm" . }}
 
-{{ template "publishers" }}
+{{- template "publishers" . }}
 
-{{ template "archives" }}
+{{- template "archives" . }}
 
 checksum:
   disable: true

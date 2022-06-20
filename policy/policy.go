@@ -39,8 +39,10 @@ type Policies struct {
 	Description string
 	PCRepo      string
 	DHRepo      string
+	CSRepo      string
 	ExposePorts string
 	Binary      string
+	Archs       []string
 	Protected   []string
 	Goversion   string
 	Master      string              // The equivalent of the master branch
@@ -51,16 +53,22 @@ type Policies struct {
 
 // RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
 type RepoPolicy struct {
-	Name       string
-	Protected  []string
-	Files      map[string][]string
-	Ports      map[string][]string
-	gitRepo    *git.GitRepo
-	Branch     string
-	prBranch   string
-	Branchvals branchVals
-	prefix     string
-	Timestamp  string
+	Name        string
+	Protected   []string
+	PCRepo      string
+	DHRepo      string
+	CSRepo      string
+	Binary      string
+	ExposePorts string
+	Archs       []string
+	Files       map[string][]string
+	Ports       map[string][]string
+	gitRepo     *git.GitRepo
+	Branch      string
+	prBranch    string
+	Branchvals  branchVals
+	prefix      string
+	Timestamp   string
 }
 
 // GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates
@@ -76,42 +84,48 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 		copier.CopyWithOption(&b, &ib, copier.Option{IgnoreEmpty: true})
 	}
 	return RepoPolicy{
-		Name:       repo,
-		Protected:  append(p.Protected, r.Protected...),
-		Ports:      r.Ports,
-		Branch:     branch,
-		prefix:     prefix,
-		Branchvals: b,
+		Name:        repo,
+		Protected:   append(p.Protected, r.Protected...),
+		Ports:       r.Ports,
+		Branch:      branch,
+		prefix:      prefix,
+		Branchvals:  b,
+		DHRepo:      r.DHRepo,
+		PCRepo:      r.PCRepo,
+		CSRepo:      r.CSRepo,
+		Archs:       r.Archs,
+		ExposePorts: r.ExposePorts,
+		Binary:      r.Binary,
 	}, nil
 }
 
 // SwitchBranch calls the SwitchBranch method of gitRepo and creates a new
 // branch and switches the underlying git repo to the given branch - also
 // sets prBranch to the newly checked out branch.
-func (rp *RepoPolicy) SwitchBranch(branch string) error {
-	err := rp.gitRepo.SwitchBranch(branch)
+func (r *RepoPolicy) SwitchBranch(branch string) error {
+	err := r.gitRepo.SwitchBranch(branch)
 	if err != nil {
 		return err
 	}
-	rp.prBranch = branch
+	r.prBranch = branch
 	return nil
 }
 
 // SetTimestamp Sets the given time as the repopolicy timestamp. If called with zero time
 // sets the current time in UTC
-func (rp *RepoPolicy) SetTimestamp(ts time.Time) {
+func (r *RepoPolicy) SetTimestamp(ts time.Time) {
 	if ts.IsZero() {
 		ts = time.Now().UTC()
 	}
-	rp.Timestamp = ts.Format(time.UnixDate)
+	r.Timestamp = ts.Format(time.UnixDate)
 
 }
 
 // GetTimeStamp returns the timestamp currently set for the given repopolicy.
-func (rp RepoPolicy) GetTimeStamp() (time.Time, error) {
+func (r RepoPolicy) GetTimeStamp() (time.Time, error) {
 	var ts time.Time
 	var err error
-	ts, err = time.Parse(time.UnixDate, rp.Timestamp)
+	ts, err = time.Parse(time.UnixDate, r.Timestamp)
 	return ts, err
 }
 
@@ -125,8 +139,8 @@ func (r RepoPolicy) DestBranches(srcBranch string) []string {
 }
 
 // IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
-func (rp RepoPolicy) IsProtected(branch string) bool {
-	for _, pb := range rp.Protected {
+func (r RepoPolicy) IsProtected(branch string) bool {
+	for _, pb := range r.Protected {
 		if pb == branch {
 			return true
 		}
@@ -248,6 +262,8 @@ func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (st
 	return prURL, nil
 }
 
+// GetOwner returns the owner part of a given github oprg prefix fqdn, returns
+// error if not a valid github fqdn.
 func (r RepoPolicy) GetOwner() (string, error) {
 	u, err := url.Parse(r.prefix)
 	if err != nil {
@@ -261,13 +277,13 @@ func (r RepoPolicy) GetOwner() (string, error) {
 }
 
 // String representation
-func (rp Policies) String() string {
+func (p Policies) String() string {
 	w := new(bytes.Buffer)
 	fmt.Fprintln(w, `Commits landing on the Source branch are automatically sync'd to the list of Destinations. PRs will be created for the protected branch. Other branches will be updated directly.`)
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, "Protected branches: %v\n", rp.Protected)
+	fmt.Fprintf(w, "Protected branches: %v\n", p.Protected)
 	fmt.Fprintln(w, "Common Files:")
-	for repo, pols := range rp.Repos {
+	for repo, pols := range p.Repos {
 		fmt.Fprintf(w, "%s\n", repo)
 		fmt.Fprintln(w, " Extra files:")
 		fmt.Fprintln(w, " Ports")
@@ -279,12 +295,12 @@ func (rp Policies) String() string {
 	return w.String()
 }
 
-func (rp Policies) dotGen(cg *cgraph.Graph) error {
+func (p Policies) dotGen(cg *cgraph.Graph) error {
 	return nil
 }
 
-// (rp RepoPolicies) Graph returns a graphviz dot format representation of the policy
-func (rp Policies) Graph(w io.Writer) error {
+// Graph returns a graphviz dot format representation of the policy
+func (p Policies) Graph(w io.Writer) error {
 	g := graphviz.New()
 	relgraph, err := g.Graph()
 	if err != nil {
@@ -297,14 +313,14 @@ func (rp Policies) Graph(w io.Writer) error {
 		g.Close()
 	}()
 
-	err = rp.dotGen(relgraph)
+	err = p.dotGen(relgraph)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// GetPolicyConfig returns the policies as a map of repos to policies
+// LoadRepoPolicies returns the policies as a map of repos to policies
 // This will panic if the type assertions fail
 func LoadRepoPolicies(policies *Policies) error {
 	log.Info().Msg("loading repo policies")

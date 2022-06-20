@@ -5,9 +5,11 @@ policy:
     tyk:
       description: |
         Tyk API Gateway
-      pc_repo: tyk-gateway
-      dh_repo: tyk-gateway
+      pcrepo: tyk-gateway
+      dhrepo: tykio/tyk-gateway
+      csrepo: docker.tyk.io/tyk-gateway
       binary: tyk
+      archs: [ amd64, arm64 ]
       protected: [ release-3-lts ]
       exposeports: "8080"
       branches:
@@ -26,10 +28,12 @@ policy:
         master: [ release-4 ]
         release-3-lts: [release-3.0.11]
     tyk-analytics:
-      pc_repo: tyk-dashboard
-      dh_repo: tyk-dashboard
+      pcrepo: tyk-dashboard
+      dhrepo: tykio/tyk-dashboard
+      csrepo: docker.tyk.io/tyk-dashboard
       exposeports: "3000 5000"
       binary: tyk-analytics
+      archs: [ amd64, arm64 ]
       protected: [ release-3-lts ]
       branches:
           cgo: true
