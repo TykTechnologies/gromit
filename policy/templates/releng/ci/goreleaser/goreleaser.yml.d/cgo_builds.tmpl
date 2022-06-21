@@ -18,7 +18,7 @@ builds:
       - -tags=goplugin
   {{- end}}
     ldflags:
-      - -X {{.Branchvals.VersionPackage}}.VERSION={{`{{.Version}}`}} -X {{.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}} -X {{.Branchvals.VersionPackage}}.buildDate=`{{`{{.Date}}`}} -X {{.Branchvals.VersionPackage}}.builtBy=goreleaser
+      - -X {{.Branchvals.VersionPackage}}.VERSION={{`{{.Version}}`}} -X {{.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}} -X {{.Branchvals.VersionPackage}}.buildDate={{`{{.Date}}`}} -X {{.Branchvals.VersionPackage}}.builtBy=goreleaser
     env:
       - CC=aarch64-linux-gnu-gcc
     goos:
@@ -35,7 +35,7 @@ builds:
       - linux
     goarch:
       - amd64
-    binary: {{.Binary}}
+    binary: {{.Binary}}-static
   {{- if eq .Name "tyk-analytics"}}
   # With special license pubkey
   - id: payg

@@ -8,6 +8,7 @@ policy:
       pcrepo: tyk-gateway
       dhrepo: tykio/tyk-gateway
       csrepo: docker.tyk.io/tyk-gateway
+      packagename: tyk-gateway
       binary: tyk
       protected: [ release-3-lts ]
       exposeports: "8080"
@@ -15,7 +16,7 @@ policy:
           cgo: true
           goversion: 1.15
           upgradefromver: 3.0.1
-          configfile: tyk.conf.example
+          configfile: tyk.conf
           versionpackage: github.com/TykTechnologies/tyk/gateway
           branch:
             release-3-lts:
