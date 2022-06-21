@@ -40,9 +40,9 @@ type Policies struct {
 	PCRepo      string
 	DHRepo      string
 	CSRepo      string
+	PackageName string
 	ExposePorts string
 	Binary      string
-	Archs       []string
 	Protected   []string
 	Goversion   string
 	Master      string              // The equivalent of the master branch
@@ -54,13 +54,14 @@ type Policies struct {
 // RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
 type RepoPolicy struct {
 	Name        string
+	Description string
 	Protected   []string
 	PCRepo      string
 	DHRepo      string
 	CSRepo      string
 	Binary      string
+	PackageName string
 	ExposePorts string
-	Archs       []string
 	Files       map[string][]string
 	Ports       map[string][]string
 	gitRepo     *git.GitRepo
@@ -93,9 +94,10 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 		DHRepo:      r.DHRepo,
 		PCRepo:      r.PCRepo,
 		CSRepo:      r.CSRepo,
-		Archs:       r.Archs,
 		ExposePorts: r.ExposePorts,
 		Binary:      r.Binary,
+		Description: r.Description,
+		PackageName: r.PackageName,
 	}, nil
 }
 

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -88,6 +89,7 @@ func (r *RepoPolicy) renderTemplate(bundleDir, path string, isDir bool) error {
 	defer op.Close()
 	t := template.Must(template.
 		New(filepath.Base(path)).
+		Funcs(sprig.FuncMap()).
 		Option("missingkey=error").
 		ParseFS(templates, parsePaths...))
 	log.Trace().Interface("vars", r).Msg("template vars")
@@ -107,14 +109,19 @@ func (r *RepoPolicy) renderPR(bundle string) ([]byte, error) {
 	prFile := bundle + ".tmpl"
 	path := filepath.Join("templates", "prs", prFile)
 	log.Trace().Str("PRFilePath", path).Msg("rendering PRs")
+	prContent, err := templates.ReadFile(path)
+	if err != nil {
+		log.Error().Err(err).Str("bundle", bundle).Msg("failed to open pr file for bundle")
+		return []byte{}, err
+	}
 
 	t := template.Must(template.
 		New(prFile).
 		Option("missingkey=error").
-		ParseFS(templates, path))
+		Parse(string(prContent)))
 
 	rendered := new(bytes.Buffer)
-	err := t.Execute(rendered, r)
+	err = t.Execute(rendered, r)
 	if err != nil {
 		return []byte{}, err
 	}

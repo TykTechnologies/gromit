@@ -9,7 +9,6 @@ policy:
       dhrepo: tykio/tyk-gateway
       csrepo: docker.tyk.io/tyk-gateway
       binary: tyk
-      archs: [ amd64, arm64 ]
       protected: [ release-3-lts ]
       exposeports: "8080"
       branches:
