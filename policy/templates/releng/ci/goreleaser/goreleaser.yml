@@ -16,6 +16,8 @@
 
 {{- template "dockers" . }}
 
+{{- template "docker_manifests" . }}
+
 {{- template "nfpm" . }}
 
 {{- template "publishers" . }}

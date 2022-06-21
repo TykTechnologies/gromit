@@ -1,8 +1,9 @@
 {{define "dockers"}}
+dockers:
   {{/* range over all the supported archs.
     Except for the archs, everything else stays the same for docker templates */}}
-  {{ $r := . }}
-  {{range $arch := .Archs}}
+  {{- $r := . }}
+  {{- range $arch := list "arm64" "amd64" }}
 # Build {{$r.DHRepo}}, {{$r.CSRepo}} ({{ $arch }})
 - ids:
     - std
