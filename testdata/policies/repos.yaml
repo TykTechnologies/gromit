@@ -24,7 +24,7 @@ policy:
               goversion: 1.12
               upgradefromver: 3.0.4
             master:
-              upgradefromver: 3.0.9
+              upgradefromver: 3.0.8
       ports:
         master: [ release-4 ]
         release-3-lts: [release-3.0.11]
