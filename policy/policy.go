@@ -31,6 +31,7 @@ type branchVals struct {
 	ConfigFile     string
 	VersionPackage string                // The package containing version.go
 	UpgradeFromVer string                // Versions to test package upgrades from
+	PCPrivate      bool                  // indicates whether package cloud repo is private
 	Branch         map[string]branchVals `copier:"-"`
 }
 

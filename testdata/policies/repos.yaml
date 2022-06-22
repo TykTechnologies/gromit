@@ -16,6 +16,7 @@ policy:
           cgo: true
           goversion: 1.15
           upgradefromver: 3.0.1
+          pcprivate: false
           configfile: tyk.conf
           versionpackage: github.com/TykTechnologies/tyk/gateway
           branch:
@@ -39,6 +40,7 @@ policy:
           cgo: true
           goversion: 1.15
           upgradefromver: 3.0.9
+          pcprivate: true
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
       ports:
