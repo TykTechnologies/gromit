@@ -34,4 +34,4 @@ release:
     name: {{ .Name }}
   prerelease: auto
   draft: true
-  name_template: {{ `{{.ProjectName}}-v{{.Version}}` }}
+  name_template: "{{ `{{.ProjectName}}-v{{.Version}}` }}"
