@@ -7,7 +7,7 @@ policy:
         Tyk API Gateway
       pcrepo: tyk-gateway
       dhrepo: tykio/tyk-gateway
-      csrepo: docker.tyk.io/tyk-gateway
+      csrepo: docker.tyk.io/tyk-gateway/tyk-gateway
       packagename: tyk-gateway
       binary: tyk
       protected: [ release-3-lts ]
@@ -31,10 +31,9 @@ policy:
     tyk-analytics:
       pcrepo: tyk-dashboard
       dhrepo: tykio/tyk-dashboard
-      csrepo: docker.tyk.io/tyk-dashboard
+      csrepo: docker.tyk.io/tyk-dashboard/tyk-dashboard
       exposeports: "3000 5000"
       binary: tyk-analytics
-      archs: [ amd64, arm64 ]
       protected: [ release-3-lts ]
       branches:
           cgo: true
