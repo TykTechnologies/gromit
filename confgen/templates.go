@@ -72,17 +72,21 @@ func getLicense(path string) (string, error) {
 
 // templateVars will be interpolated into templates
 type templateVars struct {
-	EnvName string
+	EnvName   string
+	MongoUser string
+	MongoPass string
 }
 
 // Must will create a config tree if it does not exist
 // Only the root path is checked as a full set of templates will be generated into confDir
-func Must(confPath string, envName string) error {
+func Must(confPath string, envName string, mongoUser string, mongoPass string) error {
 	confDir := filepath.Join(confPath, envName)
 	// Does a config dir matching the env name exist?
 	if _, err := os.Stat(confDir); os.IsNotExist(err) {
 		tVars := templateVars{
 			envName,
+			mongoUser,
+			mongoPass,
 		}
 		return makeConfigTree(confTemplates, "templates", confDir, tVars)
 	}
