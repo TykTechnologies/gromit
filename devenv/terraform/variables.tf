@@ -37,8 +37,8 @@ variable "tyk-sink" {
   default     = "master"
 }
 
-variable "raava" {
-  description = "Image tag for the raava service"
+variable "portal" {
+  description = "Image tag for the portal service"
   type        = string
   default     = "master"
 }

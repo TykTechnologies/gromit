@@ -1,0 +1,4 @@
+# Load Testing Tool
+This terraform folder creates na ecs task definition for a load testing utility image https://hub.docker.com/r/loadimpact/k6.
+
+More info at: https://k6.io/
