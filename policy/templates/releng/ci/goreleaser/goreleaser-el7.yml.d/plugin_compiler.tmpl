@@ -1,6 +1,6 @@
 {{ define "plugin-compiler" }}
-    {{/* define the el7 suffix for plugin compiler container image. */}}
-    {{- $el7 := "-el7" }}
+{{/* define the el7 suffix for plugin compiler container image. */}}
+    {{- $el7 := "-el7" -}}
 # Build plugin-compiler
 - ids:
     - std
@@ -44,4 +44,4 @@
     - testdata
     - trace
     - user
-  {{- end }}
+{{- end }}
