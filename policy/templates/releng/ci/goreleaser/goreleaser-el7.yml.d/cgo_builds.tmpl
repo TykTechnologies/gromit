@@ -26,16 +26,6 @@ builds:
     goarch:
       - arm64
     binary: {{.Binary}}
-  # static builds strip symbols and do not allow plugins
-  - id: static-amd64
-    ldflags:
-      - -s -w -X {{.Branchvals.VersionPackage}}.VERSION={{`{{.Version}}`}} -X {{.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}} -X {{.Branchvals.VersionPackage}}.buildDate={{`{{.Date}}`}} -X {{.Branchvals.VersionPackage}}.builtBy=goreleaser
-      - -linkmode external -extldflags -static
-    goos:
-      - linux
-    goarch:
-      - amd64
-    binary: {{.Binary}}-static
   {{- if eq .Name "tyk-analytics"}}
   # With special license pubkey
   - id: payg
