@@ -1,6 +1,6 @@
 policy:
   protected: [ master ]
-  master: master
+  default: master
   repos:
     tyk:
       description: |
@@ -10,7 +10,7 @@ policy:
       csrepo: docker.tyk.io/tyk-gateway/tyk-gateway
       packagename: tyk-gateway
       binary: tyk
-      protected: [ release-3-lts ]
+      protected: [ release-3-lts, release-4 ]
       exposeports: "8080"
       branches:
           cgo: true
@@ -25,6 +25,8 @@ policy:
               upgradefromver: 3.0.4
             master:
               upgradefromver: 3.0.8
+            release-4:
+              upgradefromver: 3.0.8
       ports:
         master: [ release-4 ]
         release-3-lts: [release-3.0.11]
@@ -34,7 +36,7 @@ policy:
       csrepo: docker.tyk.io/tyk-dashboard/tyk-dashboard
       exposeports: "3000 5000"
       binary: tyk-analytics
-      protected: [ release-3-lts ]
+      protected: [ release-3-lts, release-4 ]
       branches:
           cgo: true
           goversion: 1.15

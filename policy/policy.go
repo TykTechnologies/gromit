@@ -46,7 +46,7 @@ type Policies struct {
 	Binary      string
 	Protected   []string
 	Goversion   string
-	Master      string              // The equivalent of the master branch
+	Default     string              // The default git branch(master/main/anything else)
 	Repos       map[string]Policies // map of reponames to branchPolicies
 	Ports       map[string][]string
 	Branches    branchVals
@@ -57,6 +57,7 @@ type RepoPolicy struct {
 	Name        string
 	Description string
 	Protected   []string
+	Default     string
 	PCRepo      string
 	DHRepo      string
 	CSRepo      string
@@ -88,6 +89,7 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	return RepoPolicy{
 		Name:        repo,
 		Protected:   append(p.Protected, r.Protected...),
+		Default:     p.Default,
 		Ports:       r.Ports,
 		Branch:      branch,
 		prefix:      prefix,
@@ -160,6 +162,14 @@ func (r *RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string
 	r.gitRepo, err = git.FetchRepo(fqdnRepo, dir, ghToken, depth)
 	if err != nil {
 		return err
+	}
+	// checkout the base branch if a non-default base branch was given.
+	if r.Branch != r.Default {
+		log.Info().Str("Default", r.Default).Str("branch", r.Branch).Msg("Non-default branch to be checked out.")
+		err := r.gitRepo.Checkout(r.Branch)
+		if err != nil {
+			return err
+		}
 	}
 	if signingKeyid != 0 {
 		signer, err := util.GetSigningEntity(signingKeyid)
