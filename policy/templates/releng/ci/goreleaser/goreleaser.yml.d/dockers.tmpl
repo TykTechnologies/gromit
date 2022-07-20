@@ -9,7 +9,11 @@ dockers:
     - std
   image_templates:
     - "{{$r.DHRepo}}:{{`{{ .Tag }}`}}-{{ $arch }}"
+    {{- if eq $arch "amd64" }}
+    - "{{$r.CSRepo}}:{{`{{ .Tag }}`}}"
+    {{- else }}
     - "{{$r.CSRepo}}:{{`{{ .Tag }}`}}-{{ $arch }}"
+    {{- end }}
   build_flag_templates:
     - "--build-arg=PORTS={{ $r.ExposePorts }}"
     - "--platform=linux/{{ $arch }}"
