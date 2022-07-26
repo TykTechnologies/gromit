@@ -105,7 +105,7 @@ nfpms:
     maintainer: "Tyk <info@tyk.io>"
     description: "PAYG Dashboard for the Tyk API Gateway"
     package_name: {{ .PackageName }}-PAYG
-    file_name_template: "{{ .ProjectName }}_PAYG_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    file_name_template: "{{`{{ .ProjectName }}_PAYG_{{ .Version }}_{{ .Os }}_{{ .Arch }}`}}"
     builds:
       - payg
     formats:
