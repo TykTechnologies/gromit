@@ -31,19 +31,41 @@ policy:
         master: [ release-4 ]
         release-3-lts: [release-3.0.11]
     tyk-analytics:
+      description: |
+        Dashboard for the Tyk API Gateway
       pcrepo: tyk-dashboard
       dhrepo: tykio/tyk-dashboard
       csrepo: docker.tyk.io/tyk-dashboard/tyk-dashboard
       exposeports: "3000 5000"
       binary: tyk-analytics
-      protected: [ release-3-lts, release-4 ]
+      packagename: tyk-dashboard
+      protected: [ release-3-lts, release-4, release-4-lts ]
       branches:
           cgo: true
           goversion: 1.15
           upgradefromver: 3.0.9
-          pcprivate: true
+          pcprivate: false
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
       ports:
         master: [ release-4 ]
         release-3: [release-3-lts]
+    tyk-pump:
+      description: |
+        Archive analytics for the Tyk API Gateway
+      pcrepo: tyk-pump
+      dhrepo: tykio/tyk-pump-docker-pub
+      csrepo: docker.tyk.io/tyk-pump/tyk-pump
+      exposeports: "80"
+      binary: tyk-pump
+      packagename: tyk-pump
+      protected: [ release-1.6, release-1.5 ]
+      branches:
+          cgo: false
+          goversion: 1.15
+          upgradefromver: 1.4.0
+          pcprivate: false
+          configfile: pump.conf
+          versionpackage: github.com/TykTechnologies/tyk-pump/pumps
+      ports:
+        master: [ release-1.6 ]
