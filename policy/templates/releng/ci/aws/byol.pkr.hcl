@@ -110,7 +110,7 @@ build {
     source      = "utils/10-run-tyk.conf"
   }
   provisioner "shell" {
-    environment_vars = ["VERSION=${var.version}" {{ if eq .Name "tyk" -}} , "GEOIP_LICENSE=${var.geoip_license}" {{- end }} ]
+    environment_vars = ["VERSION=${var.version}" {{ if eq .Name "tyk" -}} , "GEOIP_LICENSE=${var.geoip_license}" {{- end }}]
     script           = "byol/install-{{ .Name }}.sh"
   }
 }
