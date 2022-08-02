@@ -1,42 +1,71 @@
 policy:
   protected: [ master ]
-  master: master
+  default: master
   repos:
     tyk:
       description: |
         Tyk API Gateway
-      pc_repo: tyk-gateway
-      dh_repo: tyk-gateway
+      pcrepo: tyk-gateway
+      dhrepo: tykio/tyk-gateway
+      csrepo: docker.tyk.io/tyk-gateway/tyk-gateway
+      packagename: tyk-gateway
       binary: tyk
-      protected: [ release-3-lts ]
+      protected: [ release-3-lts, release-4 ]
       exposeports: "8080"
       branches:
           cgo: true
           goversion: 1.15
           upgradefromver: 3.0.1
-          configfile: tyk.conf.example
+          pcprivate: false
+          configfile: tyk.conf
           versionpackage: github.com/TykTechnologies/tyk/gateway
           branch:
             release-3-lts:
               goversion: 1.12
               upgradefromver: 3.0.4
             master:
-              upgradefromver: 3.0.9
+              upgradefromver: 3.0.8
+            release-4:
+              upgradefromver: 3.0.8
       ports:
         master: [ release-4 ]
         release-3-lts: [release-3.0.11]
     tyk-analytics:
-      pc_repo: tyk-dashboard
-      dh_repo: tyk-dashboard
+      description: |
+        Dashboard for the Tyk API Gateway
+      pcrepo: tyk-dashboard
+      dhrepo: tykio/tyk-dashboard
+      csrepo: docker.tyk.io/tyk-dashboard/tyk-dashboard
       exposeports: "3000 5000"
       binary: tyk-analytics
-      protected: [ release-3-lts ]
+      packagename: tyk-dashboard
+      protected: [ release-3-lts, release-4, release-4-lts ]
       branches:
           cgo: true
           goversion: 1.15
           upgradefromver: 3.0.9
+          pcprivate: false
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
       ports:
         master: [ release-4 ]
         release-3: [release-3-lts]
+    tyk-pump:
+      description: |
+        Archive analytics for the Tyk API Gateway
+      pcrepo: tyk-pump
+      dhrepo: tykio/tyk-pump-docker-pub
+      csrepo: docker.tyk.io/tyk-pump/tyk-pump
+      exposeports: "80"
+      binary: tyk-pump
+      packagename: tyk-pump
+      protected: [ release-1.6, release-1.5 ]
+      branches:
+          cgo: false
+          goversion: 1.15
+          upgradefromver: 1.4.0
+          pcprivate: false
+          configfile: pump.conf
+          versionpackage: github.com/TykTechnologies/tyk-pump/pumps
+      ports:
+        master: [ release-1.6 ]

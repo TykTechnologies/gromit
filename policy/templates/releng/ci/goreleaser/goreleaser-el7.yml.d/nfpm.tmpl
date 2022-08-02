@@ -1,0 +1,165 @@
+{{define "nfpm" }}
+nfpms:
+  - id: std
+    vendor: "Tyk Technologies Ltd"
+    homepage: "https://tyk.io"
+    maintainer: "Tyk <info@tyk.io>"
+    description: {{ .Description }}
+    package_name: {{ .PackageName }}
+    builds:
+      - std-linux
+      - std-arm64
+    formats:
+      - deb
+      - rpm
+    contents:
+      - src: "README.md"
+        dst: "/opt/share/docs/{{ .PackageName }}/README.md"
+      - src: "ci/install/*"
+        dst: "/opt/{{ .PackageName }}/install"
+      - src: ci/install/inits/systemd/system/{{ .PackageName }}.service
+        dst: /lib/systemd/system/{{ .PackageName }}.service
+      - src: ci/install/inits/sysv/init.d/{{ .PackageName }}
+        dst: /etc/init.d/{{ .PackageName }}
+  {{- if eq .Name "tyk-analytics" }}
+      - src: /opt/{{ .PackageName }}
+        dst: /opt/{{ .Name }}
+        type: "symlink"
+      - src: "EULA.md"
+        dst: "/opt/share/docs/{{ .PackageName }}/EULA.md"
+      - src: "portal/*"
+        dst: "/opt/{{ .PackageName }}/portal"
+      - src: "utils/scripts/*"
+        dst: "/opt/{{ .PackageName }}/utils/scripts"
+      - src: "schemas/*"
+        dst: "/opt/{{ .PackageName }}/schemas"
+      - src: "webclient/lang/*"
+        dst: "/opt/{{ .PackageName }}/lang"
+      - src: tyk_config_sample.config
+        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        type: "config|noreplace"
+  {{- end}}
+  {{- if eq .Name "tyk" }}
+      - src: /opt/{{ .PackageName }}
+        dst: /opt/{{ .Name }}
+        type: "symlink"
+      - src: "LICENSE.md"
+        dst: "/opt/share/docs/{{ .PackageName }}/LICENSE.md"
+      - src: "apps/app_sample.*"
+        dst: "/opt/{{ .PackageName }}/apps"
+      - src: "templates/*.json"
+        dst: "/opt/{{ .PackageName }}/templates"
+      - src: "templates/playground/*"
+        dst: "/opt/{{ .PackageName }}/templates/playground"
+      - src: "middleware/*.js"
+        dst: "/opt/{{ .PackageName }}/middleware"
+      - src: "event_handlers/sample/*.js"
+        dst: "/opt/{{ .PackageName }}/event_handlers/sample"
+      - src: "policies/*.json"
+        dst: "/opt/{{ .PackageName }}/policies"
+      - src: "coprocess/*"
+        dst: "/opt/{{ .PackageName }}/coprocess"
+      - src: tyk.conf.example
+        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        type: "config|noreplace"
+  {{- end }}
+  {{- if eq .Name "tyk-identity-broker" }}
+      - src: "LICENSE.md"
+        dst: "/opt/share/docs/{{ .PackageName }}/LICENSE.md"
+      - src: tib_sample.conf
+        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        type: "config|noreplace"
+  {{- end }}
+  {{- if eq .Name "tyk-pump" }}
+      - src: "LICENSE.md"
+        dst: "/opt/share/docs/{{ .PackageName }}/LICENSE.md"
+      - src: pump.example.conf
+        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        type: "config|noreplace"
+  {{- end }}
+  {{- if eq .Name "tyk-sink" }}
+      - src: tyk_sink_sample.conf
+        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        type: "config|noreplace"
+  {{- end }}
+  {{- if eq .Name "portal" }}
+      - src: portal.conf
+        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        type: "config|noreplace"
+      - src: app/*
+        dst: /opt/{{ .PackageName }}/app/
+      - src: themes/*
+        dst: /opt/{{ .PackageName }}/themes/
+      - src: public/system/*
+        dst: /opt/{{ .PackageName }}/public/system/
+  {{- end }}
+  {{- template "nfpm-common" . }}
+  {{- if eq .Name "tyk-analytics" }}
+  - id: payg
+    vendor: "Tyk Technologies Ltd"
+    homepage: "https://tyk.io"
+    maintainer: "Tyk <info@tyk.io>"
+    description: "PAYG Dashboard for the Tyk API Gateway"
+    package_name: {{ .PackageName }}-PAYG
+    file_name_template: "{{`{{ .ProjectName }}_PAYG_{{ .Version }}_{{ .Os }}_{{ .Arch }}`}}"
+    builds:
+      - payg
+    formats:
+      - deb
+      - rpm
+    contents:
+      - src: "README.md"
+        dst: "/opt/share/docs/{{ .PackageName }}/README.md"
+      - src: "ci/install/*"
+        dst: "/opt/{{ .PackageName }}/install"
+      - src: ci/install/inits/systemd/system/{{ .PackageName }}.service
+        dst: /lib/systemd/system/{{ .PackageName }}.service
+      - src: ci/install/inits/sysv/init.d/{{ .PackageName }}
+        dst: /etc/init.d/{{ .PackageName }}
+      - src: /opt/{{ .PackageName }}
+        dst: /opt/{{ .Name }}
+        type: "symlink"
+      - src: "EULA.md"
+        dst: "/opt/share/docs/{{ .PackageName }}/EULA.md"
+      - src: "portal/*"
+        dst: "/opt/{{ .PackageName }}/portal"
+      - src: "utils/scripts/*"
+        dst: "/opt/{{ .PackageName }}/utils/scripts"
+      - src: "schemas/*"
+        dst: "/opt/{{ .PackageName }}/schemas"
+      - src: "webclient/lang/*"
+        dst: "/opt/{{ .PackageName }}/lang"
+      - src: tyk_config_sample.config
+        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        type: "config|noreplace"
+  {{- template "nfpm-common" . }}
+  {{- end }}
+{{end}}
+
+{{ define "nfpm-common" }}
+    scripts:
+      preinstall: "ci/install/before_install.sh"
+      postinstall: "ci/install/post_install.sh"
+      postremove: "ci/install/post_remove.sh"
+    bindir: "/opt/{{ .PackageName }}"
+    overrides:
+      rpm:
+        file_name_template: '{{`{{ .PackageName }}-{{ replace .Version `}}"-" "~"{{` }}-1.{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}`}}'
+        replacements:
+          amd64: x86_64
+          arm: aarch64
+          arm64: aarch64
+      deb:
+        file_name_template: '{{`{{ .PackageName }}_{{ replace .Version `}}"-" "~"{{` }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}`}}'
+        replacements:
+          arm: arm64
+    rpm:
+      scripts:
+        posttrans: ci/install/post_trans.sh
+      signature:
+        key_file: tyk.io.signing.key
+    deb:
+      signature:
+        key_file: tyk.io.signing.key
+        type: origin
+{{- end }}

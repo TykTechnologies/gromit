@@ -1,0 +1,13 @@
+{{define "builds"}}
+builds:
+  - id: std
+    ldflags:
+      - -X {{.Branchvals.VersionPackage}}.VERSION={{`{{.Version}}`}} -X {{.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}} -X {{.Branchvals.VersionPackage}}.buildDate={{`{{.Date}}`}} -X {{.Branchvals.VersionPackage}}.builtBy=goreleaser
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    binary: {{.Binary}}
+{{end}}
+
