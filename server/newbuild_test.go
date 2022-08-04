@@ -32,7 +32,7 @@ func TestNewBuild(t *testing.T) {
 			Name:         "CheckBranchWithDots",
 			Endpoint:     "/env/release-310",
 			HTTPStatus:   http.StatusOK,
-			ResponseJSON: `{"name":"release-310","state":"new","tyk":"master","tyk-analytics":"master","tyk-pump":"sha-pump"}`,
+			ResponseJSON: `{"name":"release-310", "portal":"master", "state":"new", "tyk":"master", "tyk-analytics":"master", "tyk-identity-broker":"master", "tyk-pump":"sha-pump", "tyk-sink":"master"}`,
 			HTTPMethod:   "GET",
 		},
 		{
@@ -46,7 +46,7 @@ func TestNewBuild(t *testing.T) {
 			Name:         "CheckGHStyleGateway",
 			Endpoint:     "/env/app-test",
 			HTTPStatus:   http.StatusOK,
-			ResponseJSON: `{"name":"app-test","state":"new","tyk":"sha-gw","tyk-analytics":"master","tyk-pump":"master"}`,
+			ResponseJSON: `{"name":"app-test", "portal":"master", "state":"new", "tyk":"sha-gw", "tyk-analytics":"master", "tyk-identity-broker":"master", "tyk-pump":"master", "tyk-sink":"master"}`,
 			HTTPMethod:   "GET",
 		},
 		{
@@ -60,7 +60,7 @@ func TestNewBuild(t *testing.T) {
 			Name:         "CheckURLEncStyleDashboard",
 			Endpoint:     "/env/app-test",
 			HTTPStatus:   http.StatusOK,
-			ResponseJSON: `{"name":"app-test","state":"new","tyk":"master","tyk-analytics":"sha-db","tyk-pump":"master"}`,
+			ResponseJSON: `{"name":"app-test", "portal":"master", "state":"new", "tyk":"master", "tyk-analytics":"sha-db", "tyk-identity-broker":"master", "tyk-pump":"master", "tyk-sink":"master"}`,
 			HTTPMethod:   "GET",
 		},
 	}
