@@ -18,7 +18,7 @@ func TestNewBuild(t *testing.T) {
 			Name:         "CheckPlainPump",
 			Endpoint:     "/env/app-test-pump",
 			HTTPStatus:   http.StatusOK,
-			ResponseJSON: `{"name":"app-test-pump","portal":"master","state":"new","tyk":"master","tyk-analytics":"master","tyk-identity-broker":"master","tyk-pump":"sha-pump","tyk-sink":"master"}`,
+			ResponseJSON: `{"name":"app-test-pump", "portal":"master","state":"new","tyk":"master","tyk-analytics":"master","tyk-identity-broker":"master","tyk-pump":"sha-pump","tyk-sink":"master"}`,
 			HTTPMethod:   "GET",
 		},
 		{

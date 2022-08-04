@@ -85,9 +85,6 @@ func runSubTests(t *testing.T, cases []APITestCase) {
 
 			if tc.ResponseJSON != "" {
 				require.JSONEq(t, tc.ResponseJSON, response.Body.String())
-				if body := response.Body.String(); body != tc.ResponseJSON {
-					t.Errorf("Expected %s. Got %s", tc.ResponseJSON, body)
-				}
 			}
 		})
 	}
