@@ -20,7 +20,7 @@ dockers:
   - image_templates:
       - "tykio/gromit:latest"
       - "tykio/gromit:{{.Tag}}"
-    use_buildx: true
+    use: buildx
     build_flag_templates:
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
