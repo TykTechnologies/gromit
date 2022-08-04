@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"os"
 	"strings"
@@ -13,8 +12,6 @@ import (
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/goccy/go-graphviz"
-	"github.com/goccy/go-graphviz/cgraph"
 	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -306,31 +303,6 @@ func (p Policies) String() string {
 	}
 	fmt.Fprintln(w)
 	return w.String()
-}
-
-func (p Policies) dotGen(cg *cgraph.Graph) error {
-	return nil
-}
-
-// Graph returns a graphviz dot format representation of the policy
-func (p Policies) Graph(w io.Writer) error {
-	g := graphviz.New()
-	relgraph, err := g.Graph()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := relgraph.Close(); err != nil {
-			log.Fatal().Err(err).Msg("could not close graphviz")
-		}
-		g.Close()
-	}()
-
-	err = p.dotGen(relgraph)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // LoadRepoPolicies returns the policies as a map of repos to policies
