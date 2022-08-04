@@ -62,9 +62,9 @@ func TestPolicyConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get a repo: %v", err)
 	}
-	assert.EqualValues(t, repo.Protected, []string{"master", "release-3-lts"})
+	assert.EqualValues(t, repo.Protected, []string{"master", "release-3-lts", "release-4"})
 	// test if branch policy for master is set correctly.
-	assert.EqualValues(t, repo.Branchvals.UpgradeFromVer, "3.0.9")
+	assert.EqualValues(t, repo.Branchvals.UpgradeFromVer, "3.0.8")
 	t.Logf("Branchvals: %+v", repo.Branchvals)
 	// test if global branch policy is set correctly.
 	assert.EqualValues(t, repo.Branchvals.GoVersion, "1.15")
