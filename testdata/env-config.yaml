@@ -1,7 +1,7 @@
 authtoken: 58bb30be72d53a000140441e3003391ccb4c47daa0e2527d637
 tablename: GromitTest
 registryid: "046805072452"
-repos: "tyk,tyk-analytics,tyk-pump,tyk-sink,tyk-identity-broker,raava"
+repos: "tyk,tyk-analytics,tyk-pump,tyk-sink,tyk-identity-broker,portal"
 cluster:
   zoneid: Z02045551IU0LZIOX4AO0
   domain: test.tyk.technology
