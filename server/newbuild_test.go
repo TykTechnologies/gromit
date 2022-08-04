@@ -11,14 +11,14 @@ func TestNewBuild(t *testing.T) {
 			Name:       "PlainPump",
 			Endpoint:   "/newbuild",
 			HTTPStatus: http.StatusOK,
-			Payload:    `{"repo":"tyk-pump","ref":"app-test","sha":"sha-pump"}`,
+			Payload:    `{"repo":"tyk-pump","ref":"app-test-pump","sha":"sha-pump"}`,
 			HTTPMethod: "POST",
 		},
 		{
 			Name:         "CheckPlainPump",
-			Endpoint:     "/env/app-test",
+			Endpoint:     "/env/app-test-pump",
 			HTTPStatus:   http.StatusOK,
-			ResponseJSON: `{"name":"app-test","state":"new","tyk":"master","tyk-analytics":"master","tyk-pump":"sha-pump"}`,
+			ResponseJSON: `{"name":"app-test-pump","portal":"master","state":"new","tyk":"master","tyk-analytics":"master","tyk-identity-broker":"master","tyk-pump":"sha-pump","tyk-sink":"master"}`,
 			HTTPMethod:   "GET",
 		},
 		{
