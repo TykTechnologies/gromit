@@ -140,6 +140,10 @@
 
       - name: Run tests
         shell: bash
+  {{- if eq .Name "tyk-analytics" }}
+        env:
+          TYK_DB_LICENSEKEY: ${{`{{ secrets.DASH_LICENSE }}`}}
+  {{- end }}
         run: |
           set -eaxo pipefail
           if [ ! -d smoke-tests ]; then
