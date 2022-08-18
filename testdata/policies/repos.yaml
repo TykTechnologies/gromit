@@ -69,3 +69,60 @@ policy:
           versionpackage: github.com/TykTechnologies/tyk-pump/pumps
       ports:
         master: [ release-1.6 ]
+    tyk-identity-broker:
+      description: |
+        Bridge between various Identity Management systems and Tyk API Gateway
+      pcrepo: tyk-identity-broker
+      dhrepo: tykio/tyk-identity-broker
+      csrepo: docker.tyk.io/tyk-identity-broker/tyk-identity-broker
+      exposeports: 80
+      binary: tyk-identity-broker
+      packagename: tyk-identity-broker
+      protected: [ master, release-1.3, release-1.2 ]
+      branches:
+        cgo: false
+        goversion: 1.13
+        upgradefromver: 1.1.0
+        pcprivate: false
+        configfile: tib.conf
+        versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
+      ports:
+        master: [ release-1.3, release-1.2 ]
+    tyk-sink:
+      description: |
+        Tyk RPC server backend (bridge)
+      pcrepo: tyk-mdcb
+      dhrepo: tyk-mdcb-docker
+      csrepo: docker.tyk.io/tyk-sink/tyk-sink
+      exposeports: 80
+      binary: tyk-sink
+      packagename: tyk-sink
+      protected: [ master, release-2, release-1.9 ]
+      branches:
+        cgo: false
+        goversion: 1.15
+        upgradefromver: 1.7.7
+        pcprivate: true
+        configfile: tyk_sink.conf
+        versionpackage: github.com/TykTechnologies/tyk-sink/main
+      ports:
+        master: [ release-2, release-1.9 ]
+    portal:
+      description: |
+        Developer portal for the Tyk API Gateway
+      pcrepo: portal
+      dhrepo: tykio/portal
+      csrepo: docker.tyk.io/portal/portal
+      exposeports: 80
+      binary: dev-portal
+      packagename: portal
+      protected: [ master, release-1.0 ]
+      branches:
+        cgo: true
+        goversion: 1.15
+        upgradefromver: 0.0.0
+        pcprivate: false
+        configfile: portal.conf
+        versionpackage: github.com/TykTechnologies/portal/core
+      ports:
+        master: [ release-1.0 ]
