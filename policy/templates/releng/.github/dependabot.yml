@@ -9,7 +9,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-{{ if eq .Name "tyk-pump" }}
+{{ if or (eq .Name "tyk-pump") (eq .Name "tyk-identity-broker")  }}
   - package-ecosystem: "gomod"
     # Look for `go.mod` file in the `root` directory
     directory: "/"
@@ -17,7 +17,7 @@ updates:
     schedule:
       interval: "weekly"
     reviewers:
-      - "platform"
+      - "TykTechnologies/platform"
     # max number of pull requests that dependabot will open in tandem
     open-pull-requests-limit: 4
 {{- end }}
