@@ -92,7 +92,7 @@ policy:
       description: |
         Tyk RPC server backend (bridge)
       pcrepo: tyk-mdcb
-      dhrepo: tyk-mdcb-docker
+      dhrepo: tykio/tyk-mdcb-docker
       csrepo: docker.tyk.io/tyk-sink/tyk-sink
       exposeports: 80
       binary: tyk-sink
