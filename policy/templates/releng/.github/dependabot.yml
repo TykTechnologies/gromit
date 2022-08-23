@@ -9,7 +9,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-{{ if or (eq .Name "tyk-pump") (eq .Name "tyk-identity-broker")  }}
+{{ if or (eq .Name "tyk-pump") (eq .Name "tyk-sink") (eq .Name "tyk-identity-broker") }}
   - package-ecosystem: "gomod"
     # Look for `go.mod` file in the `root` directory
     directory: "/"
