@@ -10,7 +10,7 @@ updates:
     schedule:
       interval: "weekly"
     reviewers:
-      - "TykTechnologies/devops""
+      - "TykTechnologies/devops"
 {{ if or (eq .Name "tyk-pump") (eq .Name "tyk-sink") (eq .Name "tyk-identity-broker") }}
   - package-ecosystem: "gomod"
     # Look for `go.mod` file in the `root` directory
