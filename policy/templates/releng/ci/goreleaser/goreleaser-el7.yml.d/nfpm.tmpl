@@ -92,6 +92,10 @@ nfpms:
         dst: /opt/{{ .PackageName }}/themes/
       - src: public/system/*
         dst: /opt/{{ .PackageName }}/public/system/
+      - src: ci/entrypoint.sh
+        dst: /opt/{{ .PackageName }}/entrypoint.sh
+        file_info:
+          mode: 0775
   {{- end }}
   {{- template "nfpm-common" . }}
   {{- if eq .Name "tyk-analytics" }}

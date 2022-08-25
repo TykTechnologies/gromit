@@ -8,6 +8,8 @@
 {{/* Generate this only if cgo is enabled. */}}
 {{- if .Branchvals.Cgo }}
 
+  {{- template "before_hooks" . }}
+
   {{- template "cgo_builds" . }}
 
   {{- template "nfpm" . }}
