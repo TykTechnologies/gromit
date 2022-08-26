@@ -120,7 +120,7 @@ policy:
       branches:
         cgo: true
         goversion: 1.15
-        upgradefromver: 0.0.0
+        upgradefromver: 1.0.0
         pcprivate: false
         configfile: portal.conf
         versionpackage: github.com/TykTechnologies/portal/core
