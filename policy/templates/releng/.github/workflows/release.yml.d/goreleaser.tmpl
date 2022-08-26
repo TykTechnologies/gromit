@@ -38,27 +38,27 @@
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
 
       - name: Checkout of {{ .Name }}
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
   {{- if eq .Name "tyk-analytics" }}
           token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
           submodules: true
   {{- end }}
-      - uses: docker/setup-qemu-action@v1
+      - uses: docker/setup-qemu-action@v2
 
-      - uses: docker/setup-buildx-action@v1
+      - uses: docker/setup-buildx-action@v2
 
       - name: Login to DockerHub
         if: startsWith(github.ref, 'refs/tags')
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{`{{ secrets.DOCKER_USERNAME }}`}}
           password: ${{`{{ secrets.DOCKER_PASSWORD }}`}}
 
       - name: Login to Cloudsmith
         if: startsWith(github.ref, 'refs/tags')
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: docker.tyk.io
           username: ${{`{{ secrets.CLOUDSMITH_USERNAME }}`}}
@@ -106,7 +106,7 @@
           cp -r ./* /go/src/github.com/TykTechnologies/tyk
   {{- end }}
 
-      - uses: goreleaser/goreleaser-action@v2
+      - uses: goreleaser/goreleaser-action@v3
         with:
           version: latest
           args: release --rm-dist -f ${{`{{ matrix.goreleaser }}`}}
@@ -125,7 +125,7 @@
           RPMVERS: ${{`{{ matrix.rpmvers }}`}}
           PACKAGECLOUD_TOKEN: ${{`{{ secrets.PACKAGECLOUD_TOKEN }}`}}
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: deb
           retention-days: 1
@@ -133,7 +133,7 @@
             dist/*.deb
             !dist/*PAYG*.deb
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: rpm
           retention-days: 1
@@ -141,7 +141,7 @@
             dist/*.rpm
             !dist/*PAYG*.rpm
   {{- if eq .Name "tyk-analytics" }}
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: payg
           retention-days: 1
