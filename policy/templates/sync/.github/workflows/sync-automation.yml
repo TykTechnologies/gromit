@@ -6,10 +6,10 @@
 
 
 {{ $dirs := list "ci" }}
-{{ $files := list ".github/workflows/api-tests.yml" ".github/workflows/release.yml" "github/dependabot.yml" }}
+{{ $files := list ".github/workflows/api-tests.yml" ".github/workflows/release.yml" ".github/dependabot.yml" }}
 
 {{ if eq .Name "tyk-analytics" }}
-  {{ $files := list ".github/workflows/api-tests.yml" ".github/workflows/release.yml" "github/dependabot.yml" ".github/workflows/ui-tests.yml" }}
+  {{ $files := list ".github/workflows/api-tests.yml" ".github/workflows/release.yml" ".github/dependabot.yml" ".github/workflows/ui-tests.yml" }}
 {{ end }}
 
 name: Sync automation
@@ -38,6 +38,12 @@ jobs:
           - {{ $port }}
           {{- end }}
 
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{`{{matrix.branch}}`}}
+          token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
+
       - name: sync ${{`{{matrix.branch}}`}} from master
         id: sync-changes
         run: |
@@ -47,19 +53,21 @@ jobs:
           git fetch origin master:master
           prbranch=sync/auto/${{`{{ matrix.branch }}/${{ github.run_id }}`}}
           git checkout -b $prbranch
-				{{- range $dir := index $dirs }}
-					rm -rf $dir
-				  git restore --source {{ .Branch }} -- $dir
-				{{- end }}
-				{{- range $file := index $files }}
-					rm -f $file
-				  git restore --source {{ .Branch }} -- $file
-				{{- end }}
+        {{- $branch := .Branch }}
+        {{- range $dir := index $dirs }}
+          rm -rf {{ $dir }}
+          git restore --source {{ $branch }} -- {{ $dir }}
+        {{- end }}
+        {{- range $file := index $files }}
+          rm -f {{ $file }}
+          git restore --source {{ $branch }} -- {{ $file }}
+        {{- end }}
           git add -A && git commit -m "[CI]: Syncing CI changes to ${{`{{ matrix.branch }}`}}"
           git push origin $prbranch
           echo "::set-output name=prbranch::$prbranch"
           echo "::debug::Commit ${{`{{ github.sha }} syncd for ${{matrix.branch}}`}}"
           exit 0
+
       - name: Create PR from the branch.
         id: create-pr
         uses: actions/github-script@v6
