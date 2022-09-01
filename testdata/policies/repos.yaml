@@ -48,7 +48,7 @@ policy:
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
       ports:
-        master: [ release-4 ]
+        master: [ release-4, release-3.2.3 ]
         release-3: [release-3-lts]
     tyk-pump:
       description: |
