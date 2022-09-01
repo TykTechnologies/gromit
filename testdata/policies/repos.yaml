@@ -28,7 +28,7 @@ policy:
             release-4:
               upgradefromver: 3.0.8
       ports:
-        master: [ release-4 ]
+        master: [ release-4, release-3.2.3 ]
         release-3-lts: [release-3.0.11]
     tyk-analytics:
       description: |
@@ -120,7 +120,7 @@ policy:
       branches:
         cgo: true
         goversion: 1.15
-        upgradefromver: 0.0.0
+        upgradefromver: 1.0.0
         pcprivate: false
         configfile: portal.conf
         versionpackage: github.com/TykTechnologies/portal/core

@@ -50,7 +50,7 @@ WORKDIR /opt/{{ .PackageName }}/
 # COPY {{ .Binary }} .
 
 {{- if eq .Name "portal" }}
-ENTRYPOINT ["/opt/{{ .PackageName }}/{{ .Binary }}" ]
+ENTRYPOINT ["/opt/{{ .PackageName }}/entrypoint.sh" ]
 {{- else }}
 ENTRYPOINT ["/opt/{{ .PackageName }}/{{ .Name }}" ]
 {{- end }}
