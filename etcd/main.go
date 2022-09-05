@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"go.etcd.io/etcd/api/v3/v3rpc/rpctypes"
@@ -14,13 +13,39 @@ import (
 var EtcdConfig = clientv3.Config{
 	Endpoints:   []string{"ec2-3-66-86-193.eu-central-1.compute.amazonaws.com:2379"},
 	DialTimeout: 5 * time.Second,
-	Username:    "xxxxxxxxx",
-	Password:    "xxxxxxxxx",
+	Username:    "x",
+	Password:    "x",
 }
 
-var requestTimeout = 4 * time.Second
+var requestTimeout = 2 * time.Second
 
-func (e *etcdLock) Acquire(lockName string) *concurrency.Mutex {
+func (e *etcdLock) Acquire(lockName string, duration time.Duration) bool {
+
+	// create a new session
+	s1, err := concurrency.NewSession(e.client)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// when session is closed lock on mutex will be released as well
+	defer s1.Close()
+	m1 := concurrency.NewMutex(s1, lockName)
+
+	// Acquire lock for s1
+	if err := m1.Lock(context.TODO()); err != nil {
+		fmt.Println("Lock: Couldn't adquire lock")
+		fmt.Println(err)
+		return false
+	}
+
+	fmt.Println("Lock: Got lock for s1")
+	time.Sleep(duration * time.Second)
+	fmt.Println(*m1)
+
+	return true
+}
+
+func (e *etcdLock) TryAcquire(lockName string, duration time.Duration) error {
 
 	// create a new session
 	s1, err := concurrency.NewSession(e.client)
@@ -32,136 +57,51 @@ func (e *etcdLock) Acquire(lockName string) *concurrency.Mutex {
 
 	// Try acquire lock for s1
 	err = m1.TryLock(context.TODO())
+
 	if err != nil {
+		fmt.Println("TryLock: Couldn't adquire lock")
 		switch err {
 		case concurrency.ErrLocked:
 			fmt.Println("cannot acquire lock, as already locked in another session")
-			return m1
 		default:
 			fmt.Println(err)
-			return m1
 		}
+		return err
 	}
+
+	fmt.Println("Got Lock!")
 	fmt.Println(m1)
-	return m1
-
+	time.Sleep(duration * time.Second)
+	return err
 }
 
-func (e *etcdLock) Release(lockName string) {
+func (e *etcdLock) Release(lockName string) error {
 
-}
-
-type etcdLock struct {
-	client *clientv3.Client
-}
-
-func main() {
-
-	out, _ := Put("tesKey", "TRY123")
-	fmt.Println(out)
-
-	cli, err := clientv3.New(EtcdConfig)
+	// create a new session
+	s1, err := concurrency.NewSession(e.client)
 	if err != nil {
 		fmt.Println(err)
 	}
-	defer cli.Close()
+	defer s1.Close()
 
-	lock := etcdLock{
-		cli,
+	m1 := concurrency.NewMutex(s1, lockName)
+
+	// Try unlock for s1
+	err = m1.Unlock((context.TODO()))
+	if err != nil {
+		fmt.Println(err)
+		return err
 	}
 
-	lock.Acquire("master")
-
-	time.Sleep(30 * time.Second)
-
-	// mtx := AdquireLock("myLock")
-	// fmt.Println(mtx)
-
-	// cli, err := clientv3.New(EtcdConfig)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// defer cli.Close()
-
-	// if err = mtx.Unlock(context.TODO()); err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Println("Context unlocked??")
-	// fmt.Println(mtx)
-	// fmt.Println("The End")
+	fmt.Println("Release: released lock for s1")
+	return err
 
 }
 
-// func AdquireLock(client clientv3, lockName string) concurrency.Mutex {
-
-// 	cli, err := clientv3.New(EtcdConfig)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	defer cli.Close()
-
-// 	// create a new session
-// 	s1, err := concurrency.NewSession(cli)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	defer s1.Close()
-// 	m1 := concurrency.NewMutex(s1, lockName)
-
-// 	// Try acquire lock for s1
-// 	err = m1.TryLock(context.TODO())
-// 	if err != nil {
-// 		switch err {
-// 		case concurrency.ErrLocked:
-// 			fmt.Println("cannot acquire lock, as already locked in another session")
-// 			return *m1
-// 		default:
-// 			fmt.Println(err)
-// 			return *m1
-// 		}
-// 	}
-// 	fmt.Println(*m1)
-// 	return *m1
-// }
-
-// func ReleaseLock(lockName string) concurrency.Mutex {
-
-// 	cli, err := clientv3.New(EtcdConfig)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	defer cli.Close()
-
-// 	// create a new session
-// 	s1, err := concurrency.NewSession(cli)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	defer s1.Close()
-// 	m1 := concurrency.NewMutex(s1, lockName)
-
-// 	// Try unlock for s1
-// 	err = m1.Unlock((context.TODO()))
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	fmt.Println("released lock for s1")
-// 	fmt.Println(*m1)
-// 	return *m1
-// }
-
-func Put(key string, value string) (clientv3.PutResponse, error) {
-	cli, err := clientv3.New(EtcdConfig)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer cli.Close()
+func (e *etcdLock) Put(key string, value string) (clientv3.PutResponse, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	out, err := cli.Put(ctx, key, value)
+	out, err := e.client.Put(ctx, key, value)
 
 	cancel()
 
@@ -179,4 +119,34 @@ func Put(key string, value string) (clientv3.PutResponse, error) {
 	}
 
 	return *out, err
+}
+
+type etcdLock struct {
+	client *clientv3.Client
+}
+
+func main() {
+
+	// create client
+	cli, err := clientv3.New(EtcdConfig)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer cli.Close()
+
+	// create lock object
+	lock := etcdLock{
+		cli,
+	}
+
+	//lock.TryAcquire("master", 10)
+	lock.Acquire("master", 1)
+
+	//time.Sleep(100 * time.Second)
+
+	// when session is closed lock is released
+	lock.Release("master")
+
+	// out, _ := Put("tesKey", "TRY123")
+	// fmt.Println(out)
 }
