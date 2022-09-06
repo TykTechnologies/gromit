@@ -25,7 +25,7 @@ var mutexCmd = &cobra.Command{
 This command can be used to synchronise external processes.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		log.Debug().Str("host", etcdHost).Str("user", etcdUser).Str("pass", etcdPass).Msg("etcd url")
+		log.Info().Str("host", etcdHost).Str("user", etcdUser).Str("pass", etcdPass).Msg("etcd url")
 		// create client
 		cli, err := clientv3.New(clientv3.Config{
 			Endpoints:   []string{etcdHost},
@@ -36,19 +36,26 @@ This command can be used to synchronise external processes.
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not connect to etcd")
 		}
-		defer cli.Close()
 		// create a new session
 		sess, err := concurrency.NewSession(cli)
 		if err != nil {
 			fmt.Println(err)
 		}
 		// when session is closed lock on mutex will be released as well
-		defer sess.Close()
 
 		m := concurrency.NewMutex(sess, args[0])
 		lock = mutex.Lock{
-			Mutex: m,
+			Client:  cli,
+			Session: sess,
+			Mutex:   m,
 		}
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		err := lock.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("could not close session and/or client")
+		}
+
 	},
 }
 

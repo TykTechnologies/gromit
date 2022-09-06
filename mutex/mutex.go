@@ -6,9 +6,12 @@ import (
 	"time"
 
 	"go.etcd.io/etcd/client/v3/concurrency"
+	"go.etcd.io/etcd/client/v3"
 )
 
 type Lock struct {
+	Client *clientv3.Client
+	Session *concurrency.Session
 	Mutex *concurrency.Mutex
 }
 
@@ -22,6 +25,16 @@ func (e *Lock) Acquire() error {
 
 	fmt.Println("Lock: Got lock for s1")
 	return nil
+}
+
+// Close releases the client and session resources
+func (e *Lock) Close() error {
+	err := e.Session.Close()
+	if err != nil {
+		return err
+	}
+	err = e.Client.Close()
+	return err
 }
 
 func (e *Lock) TryAcquire(lockName string, duration time.Duration) error {
