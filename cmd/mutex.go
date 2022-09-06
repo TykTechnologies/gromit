@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/TykTechnologies/gromit/mutex"
@@ -65,9 +66,13 @@ var getSubCmd = &cobra.Command{
 	Short: "Acquire a lock named <lock name> and block until it is acquired.",
 	Long:  `Implemented as a mutex in etcd named <lock name>. If it does not exist it will be created.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		lock.Acquire()
+		lock.TryAcquire()
 		// Simulate some processing
-		time.Sleep(15 * time.Second)
+		op, err := exec.Command("./script.sh").Output()
+		if err != nil {
+			log.Fatal().Bytes("output", op).Msg("could not execute script")
+		}
+		log.Info().Bytes("output", op).Msg("script output")
 		lock.Release()
 	},
 }

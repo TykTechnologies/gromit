@@ -3,10 +3,10 @@ package mutex
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"go.etcd.io/etcd/client/v3/concurrency"
 	"go.etcd.io/etcd/client/v3"
+	"github.com/rs/zerolog/log"
 )
 
 type Lock struct {
@@ -18,12 +18,10 @@ type Lock struct {
 func (e *Lock) Acquire() error {
 	// Acquire lock for s1
 	if err := e.Mutex.Lock(context.TODO()); err != nil {
-		fmt.Println("Lock: Couldn't adquire lock")
-		fmt.Println(err)
 		return err
 	}
 
-	fmt.Println("Lock: Got lock for s1")
+	log.Debug().Msgf("Lock: got lock %s", e.Mutex.Key())
 	return nil
 }
 
@@ -37,7 +35,7 @@ func (e *Lock) Close() error {
 	return err
 }
 
-func (e *Lock) TryAcquire(lockName string, duration time.Duration) error {
+func (e *Lock) TryAcquire() error {
 	// Try acquire lock for s1
 	err := e.Mutex.TryLock(context.TODO())
 
@@ -51,18 +49,13 @@ func (e *Lock) TryAcquire(lockName string, duration time.Duration) error {
 		}
 		return err
 	}
-
-	fmt.Println("Got Lock!")
-	time.Sleep(duration * time.Second)
+	log.Debug().Msgf("TryLock: got lock %s", e.Mutex.Key())
 	return err
 }
 
 func (e *Lock) Release() error {
+	log.Debug().Msgf("releasing lock: %s", e.Mutex.Key())
 	err := e.Mutex.Unlock((context.TODO()))
-	if err != nil {
-		fmt.Println(err)
-	}
 
-	fmt.Println("Release: released lock for s1")
 	return err
 }
