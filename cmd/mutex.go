@@ -26,7 +26,7 @@ var mutexCmd = &cobra.Command{
 This command can be used to synchronise external processes.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		log.Info().Str("host", etcdHost).Str("user", etcdUser).Str("pass", etcdPass).Msg("etcd url")
+		//log.Info().Str("host", etcdHost).Str("user", etcdUser).Str("pass", etcdPass).Msg("etcd url")
 		// create client
 		cli, err := clientv3.New(clientv3.Config{
 			Endpoints:   []string{etcdHost},
