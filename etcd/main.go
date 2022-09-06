@@ -19,7 +19,7 @@ var EtcdConfig = clientv3.Config{
 
 var requestTimeout = 2 * time.Second
 
-func (e *etcdLock) Acquire(lockName string, duration time.Duration) bool {
+func (e *etcdLock) Acquire(lockName string, duration time.Duration) error {
 
 	// create a new session
 	s1, err := concurrency.NewSession(e.client)
@@ -35,14 +35,49 @@ func (e *etcdLock) Acquire(lockName string, duration time.Duration) bool {
 	if err := m1.Lock(context.TODO()); err != nil {
 		fmt.Println("Lock: Couldn't adquire lock")
 		fmt.Println(err)
-		return false
+		return err
 	}
 
 	fmt.Println("Lock: Got lock for s1")
 	time.Sleep(duration * time.Second)
 	fmt.Println(*m1)
 
-	return true
+	return err
+}
+
+func (e *etcdLock) AcquireWRelease(lockName string, duration time.Duration) error {
+
+	// create a new session
+	s1, err := concurrency.NewSession(e.client)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// when session is closed lock on mutex will be released as well
+	defer s1.Close()
+	m1 := concurrency.NewMutex(s1, lockName)
+
+	// acquire lock for s1
+	if err := m1.Lock(context.TODO()); err != nil {
+		fmt.Println("Lock: Couldn't adquire lock")
+		fmt.Println(err)
+		return err
+	}
+
+	fmt.Println("Lock: Got lock for s1")
+	// do stuff
+	time.Sleep(duration * time.Second)
+	fmt.Println(*m1)
+
+	// unlock for s1
+	err = m1.Unlock((context.TODO()))
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	fmt.Println("Release: released lock for s1")
+	return err
 }
 
 func (e *etcdLock) TryAcquire(lockName string, duration time.Duration) error {
@@ -139,14 +174,22 @@ func main() {
 		cli,
 	}
 
+	// Example-1 : TryAcquire
 	//lock.TryAcquire("master", 10)
-	lock.Acquire("master", 1)
 
-	//time.Sleep(100 * time.Second)
+	// Example-2 : Acquire
+	/*
+		lock.Acquire("master", 1)
+		time.Sleep(100 * time.Second)
+		// release is going to fail
+		lock.Release("master")
+	*/
 
-	// when session is closed lock is released
-	lock.Release("master")
+	// Example-3 : AcquireWRelease
 
+	lock.AcquireWRelease("master", 15)
+
+	// Example-4: Simple Put
 	// out, _ := Put("tesKey", "TRY123")
-	// fmt.Println(out)
+
 }
