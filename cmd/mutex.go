@@ -16,7 +16,7 @@ import (
 	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
-var etcdPass, etcdHost, etcdUser string
+var etcdPass, etcdHost, etcdUser, script string
 var lock mutex.Lock
 
 var mutexCmd = &cobra.Command{
@@ -68,7 +68,7 @@ var getSubCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		lock.TryAcquire()
 		// Simulate some processing
-		op, err := exec.Command("./script.sh").Output()
+		op, err := exec.Command(script).Output()
 		if err != nil {
 			log.Fatal().Bytes("output", op).Msg("could not execute script")
 		}
@@ -81,6 +81,7 @@ func init() {
 	mutexCmd.PersistentFlags().StringVar(&etcdPass, "etcdpass", os.Getenv("ETCD_PASS"), "Password for etcd user")
 	mutexCmd.PersistentFlags().StringVar(&etcdUser, "etcduser", "root", "etcd user to connect as")
 	mutexCmd.PersistentFlags().StringVar(&etcdHost, "host", "ec2-3-66-86-193.eu-central-1.compute.amazonaws.com:2379", "etcd host")
+	mutexCmd.PersistentFlags().StringVar(&script, "script", "./script.sh", "script to be run after acquiring lock")
 
 	mutexCmd.AddCommand(getSubCmd)
 	rootCmd.AddCommand(mutexCmd)
