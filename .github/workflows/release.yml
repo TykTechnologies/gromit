@@ -143,12 +143,3 @@ jobs:
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Tell CD about new version
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: peter-evans/repository-dispatch@v1
-        with:
-          token: ${{ secrets.TYK_CI_TOKEN }}
-          repository: TykTechnologies/tyk-ci
-          event-type: new-gromit
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
