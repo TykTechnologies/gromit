@@ -70,7 +70,7 @@ var getSubCmd = &cobra.Command{
 		// Simulate some processing
 		op, err := exec.Command(script).Output()
 		if err != nil {
-			log.Fatal().Bytes("output", op).Msg("could not execute script")
+			log.Fatal().AnErr("error", err).Bytes("output", op).Msg("could not execute script")
 		}
 		log.Info().Bytes("output", op).Msg("script output")
 		lock.Release()
