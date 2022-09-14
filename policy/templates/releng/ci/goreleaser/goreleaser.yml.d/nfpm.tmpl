@@ -90,12 +90,12 @@ nfpms:
       - src: portal.conf
         dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
         type: "config|noreplace"
-      - src: app/*
-        dst: /opt/{{ .PackageName }}/app/
-      - src: themes/*
-        dst: /opt/{{ .PackageName }}/themes/
-      - src: public/system/*
-        dst: /opt/{{ .PackageName }}/public/system/
+      - src: app
+        dst: /opt/{{ .PackageName }}/app
+      - src: themes
+        dst: /opt/{{ .PackageName }}/themes
+      - src: public/system
+        dst: /opt/{{ .PackageName }}/public/system
       - src: ci/entrypoint.sh
         dst: /opt/{{ .PackageName }}/entrypoint.sh
         file_info:
