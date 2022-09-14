@@ -66,14 +66,17 @@ var getSubCmd = &cobra.Command{
 	Short: "Acquire a lock named <lock name> and block until it is acquired.",
 	Long:  `Implemented as a mutex in etcd named <lock name>. If it does not exist it will be created.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		lock.TryAcquire()
-		// Simulate some processing
-		op, err := exec.Command(script).Output()
-		if err != nil {
-			log.Fatal().AnErr("error", err).Bytes("output", op).Msg("could not execute script")
+		if err := lock.TryAcquire(); err == nil {
+			// Simulate some processing
+			op, err := exec.Command(script).Output()
+			if err != nil {
+				log.Fatal().AnErr("error", err).Bytes("output", op).Msg("could not execute script")
+			}
+			log.Info().Bytes("output", op).Msg("script output")
+			lock.Release()
+		} else {
+			log.Info().Msg("Environment being created by another process, exiting with no errors")
 		}
-		log.Info().Bytes("output", op).Msg("script output")
-		lock.Release()
 	},
 }
 
