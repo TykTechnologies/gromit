@@ -2,10 +2,18 @@
 # Generated on: {{ .Timestamp }}
 
 {{- $dirs := list "ci" }}
-{{- $files := list ".github/workflows/api-tests.yml" ".github/workflows/release.yml" ".github/dependabot.yml" }}
+{{- $files := list ".github/workflows/release.yml" ".github/dependabot.yml" }}
 
-{{- if eq .Name "tyk-analytics" }}
-  {{- $files = list ".github/workflows/api-tests.yml" ".github/workflows/release.yml" ".github/dependabot.yml" ".github/workflows/ui-tests.yml" }}
+{{- if or (eq .Name "tyk-analytics") }}
+  {{- $files = append $files ".github/workflows/api-tests.yml" ".github/workflows/ui-tests.yml" }}
+{{- end }}
+
+{{- if or (eq .Name "tyk") }}
+  {{- $files = append $files ".github/workflows/api-tests.yml" }}
+{{- end }}
+
+{{- if or (eq .Name "portal") }}
+  {{- $files = append $files ".github/workflows/api_tests.yml" ".github/workflows/ui-tests.yml"}}
 {{- end }}
 
 name: Sync automation
