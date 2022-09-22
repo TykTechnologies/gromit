@@ -80,7 +80,7 @@ policy:
       csrepo: docker.tyk.io/tyk-identity-broker/tyk-identity-broker
       exposeports: 80
       binary: tyk-identity-broker
-      reviewers: []
+      reviewers: [ TykTechnologies/platform-squad ]
       packagename: tyk-identity-broker
       protected: [ master, release-1.3, release-1.2 ]
       branches:
@@ -100,7 +100,7 @@ policy:
       csrepo: docker.tyk.io/tyk-sink/tyk-sink
       exposeports: 80
       binary: tyk-sink
-      reviewers: []
+      reviewers: [ TykTechnologies/platform-squad ]
       packagename: tyk-sink
       protected: [ master, release-2, release-1.9 ]
       branches:
