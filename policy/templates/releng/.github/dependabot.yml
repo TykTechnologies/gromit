@@ -18,8 +18,12 @@ updates:
     # Check the gomod registry for updates every Monday
     schedule:
       interval: "weekly"
+  {{- if .Reviewers }}
     reviewers:
-      - "TykTechnologies/platform"
+    {{- range .Reviewers }}
+      - "{{ . }}"
+    {{- end }}
+  {{- end }}
     # max number of pull requests that dependabot will open in tandem
     open-pull-requests-limit: 4
 {{- end }}
