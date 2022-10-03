@@ -68,7 +68,7 @@ var getSubCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := lock.TryAcquire(); err == nil {
 			// Simulate some processing
-			op, err := exec.Command(script).Output()
+			op, err := exec.Command(script).CombinedOutput()
 			if err != nil {
 				log.Fatal().AnErr("error", err).Bytes("output", op).Msg("could not execute script")
 			}
