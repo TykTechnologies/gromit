@@ -19,6 +19,7 @@ import (
 var etcdPass, etcdHost, etcdUser, script string
 var lock mutex.Lock
 
+// mutexCmd represents the mutex command
 var mutexCmd = &cobra.Command{
 	Use:   "mutex",
 	Short: "Interact with MaaS",
@@ -26,7 +27,6 @@ var mutexCmd = &cobra.Command{
 This command can be used to synchronise external processes.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		//log.Info().Str("host", etcdHost).Str("user", etcdUser).Str("pass", etcdPass).Msg("etcd url")
 		// create client
 		cli, err := clientv3.New(clientv3.Config{
 			Endpoints:   []string{etcdHost},
@@ -60,6 +60,7 @@ This command can be used to synchronise external processes.
 	},
 }
 
+// getSubCmd represents the get subcommand from mutex command
 var getSubCmd = &cobra.Command{
 	Use:   "get <lock name>",
 	Args:  cobra.MinimumNArgs(1),
@@ -80,6 +81,7 @@ var getSubCmd = &cobra.Command{
 	},
 }
 
+// initialization of variables
 func init() {
 	mutexCmd.PersistentFlags().StringVar(&etcdPass, "etcdpass", os.Getenv("ETCD_PASS"), "Password for etcd user")
 	mutexCmd.PersistentFlags().StringVar(&etcdUser, "etcduser", "root", "etcd user to connect as")
