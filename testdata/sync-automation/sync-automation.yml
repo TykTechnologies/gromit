@@ -9,9 +9,9 @@ on:
       - master
     paths:
       - ci/**
-      - .github/workflows/api-tests.yml
       - .github/workflows/release.yml
       - .github/dependabot.yml
+      - .github/workflows/api-tests.yml
 
 jobs:
   sync:
@@ -41,12 +41,12 @@ jobs:
           git checkout -b $prbranch
           rm -rf ci
           git restore --source master -- ci
-          rm -f .github/workflows/api-tests.yml
-          git restore --source master -- .github/workflows/api-tests.yml
           rm -f .github/workflows/release.yml
           git restore --source master -- .github/workflows/release.yml
           rm -f .github/dependabot.yml
           git restore --source master -- .github/dependabot.yml
+          rm -f .github/workflows/api-tests.yml
+          git restore --source master -- .github/workflows/api-tests.yml
           git add -A && git commit -m "[CI]: Syncing CI changes to ${{ matrix.branch }}"
           git push origin $prbranch
           echo "::set-output name=prbranch::$prbranch"

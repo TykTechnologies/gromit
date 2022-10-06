@@ -39,6 +39,7 @@ type Policies struct {
 	DHRepo      string
 	CSRepo      string
 	PackageName string
+	Reviewers   []string
 	ExposePorts string
 	Binary      string
 	Protected   []string
@@ -60,6 +61,7 @@ type RepoPolicy struct {
 	CSRepo      string
 	Binary      string
 	PackageName string
+	Reviewers   []string
 	ExposePorts string
 	Files       map[string][]string
 	Ports       map[string][]string
@@ -91,6 +93,7 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 		Branch:      branch,
 		prefix:      prefix,
 		Branchvals:  b,
+		Reviewers:   r.Reviewers,
 		DHRepo:      r.DHRepo,
 		PCRepo:      r.PCRepo,
 		CSRepo:      r.CSRepo,
