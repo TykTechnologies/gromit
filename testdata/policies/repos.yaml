@@ -51,6 +51,14 @@ policy:
           pcprivate: false
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
+          branch:
+            release-3-lts:
+              goversion: 1.12
+              upgradefromver: 3.0.4
+            master:
+              goversion: 1.16
+            release-4:
+              goversion: 1.16
       ports:
         master: [ release-4, release-3.2.3 ]
         release-3: [release-3-lts]
