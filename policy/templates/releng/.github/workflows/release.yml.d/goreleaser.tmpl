@@ -7,18 +7,18 @@
       fail-fast: false
       matrix:
   {{- if .Branchvals.Cgo }}
-        golang_cross: [ 1.16, 1.16-el7 ]
+        golang_cross: [ {{ .Branchvals.GoVersion }}, {{ .Branchvals.GoVersion }}-el7 ]
   {{- else }}
-        golang_cross: [ 1.16 ]
+        golang_cross: [ {{ .Branchvals.GoVersion }} ]
   {{- end }}
         include:
   {{- if .Branchvals.Cgo }}
-          - golang_cross: 1.16-el7
+          - golang_cross: {{ .Branchvals.GoVersion }}-el7
             goreleaser: 'ci/goreleaser/goreleaser-el7.yml'
             rpmvers: 'el/7'
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie'
   {{- end }}
-          - golang_cross: 1.16
+          - golang_cross: {{ .Branchvals.GoVersion }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'
   {{- if .Branchvals.Cgo }}
             rpmvers: 'el/8'
