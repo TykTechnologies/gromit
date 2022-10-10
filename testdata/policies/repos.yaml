@@ -81,7 +81,7 @@ policy:
           configfile: pump.conf
           versionpackage: github.com/TykTechnologies/tyk-pump/pumps
       ports:
-        master: [ release-1.6 ]
+        master: [ release-1.7 ]
     tyk-identity-broker:
       description: |
         Bridge between various Identity Management systems and Tyk API Gateway
@@ -95,7 +95,7 @@ policy:
       protected: [ master, release-1.3, release-1.2 ]
       branches:
         cgo: false
-        goversion: 1.13
+        goversion: 1.15
         upgradefromver: 1.1.0
         pcprivate: false
         configfile: tib.conf
