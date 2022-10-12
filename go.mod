@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.2
+	github.com/apex/log v1.9.0
 	github.com/aws/aws-sdk-go-v2 v0.24.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-git/go-billy/v5 v5.3.1
