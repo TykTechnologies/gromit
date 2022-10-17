@@ -2,9 +2,19 @@ terraform {
   required_providers {
     github = {
       source  = "integrations/github"
-      version = "5.3.0"
+      version = "5.5.0"
     }
   }
+
+  required_version = ">= 1.0.10"
+
+  backend "s3" {
+    bucket = "terraform-state-devenv"
+    key    = "devenv"
+    region = "eu-central-1"
+    dynamodb_table = "terraform-state-locks"
+  }
+
 }
 
 
@@ -16,6 +26,7 @@ provider "github" {
 }
 
 
+
 resource "github_repository" "tyk" {
   name               = "tyk"
   description        = "Fork of the Tyk GW for experiments"
@@ -24,6 +35,7 @@ resource "github_repository" "tyk" {
   allow_squash_merge = true
   allow_merge_commit = false
   allow_auto_merge   = true
+
 }
 
 resource "github_branch" "master" {
