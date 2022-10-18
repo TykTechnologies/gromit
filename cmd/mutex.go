@@ -86,7 +86,7 @@ func init() {
 	mutexCmd.PersistentFlags().StringVar(&etcdPass, "etcdpass", os.Getenv("ETCD_PASS"), "Password for etcd user")
 	mutexCmd.PersistentFlags().StringVar(&etcdUser, "etcduser", "root", "etcd user to connect as")
 	mutexCmd.PersistentFlags().StringVar(&etcdHost, "host", "ec2-3-66-86-193.eu-central-1.compute.amazonaws.com:2379", "etcd host")
-	mutexCmd.PersistentFlags().StringVar(&script, "script", "./script.sh", "script to be run after acquiring lock")
+	mutexCmd.PersistentFlags().StringVar(&script, "script", "testdata/mutex/script.sh", "script to be run after acquiring lock")
 
 	mutexCmd.AddCommand(getSubCmd)
 	rootCmd.AddCommand(mutexCmd)
