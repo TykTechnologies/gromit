@@ -4,16 +4,12 @@ Copyright © 2022 Tyk Technologies
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
-	"time"
 
 	"github.com/TykTechnologies/gromit/mutex"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
 var etcdPass, etcdHost, etcdUser, script string
@@ -28,23 +24,19 @@ This command can be used to synchronise external processes.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// create client
-		cli, err := clientv3.New(clientv3.Config{
-			Endpoints:   []string{etcdHost},
-			DialTimeout: 5 * time.Second,
-			Username:    etcdUser,
-			Password:    etcdPass,
-		})
+		cli, err := mutex.GetEtcdClient(etcdHost, 5, etcdUser, etcdPass)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not connect to etcd")
 		}
-		// create a new session
-		sess, err := concurrency.NewSession(cli)
-		if err != nil {
-			fmt.Println(err)
-		}
-		// when session is closed lock on mutex will be released as well
 
-		m := concurrency.NewMutex(sess, args[0])
+		// create a new session
+		sess, err := mutex.GetSessionLease(cli)
+		if err != nil {
+			log.Fatal().Err(err).Msg("unable to get a session lease")
+		}
+
+		// when session is closed lock on mutex will be released as well
+		m := mutex.GetMutex(sess, mutex.ProdMutexPrefix+args[0])
 		lock = mutex.Lock{
 			Client:  cli,
 			Session: sess,

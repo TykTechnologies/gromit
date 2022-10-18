@@ -2,16 +2,42 @@ package mutex
 
 import (
 	"context"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
+// ProdMutexPrefix is the prefix for all the created mutex objects.
+const ProdMutexPrefix = "/gromit/prod/"
+
+// TestMutexPrefix should only be used from within unit and integration
+// tests.
+const TestMutexPrefix = "/gromit/test/"
+
 type Lock struct {
 	Client  *clientv3.Client
 	Session *concurrency.Session
 	Mutex   *concurrency.Mutex
+}
+
+// GetEtcdClient creates an etcd client.
+func GetEtcdClient(host string, timeout time.Duration, user string, pass string) (*clientv3.Client, error) {
+	return clientv3.New(clientv3.Config{
+		Endpoints:   []string{host},
+		DialTimeout: timeout * time.Second,
+		Username:    user,
+		Password:    pass,
+	})
+}
+
+func GetSessionLease(client *clientv3.Client) (*concurrency.Session, error) {
+	return concurrency.NewSession(client)
+}
+
+func GetMutex(session *concurrency.Session, prefix string) *concurrency.Mutex {
+	return concurrency.NewMutex(session, prefix)
 }
 
 // Close releases the client and session resources
@@ -34,7 +60,7 @@ func (e *Lock) TryAcquire() error {
 	err := e.Mutex.TryLock(context.TODO())
 
 	if err != nil {
-		log.Debug().Msgf("TryLock: Couldn't adquire lock %s", e.Mutex.Key())
+		log.Debug().Msgf("TryLock: Couldn't adquire lock: %s", e.Mutex.Key())
 		switch err {
 		case concurrency.ErrLocked:
 			log.Error().Msg("cannot acquire lock, as already locked in another session")
@@ -43,7 +69,7 @@ func (e *Lock) TryAcquire() error {
 		}
 		return err
 	}
-	log.Debug().Msgf("TryLock: got lock %s", e.Mutex.Key())
+	log.Debug().Msgf("TryLock: got lock: %s", e.Mutex.Key())
 	return err
 }
 
