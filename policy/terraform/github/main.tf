@@ -4,11 +4,19 @@ locals {
 
 terraform {
 
-  backend "s3" {
-    bucket         = "terraform-state-devenv"
-    key            = "devenv-prod"
-    region         = "eu-central-1"
-    dynamodb_table = "terraform-state-locks"
+  # backend "s3" {
+  #   bucket         = "terraform-state-devenv"
+  #   key            = "devenv-prod"
+  #   region         = "eu-central-1"
+  #   dynamodb_table = "terraform-state-locks"
+  # }
+
+  backend "remote" {
+    hostname     = "app.terraform.io"
+    organization = "Tyk"
+    workspaces {
+      name = "github-policy"
+    }
   }
 
   required_providers {
@@ -28,7 +36,7 @@ provider "github" {
 }
 
 module "tyk" {
-  source                          = "../modules/github-repos"
+  source                          = "https://github.com/TykTechnologies/gromit//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
   repo                            = "tyk"
   description                     = "Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols"
   topics                          = ["api", "api-gateway", "api-management", "cloudnative", "go", "graphql", "grpc", "k8s", "kubernetes", "microservices", "reverse-proxy", "tyk"]
