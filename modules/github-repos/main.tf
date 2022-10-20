@@ -12,7 +12,7 @@ terraform {
 resource "github_repository" "repository" {
   name                   = var.repo
   description            = var.description
-  visibility             = "public"
+  visibility             = var.visibility
   allow_rebase_merge     = false
   allow_squash_merge     = true
   allow_merge_commit     = false
@@ -20,6 +20,7 @@ resource "github_repository" "repository" {
   delete_branch_on_merge = true
   has_downloads          = true
   has_issues             = true
+  has_wiki               = var.wiki 
   has_projects           = true
   topics                 = var.topics
 }

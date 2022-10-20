@@ -8,6 +8,18 @@ variable "description" {
   description = "Repository description"
 }
 
+variable "visibility" {
+  type        = string
+  description = "Repository visibility , private or public"
+  default = "public"
+}
+
+variable "wiki" {
+  type        = bool
+  description = "Repository has wiki enabled or not"
+  default = true
+}
+
 variable "topics" {
   type        = list(string)
   description = "Github topics"

@@ -22,3 +22,10 @@ dist/
 /testdata/config/
 /server/debug/debugger.wasm
 /tyk/
+
+# VScode
+*.vscode*
+
+# Terraform
+errored.tfstate
+.terraform.lock*
