@@ -67,8 +67,8 @@ func TestPolicyConfig(t *testing.T) {
 	// test if branch policy for master is set correctly.
 	assert.EqualValues(t, repo.Branchvals.UpgradeFromVer, "3.0.8")
 	t.Logf("Branchvals: %+v", repo.Branchvals)
-	// test if global branch policy is set correctly.
-	assert.EqualValues(t, repo.Branchvals.GoVersion, "1.15")
+	// test if  branch policy is set correctly for master
+	assert.EqualValues(t, repo.Branchvals.GoVersion, "1.16")
 }
 
 func SetupRepo(t *testing.T, token string) *RepoPolicy {

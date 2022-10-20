@@ -5,7 +5,7 @@
 # This project needs CGO_ENABLED=1 and the cross-compiler toolchains for
 # - arm64
 # - amd64
-{{/* Generate this only if cgo is enabled. */}}
+{{- /* Generate this only if cgo is enabled. */ -}}
 {{- if .Branchvals.Cgo }}
 
   {{- template "before_hooks" . }}
