@@ -2,9 +2,13 @@
 
 As per each repository, please first import the existent resources
 ```
-terraform import module.tyk.github_repository.repository tyk
-terraform import module.tyk.github_branch.default tyk:master
-terraform import module.tyk.github_branch_default.default tyk
+make REPO=tyk BRANCH=master import
+make REPO=tyk-analytics BRANCH=master import
+make REPO=tyk-pump BRANCH=master import
+make REPO=tyk-sink BRANCH=master import
+make REPO=tyk-identity-broker BRANCH=master import
+make REPO=portal BRANCH=master import
+
 ```
 
 Export github credentials using github PAT
