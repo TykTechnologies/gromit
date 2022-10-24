@@ -1,10 +1,8 @@
-{{define "before_hooks"}}
-  {{- if eq .Name "portal" }}
+{{- define "before_hooks" -}}
+  {{- if eq .Name "portal"}}
 before:
   hooks:
     - go mod tidy
     - ./ci/copy-framework-files.sh
   {{- end}}
-{{end}}
-
-
+{{- end}}
