@@ -1,0 +1,5 @@
+$ gromit mutex get testlock --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ${TEST_SCRIPT_PATH}
+
+$ gromit mutex get testlock --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ./non-existent-script.sh --> FAIL
+
+$ gromit mutex get testlock --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ${TEST_SCRIPT_PATH}
