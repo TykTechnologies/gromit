@@ -46,15 +46,35 @@ module "tyk" {
   wiki           = false
   default_branch = "master"
   branch_protection_conf_set = [{
-    pattern             = "master"
-    signed_commits      = false
-    linear_history      = false
-    allows_deletions    = false
-    allows_force_pushes = false
-    blocks_creations    = false
-    contexts            = ["Go 1.16 Redis 5"]
-    //contexts            = ["test","Go 1.16 Redis 5","Analyze (go)","1.16", "lint","1.16-el7","ci","upgrade-deb (amd64, ubuntu:xenial)"," upgrade-deb (amd64, ubuntu:bionic)","upgrade-deb (amd64, ubuntu:focal)","upgrade-deb (amd64, debian:bullseye)","upgrade-deb (arm64, ubuntu:xenial)","upgrade-deb (arm64, ubuntu:bionic)"," upgrade-deb (arm64, ubuntu:focal)","upgrade-deb (arm64, debian:bullseye)","upgrade-rpm (ubi7/ubi)","upgrade-rpm (ubi8/ubi)","smoke-tests","CodeQL","SonarCloud","SonarCloud Code Analysis" ]
-    review_count        = 2
+      pattern             = "master"
+      signed_commits      = false
+      linear_history      = false
+      allows_deletions    = false
+      allows_force_pushes = false
+      blocks_creations    = false
+      contexts            = [
+        "test",
+        "Go 1.16 Redis 5",
+        "Analyze (go)",
+        "1.16", 
+        "lint",
+        "1.16-el7",
+        "ci",
+        "upgrade-deb (amd64, ubuntu:xenial)",
+        " upgrade-deb (amd64, ubuntu:bionic)",
+        "upgrade-deb (amd64, ubuntu:focal)",
+        "upgrade-deb (amd64, debian:bullseye)",
+        "upgrade-deb (arm64, ubuntu:xenial)",
+        "upgrade-deb (arm64, ubuntu:bionic)",
+        " upgrade-deb (arm64, ubuntu:focal)",
+        "upgrade-deb (arm64, debian:bullseye)",
+        "upgrade-rpm (ubi7/ubi)",
+        "upgrade-rpm (ubi8/ubi)",
+        "smoke-tests",
+        "CodeQL",
+        "SonarCloud",
+        "SonarCloud Code Analysis" ]
+      review_count        = 2
     },
     {
       pattern             = "release-3.2"
@@ -98,15 +118,54 @@ module "tyk-analytics" {
   visibility                      = "private"
   default_branch                  = "master"
   branch_protection_conf_set = [{
-    pattern             = "master"
-    signed_commits      = false
-    linear_history      = false
-    allows_deletions    = false
-    allows_force_pushes = false
-    blocks_creations    = false
-    contexts            = []
-    review_count        = 2
-    }]
+      pattern             = "master"
+      signed_commits      = false
+      linear_history      = false
+      allows_deletions    = false
+      allows_force_pushes = false
+      blocks_creations    = false
+      contexts            = [
+        "commit message linter",
+        "test (1.16.x, ubuntu-latest, amd64, 15.x)",
+        "sqlite",
+        "ci",
+        "mongo"
+      ],
+      review_count        = 2
+    },
+    // missing user push restriction for every branch below
+
+    # {
+    #   pattern             = "stable"
+    #   signed_commits      = false
+    #   linear_history      = false
+    #   allows_deletions    = false
+    #   allows_force_pushes = false
+    #   blocks_creations    = false
+    #   contexts            = []
+    #   review_count        = 2
+    # },
+    # {
+    #   pattern             = "target/cloud"
+    #   signed_commits      = false
+    #   linear_history      = false
+    #   allows_deletions    = false
+    #   allows_force_pushes = false
+    #   blocks_creations    = false
+    #   contexts            = []
+    #   review_count        = 2
+    # },
+    # {
+    #   pattern             = "target/stage"
+    #   signed_commits      = false
+    #   linear_history      = false
+    #   allows_deletions    = false
+    #   allows_force_pushes = false
+    #   blocks_creations    = false
+    #   contexts            = []
+    #   review_count        = 2
+    # }
+    ]
 }
 
 module "tyk-pump" {
@@ -126,7 +185,39 @@ module "tyk-pump" {
     blocks_creations    = false
     contexts            = []
     review_count        = 2
-    }]
+    }
+    #,
+    # {
+    #   pattern             = "stable"
+    #   signed_commits      = false
+    #   linear_history      = false
+    #   allows_deletions    = false
+    #   allows_force_pushes = false
+    #   blocks_creations    = false
+    #   contexts            = []
+    #   review_count        = 2
+    # },
+    # {
+    #   pattern             = "target/cloud"
+    #   signed_commits      = false
+    #   linear_history      = false
+    #   allows_deletions    = false
+    #   allows_force_pushes = false
+    #   blocks_creations    = false
+    #   contexts            = []
+    #   review_count        = 2
+    # },
+    # {
+    #   pattern             = "target/stage"
+    #   signed_commits      = false
+    #   linear_history      = false
+    #   allows_deletions    = false
+    #   allows_force_pushes = false
+    #   blocks_creations    = false
+    #   contexts            = []
+    #   review_count        = 2
+    # }
+]
 }
 
 module "tyk-sink" {
@@ -164,7 +255,7 @@ module "tyk-identity-broker" {
     allows_force_pushes = false
     blocks_creations    = false
     contexts            = []
-    review_count        = 2
+    review_count        = 1
     }]
 }
 
