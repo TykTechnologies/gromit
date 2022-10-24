@@ -20,7 +20,7 @@ resource "github_repository" "repository" {
   delete_branch_on_merge = true
   has_downloads          = true
   has_issues             = true
-  has_wiki               = var.wiki 
+  has_wiki               = var.wiki
   has_projects           = true
   topics                 = var.topics
 }
@@ -35,21 +35,19 @@ resource "github_branch_default" "default" {
   branch     = github_branch.default.branch
 }
 
-resource "github_branch_protection" "automerge" {
-  repository_id = github_repository.repository.name
-  pattern       = github_branch.default.branch
-
-  #checks for automerge
-  require_signed_commits          = true
-  require_conversation_resolution = true
-
-  required_status_checks {
-    strict   = true
-    contexts = var.required_status_checks_contexts
+module "protected_branches" {
+  for_each = { for branch in var.branch_protection_conf_set : branch.pattern => branch }
+  source   = "./github-branch-protection"
+  repo     = github_repository.repository.name
+  branch_protection_conf = {
+    pattern             = each.value.pattern
+    signed_commits      = each.value.signed_commits
+    linear_history      = each.value.linear_history
+    allows_deletions    = each.value.allows_deletions
+    allows_force_pushes = each.value.allows_force_pushes
+    blocks_creations    = each.value.blocks_creations
+    contexts            = each.value.contexts
+    review_count        = each.value.review_count
   }
 
-  required_pull_request_reviews {
-    require_code_owner_reviews      = true
-    required_approving_review_count = var.required_approving_review_count
-  }
 }

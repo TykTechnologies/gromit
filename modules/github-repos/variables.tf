@@ -11,13 +11,13 @@ variable "description" {
 variable "visibility" {
   type        = string
   description = "Repository visibility , private or public"
-  default = "public"
+  default     = "public"
 }
 
 variable "wiki" {
   type        = bool
   description = "Repository has wiki enabled or not"
-  default = true
+  default     = true
 }
 
 variable "topics" {
@@ -30,13 +30,15 @@ variable "default_branch" {
   description = "Repository default branch name"
 }
 
-variable "required_status_checks_contexts" {
-  type        = list(string)
-  description = "Required status checks"
-}
-
-variable "required_approving_review_count" {
-  type        = number
-  description = "Number of required PR reviewers for approval"
-  default     = 2
+variable "branch_protection_conf_set" {
+  type = set(object({
+    pattern             = string
+    signed_commits      = bool
+    linear_history      = bool
+    allows_deletions    = bool
+    allows_force_pushes = bool
+    blocks_creations    = bool
+    contexts            = list(string)
+    review_count        = number
+  }))
 }
