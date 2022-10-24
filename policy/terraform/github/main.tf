@@ -39,71 +39,110 @@ provider "github" {
 
 module "tyk" {
   # source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
-  source                          = "../../../modules/github-repos"
-  repo                            = "tyk"
-  description                     = "Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols"
-  topics                          = ["api", "api-gateway", "api-management", "cloudnative", "go", "graphql", "grpc", "k8s", "kubernetes", "microservices", "reverse-proxy", "tyk"]
-  wiki                            = false
-  default_branch                  = "master"
-  required_status_checks_contexts = []
-  required_approving_review_count = "2"
+  source         = "../../../modules/github-repos"
+  repo           = "tyk"
+  description    = "Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols"
+  topics         = ["api", "api-gateway", "api-management", "cloudnative", "go", "graphql", "grpc", "k8s", "kubernetes", "microservices", "reverse-proxy", "tyk"]
+  wiki           = false
+  default_branch = "master"
+  branch_protection_conf_set = [{
+    pattern             = "master"
+    signed_commits      = false
+    linear_history      = false
+    allows_deletions    = false
+    allows_force_pushes = false
+    blocks_creations    = false
+    contexts            = ["Go 1.16 Redis 5"]
+    review_count        = 2
+    },
+    {
+      pattern             = "release-3.2"
+      signed_commits      = false
+      linear_history      = true
+      allows_deletions    = false
+      allows_force_pushes = false
+      blocks_creations    = false
+      contexts            = []
+      review_count        = 2
+    },
+    {
+      pattern             = "release-3-lts"
+      signed_commits      = false
+      linear_history      = true
+      allows_deletions    = true
+      allows_force_pushes = false
+      blocks_creations    = false
+      contexts            = []
+      review_count        = 2
+    },
+    {
+      pattern             = "release-2.9"
+      signed_commits      = false
+      linear_history      = true
+      allows_deletions    = false
+      allows_force_pushes = false
+      blocks_creations    = false
+      contexts            = []
+      review_count        = 2
+    }
+  ]
 }
 
-module "tyk-analytics" {
-  # source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
-  source                          = "../../../modules/github-repos"
-  repo                            = "tyk-analytics"
-  description                     = "Tyk Dashboard New Repository"
-  topics                          = []
-  visibility                      = "private"
-  default_branch                  = "master"
-  required_status_checks_contexts = []
-  required_approving_review_count = "2"
-}
+# module "tyk-analytics" {
+#   # source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
+#   source                          = "../../../modules/github-repos"
+#   repo                            = "tyk-analytics"
+#   description                     = "Tyk Dashboard New Repository"
+#   topics                          = []
+#   visibility                      = "private"
+#   default_branch                  = "master"
+#   required_status_checks_contexts = []
+#   required_approving_review_count = "2"
+# }
 
-module "tyk-pump" {
-  # source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
-  source                          = "../../../modules/github-repos"
-  repo                            = "tyk-pump"
-  description                     = "Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once)."
-  topics                          = []
-  wiki                            = false
-  default_branch                  = "master"
-  required_status_checks_contexts = []
-  required_approving_review_count = "2"
-}
+# module "tyk-pump" {
+#   # source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
+#   source                          = "../../../modules/github-repos"
+#   repo                            = "tyk-pump"
+#   description                     = "Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once)."
+#   topics                          = []
+#   wiki                            = false
+#   default_branch                  = "master"
+#   required_status_checks_contexts = []
+#   required_approving_review_count = "2"
+# }
 
-module "tyk-sink" {
-  # source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
-  source                          = "../../../modules/github-repos"
-  repo                            = "tyk-sink"
-  description                     = "Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols"
-  topics                          = []
-  visibility                      = "private"
-  default_branch                  = "master"
-  required_status_checks_contexts = []
-  required_approving_review_count = "2"
-}
+# module "tyk-sink" {
+#   # source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
+#   source                          = "../../../modules/github-repos"
+#   repo                            = "tyk-sink"
+#   description                     = "Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols"
+#   topics                          = []
+#   visibility                      = "private"
+#   default_branch                  = "master"
+#   required_status_checks_contexts = []
+#   required_approving_review_count = "2"
+# }
 
-module "tyk-identity-broker" {
-  # source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
-  source                          = "../../../modules/github-repos"
-  repo                            = "tyk-identity-broker"
-  description                     = "Tyk Authentication Proxy for third-party login"
-  topics                          = []
-  default_branch                  = "master"
-  required_status_checks_contexts = []
-  required_approving_review_count = "2"
-}
+# module "tyk-identity-broker" {
+#   # source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
+#   source                          = "../../../modules/github-repos"
+#   repo                            = "tyk-identity-broker"
+#   description                     = "Tyk Authentication Proxy for third-party login"
+#   topics                          = []
+#   default_branch                  = "master"
+#   required_status_checks_contexts = []
+#   required_approving_review_count = "2"
+# }
 
-module "portal" {
-  # source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
-  source                          = "../../../modules/github-repos"
-  repo                            = "portal"
-  description                     = "Portal is a full-featured developer portal, blog and CMS"
-  topics                          = ["portal", "api-gateway"]
-  visibility                      = "private"
-  default_branch                  = "master"
-  required_status_checks_contexts = []
-  required_approving_review_count = "2"
-}
+# module "portal" {
+#   # source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/github-PaC-terraform"
+#   source                          = "../../../modules/github-repos"
+#   repo                            = "portal"
+#   description                     = "Portal is a full-featured developer portal, blog and CMS"
+#   topics                          = ["portal", "api-gateway"]
+#   visibility                      = "private"
+#   default_branch                  = "master"
+#   required_status_checks_contexts = []
+#   required_approving_review_count = "2"
+# }
