@@ -38,7 +38,7 @@ resource "github_branch_default" "default" {
 module "protected_branches" {
   for_each = { for branch in var.branch_protection_conf_set : branch.pattern => branch }
   source   = "./github-branch-protection"
-  repo     = github_repository.repository.name
+  repo     = github_repository.repository.node_id
   branch_protection_conf = {
     pattern             = each.value.pattern
     signed_commits      = each.value.signed_commits
