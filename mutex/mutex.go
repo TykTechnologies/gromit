@@ -32,7 +32,7 @@ func GetEtcdClient(host string, timeout time.Duration, user string, pass string)
 	})
 }
 
-func GetSessionLease(client *clientv3.Client) (*concurrency.Session, error) {
+func GetSession(client *clientv3.Client) (*concurrency.Session, error) {
 	return concurrency.NewSession(client)
 }
 

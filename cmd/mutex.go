@@ -30,7 +30,7 @@ This command can be used to synchronise external processes.
 		}
 
 		// create a new session
-		sess, err := mutex.GetSessionLease(cli)
+		sess, err := mutex.GetSession(cli)
 		if err != nil {
 			log.Fatal().Err(err).Msg("unable to get a session lease")
 		}
