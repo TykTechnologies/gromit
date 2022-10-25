@@ -10,7 +10,7 @@
         with:
           fetch-depth: 1
   {{- if eq .Name "tyk-analytics" }}
-          token: ${{`{{ secrets.REPO_TOKEN }}`}}
+          token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
           submodules: true
   {{- end }}
       - name: Setup Terraform
@@ -80,7 +80,7 @@
           --author 'Bender' \
           --author-icon 'https://hcoop.net/~alephnull/bender/bender-arms.jpg' \
           --author-link 'https://github.com/TykTechnologies/tyk-ci' \
-          --channel '#integration' \
+          --channel '#service-integration' \
           --color $colour \
           --fields '{"title": "Repo", "value": "${{`{{ github.repository }}`}}", "short": false}' \
           --footer 'github-actions' \
