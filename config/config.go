@@ -73,7 +73,7 @@ func LoadConfig(cfgFile string) {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
 
-	log.Info().Interface("repos", Repos).Str("tablename", TableName).Str("registry", RegistryID).Str("file", viper.ConfigFileUsed()).Msg("loaded config from file")
+	log.Debug().Interface("repos", Repos).Str("tablename", TableName).Str("registry", RegistryID).Str("file", viper.ConfigFileUsed()).Msg("loaded config from file")
 }
 
 // LoadClusterConfig loads the config that the cluster command will need
