@@ -1,20 +1,26 @@
 package cmd
 
 import (
+	"flag"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmdtest"
 )
 
+var update = flag.Bool("update", false, "update the testcases for cmdtest")
+
 func TestCmd(t *testing.T) {
+	flag.Parse()
 	if err := exec.Command("go", "build", "..").Run(); err != nil {
 		t.Fatalf("error building gromit binary: %v", err)
 	}
-	//defer os.Remove("./gromit")
+	t.Cleanup(func() {
+		t.Log("Cleaning up..")
+		os.Remove("./gromit")
+	})
 	tcDir := "../testdata/cmdtest"
 	dirs, err := os.ReadDir(tcDir)
 	if err != nil {
@@ -26,14 +32,15 @@ func TestCmd(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error reading testsuite: %v", err)
 		}
+		// ts.KeepRootDirs = true
+		// set to true for prod - might spew secrets otherwise.
+		ts.DisableLogging = true
 		ts.Commands["gromit"] = cmdtest.Program("gromit")
-		ts.Commands["wait2"] = cmdtest.InProcessProgram("wait", func() int {
+		/* ts.Commands["wait2"] = cmdtest.InProcessProgram("wait", func() int {
 			time.Sleep(2 * time.Second)
 			return 0
-		})
-		// t.Log(ts.Commands)
-		//ts.Run(t, true)
+		}) */
 		// run with true if outputs requires update
-		ts.RunParallel(t, true)
+		ts.Run(t, *update)
 	}
 }

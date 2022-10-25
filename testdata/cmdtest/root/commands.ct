@@ -30,6 +30,7 @@ Flags:
   -f, --conf string       config file (default is $HOME/.config/gromit.yaml)
   -h, --help              help for gromit
   -l, --loglevel string   Log verbosity: trace, info, warn, error (default "info")
+      --testlogs          Logs without timestamp or stack info - for automated tests.
   -t, --textlogs          Logs in plain text
 
 Use "gromit [command] --help" for more information about a command.

@@ -1,5 +1,8 @@
-$ gromit mutex get testlock --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ${TEST_SCRIPT_PATH}
+$ gromit mutex get testlock --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ${TEST_SCRIPT_PATH} --testlogs
+{"level":"info","output":"Sleeping for 15 seconds\n","time":"0001-01-01T00:00:00Z","message":"script output"}
 
-$ gromit mutex get testlock --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ./non-existent-script.sh --> FAIL
+$ gromit mutex get testlock --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ./non-existent-script.sh --testlogs --> FAIL
+{"level":"fatal","error":"fork/exec ./non-existent-script.sh: no such file or directory","output":"","time":"0001-01-01T00:00:00Z","message":"could not execute script"}
 
-$ gromit mutex get testlock --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ${TEST_SCRIPT_PATH}
+$ gromit mutex get testlock --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ${TEST_SCRIPT_PATH} --testlogs
+{"level":"info","output":"Sleeping for 15 seconds\n","time":"0001-01-01T00:00:00Z","message":"script output"}
