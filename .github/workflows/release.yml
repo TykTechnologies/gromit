@@ -46,6 +46,9 @@ jobs:
 
       - run: make test
         env:
+          TEST_ETCD_HOST: ${{ secrets.TEST_ETCD_HOST }}
+          TEST_ETCD_PASS: ${{ secrets.TEST_ETCD_PASS }}
+          TEST_ETCD_USER: ${{ secrets.TEST_ETCD_USER }}
           GROMIT_TABLENAME: GromitTest
           GROMIT_REPOS: tyk,tyk-analytics,tyk-pump
           GROMIT_REGISTRYID: "046805072452"
