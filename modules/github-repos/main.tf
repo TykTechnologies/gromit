@@ -9,6 +9,14 @@ terraform {
 
 }
 
+provider "github" {
+  # set gh_token if GITHUB_TOKEN is not present locally.
+  #token = var.gh_token
+  owner = "Tyklabs"
+  # organization = "TykTechnologies"
+  #base_url = "https://github.com/TykTechnologies"
+}
+
 resource "github_repository" "repository" {
   name                   = var.repo
   description            = var.description
