@@ -19,6 +19,7 @@ http://www.apache.org/licenses/LICENSE-2.0
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -31,6 +32,7 @@ import (
 
 var cfgFile, logLevel string
 var textLogs bool
+var testLogs bool
 
 // AWScfg is used in cluster, sow, reap and the server
 var AWScfg aws.Config
@@ -69,6 +71,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "conf", "f", "", "config file (default is $HOME/.config/gromit.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "info", "Log verbosity: trace, info, warn, error")
 	rootCmd.PersistentFlags().BoolVarP(&textLogs, "textlogs", "t", false, "Logs in plain text")
+	rootCmd.PersistentFlags().BoolVar(&testLogs, "testlogs", false, "Logs without timestamp or stack info - for automated tests.")
 }
 
 // initConfig reads in config file and env variables if set.
@@ -81,8 +84,23 @@ func initConfig() {
 		zerolog.SetGlobalLevel(ll)
 	}
 	log.Logger = log.With().Str("version", util.Version()).Caller().Logger()
+	if testLogs {
+		// To be used only for cmdtest fixtures.
+		// This flag sets:
+		//		level to info.
+		//		timestamp to a static time.
+		//      only logs basic info
+		//		outputs directly to stderr.
+		zerolog.TimestampFunc = func() time.Time {
+			return (time.Time{})
+		}
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		log.Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
+		textLogs = false
+	}
 	if textLogs {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
+
 	config.LoadConfig(cfgFile)
 }

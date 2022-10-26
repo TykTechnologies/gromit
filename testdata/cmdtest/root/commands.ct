@@ -1,0 +1,36 @@
+$ gromit version
+known at build time
+
+$ gromit help
+It also has a grab bag of various ops automation.
+Global env vars:
+These vars apply to all commands
+GROMIT_TABLENAME DynamoDB tablename to use for env state
+GROMIT_REPOS Comma separated list of ECR repos to answer for
+
+Usage:
+  gromit [command]
+
+Available Commands:
+  cluster     Manage cluster of tyk components
+  completion  Generate completion script
+  env         Mess about with the env state
+  help        Help about any command
+  licenser    Get a trial license and writes it to path, overwriting it
+  mutex       Interact with MaaS
+  orgs        Dump/restore org keys and mongodb
+  passwd      Returns the password hash of the given plaintext
+  policy      Mess with the release engineering policy
+  reap        Reap envs from GROMIT_TABLENAME, using a config tree at <config root path>
+  serve       Run endpoint for github requests
+  sow         Sow envs creating a config tree at <config root path>
+  version     Print version
+
+Flags:
+  -f, --conf string       config file (default is $HOME/.config/gromit.yaml)
+  -h, --help              help for gromit
+  -l, --loglevel string   Log verbosity: trace, info, warn, error (default "info")
+      --testlogs          Logs without timestamp or stack info - for automated tests.
+  -t, --textlogs          Logs in plain text
+
+Use "gromit [command] --help" for more information about a command.
