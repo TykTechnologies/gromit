@@ -4,16 +4,12 @@ Copyright © 2022 Tyk Technologies
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
-	"time"
 
 	"github.com/TykTechnologies/gromit/mutex"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
 var etcdPass, etcdHost, etcdUser, script string
@@ -28,23 +24,19 @@ This command can be used to synchronise external processes.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// create client
-		cli, err := clientv3.New(clientv3.Config{
-			Endpoints:   []string{etcdHost},
-			DialTimeout: 5 * time.Second,
-			Username:    etcdUser,
-			Password:    etcdPass,
-		})
+		cli, err := mutex.GetEtcdClient(etcdHost, 5, etcdUser, etcdPass)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not connect to etcd")
 		}
-		// create a new session
-		sess, err := concurrency.NewSession(cli)
-		if err != nil {
-			fmt.Println(err)
-		}
-		// when session is closed lock on mutex will be released as well
 
-		m := concurrency.NewMutex(sess, args[0])
+		// create a new session
+		sess, err := mutex.GetSession(cli)
+		if err != nil {
+			log.Fatal().Err(err).Msg("unable to get a session lease")
+		}
+
+		// when session is closed lock on mutex will be released as well
+		m := mutex.GetMutex(sess, mutex.ProdMutexPrefix+args[0])
 		lock = mutex.Lock{
 			Client:  cli,
 			Session: sess,
@@ -71,12 +63,14 @@ var getSubCmd = &cobra.Command{
 			// Simulate some processing
 			op, err := exec.Command(script).CombinedOutput()
 			if err != nil {
+				lock.Release()
 				log.Fatal().AnErr("error", err).Bytes("output", op).Msg("could not execute script")
 			}
 			log.Info().Bytes("output", op).Msg("script output")
 			lock.Release()
 		} else {
-			log.Info().Msg("Environment being created by another process, exiting with no errors")
+			log.Info().Msg("Environment being created by another process, exiting.")
+			os.Exit(exitLockAlreadyTaken)
 		}
 	},
 }
@@ -86,7 +80,7 @@ func init() {
 	mutexCmd.PersistentFlags().StringVar(&etcdPass, "etcdpass", os.Getenv("ETCD_PASS"), "Password for etcd user")
 	mutexCmd.PersistentFlags().StringVar(&etcdUser, "etcduser", "root", "etcd user to connect as")
 	mutexCmd.PersistentFlags().StringVar(&etcdHost, "host", "ec2-3-66-86-193.eu-central-1.compute.amazonaws.com:2379", "etcd host")
-	mutexCmd.PersistentFlags().StringVar(&script, "script", "./script.sh", "script to be run after acquiring lock")
+	mutexCmd.PersistentFlags().StringVar(&script, "script", "testdata/mutex/script.sh", "script to be run after acquiring lock")
 
 	mutexCmd.AddCommand(getSubCmd)
 	rootCmd.AddCommand(mutexCmd)
