@@ -1,0 +1,6 @@
+# this waits for 5 seconds before running the command - so as to make sure that the other instance of the same command - with
+# the same lock `paralleltest` runs before this.
+$ wait5
+$ gromit mutex get paralleltest --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ${TEST_SCRIPT_PATH} --testlogs --> FAIL 10
+{"level":"error","time":"0001-01-01T00:00:00Z","message":"cannot acquire lock, as already locked in another session"}
+{"level":"info","time":"0001-01-01T00:00:00Z","message":"Environment being created by another process, exiting."}

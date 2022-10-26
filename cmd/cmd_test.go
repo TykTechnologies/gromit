@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmdtest"
 )
@@ -32,15 +33,13 @@ func TestCmd(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error reading testsuite: %v", err)
 		}
-		// ts.KeepRootDirs = true
 		// set to true for prod - might spew secrets otherwise.
 		ts.DisableLogging = true
 		ts.Commands["gromit"] = cmdtest.Program("gromit")
-		/* ts.Commands["wait2"] = cmdtest.InProcessProgram("wait", func() int {
-			time.Sleep(2 * time.Second)
+		ts.Commands["wait5"] = cmdtest.InProcessProgram("wait", func() int {
+			time.Sleep(5 * time.Second)
 			return 0
-		}) */
-		// run with true if outputs requires update
-		ts.Run(t, *update)
+		})
+		ts.RunParallel(t, *update)
 	}
 }

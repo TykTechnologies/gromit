@@ -1,0 +1,3 @@
+$ gromit mutex get paralleltest --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ${TEST_SCRIPT_PATH} --testlogs
+{"level":"info","output":"Sleeping for 15 seconds\n","time":"0001-01-01T00:00:00Z","message":"script output"}
+
