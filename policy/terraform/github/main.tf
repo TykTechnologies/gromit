@@ -4,20 +4,20 @@ locals {
 
 terraform {
 
-  backend "s3" {
-    bucket         = "terraform-state-devenv"
-    key            = "github-policy"
-    region         = "eu-central-1"
-    dynamodb_table = "terraform-state-locks"
-  }
-
-  # backend "remote" {
-  #   hostname     = "app.terraform.io"
-  #   organization = "Tyk"
-  #   workspaces {
-  #     name = "github-policy"
-  #   }
+  # backend "s3" {
+  #   bucket         = "terraform-state-devenv"
+  #   key            = "github-policy"
+  #   region         = "eu-central-1"
+  #   dynamodb_table = "terraform-state-locks"
   # }
+
+  backend "remote" {
+    hostname     = "app.terraform.io"
+    organization = "Tyk"
+    workspaces {
+      name = "github-policy"
+    }
+  }
 
   required_providers {
     github = {
