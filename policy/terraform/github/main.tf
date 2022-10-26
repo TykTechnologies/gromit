@@ -29,13 +29,13 @@ terraform {
   required_version = ">= 1.0.10"
 }
 
-provider "github" {
-  # set gh_token if GITHUB_TOKEN is not present locally.
-  #token = var.gh_token
-  owner = "Tyklabs"
-  # organization = "TykTechnologies"
-  #base_url = "https://github.com/TykTechnologies"
-}
+# provider "github" {
+#   # set gh_token if GITHUB_TOKEN is not present locally.
+#   #token = var.gh_token
+#   owner = "Tyklabs"
+#   # organization = "TykTechnologies"
+#   #base_url = "https://github.com/TykTechnologies"
+# }
 
 module "tyk" {
   source                          = "git::https://github.com/TykTechnologies/gromit.git//modules/github-repos?ref=feat/td-1220/tryon-tf-cloud"
