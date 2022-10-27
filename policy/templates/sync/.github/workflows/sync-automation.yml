@@ -6,7 +6,7 @@
 
 {{- if or (eq .Name "tyk-analytics") }}
   {{- $tyk_analytics_files := list ".github/workflows/api-tests.yml" ".github/workflows/ui-tests.yml" }}
-  {{- $files = append $files $tyk_analytics_files }}
+  {{- $files = concat $files $tyk_analytics_files }}
 {{- end }}
 
 {{- if or (eq .Name "tyk") }}
@@ -15,7 +15,7 @@
 
 {{- if or (eq .Name "portal") }}
   {{- $portal_files := list ".github/workflows/api-tests.yml" ".github/workflows/ui-tests.yml" }}
-  {{- $files = append $files $portal_files }}
+  {{- $files = concat $files $portal_files }}
 {{- end }}
 
 name: Sync automation
