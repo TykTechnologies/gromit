@@ -11,6 +11,7 @@ variable "branch_protection_conf" {
     allows_deletions    = bool
     allows_force_pushes = bool
     blocks_creations    = bool
+    push_restrictions   = list(string)
     contexts            = list(string)
     review_count        = number
   })

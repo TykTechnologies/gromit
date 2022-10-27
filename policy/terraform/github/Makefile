@@ -11,7 +11,7 @@ import_protection:
 fixed_import_protection:
 #tyk
 	terraform import 'module.tyk.module.protected_branches["master"].github_branch_protection.automerge' tyk:master
-	terraform import 'module.tyk.module.protected_branches["release-2.9"].github_branch_protection.automerge' tyk:release-2.9
+#	terraform import 'module.tyk.module.protected_branches["release-2.9"].github_branch_protection.automerge' tyk:release-2.9
 	terraform import 'module.tyk.module.protected_branches["release-3-lts"].github_branch_protection.automerge' tyk:release-3-lts
 	terraform import 'module.tyk.module.protected_branches["release-3.2"].github_branch_protection.automerge' tyk:release-3.2 
 #tyk-analytics
@@ -26,3 +26,11 @@ fixed_import_protection:
 	terraform import 'module.tyk-pump.module.protected_branches["target/stage"].github_branch_protection.automerge' tyk-pump:target/stage
 #tyk-identity-broker
 	terraform import 'module.tyk-identity-broker.module.protected_branches["master"].github_branch_protection.automerge' tyk-identity-broker:master
+
+validate:
+	terraform fmt
+	terraform validate
+	terraform fmt -recursive ../../../modules
+
+clean:
+	rm -rf ./.terraform*
