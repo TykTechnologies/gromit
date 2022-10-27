@@ -31,7 +31,7 @@ policy:
               goversion: 1.16
               upgradefromver: 3.0.8
       ports:
-        master: [ release-4, release-3.2.3 ]
+        master: [ release-4 , release-4.2]
         release-3-lts: [release-3.0.11]
     tyk-analytics:
       description: |
@@ -60,7 +60,7 @@ policy:
             release-4:
               goversion: 1.16
       ports:
-        master: [ release-4, release-3.2.3 ]
+        master: [ release-4, release-4.2 ]
         release-3: [release-3-lts]
     tyk-pump:
       description: |
