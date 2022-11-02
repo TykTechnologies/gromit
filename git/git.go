@@ -22,8 +22,9 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v47/github"
 	"github.com/rs/zerolog/log"
+	"github.com/shurcooL/githubv4"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/oauth2"
 )
@@ -38,8 +39,23 @@ type GitRepo struct {
 	fs           billy.Filesystem
 	auth         transport.AuthMethod
 	gh           *github.Client
+	ghV4         *githubv4.Client
 	prs          []string
 	dryRun       bool
+}
+
+var mutation struct {
+	Automerge struct {
+		clientMutationId githubv4.String
+		Actor            struct {
+			Login githubv4.String
+		}
+		PullRequest struct {
+			BaseRefName githubv4.String
+			CreatedAt   githubv4.DateTime
+			Number      githubv4.Int
+		}
+	} `graphql:"enablePullRequestAutoMerge(input: $input)"`
 }
 
 const defaultRemote = "origin"
@@ -58,20 +74,28 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 	if depth > 0 {
 		opts.Depth = depth
 	}
-	var gh *github.Client
+
+	var gh *github.Client     // ghV3client
+	var ghV4 *githubv4.Client // ghV4client
+
 	if authToken != "" {
 		opts.Auth = &http.BasicAuth{
 			Username: "abc123", // anything except an empty string
 			Password: authToken,
 		}
 		ctx := context.Background()
+		//ctxV4 := context.Background()
+
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: authToken},
 		)
 		tc := oauth2.NewClient(ctx, ts)
+		//tcV4 := oauth2.NewClient(ctxV4, ts)
 
 		gh = github.NewClient(tc)
+		ghV4 = githubv4.NewClient(tc)
 	}
+
 	log.Trace().Interface("opts", opts).Msg("git clone options")
 	var repo *git.Repository
 	var fs billy.Filesystem
@@ -103,6 +127,7 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 		worktree: w,
 		fs:       fs,
 		gh:       gh,
+		ghV4:     ghV4,
 		commitOpts: &git.CommitOptions{
 			All: false,
 			Author: &object.Signature{
@@ -393,10 +418,31 @@ func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (string
 		Base:  github.String(baseBranch),
 		Body:  github.String(body),
 	}
+
 	pr, _, err := r.gh.PullRequests.Create(context.Background(), owner, repo, prOpts)
 	if err != nil {
 		return "", fmt.Errorf("Error creating PR:(owner: %s, repo: %s, head: %s,  %v", owner, repo, head, err)
 	}
+
+	// Implement grapql v4API
+	squash := githubv4.PullRequestMergeMethodSquash
+
+	input := githubv4.EnablePullRequestAutoMergeInput{
+		AuthorEmail:    githubv4.NewString("policy@gromit"),
+		CommitBody:     githubv4.NewString("This PR will automerge. Enabled by Gromit"),
+		CommitHeadline: githubv4.NewString("Automerge"),
+		MergeMethod:    &squash,
+		// PullRequestID:  githubv4.NewBase64String(pr.ID),
+		PullRequestID: githubv4.NewBase64String("PR_kwDOASogO85AxbF1"),
+	}
+
+	err2 := r.ghV4.Mutate(context.Background(), &mutation, input, nil)
+
+	if err2 != nil {
+		return "", fmt.Errorf("Error enabling automerge %v", err2)
+	}
+	//
+
 	url := pr.GetHTMLURL()
 	r.prs = append(r.prs, url)
 	return url, nil
