@@ -6,7 +6,7 @@ on:
       - policy/terraform/**
 
 env:
-  TERRAFORM_DIR: "./policy/terraform"
+  TERRAFORM_DIR: "./policy/terraform/github"
 
 jobs:
   terraform:
