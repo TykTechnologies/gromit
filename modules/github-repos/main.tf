@@ -33,6 +33,12 @@ resource "github_branch" "default" {
   branch     = var.default_branch
 }
 
+resource "github_branch" "release_branches" {
+  for_each = toset(var.release_branches)
+  repository = github_repository.repository.name
+  branch     = each.value
+}
+
 resource "github_branch_default" "default" {
   repository = github_repository.repository.name
   branch     = github_branch.default.branch

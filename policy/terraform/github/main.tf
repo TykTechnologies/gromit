@@ -46,38 +46,51 @@ module "tyk" {
   wiki                 = false
   default_branch       = "master"
   vulnerability_alerts = true
-  branch_protection_conf_set = [{
-    pattern             = "master"
-    signed_commits      = false
-    linear_history      = false
-    allows_deletions    = false
-    allows_force_pushes = false
-    blocks_creations    = false
-    push_restrictions   = []
-    contexts = [
-      # "test",
-      "Go 1.16 Redis 5"
-      #   "Analyze (go)",
-      #   "1.16",
-      #   "lint",
-      #   "1.16-el7",
-      #   "ci",
-      #   "upgrade-deb (amd64, ubuntu:xenial)",
-      #   " upgrade-deb (amd64, ubuntu:bionic)",
-      #   "upgrade-deb (amd64, ubuntu:focal)",
-      #   "upgrade-deb (amd64, debian:bullseye)",
-      #   "upgrade-deb (arm64, ubuntu:xenial)",
-      #   "upgrade-deb (arm64, ubuntu:bionic)",
-      #   " upgrade-deb (arm64, ubuntu:focal)",
-      #   "upgrade-deb (arm64, debian:bullseye)",
-      #   "upgrade-rpm (ubi7/ubi)",
-      #   "upgrade-rpm (ubi8/ubi)",
-      #   "smoke-tests",
-      #   "CodeQL",
-      #   "SonarCloud",
-      # "SonarCloud Code Analysis"
-    ]
-    review_count = 2
+  release_branches = ["release-4.2.4"]
+  branch_protection_conf_set = [
+    {
+      pattern             = "release-4.2.4"
+      signed_commits      = false
+      linear_history      = true
+      allows_deletions    = false
+      allows_force_pushes = false
+      blocks_creations    = false
+      push_restrictions   = []
+      contexts            = [ "Go 1.16 Redis 5"]
+      review_count        = 2
+    },
+    {
+      pattern             = "master"
+      signed_commits      = false
+      linear_history      = false
+      allows_deletions    = false
+      allows_force_pushes = false
+      blocks_creations    = false
+      push_restrictions   = []
+      contexts = [
+        # "test",
+        "Go 1.16 Redis 5"
+        #   "Analyze (go)",
+        #   "1.16",
+        #   "lint",
+        #   "1.16-el7",
+        #   "ci",
+        #   "upgrade-deb (amd64, ubuntu:xenial)",
+        #   " upgrade-deb (amd64, ubuntu:bionic)",
+        #   "upgrade-deb (amd64, ubuntu:focal)",
+        #   "upgrade-deb (amd64, debian:bullseye)",
+        #   "upgrade-deb (arm64, ubuntu:xenial)",
+        #   "upgrade-deb (arm64, ubuntu:bionic)",
+        #   " upgrade-deb (arm64, ubuntu:focal)",
+        #   "upgrade-deb (arm64, debian:bullseye)",
+        #   "upgrade-rpm (ubi7/ubi)",
+        #   "upgrade-rpm (ubi8/ubi)",
+        #   "smoke-tests",
+        #   "CodeQL",
+        #   "SonarCloud",
+        # "SonarCloud Code Analysis"
+      ]
+      review_count = 2
     },
     {
       pattern             = "release-3.2"
@@ -101,17 +114,6 @@ module "tyk" {
       contexts            = []
       review_count        = 2
     }
-    # {
-    #   pattern             = "release-2.9"
-    #   signed_commits      = false
-    #   linear_history      = true
-    #   allows_deletions    = false
-    #   allows_force_pushes = false
-    #   blocks_creations    = false
-    #   push_restrictions   = []
-    #   contexts            = []
-    #   review_count        = 2
-    # }
   ]
 }
 
@@ -126,6 +128,7 @@ module "tyk-analytics" {
   vulnerability_alerts        = true
   squash_merge_commit_message = "PR_BODY"
   squash_merge_commit_title   = "PR_TITLE"
+  release_branches = []
   branch_protection_conf_set = [{
     pattern             = "master"
     signed_commits      = false
@@ -188,6 +191,7 @@ module "tyk-pump" {
   wiki                 = false
   default_branch       = "master"
   vulnerability_alerts = true
+  release_branches = []
   branch_protection_conf_set = [{
     pattern             = "master"
     signed_commits      = false
@@ -247,7 +251,7 @@ module "tyk-sink" {
   merge_commit         = true
   rebase_merge         = true
   vulnerability_alerts = false
-
+  release_branches = []
   branch_protection_conf_set = [
     # {
     #   pattern             = "master"
@@ -271,6 +275,7 @@ module "tyk-identity-broker" {
   topics               = []
   default_branch       = "master"
   vulnerability_alerts = true
+  release_branches = []
   branch_protection_conf_set = [{
     pattern             = "master"
     signed_commits      = false
@@ -296,6 +301,7 @@ module "portal" {
   rebase_merge           = true
   delete_branch_on_merge = false
   vulnerability_alerts   = false
+  release_branches = []
 
   branch_protection_conf_set = [
   #  {

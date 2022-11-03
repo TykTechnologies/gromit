@@ -66,6 +66,10 @@ variable "squash_merge_commit_title" {
   default     = "COMMIT_OR_PR_TITLE"
 }
 
+variable "release_branches" {
+  type        = list(string)
+  description = "List of repository official release branches"
+}
 
 variable "branch_protection_conf_set" {
   type = set(object({
