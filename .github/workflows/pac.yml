@@ -20,7 +20,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: arn:aws:iam::046805072452:role/gromit-test
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
           role-session-name: gromitci
           aws-region: eu-central-1
 
