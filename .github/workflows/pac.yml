@@ -21,7 +21,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-to-assume: arn:aws:iam::754489498669:role/gromit-ci
           role-session-name: gromitci
           aws-region: eu-central-1
 
