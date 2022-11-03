@@ -1,9 +1,9 @@
-name: Release
+name: Policy as Code
 
 on:
   pull_request:
-  paths:
-    - policy/terraform/**
+    paths:
+      - policy/terraform/**
 
 env:
   TERRAFORM_DIR: "./policy/terraform"
