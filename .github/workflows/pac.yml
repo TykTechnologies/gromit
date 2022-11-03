@@ -38,5 +38,5 @@ jobs:
 
       - name: Terraform Plan
         working-directory: ${{ env.TERRAFORM_DIR }}
-        id: init
+        id: plan
         run: terraform plan
