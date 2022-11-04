@@ -25,7 +25,9 @@ jobs:
           role-session-name: gromitci
           aws-region: eu-central-1
 
-      - uses: hashicorp/setup-terraform@v1
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.3.0
 
       - name: Terraform Format
         working-directory: ${{ env.TERRAFORM_DIR }}
