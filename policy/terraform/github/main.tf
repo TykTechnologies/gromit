@@ -47,10 +47,10 @@ module "tyk" {
   default_branch       = "master"
   vulnerability_alerts = true
   release_branches = [
-    { branch = "master",
-      reviewers = 2,
+    { branch         = "master",
+      reviewers      = 2,
       required_tests = ["Go 1.16 Redis 5"],
-      convos = false },
+    convos = false },
   ]
 }
 
@@ -65,10 +65,10 @@ module "tyk-analytics" {
   squash_merge_commit_message = "PR_BODY"
   squash_merge_commit_title   = "PR_TITLE"
   release_branches = [
-    { branch = "master",
+    { branch    = "master",
       reviewers = 2,
-      convos = false,
-      required_tests = ["commit message linter", "test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"] },
+      convos    = false,
+    required_tests = ["commit message linter", "test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"] },
   ]
 }
 
@@ -81,10 +81,10 @@ module "tyk-pump" {
   default_branch       = "master"
   vulnerability_alerts = true
   release_branches = [
-    { branch = "master",
+    { branch    = "master",
       reviewers = 2,
-      convos = false,
-      required_tests = [] },
+      convos    = false,
+    required_tests = [] },
   ]
 }
 
@@ -99,10 +99,10 @@ module "tyk-sink" {
   rebase_merge         = true
   vulnerability_alerts = false
   release_branches = [
-    { branch = "master",
+    { branch    = "master",
       reviewers = 1,
-      convos = false,
-      required_tests = [] },
+      convos    = false,
+    required_tests = [] },
   ]
 }
 
@@ -114,10 +114,10 @@ module "tyk-identity-broker" {
   default_branch       = "master"
   vulnerability_alerts = true
   release_branches = [
-    { branch = "master",
+    { branch    = "master",
       reviewers = 1,
-      convos = false,
-      required_tests = [] },
+      convos    = false,
+    required_tests = [] },
   ]
 }
 
@@ -133,9 +133,9 @@ module "portal" {
   delete_branch_on_merge = false
   vulnerability_alerts   = false
   release_branches = [
-    { branch = "master",
+    { branch    = "master",
       reviewers = 1,
-      convos = false,
-      required_tests = ["test (1.16.x, ubuntu-latest, amd64, 15.x)"] },
+      convos    = false,
+    required_tests = ["test (1.16.x, ubuntu-latest, amd64, 15.x)"] },
   ]
 }

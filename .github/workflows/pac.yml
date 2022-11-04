@@ -40,4 +40,5 @@ jobs:
       - name: Terraform Plan
         working-directory: ${{ env.TERRAFORM_DIR }}
         id: plan
-        run: terraform plan
+        run: |
+          terraform validate && terraform plan

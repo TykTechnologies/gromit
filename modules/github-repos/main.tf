@@ -34,7 +34,7 @@ resource "github_branch" "default" {
 }
 
 resource "github_branch" "release_branches" {
-  for_each = toset([ for i, b in var.release_branches: b.branch ])
+  for_each   = toset([for i, b in var.release_branches : b.branch])
   repository = github_repository.repository.name
   branch     = each.value
 }
@@ -46,9 +46,9 @@ resource "github_branch_default" "default" {
 
 
 resource "github_branch_protection" "automerge" {
-  for_each = { for i, b in var.release_branches:
-    b.branch => b }
-  
+  for_each = { for i, b in var.release_branches :
+  b.branch => b }
+
   repository_id = github_repository.repository.node_id
   pattern       = each.value.branch
 
