@@ -37,7 +37,7 @@ resource "github_branch" "release_branches" {
   b.branch => b }
   repository    = github_repository.repository.name
   branch        = each.value.branch
-  source_branch = each.value.source
+  source_branch = each.value.source_branch
 }
 
 resource "github_branch_default" "default" {
