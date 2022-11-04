@@ -67,20 +67,11 @@ variable "squash_merge_commit_title" {
 }
 
 variable "release_branches" {
-  type        = list(string)
-  description = "List of repository official release branches"
-}
-
-variable "branch_protection_conf_set" {
-  type = set(object({
-    pattern             = string
-    signed_commits      = bool
-    linear_history      = bool
-    allows_deletions    = bool
-    allows_force_pushes = bool
-    blocks_creations    = bool
-    push_restrictions   = list(string)
-    contexts            = list(string)
-    review_count        = number
+  type = list(object({
+    branch         = string	# Name of the branch
+    reviewers      = number	# Min number of reviews needed
+    required_tests = list(string) # Workflows that need to pass before merging
+    convos = bool 		# Should conversations be resolved before merging
   }))
+  description = "List of branches managed by terraform"
 }
