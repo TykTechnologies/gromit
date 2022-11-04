@@ -1,5 +1,5 @@
 locals {
-  repos = ["tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"]
+  repos = ["tyk", "tyk-analytics", "tyk-analytics-ui", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"]
 }
 
 terraform {
@@ -28,8 +28,6 @@ terraform {
       version = ">= 5.5.0"
     }
   }
-
-  required_version = ">= 1.0.10"
 }
 
 provider "github" {
