@@ -1,5 +1,5 @@
 locals {
-  repos = ["tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"]
+  repos = ["tyk", "tyk-analytics", "tyk-analytics-ui", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"]
 }
 
 terraform {
@@ -28,8 +28,6 @@ terraform {
       version = ">= 5.5.0"
     }
   }
-
-  required_version = ">= 1.0.10"
 }
 
 provider "github" {
@@ -51,6 +49,16 @@ module "tyk" {
       reviewers      = 2,
       required_tests = ["Go 1.16 Redis 5"],
     convos = false },
+    { branch         = "release-4.3",
+      reviewers      = 2,
+      source_branch  = "release-4",
+      required_tests = ["Go 1.16 Redis 5"],
+    convos = false },
+    { branch         = "release-4.3.0",
+      reviewers      = 2,
+      source_branch  = "release-4",
+      required_tests = ["Go 1.16 Redis 5"],
+    convos = false },
   ]
 }
 
@@ -69,6 +77,16 @@ module "tyk-analytics" {
       reviewers = 2,
       convos    = false,
     required_tests = ["commit message linter", "test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"] },
+    { branch        = "release-4.3",
+      reviewers     = 2,
+      convos        = false,
+      source_branch = "release-4",
+    required_tests = ["commit message linter", "test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"] },
+    { branch        = "release-4.3.0",
+      reviewers     = 2,
+      convos        = false,
+      source_branch = "release-4",
+    required_tests = ["commit message linter", "test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"] },
   ]
 }
 
@@ -86,6 +104,16 @@ module "tyk-analytics-ui" {
     { branch    = "master",
       reviewers = 2,
       convos    = false,
+    required_tests = ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"] },
+    { branch        = "release-4.3",
+      reviewers     = 2,
+      convos        = false,
+      source_branch = "release-4",
+    required_tests = ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"] },
+    { branch        = "release-4.3.0",
+      reviewers     = 2,
+      convos        = false,
+      source_branch = "release-4",
     required_tests = ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"] },
   ]
 }
