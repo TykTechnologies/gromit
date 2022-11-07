@@ -44,20 +44,6 @@ type GitRepo struct {
 	dryRun       bool
 }
 
-var mutation struct {
-	Automerge struct {
-		clientMutationId githubv4.String
-		Actor            struct {
-			Login githubv4.String
-		}
-		PullRequest struct {
-			BaseRefName githubv4.String
-			CreatedAt   githubv4.DateTime
-			Number      githubv4.Int
-		}
-	} `graphql:"enablePullRequestAutoMerge(input: $input)"`
-}
-
 const defaultRemote = "origin"
 
 // FetchRepo clones a repo into the given dir or an in-memory fs
@@ -403,6 +389,63 @@ func (r GitRepo) HasGithub() bool {
 	return false
 }
 
+// GetPRV4 implements graphql github v4 API to get ID of a given PR, if it exists it
+// returns the PR UNIQUE ID (not number, which is diferent) otherwhise will return nil
+// and error
+func (r *GitRepo) GetPRV4(number int, owner string, repo string) (githubv4.ID, error) {
+
+	var getPR struct {
+		Repo struct {
+			PR struct {
+				ID    githubv4.ID
+				Title string
+				Body  string
+			} `graphql:"pullRequest(number: $number)"`
+		} `graphql:"repository(owner: $owner, name: $repo)"`
+	}
+
+	input := map[string]interface{}{
+		"owner":  githubv4.String(owner),
+		"repo":   githubv4.String(repo),
+		"number": githubv4.Int(number),
+	}
+
+	err := r.ghV4.Query(context.Background(), &getPR, input)
+
+	return getPR.Repo.PR.ID, err
+}
+
+// EnableAutoMergePR implements graphQL github v4 API to mutate graphQL PR object to enable automerge
+// feature, will return error only
+func (r *GitRepo) EnableAutoMergePR(id githubv4.ID, body string, head string, method string) error {
+	var mutation struct {
+		Automerge struct {
+			ClientMutationID githubv4.String
+			Actor            struct {
+				Login githubv4.String
+			}
+			PullRequest struct {
+				BaseRefName githubv4.String
+				CreatedAt   githubv4.DateTime
+				Number      githubv4.Int
+			}
+		} `graphql:"enablePullRequestAutoMerge(input: $input)"`
+	}
+
+	mergeMethod := githubv4.PullRequestMergeMethodSquash
+
+	input := githubv4.EnablePullRequestAutoMergeInput{
+		CommitBody:     githubv4.NewString(githubv4.String(body)),
+		CommitHeadline: githubv4.NewString(githubv4.String(head)),
+		MergeMethod:    &mergeMethod,
+		PullRequestID:  id,
+	}
+
+	err := r.ghV4.Mutate(context.Background(), &mutation, input, nil)
+
+	return err
+}
+
 func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (string, error) {
 	if !r.HasGithub() {
 		return "", errors.New("github object not initialized")
@@ -424,24 +467,17 @@ func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (string
 		return "", fmt.Errorf("Error creating PR:(owner: %s, repo: %s, head: %s,  %v", owner, repo, head, err)
 	}
 
-	// Implement grapql v4API
-	squash := githubv4.PullRequestMergeMethodSquash
+	prID, err := r.GetPRV4(*pr.Number, owner, repo)
 
-	input := githubv4.EnablePullRequestAutoMergeInput{
-		AuthorEmail:    githubv4.NewString("policy@gromit"),
-		CommitBody:     githubv4.NewString("This PR will automerge. Enabled by Gromit"),
-		CommitHeadline: githubv4.NewString("Automerge"),
-		MergeMethod:    &squash,
-		// PullRequestID:  githubv4.NewBase64String(pr.ID),
-		PullRequestID: githubv4.NewBase64String("PR_kwDOASogO85AxbF1"),
+	if err != nil {
+		log.Error().Err(err).Msgf("Error querying PR number from PR: %s", *pr.Number)
+		return "", err
 	}
 
-	err2 := r.ghV4.Mutate(context.Background(), &mutation, input, nil)
-
-	if err2 != nil {
-		return "", fmt.Errorf("Error enabling automerge %v", err2)
+	err = r.EnableAutoMergePR(prID, body, head, "squash")
+	if err != nil {
+		log.Error().Err(err).Msg("Error enabling automerge")
 	}
-	//
 
 	url := pr.GetHTMLURL()
 	r.prs = append(r.prs, url)
