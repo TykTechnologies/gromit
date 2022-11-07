@@ -444,13 +444,13 @@ func (r *GitRepo) EnableAutoMergePR(id githubv4.ID) error {
 	return err
 }
 
-func (r *GitRepo) CreatePR(baseBranch string, title string, body string, autoMerge bool) (string, error) {
+func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (*github.PullRequest, error) {
 	if !r.HasGithub() {
-		return "", errors.New("github object not initialized")
+		return nil, errors.New("github object not initialized")
 	}
 	owner, repo, err := r.GithubRepoComponents()
 	if err != nil {
-		return "", fmt.Errorf("Error getting github comps from fqdn: (%s) : %v", r.Name, err)
+		return nil, fmt.Errorf("Error getting github comps from fqdn: (%s) : %v", r.Name, err)
 	}
 	head := owner + ":" + r.CurrentBranch()
 	prOpts := &github.NewPullRequest{
@@ -462,28 +462,12 @@ func (r *GitRepo) CreatePR(baseBranch string, title string, body string, autoMer
 
 	pr, _, err := r.gh.PullRequests.Create(context.Background(), owner, repo, prOpts)
 	if err != nil {
-		return "", fmt.Errorf("Error creating PR:(owner: %s, repo: %s, head: %s,  %v", owner, repo, head, err)
+		return nil, fmt.Errorf("Error creating PR:(owner: %s, repo: %s, head: %s,  %v", owner, repo, head, err)
 	}
 
-	if autoMerge {
-		log.Info().Msg("Enabling automerge...")
-		prID, err := r.GetPRV4(*pr.Number, owner, repo)
-
-		if err != nil {
-			log.Error().Err(err).Msgf("Error querying PR number from PR: %d. Please enable automerge manually", *pr.Number)
-			return "", err
-		}
-
-		err = r.EnableAutoMergePR(prID)
-		if err != nil {
-			log.Error().Err(err).Msg("Error enabling automerge")
-		} else {
-			log.Info().Msg("Success! PR will now automerge when conditions are meet")
-		}
-	}
 	url := pr.GetHTMLURL()
 	r.prs = append(r.prs, url)
-	return url, nil
+	return pr, err
 }
 
 // (r *GitRepo) SetDryRun(true) will make this repo not perform any destructive action
