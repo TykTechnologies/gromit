@@ -12,9 +12,13 @@ import (
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 var etcdPass, etcdHost, etcdUser, script string
+var hasTLS bool
+var caCertFile, clientCertFile, clientKeyFile string
 var lock mutex.Lock
 
 // mutexCmd represents the mutex command
@@ -25,23 +29,39 @@ var mutexCmd = &cobra.Command{
 This command can be used to synchronise external processes.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		// create client
-		ca, _ := ioutil.ReadFile("ca.crt")
-		clientCert, _ := ioutil.ReadFile("client.crt")
-		clientKey, _ := ioutil.ReadFile("client.key")
-		tlsAuth := util.TLSAuthClient{
-			CA:   ca,
-			Cert: clientCert,
-			Key:  clientKey,
-		}
-		// cli, err := mutex.GetEtcdClient(etcdHost, 5, etcdUser, etcdPass)
-		tlsConfig, err := tlsAuth.GetTLSConfig()
-		if err != nil {
-			log.Fatal().Err(err).Msg("creating TLS config.")
-		}
-		cli, err := mutex.GetEtcdTLSClient(etcdHost, tlsConfig, 5)
-		if err != nil {
-			log.Fatal().Err(err).Msg("could not connect to etcd")
+		var cli *clientv3.Client
+		if hasTLS {
+			ca, err := ioutil.ReadFile(caCertFile)
+			if err != nil {
+				log.Fatal().Err(err).Msg("couldn't read ca cert")
+			}
+			clientCert, err := ioutil.ReadFile(clientCertFile)
+			if err != nil {
+				log.Fatal().Err(err).Msg("couldn't read client cert")
+			}
+			clientKey, err := ioutil.ReadFile(clientKeyFile)
+			if err != nil {
+				log.Fatal().Err(err).Msg("couldn't read client key file")
+			}
+			tlsAuth := util.TLSAuthClient{
+				CA:   ca,
+				Cert: clientCert,
+				Key:  clientKey,
+			}
+			tlsConfig, err := tlsAuth.GetTLSConfig()
+			if err != nil {
+				log.Fatal().Err(err).Msg("creating TLS config.")
+			}
+			cli, err = mutex.GetEtcdTLSClient(etcdHost, tlsConfig, 5)
+			if err != nil {
+				log.Fatal().Err(err).Msg("could not connect to etcd over TLS")
+			}
+		} else {
+			var err error
+			cli, err = mutex.GetEtcdClient(etcdHost, 5, etcdUser, etcdPass)
+			if err != nil {
+				log.Fatal().Err(err).Msg("could not connect to etcd")
+			}
 		}
 
 		// create a new session
@@ -92,9 +112,15 @@ var getSubCmd = &cobra.Command{
 
 // initialization of variables
 func init() {
+	mutexCmd.PersistentFlags().BoolVar(&hasTLS, "tlsauth", false, "Use mTLS auth to connect to etcd, if this is set, --etcdpass and --etcduser are ignored")
+	mutexCmd.PersistentFlags().StringVar(&caCertFile, "cacert", "", "The file containing the CA certificate")
+	mutexCmd.PersistentFlags().StringVar(&clientCertFile, "cert", "", "The file containing the client certificate")
+	mutexCmd.PersistentFlags().StringVar(&clientKeyFile, "key", "", "The file containing the client key")
+	mutexCmd.MarkFlagsRequiredTogether("tlsauth", "cacert", "cert", "key")
 	mutexCmd.PersistentFlags().StringVar(&etcdPass, "etcdpass", os.Getenv("ETCD_PASS"), "Password for etcd user")
 	mutexCmd.PersistentFlags().StringVar(&etcdUser, "etcduser", "root", "etcd user to connect as")
-	mutexCmd.PersistentFlags().StringVar(&etcdHost, "host", "ec2-3-66-86-193.eu-central-1.compute.amazonaws.com:2379", "etcd host")
+	mutexCmd.MarkFlagsMutuallyExclusive("tlsauth", "etcduser")
+	mutexCmd.PersistentFlags().StringVar(&etcdHost, "host", "", "etcd host")
 	mutexCmd.PersistentFlags().StringVar(&script, "script", "testdata/mutex/script.sh", "script to be run after acquiring lock")
 
 	mutexCmd.AddCommand(getSubCmd)
