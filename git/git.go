@@ -417,7 +417,7 @@ func (r *GitRepo) GetPRV4(number int, owner string, repo string) (githubv4.ID, e
 
 // EnableAutoMergePR implements graphQL github v4 API to mutate graphQL PR object to enable automerge
 // feature, will return error only
-func (r *GitRepo) EnableAutoMergePR(id githubv4.ID, body string, head string, method string) error {
+func (r *GitRepo) EnableAutoMergePR(id githubv4.ID, body string, head string) error {
 	var mutation struct {
 		Automerge struct {
 			ClientMutationID githubv4.String
@@ -476,7 +476,7 @@ func (r *GitRepo) CreatePR(baseBranch string, title string, body string, autoMer
 			return "", err
 		}
 
-		err = r.EnableAutoMergePR(prID, body, head, "squash")
+		err = r.EnableAutoMergePR(prID, body, head)
 		if err != nil {
 			log.Error().Err(err).Msg("Error enabling automerge")
 		} else {
