@@ -4,10 +4,12 @@ Copyright © 2022 Tyk Technologies
 package cmd
 
 import (
+	"io/ioutil"
 	"os"
 	"os/exec"
 
 	"github.com/TykTechnologies/gromit/mutex"
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -24,7 +26,20 @@ This command can be used to synchronise external processes.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// create client
-		cli, err := mutex.GetEtcdClient(etcdHost, 5, etcdUser, etcdPass)
+		ca, _ := ioutil.ReadFile("ca.crt")
+		clientCert, _ := ioutil.ReadFile("client.crt")
+		clientKey, _ := ioutil.ReadFile("client.key")
+		tlsAuth := util.TLSAuthClient{
+			CA:   ca,
+			Cert: clientCert,
+			Key:  clientKey,
+		}
+		// cli, err := mutex.GetEtcdClient(etcdHost, 5, etcdUser, etcdPass)
+		tlsConfig, err := tlsAuth.GetTLSConfig()
+		if err != nil {
+			log.Fatal().Err(err).Msg("creating TLS config.")
+		}
+		cli, err := mutex.GetEtcdTLSClient(etcdHost, tlsConfig, 5)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not connect to etcd")
 		}
