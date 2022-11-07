@@ -1,5 +1,4 @@
 terraform {
-
   required_providers {
     github = {
       source  = "integrations/github"
@@ -33,25 +32,43 @@ resource "github_branch" "default" {
   branch     = var.default_branch
 }
 
+resource "github_branch" "release_branches" {
+  for_each = { for i, b in var.release_branches :
+  b.branch => b }
+  repository    = github_repository.repository.name
+  branch        = each.value.branch
+  source_branch = each.value.source_branch
+}
+
 resource "github_branch_default" "default" {
   repository = github_repository.repository.name
   branch     = github_branch.default.branch
 }
 
-module "protected_branches" {
-  for_each = { for branch in var.branch_protection_conf_set : branch.pattern => branch }
-  source   = "./github-branch-protection"
-  repo     = github_repository.repository.node_id
-  branch_protection_conf = {
-    pattern             = each.value.pattern
-    signed_commits      = each.value.signed_commits
-    linear_history      = each.value.linear_history
-    allows_deletions    = each.value.allows_deletions
-    allows_force_pushes = each.value.allows_force_pushes
-    blocks_creations    = each.value.blocks_creations
-    push_restrictions   = each.value.push_restrictions
-    contexts            = each.value.contexts
-    review_count        = each.value.review_count
+
+resource "github_branch_protection" "automerge" {
+  for_each = { for i, b in var.release_branches :
+  b.branch => b }
+
+  repository_id = github_repository.repository.node_id
+  pattern       = each.value.branch
+
+  #checks for automerge
+  require_signed_commits          = false
+  require_conversation_resolution = each.value.convos
+  required_linear_history         = false
+  enforce_admins                  = false
+  allows_deletions                = false
+  allows_force_pushes             = false
+
+  required_status_checks {
+    strict   = true
+    contexts = each.value.required_tests
   }
 
+  required_pull_request_reviews {
+    require_code_owner_reviews      = false
+    required_approving_review_count = each.value.reviewers
+
+  }
 }
