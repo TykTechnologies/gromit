@@ -234,7 +234,7 @@ func (r RepoPolicy) Push() error {
 // gien baseBranch and title. If dryRun is enabled, it prints out the parameters with
 // which the PR will be generated to stdout. It returns the URL of the PR on success.
 // Returns an empty string and no error on a successful dry run.
-func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (string, error) {
+func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool, autoMerge bool) (string, error) {
 	prURL := ""
 	if r.Branch == "" {
 		return prURL, fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
@@ -267,7 +267,7 @@ func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (st
 		}
 		log.Info().Str("baseBranch", baseBranch).
 			Str("title", title).Msg("calling CreatePR on github")
-		prURL, err = r.gitRepo.CreatePR(baseBranch, title, string(body))
+		prURL, err = r.gitRepo.CreatePR(baseBranch, title, string(body), autoMerge)
 		if err != nil {
 			return "", err
 		}

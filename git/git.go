@@ -446,7 +446,7 @@ func (r *GitRepo) EnableAutoMergePR(id githubv4.ID, body string, head string, me
 	return err
 }
 
-func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (string, error) {
+func (r *GitRepo) CreatePR(baseBranch string, title string, body string, autoMerge bool) (string, error) {
 	if !r.HasGithub() {
 		return "", errors.New("github object not initialized")
 	}
@@ -467,18 +467,22 @@ func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (string
 		return "", fmt.Errorf("Error creating PR:(owner: %s, repo: %s, head: %s,  %v", owner, repo, head, err)
 	}
 
-	prID, err := r.GetPRV4(*pr.Number, owner, repo)
+	if autoMerge {
+		log.Info().Msg("Enabling automerge...")
+		prID, err := r.GetPRV4(*pr.Number, owner, repo)
 
-	if err != nil {
-		log.Error().Err(err).Msgf("Error querying PR number from PR: %s", *pr.Number)
-		return "", err
+		if err != nil {
+			log.Error().Err(err).Msgf("Error querying PR number from PR: %d. Please enable automerge manually", *pr.Number)
+			return "", err
+		}
+
+		err = r.EnableAutoMergePR(prID, body, head, "squash")
+		if err != nil {
+			log.Error().Err(err).Msg("Error enabling automerge")
+		} else {
+			log.Info().Msg("Success! PR will now automerge when conditions are meet")
+		}
 	}
-
-	err = r.EnableAutoMergePR(prID, body, head, "squash")
-	if err != nil {
-		log.Error().Err(err).Msg("Error enabling automerge")
-	}
-
 	url := pr.GetHTMLURL()
 	r.prs = append(r.prs, url)
 	return url, nil
