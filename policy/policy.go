@@ -270,23 +270,23 @@ func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool, aut
 		pr, err := r.gitRepo.CreatePR(baseBranch, title, string(body))
 		if err != nil {
 			return "", err
-		} else {
-			prURL = pr.GetHTMLURL()
-			if autoMerge {
-				log.Info().Msg("Enabling automerge...")
-				prID, err := r.gitRepo.GetPRV4(*pr.Number, owner, r.Name)
+		}
 
-				if err != nil {
-					log.Error().Err(err).Msgf("Error querying PR number from PR: %d. Please enable automerge manually", *pr.Number)
-					return prURL, nil
-				}
-				err = r.gitRepo.EnableAutoMergePR(prID)
-				if err != nil {
-					log.Error().Err(err).Msg("Error enabling automerge")
-				} else {
-					log.Info().Msg("Success! PR will now automerge when conditions are meet")
-				}
+		prURL = pr.GetHTMLURL()
+		if autoMerge {
+			log.Info().Msg("Enabling automerge...")
+
+			prID, err := r.gitRepo.GetPRV4(*pr.Number, owner, r.Name)
+			if err != nil {
+				log.Error().Err(err).Msgf("Error querying PR number from PR: %d. Please enable automerge manually", *pr.Number)
+				return prURL, nil
 			}
+
+			err = r.gitRepo.EnableAutoMergePR(prID)
+			if err != nil {
+				log.Error().Err(err).Msgf("Error enabling automerge for PR , ID: %v , URL: %s", prID, prURL)
+			}
+			log.Info().Msg("Success! PR will now automerge when conditions are meet")
 		}
 	}
 	return prURL, nil

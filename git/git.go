@@ -70,13 +70,11 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 			Password: authToken,
 		}
 		ctx := context.Background()
-		//ctxV4 := context.Background()
 
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: authToken},
 		)
 		tc := oauth2.NewClient(ctx, ts)
-		//tcV4 := oauth2.NewClient(ctxV4, ts)
 
 		gh = github.NewClient(tc)
 		ghV4 = githubv4.NewClient(tc)
