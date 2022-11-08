@@ -4,7 +4,6 @@ Copyright © 2022 Tyk Technologies
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 
@@ -12,13 +11,13 @@ import (
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 var etcdPass, etcdHost, etcdUser, script string
 var hasTLS bool
-var caCertFile, clientCertFile, clientKeyFile string
 var lock mutex.Lock
 
 // mutexCmd represents the mutex command
@@ -31,22 +30,15 @@ This command can be used to synchronise external processes.
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		var cli *clientv3.Client
 		if hasTLS {
-			ca, err := ioutil.ReadFile(caCertFile)
-			if err != nil {
-				log.Fatal().Err(err).Msg("couldn't read ca cert")
-			}
-			clientCert, err := ioutil.ReadFile(clientCertFile)
-			if err != nil {
-				log.Fatal().Err(err).Msg("couldn't read client cert")
-			}
-			clientKey, err := ioutil.ReadFile(clientKeyFile)
-			if err != nil {
-				log.Fatal().Err(err).Msg("couldn't read client key file")
+			if !(viper.IsSet("etcd.ca") &&
+				viper.IsSet("etcd.client.cert") &&
+				viper.IsSet("etcd.client.key")) {
+				log.Fatal().Msg("any one of ca, client cert or client key is not set.")
 			}
 			tlsAuth := util.TLSAuthClient{
-				CA:   ca,
-				Cert: clientCert,
-				Key:  clientKey,
+				CA:   []byte(viper.GetString("etcd.ca")),
+				Cert: []byte(viper.GetString("etcd.client.cert")),
+				Key:  []byte(viper.GetString("etcd.client.key")),
 			}
 			tlsConfig, err := tlsAuth.GetTLSConfig()
 			if err != nil {
@@ -112,16 +104,12 @@ var getSubCmd = &cobra.Command{
 
 // initialization of variables
 func init() {
-	mutexCmd.PersistentFlags().BoolVar(&hasTLS, "tlsauth", false, "Use mTLS auth to connect to etcd, if this is set, --etcdpass and --etcduser are ignored")
-	mutexCmd.PersistentFlags().StringVar(&caCertFile, "cacert", "", "The file containing the CA certificate(to be used with --tlsauth)")
-	mutexCmd.PersistentFlags().StringVar(&clientCertFile, "cert", "", "The file containing the client certificate(to be used with --tlsauth)")
-	mutexCmd.PersistentFlags().StringVar(&clientKeyFile, "key", "", "The file containing the client key(to be used with --tlsauth)")
-	mutexCmd.MarkFlagsRequiredTogether("tlsauth", "cacert", "cert", "key")
+	mutexCmd.PersistentFlags().BoolVar(&hasTLS, "tlsauth", false, "Use mTLS auth to connect to etcd, if this is set, --etcdpass and --etcduser are ignored. Cert info will be read from config/ GROMIT_ETCD_CA, GROMIT_ETCD_CLIENT_CERT, GROMIT_ETCD_CLIENT_KEY must be set")
 	mutexCmd.PersistentFlags().StringVar(&etcdPass, "etcdpass", os.Getenv("ETCD_PASS"), "Password for etcd user")
 	mutexCmd.PersistentFlags().StringVar(&etcdUser, "etcduser", "root", "etcd user to connect as")
-	mutexCmd.MarkFlagsMutuallyExclusive("tlsauth", "etcduser")
 	mutexCmd.PersistentFlags().StringVar(&etcdHost, "host", "", "etcd host")
 	mutexCmd.PersistentFlags().StringVar(&script, "script", "testdata/mutex/script.sh", "script to be run after acquiring lock")
+	mutexCmd.MarkFlagsMutuallyExclusive("tlsauth", "etcduser")
 
 	mutexCmd.AddCommand(getSubCmd)
 	rootCmd.AddCommand(mutexCmd)
