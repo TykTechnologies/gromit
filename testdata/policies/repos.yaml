@@ -115,7 +115,7 @@ policy:
       protected: [ master, release-2, release-1.9 ]
       branches:
         cgo: false
-        goversion: 1.15
+        goversion: 1.16
         upgradefromver: 1.7.7
         pcprivate: true
         configfile: tyk_sink.conf
