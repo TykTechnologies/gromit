@@ -113,9 +113,9 @@ var getSubCmd = &cobra.Command{
 // initialization of variables
 func init() {
 	mutexCmd.PersistentFlags().BoolVar(&hasTLS, "tlsauth", false, "Use mTLS auth to connect to etcd, if this is set, --etcdpass and --etcduser are ignored")
-	mutexCmd.PersistentFlags().StringVar(&caCertFile, "cacert", "", "The file containing the CA certificate")
-	mutexCmd.PersistentFlags().StringVar(&clientCertFile, "cert", "", "The file containing the client certificate")
-	mutexCmd.PersistentFlags().StringVar(&clientKeyFile, "key", "", "The file containing the client key")
+	mutexCmd.PersistentFlags().StringVar(&caCertFile, "cacert", "", "The file containing the CA certificate(to be used with --tlsauth)")
+	mutexCmd.PersistentFlags().StringVar(&clientCertFile, "cert", "", "The file containing the client certificate(to be used with --tlsauth)")
+	mutexCmd.PersistentFlags().StringVar(&clientKeyFile, "key", "", "The file containing the client key(to be used with --tlsauth)")
 	mutexCmd.MarkFlagsRequiredTogether("tlsauth", "cacert", "cert", "key")
 	mutexCmd.PersistentFlags().StringVar(&etcdPass, "etcdpass", os.Getenv("ETCD_PASS"), "Password for etcd user")
 	mutexCmd.PersistentFlags().StringVar(&etcdUser, "etcduser", "root", "etcd user to connect as")
