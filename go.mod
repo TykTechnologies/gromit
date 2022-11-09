@@ -18,7 +18,7 @@ require (
 	github.com/mongodb/mongo-tools-common v4.0.6+incompatible
 	github.com/rs/zerolog v1.19.0
 	github.com/shurcooL/githubv4 v0.0.0-20221021030919-a134b1472cc7
-	github.com/spf13/cobra v1.1.3
+	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.7.2-0.20210422093502-50f933027707
 	github.com/stretchr/testify v1.7.0
 	go.etcd.io/etcd/client/v3 v3.5.4
@@ -50,7 +50,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huandu/xstrings v1.3.1 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jessevdk/go-flags v1.5.0 // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
@@ -95,5 +95,5 @@ require (
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
