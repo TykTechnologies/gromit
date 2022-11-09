@@ -22,8 +22,9 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v47/github"
 	"github.com/rs/zerolog/log"
+	"github.com/shurcooL/githubv4"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/oauth2"
 )
@@ -38,6 +39,7 @@ type GitRepo struct {
 	fs           billy.Filesystem
 	auth         transport.AuthMethod
 	gh           *github.Client
+	ghV4         *githubv4.Client
 	prs          []string
 	dryRun       bool
 }
@@ -58,20 +60,26 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 	if depth > 0 {
 		opts.Depth = depth
 	}
-	var gh *github.Client
+
+	var gh *github.Client     // ghV3client
+	var ghV4 *githubv4.Client // ghV4client
+
 	if authToken != "" {
 		opts.Auth = &http.BasicAuth{
 			Username: "abc123", // anything except an empty string
 			Password: authToken,
 		}
 		ctx := context.Background()
+
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: authToken},
 		)
 		tc := oauth2.NewClient(ctx, ts)
 
 		gh = github.NewClient(tc)
+		ghV4 = githubv4.NewClient(tc)
 	}
+
 	log.Trace().Interface("opts", opts).Msg("git clone options")
 	var repo *git.Repository
 	var fs billy.Filesystem
@@ -103,6 +111,7 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 		worktree: w,
 		fs:       fs,
 		gh:       gh,
+		ghV4:     ghV4,
 		commitOpts: &git.CommitOptions{
 			All: false,
 			Author: &object.Signature{
@@ -378,13 +387,68 @@ func (r GitRepo) HasGithub() bool {
 	return false
 }
 
-func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (string, error) {
+// GetPRV4 implements graphql github v4 API to get ID of a given PR, if it exists it
+// returns the PR UNIQUE ID (not number, which is diferent) otherwhise will return nil
+// and error
+func (r *GitRepo) GetPRV4(number int, owner string, repo string) (githubv4.ID, error) {
+
+	var getPR struct {
+		Repo struct {
+			PR struct {
+				ID    githubv4.ID
+				Title string
+				Body  string
+			} `graphql:"pullRequest(number: $number)"`
+		} `graphql:"repository(owner: $owner, name: $repo)"`
+	}
+
+	input := map[string]interface{}{
+		"owner":  githubv4.String(owner),
+		"repo":   githubv4.String(repo),
+		"number": githubv4.Int(number),
+	}
+
+	err := r.ghV4.Query(context.Background(), &getPR, input)
+
+	return getPR.Repo.PR.ID, err
+}
+
+// EnableAutoMergePR implements graphQL github v4 API to mutate graphQL PR object to enable automerge
+// feature, will return error only
+func (r *GitRepo) EnableAutoMergePR(id githubv4.ID) error {
+	var mutation struct {
+		Automerge struct {
+			ClientMutationID githubv4.String
+			Actor            struct {
+				Login githubv4.String
+			}
+			PullRequest struct {
+				BaseRefName githubv4.String
+				CreatedAt   githubv4.DateTime
+				Number      githubv4.Int
+			}
+		} `graphql:"enablePullRequestAutoMerge(input: $input)"`
+	}
+
+	mergeMethod := githubv4.PullRequestMergeMethodSquash
+
+	input := githubv4.EnablePullRequestAutoMergeInput{
+		MergeMethod:   &mergeMethod,
+		PullRequestID: id,
+	}
+
+	err := r.ghV4.Mutate(context.Background(), &mutation, input, nil)
+
+	return err
+}
+
+func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (*github.PullRequest, error) {
 	if !r.HasGithub() {
-		return "", errors.New("github object not initialized")
+		return nil, errors.New("github object not initialized")
 	}
 	owner, repo, err := r.GithubRepoComponents()
 	if err != nil {
-		return "", fmt.Errorf("Error getting github comps from fqdn: (%s) : %v", r.Name, err)
+		return nil, fmt.Errorf("Error getting github comps from fqdn: (%s) : %v", r.Name, err)
 	}
 	head := owner + ":" + r.CurrentBranch()
 	prOpts := &github.NewPullRequest{
@@ -393,13 +457,15 @@ func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (string
 		Base:  github.String(baseBranch),
 		Body:  github.String(body),
 	}
+
 	pr, _, err := r.gh.PullRequests.Create(context.Background(), owner, repo, prOpts)
 	if err != nil {
-		return "", fmt.Errorf("Error creating PR:(owner: %s, repo: %s, head: %s,  %v", owner, repo, head, err)
+		return nil, fmt.Errorf("Error creating PR:(owner: %s, repo: %s, head: %s,  %v", owner, repo, head, err)
 	}
+
 	url := pr.GetHTMLURL()
 	r.prs = append(r.prs, url)
-	return url, nil
+	return pr, err
 }
 
 // (r *GitRepo) SetDryRun(true) will make this repo not perform any destructive action
