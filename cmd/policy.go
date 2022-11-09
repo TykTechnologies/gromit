@@ -30,7 +30,7 @@ import (
 var repoPolicies policy.Policies
 var repos []string
 var branch string
-var jsonOutput, dryRun bool
+var jsonOutput, dryRun, autoMerge bool
 var ghToken string
 var prBranch string
 
@@ -107,7 +107,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			}
 			log.Info().Str("hash", hash.String()).Msg("Commited the changes")
 
-			prURL, err := repo.CreatePR(bundle, commitMsg, branch, dryRun)
+			prURL, err := repo.CreatePR(bundle, commitMsg, branch, dryRun, autoMerge)
 			if err != nil {
 				log.Fatal().Err(err).Msg("unable to create PR")
 			}
@@ -148,6 +148,7 @@ func init() {
 	policyCmd.PersistentFlags().StringVarP(&config.RepoURLPrefix, "prefix", "u", "https://github.com/TykTechnologies", "Prefix to derive the fqdn repo")
 	policyCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output in JSON")
 	policyCmd.PersistentFlags().BoolVarP(&dryRun, "dry", "d", false, "Will not make any changes")
+	policyCmd.PersistentFlags().BoolVarP(&autoMerge, "auto", "a", true, "Will automerge if all requirements are meet")
 	policyCmd.PersistentFlags().StringVar(&ghToken, "token", os.Getenv("GITHUB_TOKEN"), "Github token for private repositories")
 	policyCmd.PersistentFlags().StringVar(&dir, "dir", "", "Use dir for git operations, instead of an in-memory fs, if more than one repos are speified in repos, this will be used as a prefix for dirs.")
 	rootCmd.AddCommand(policyCmd)

@@ -234,7 +234,7 @@ func (r RepoPolicy) Push() error {
 // gien baseBranch and title. If dryRun is enabled, it prints out the parameters with
 // which the PR will be generated to stdout. It returns the URL of the PR on success.
 // Returns an empty string and no error on a successful dry run.
-func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (string, error) {
+func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool, autoMerge bool) (string, error) {
 	prURL := ""
 	if r.Branch == "" {
 		return prURL, fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
@@ -267,9 +267,26 @@ func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (st
 		}
 		log.Info().Str("baseBranch", baseBranch).
 			Str("title", title).Msg("calling CreatePR on github")
-		prURL, err = r.gitRepo.CreatePR(baseBranch, title, string(body))
+		pr, err := r.gitRepo.CreatePR(baseBranch, title, string(body))
 		if err != nil {
 			return "", err
+		}
+
+		prURL = pr.GetHTMLURL()
+		if autoMerge {
+			log.Info().Msg("Enabling automerge...")
+
+			prID, err := r.gitRepo.GetPRV4(*pr.Number, owner, r.Name)
+			if err != nil {
+				log.Error().Err(err).Msgf("Error querying PR number from PR: %d. Please enable automerge manually", *pr.Number)
+				return prURL, nil
+			}
+
+			err = r.gitRepo.EnableAutoMergePR(prID)
+			if err != nil {
+				log.Error().Err(err).Msgf("Error enabling automerge for PR , ID: %v , URL: %s", prID, prURL)
+			}
+			log.Info().Msg("Success! PR will now automerge when conditions are meet")
 		}
 	}
 	return prURL, nil
