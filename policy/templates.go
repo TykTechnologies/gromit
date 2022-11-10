@@ -22,7 +22,7 @@ var templates embed.FS
 func (r *RepoPolicy) GenTemplate(bundle string) error {
 	log.Logger = log.With().Str("bundle", bundle).Interface("repo", r.Name).Logger()
 	log.Info().Msg("rendering")
-	// Set current timeatamp if not set already
+	// Set current timestamp if not set already
 	if r.Timestamp == "" {
 		r.SetTimestamp(time.Time{})
 	}
