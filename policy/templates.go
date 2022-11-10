@@ -3,10 +3,11 @@ package policy
 import (
 	"bytes"
 	"embed"
-	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -22,7 +23,7 @@ var templates embed.FS
 func (r *RepoPolicy) GenTemplate(bundle string) error {
 	log.Logger = log.With().Str("bundle", bundle).Interface("repo", r.Name).Logger()
 	log.Info().Msg("rendering")
-	// Set current timeatamp if not set already
+	// Set current timestamp if not set already
 	if r.Timestamp == "" {
 		r.SetTimestamp(time.Time{})
 	}
@@ -33,18 +34,19 @@ func (r *RepoPolicy) GenTemplate(bundle string) error {
 	if err != nil {
 		return ErrUnKnownBundle
 	}
-	return r.renderTemplates(bundlePath)
+	return r.renderTemplates(bundlePath, bundle)
 }
 
 // renderTemplates walks a bundle tree and calls renderTemplate for each file
-func (r *RepoPolicy) renderTemplates(bundleDir string) error {
+func (r *RepoPolicy) renderTemplates(bundleDir string, bundleName string) error {
 	return fs.WalkDir(templates, bundleDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return fmt.Errorf("Walk error: (%s): %v ", path, err)
+			log.Err(err).Msgf("Walk error: (%s)", path)
+			return err
 		}
 		if d.IsDir() {
 			if strings.HasSuffix(path, ".d") {
-				err := r.renderTemplate(bundleDir, path, true)
+				err := r.renderTemplate(bundleDir, path, true, bundleName)
 				if err != nil {
 					return err
 				}
@@ -60,14 +62,14 @@ func (r *RepoPolicy) renderTemplates(bundleDir string) error {
 			log.Info().Str("dir_path", path).Msg(".d directory exists, so not rendering independently")
 			return nil
 		}
-		return r.renderTemplate(bundleDir, path, false)
+		return r.renderTemplate(bundleDir, path, false, bundleName)
 	})
 }
 
 // renderTemplate will render one template into its corresponding path in the git tree
 // The first two elements of the supplied path will be stripped to remove the templates/<bundle> to derive the
 // path that should be written to in the git repo.
-func (r *RepoPolicy) renderTemplate(bundleDir, path string, isDir bool) error {
+func (r *RepoPolicy) renderTemplate(bundleDir, path string, isDir bool, bundleName string) error {
 
 	var parsePaths []string
 	if isDir {
@@ -85,8 +87,20 @@ func (r *RepoPolicy) renderTemplate(bundleDir, path string, isDir bool) error {
 
 	log.Trace().Str("templatePath", path).Str("outputPath", opFile).Msg("rendering")
 
-	op, err := r.gitRepo.CreateFile(opFile)
+	var op io.WriteCloser
+
+	if bundleName == "terraform" {
+		op, err = os.Create(opFile)
+	} else {
+		op, err = r.gitRepo.CreateFile(opFile)
+	}
+
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to create file %s", opFile)
+		return err
+	}
 	defer op.Close()
+
 	t := template.Must(template.
 		New(filepath.Base(path)).
 		Funcs(sprig.FuncMap()).
@@ -98,7 +112,10 @@ func (r *RepoPolicy) renderTemplate(bundleDir, path string, isDir bool) error {
 		return err
 	}
 	log.Debug().Str("path", opFile).Msg("wrote")
-	_, err = r.gitRepo.AddFile(opFile)
+
+	if bundleName != "terraform" {
+		_, err = r.gitRepo.AddFile(opFile)
+	}
 	if err != nil {
 		return err
 	}

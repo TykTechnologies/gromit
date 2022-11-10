@@ -59,6 +59,32 @@ Operates directly on github and creates PRs for protected branches. Requires an 
 	},
 }
 
+var gpacSubCmd = &cobra.Command{
+	// render all terraform templates into specific single repo
+	// then you can manually push the render PRs if is fine for you
+	Use:     "github",
+	Aliases: []string{"gpac"},
+	Args:    cobra.MinimumNArgs(0),
+	Short:   "Render the github terraform templates",
+	Long: `Will locally render terraform template files for github repositories configuration.
+	This files can be used for applying the generated terraform manifest and should not be uploaded to the gromit repository.`,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		err := os.MkdirAll("gpac", os.ModePerm)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to create local dir gpac")
+		}
+
+		repoPolicies, err := repoPolicies.GetAllRepos()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to get all repos")
+		}
+
+		repoPolicies.GenTemplate("terraform")
+
+	},
+}
+
 // genSubCmd generates a set of files in an in-memory git repo and pushes it to origin.
 var genSubCmd = &cobra.Command{
 	Use:     "generate <bundle> <commit msg> [commit_msg...]",
@@ -138,11 +164,12 @@ func init() {
 	genSubCmd.Flags().StringVar(&prBranch, "prbranch", "", "The branch that will be used for creating the PR - this is the branch that gets pushed to remote")
 	genSubCmd.MarkFlagRequired("prbranch")
 	policyCmd.AddCommand(genSubCmd)
+	policyCmd.AddCommand(gpacSubCmd)
 
 	docSubCmd.Flags().String("pattern", "^(release-[[:digit:].]+|master)", "Regexp to match release engineering branches")
 	policyCmd.AddCommand(docSubCmd)
 
-	policyCmd.PersistentFlags().StringSliceVar(&repos, "repos", []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"}, "Repos to operate upon, comma separated values accepted.")
+	policyCmd.PersistentFlags().StringSliceVar(&repos, "repos", []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal", "tyk-analytics-ui"}, "Repos to operate upon, comma separated values accepted.")
 	policyCmd.PersistentFlags().StringVar(&branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
 	policyCmd.PersistentFlags().Bool("sign", false, "Sign commits, requires -k/--key. gpgconf and an active gpg-agent are required if the key is protected by a passphrase.")
 	policyCmd.PersistentFlags().StringVarP(&config.RepoURLPrefix, "prefix", "u", "https://github.com/TykTechnologies", "Prefix to derive the fqdn repo")
