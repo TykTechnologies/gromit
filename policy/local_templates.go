@@ -10,7 +10,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/rs/zerolog/log"
 )
 
@@ -63,8 +63,9 @@ func (r *RepoPolicy) renderTemplatesTf(bundleDir string) error {
 // Any intermediate directories are also created.
 func (r *RepoPolicy) CreateFile(path string) (billy.File, error) {
 	var fs billy.Filesystem
-	fs = memfs.New()
-	log.Debug().Msg("Creating File now")
+	//fs = memfs.New()
+	fs = osfs.New(path)
+	log.Debug().Msg("Creating FilePath now")
 	op, err := fs.Create(path)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
