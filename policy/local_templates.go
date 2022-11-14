@@ -61,10 +61,8 @@ func (r *RepoPolicy) renderTemplatesTf(bundleDir string) error {
 
 // CreateFile will create a file in a directory, truncating it if it already exists with the embedded git worktree.
 // Any intermediate directories are also created.
-func (r *RepoPolicy) CreateFile(path string) (billy.File, error) {
-	var fs billy.Filesystem
-	//fs = memfs.New()
-	fs = osfs.New(path)
+func (r *RepoPolicy) CreateFile(path string, fs billy.Filesystem) (billy.File, error) {
+
 	log.Debug().Msg("Creating FilePath now")
 	op, err := fs.Create(path)
 	if err != nil {
@@ -94,7 +92,10 @@ func (r *RepoPolicy) renderTemplateTf(bundleDir, path string, isDir bool) error 
 
 	log.Trace().Str("templatePath", path).Str("outputPath", opFile).Msg("rendering")
 
-	op, err := r.CreateFile(opFile)
+	var fs billy.Filesystem
+	fs = osfs.New(filepath.Dir(opFile))
+
+	op, err := r.CreateFile(filepath.Base(opFile), fs)
 	defer op.Close()
 	// op, err := r.gitRepo.CreateFile(opFile)
 	// defer op.Close()
