@@ -59,6 +59,30 @@ Operates directly on github and creates PRs for protected branches. Requires an 
 	},
 }
 
+var terraformSubCmd = &cobra.Command{
+	// render all terraform templates into specific single repo
+	// then you can manually push the render PRs if is fine for you
+	Use:     "terraform",
+	Aliases: []string{"tf"},
+	Args:    cobra.MinimumNArgs(0),
+	Short:   "(re-)generate the terraform templates",
+	Long:    `Will locally render terraform template files.`,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		for _, repoName := range repos { //assumes repos default value or passing
+			repo, err := repoPolicies.GetRepo(repoName, config.RepoURLPrefix, branch)
+			if err != nil {
+				log.Fatal().Err(err).Msg("getting repo")
+			}
+
+			err = repo.GenTemplateTf("terraform")
+			if err != nil {
+				log.Fatal().Err(err).Msg("template generation")
+			}
+		}
+	},
+}
+
 // genSubCmd generates a set of files in an in-memory git repo and pushes it to origin.
 var genSubCmd = &cobra.Command{
 	Use:     "generate <bundle> <commit msg> [commit_msg...]",
@@ -138,6 +162,7 @@ func init() {
 	genSubCmd.Flags().StringVar(&prBranch, "prbranch", "", "The branch that will be used for creating the PR - this is the branch that gets pushed to remote")
 	genSubCmd.MarkFlagRequired("prbranch")
 	policyCmd.AddCommand(genSubCmd)
+	policyCmd.AddCommand(terraformSubCmd)
 
 	docSubCmd.Flags().String("pattern", "^(release-[[:digit:].]+|master)", "Regexp to match release engineering branches")
 	policyCmd.AddCommand(docSubCmd)
