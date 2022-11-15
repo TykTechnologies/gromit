@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/fs"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -34,6 +35,34 @@ func (r *RepoPolicy) GenTemplate(bundle string) error {
 		return ErrUnKnownBundle
 	}
 	return r.renderTemplates(bundlePath)
+}
+
+// GenTerraformPolicyTemplate generates the terraform policy file
+// from the given template file.
+func (r *RepoPolicy) GenTerraformPolicyTemplate(fileName string) error {
+
+	opFile := "policy/terraform/github/" + r.Name + ".tf"
+	op, err := os.Create(opFile)
+	if err != nil {
+		return err
+	}
+	t := template.Must(template.
+		New(filepath.Base(fileName)).
+		Funcs(sprig.FuncMap()).
+		Option("missingkey=error").
+		ParseFiles(fileName),
+	)
+	log.Debug().Interface("repo policy", r).Str("tmpl", fileName).Str("output", opFile).Msg("rendering terraform tmpl")
+	// Set current timestamp if not set already
+	if r.Timestamp == "" {
+		r.SetTimestamp(time.Time{})
+	}
+	err = t.Execute(op, r)
+	if err != nil {
+		return err
+	}
+	log.Debug().Msg("templates rendered successfully")
+	return nil
 }
 
 // renderTemplates walks a bundle tree and calls renderTemplate for each file

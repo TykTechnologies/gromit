@@ -74,8 +74,8 @@ var terraformSubCmd = &cobra.Command{
 			if err != nil {
 				log.Fatal().Err(err).Msg("getting repo")
 			}
-
-			err = repo.GenTemplateTf("terraform")
+			fPath := "policy/templates/terraform/github/"
+			err = repo.GenTerraformPolicyTemplate(fPath + repo.Name + ".tf")
 			if err != nil {
 				log.Fatal().Err(err).Msg("template generation")
 			}
