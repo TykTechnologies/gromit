@@ -69,7 +69,8 @@ var terraformSubCmd = &cobra.Command{
 	Long:    `Will locally render terraform template files.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		for _, repoName := range repos { //assumes repos default value or passing
+		repos = append(repos, "tyk-analytics-ui") // reduce default command verbosity
+		for _, repoName := range repos {          //assumes repos default value or passing
 			repo, err := repoPolicies.GetRepo(repoName, config.RepoURLPrefix, branch)
 			if err != nil {
 				log.Fatal().Err(err).Msg("getting repo")
