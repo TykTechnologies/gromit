@@ -1,7 +1,7 @@
 module "tyk-identity-broker" {
   source               = "../../../modules/github-repos"
-  repo                 = "tyk-identity-broker"
-  description          = "Tyk Authentication Proxy for third-party login"
+  repo                   = "{{ .Name }}"
+  description            = "{{ .Description }}"
   topics               = []
   default_branch       = "master"
   vulnerability_alerts = true

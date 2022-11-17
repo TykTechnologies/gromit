@@ -1,7 +1,7 @@
 module "portal" {
   source                 = "../../../modules/github-repos"
-  repo                   = "portal"
-  description            = "Portal is a full-featured developer portal, blog and CMS"
+  repo                   = "{{ .Name }}"
+  description            = "{{ .Description }}"
   topics                 = ["portal", "api-gateway"]
   visibility             = "private"
   default_branch         = "master"

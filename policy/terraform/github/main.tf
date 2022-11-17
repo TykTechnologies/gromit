@@ -31,12 +31,7 @@ module "portal" {
   rebase_merge           = true
   delete_branch_on_merge = false
   vulnerability_alerts   = false
-  release_branches = [
-    { branch    = "master",
-      reviewers = 1,
-      convos    = false,
-    required_tests = ["test (1.16.x, ubuntu-latest, amd64, 15.x)"] },
-  ]
+  release_branches       = var.portal_release_branches
 }
 
 module "tyk-analytics-ui" {
@@ -49,7 +44,7 @@ module "tyk-analytics-ui" {
   vulnerability_alerts        = true
   squash_merge_commit_message = "PR_BODY"
   squash_merge_commit_title   = "PR_TITLE"
-  release_branches = var.tyk_release_branches
+  release_branches            = var.tyk-analytics-ui_release_branches
 }
 
 module "tyk-analytics" {
@@ -62,22 +57,7 @@ module "tyk-analytics" {
   vulnerability_alerts        = true
   squash_merge_commit_message = "PR_BODY"
   squash_merge_commit_title   = "PR_TITLE"
-  release_branches = [
-    { branch    = "master",
-      reviewers = 2,
-      convos    = false,
-    required_tests = ["commit message linter", "test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"] },
-    { branch        = "release-4.3",
-      reviewers     = 0,
-      convos        = false,
-      source_branch = "release-4",
-    required_tests = ["commit message linter", "test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"] },
-    { branch        = "release-4.3.0",
-      reviewers     = 0,
-      convos        = false,
-      source_branch = "release-4",
-    required_tests = ["commit message linter", "test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"] },
-  ]
+  release_branches            = var.tyk-analytics_release_branches
 }
 
 module "tyk-identity-broker" {
@@ -87,12 +67,7 @@ module "tyk-identity-broker" {
   topics               = []
   default_branch       = "master"
   vulnerability_alerts = true
-  release_branches = [
-    { branch    = "master",
-      reviewers = 1,
-      convos    = false,
-    required_tests = [] },
-  ]
+  release_branches     = var.tyk-identity-broker_release_branches
 }
 
 module "tyk-pump" {
@@ -103,12 +78,7 @@ module "tyk-pump" {
   wiki                 = false
   default_branch       = "master"
   vulnerability_alerts = true
-  release_branches = [
-    { branch    = "master",
-      reviewers = 2,
-      convos    = false,
-    required_tests = [] },
-  ]
+  release_branches     = var.tyk-pump_release_branches
 }
 
 module "tyk-sink" {
@@ -121,12 +91,7 @@ module "tyk-sink" {
   merge_commit         = true
   rebase_merge         = true
   vulnerability_alerts = false
-  release_branches = [
-    { branch    = "master",
-      reviewers = 1,
-      convos    = false,
-    required_tests = [] },
-  ]
+  release_branches     = var.tyk-sink_release_branches
 }
 
 module "tyk" {
@@ -137,20 +102,5 @@ module "tyk" {
   wiki                 = false
   default_branch       = "master"
   vulnerability_alerts = true
-  release_branches = [
-    { branch         = "master",
-      reviewers      = 2,
-      required_tests = ["Go 1.16 Redis 5"],
-    convos = false },
-    { branch         = "release-4.3",
-      reviewers      = 0,
-      source_branch  = "release-4",
-      required_tests = ["Go 1.16 Redis 5"],
-    convos = false },
-    { branch         = "release-4.3.0",
-      reviewers      = 0,
-      source_branch  = "release-4",
-      required_tests = ["Go 1.16 Redis 5"],
-    convos = false },
-  ]
+  release_branches     = var.tyk_release_branches
 }

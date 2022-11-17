@@ -1,7 +1,7 @@
 module "tyk" {
   source               = "../../../modules/github-repos"
-  repo                 = "{{ .Name }}"
-  description          = "Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols"
+  repo                   = "{{ .Name }}"
+  description            = "{{ .Description }}"
   topics               = ["api", "api-gateway", "api-management", "cloudnative", "go", "graphql", "grpc", "k8s", "kubernetes", "microservices", "reverse-proxy", "tyk"]
   wiki                 = false
   default_branch       = "master"

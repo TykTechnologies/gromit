@@ -1,7 +1,7 @@
 module "tyk-sink" {
   source               = "../../../modules/github-repos"
-  repo                 = "tyk-sink"
-  description          = "Tyk RPC Server backend (bridge)"
+  repo                   = "{{ .Name }}"
+  description            = "{{ .Description }}"
   topics               = []
   visibility           = "private"
   default_branch       = "master"

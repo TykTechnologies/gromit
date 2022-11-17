@@ -96,7 +96,7 @@ policy:
         release-3-lts: [release-3.0.11]
     tyk-analytics:
       description: |
-        Dashboard for the Tyk API Gateway
+        Tyk Dashboard New Repository
       pcrepo: tyk-dashboard
       dhrepo: tykio/tyk-dashboard
       csrepo: docker.tyk.io/tyk-dashboard/tyk-dashboard
@@ -185,7 +185,7 @@ policy:
         master: [ release-2, release-1.9 ]
     portal:
       description: |
-        Developer portal for the Tyk API Gateway
+        Portal is a full-featured developer portal, blog and CMS
       pcrepo: portal
       dhrepo: tykio/portal
       csrepo: docker.tyk.io/portal/portal
@@ -203,3 +203,18 @@ policy:
         versionpackage: github.com/TykTechnologies/portal/core
       ports:
         master: [ release-1.0 ]
+    tyk-analytics-ui:
+      description: |
+        User interface for our dashboard. Backend: https://github.com/TykTechnologies/tyk-analytics
+      pcrepo: tyk-analytics-ui
+      dhrepo: tykio/tyk-analytics-ui
+      csrepo: docker.tyk.io/tyk-analytics-ui/tyk-analytics-ui
+      exposeports: 80
+      reviewers: []
+      binary: tyk-analytics-ui
+      packagename: tyk-analytics-ui
+      protected: [ master ]
+      # branches:
+      #   branch:
+      #     master:
+
