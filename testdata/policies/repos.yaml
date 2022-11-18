@@ -75,7 +75,7 @@ policy:
               goversion: 1.12
               upgradefromver: 3.0.4
             master:
-              goversion: 1.16
+              goversion: 1.89
               upgradefromver: 3.0.8
             release-4:
               goversion: 1.16
@@ -141,6 +141,9 @@ policy:
           pcprivate: false
           configfile: pump.conf
           versionpackage: github.com/TykTechnologies/tyk-pump/pumps
+          branch:
+            master:
+              reviewers: 1
       ports:
         master: [ release-1.7 ]
     tyk-identity-broker:
@@ -161,6 +164,9 @@ policy:
         pcprivate: false
         configfile: tib.conf
         versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
+        branch:
+          master:
+            reviewers: 1
       ports:
         master: [ release-1.3, release-1.2 ]
     tyk-sink:
@@ -181,6 +187,9 @@ policy:
         pcprivate: true
         configfile: tyk_sink.conf
         versionpackage: github.com/TykTechnologies/tyk-sink/main
+        branch:
+          master:
+            reviewers: 1
       ports:
         master: [ release-2, release-1.9 ]
     portal:
@@ -201,6 +210,9 @@ policy:
         pcprivate: false
         configfile: portal.conf
         versionpackage: github.com/TykTechnologies/portal/core
+        branch:
+          master:
+            reviewers: 1
       ports:
         master: [ release-1.0 ]
     tyk-analytics-ui:
@@ -214,7 +226,8 @@ policy:
       binary: tyk-analytics-ui
       packagename: tyk-analytics-ui
       protected: [ master ]
-      # branches:
-      #   branch:
-      #     master:
+      branches:
+        branch:
+          master:
+            reviewers: 1
 

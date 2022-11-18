@@ -39,9 +39,9 @@ func (r *RepoPolicy) GenTemplate(bundle string) error {
 
 // GenTerraformPolicyTemplate generates the terraform policy file
 // from the given template file.
-func (r *RepoPolicy) GenTerraformPolicyTemplate(fileName string) error {
+func GenTerraformPolicyTemplate(fpath string, fileName string, policy Policies) error {
 
-	opFile := "policy/terraform/github/" + r.Name + ".tf"
+	opFile := filepath.Join("policy/terraform/github", fileName)
 	op, err := os.Create(opFile)
 	if err != nil {
 		return err
@@ -50,19 +50,68 @@ func (r *RepoPolicy) GenTerraformPolicyTemplate(fileName string) error {
 		New(filepath.Base(fileName)).
 		Funcs(sprig.FuncMap()).
 		Option("missingkey=error").
-		ParseFiles(fileName),
+		ParseFiles(filepath.Join(fpath, fileName)),
 	)
-	log.Debug().Interface("repo policy", r).Str("tmpl", fileName).Str("output", opFile).Msg("rendering terraform tmpl")
+	log.Debug().Str("tmpl", fileName).Str("output", opFile).Msg("rendering terraform tmpl")
 	// Set current timestamp if not set already
-	if r.Timestamp == "" {
-		r.SetTimestamp(time.Time{})
-	}
-	err = t.Execute(op, r)
+	// if r.Timestamp == "" {
+	// 	r.SetTimestamp(time.Time{})
+	// }
+	err = t.Execute(op, policy)
 	if err != nil {
 		return err
 	}
 	log.Debug().Msg("templates rendered successfully")
 	return nil
+}
+
+func GenTerraformPolicyTemplate2(fPath string, policy Policies) error {
+
+	return fs.WalkDir(templates, fPath, func(path string, d fs.DirEntry, errWalk error) error {
+		if errWalk != nil {
+			log.Err(errWalk).Msgf("Walk error: (%s)", path)
+			return errWalk
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		log.Debug().Msgf(path)
+
+		opFile, err := filepath.Rel(fPath, path)
+		log.Debug().Msgf(opFile)
+		if err != nil {
+			return err
+		}
+
+		op, err := os.Create(filepath.Join("policy/terraform/github", opFile))
+		if err != nil {
+			return err
+		}
+
+		log.Debug().Interface("s", op)
+
+		t := template.Must(template.
+			New(filepath.Base(path)).
+			Funcs(sprig.FuncMap()).
+			Option("missingkey=error").
+			ParseFS(templates, path),
+		)
+		log.Debug().Str("tmpl", path).Str("output", opFile).Msg("rendering terraform tmpl")
+		// Set current timestamp if not set already
+		// if r.Timestamp == "" {
+		// 	r.SetTimestamp(time.Time{})
+		// }
+		err = t.Execute(op, policy)
+		if err != nil {
+			return err
+		}
+		log.Debug().Msg("templates rendered successfully")
+		return nil
+
+	})
+
 }
 
 // renderTemplates walks a bundle tree and calls renderTemplate for each file

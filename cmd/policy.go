@@ -69,18 +69,25 @@ var terraformSubCmd = &cobra.Command{
 	Long:    `Will locally render terraform template files.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		repos = append(repos, "tyk-analytics-ui") // reduce default command verbosity
-		for _, repoName := range repos {          //assumes repos default value or passing
-			repo, err := repoPolicies.GetRepo(repoName, config.RepoURLPrefix, branch)
-			if err != nil {
-				log.Fatal().Err(err).Msg("getting repo")
-			}
-			fPath := "policy/templates/terraform/github/"
-			err = repo.GenTerraformPolicyTemplate(fPath + repo.Name + ".tf")
-			if err != nil {
-				log.Fatal().Err(err).Msg("template generation")
-			}
+		// OPTION 1: Single file version, will generate only auto.tfvars, also considers --repos option
+		// but it wont generate makefiles and other plain files since does not walkdir over the FS
+
+		// repos = append(repos, "tyk-analytics-ui") // reduce default command verbosity
+		// fPath := "policy/templates/terraform/github" //templates relateive path
+		// for _, repoName := range repos {          //assumes repos default value or passing
+		// 	err := policy.GenTerraformPolicyTemplate(fPath, repoName+".auto.tfvars", repoPolicies)
+		// 	if err != nil {
+		// 		log.Fatal().Err(err).Msg("template generation")
+		// 	}
+		// }
+
+		// OPTION 2: Multiple file version , no repo segregation
+		fPath := "templates/terraform/github" //templates relateive path
+		err := policy.GenTerraformPolicyTemplate2(fPath, repoPolicies)
+		if err != nil {
+			log.Fatal().Err(err).Msg("template generation")
 		}
+
 	},
 }
 
