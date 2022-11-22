@@ -75,11 +75,11 @@ policy:
               goversion: 1.12
               upgradefromver: 3.0.4
             master:
-              goversion: 1.89
+              goversion: 1.16
               upgradefromver: 3.0.8
             release-4:
               goversion: 1.16
-              upgradefromver: 3.0.8
+              upgradefromver: 3.0.8           
       # Sync-automation specific policy.
       # we can have multiple sync policies for different source branches.
       # policy should be in the form of:
