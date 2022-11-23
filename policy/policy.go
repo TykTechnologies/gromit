@@ -30,6 +30,10 @@ type branchVals struct {
 	UpgradeFromVer string                // Versions to test package upgrades from
 	PCPrivate      bool                  // indicates whether package cloud repo is private
 	Branch         map[string]branchVals `copier:"-"`
+	ReviewCount    string
+	Convos         bool
+	Tests          []string
+	SourceBranch   string
 }
 
 // Policies models the config file structure. The config file may contain one or more repos.
@@ -52,25 +56,29 @@ type Policies struct {
 
 // RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
 type RepoPolicy struct {
-	Name        string
-	Description string
-	Protected   []string
-	Default     string
-	PCRepo      string
-	DHRepo      string
-	CSRepo      string
-	Binary      string
-	PackageName string
-	Reviewers   []string
-	ExposePorts string
-	Files       map[string][]string
-	Ports       map[string][]string
-	gitRepo     *git.GitRepo
-	Branch      string
-	prBranch    string
-	Branchvals  branchVals
-	prefix      string
-	Timestamp   string
+	Name         string
+	Description  string
+	Protected    []string
+	Default      string
+	PCRepo       string
+	DHRepo       string
+	CSRepo       string
+	Binary       string
+	PackageName  string
+	Reviewers    []string
+	ExposePorts  string
+	Files        map[string][]string
+	Ports        map[string][]string
+	gitRepo      *git.GitRepo
+	Branch       string
+	prBranch     string
+	Branchvals   branchVals
+	prefix       string
+	Timestamp    string
+	ReviewCount  string
+	Convos       bool
+	Tests        []string
+	SourceBranch string
 }
 
 // GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates
