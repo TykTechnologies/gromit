@@ -137,7 +137,7 @@ policy:
       branches:
           cgo: false
           goversion: 1.15
-          upgradefromver: 1.4.0
+          upgradefromver: 1.6.0
           pcprivate: false
           configfile: pump.conf
           versionpackage: github.com/TykTechnologies/tyk-pump/pumps
