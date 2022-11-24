@@ -1,3 +1,4 @@
+//go:build !wasm
 // +build !wasm
 
 package cmd
@@ -67,6 +68,9 @@ Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 		patterns, _ := cmd.Flags().GetString("patterns")
 		count, _ := cmd.Flags().GetInt64("count")
 
+		prev_cert_encoding_secret, _ := cmd.Flags().GetString("prev_cert_encoding_secret")
+		new_cert_encoding_secret, _ := cmd.Flags().GetString("new_cert_encoding_secret")
+
 		rOpts := orgs.RedisOptions{
 			Addrs:      strings.Split(redisHosts, ","),
 			MasterName: redisMasterName,
@@ -75,7 +79,7 @@ Uses SCAN with COUNT to dump redis keys so can be run in prod.`,
 		}
 
 		rdb := orgs.NewRedisClient(ctx, &rOpts, args, dir)
-		rdb.DumpOrgKeys(args, strings.Split(patterns, ","), count)
+		rdb.DumpOrgKeys(args, strings.Split(patterns, ","), count, prev_cert_encoding_secret, new_cert_encoding_secret)
 
 		// Mongo
 		org_idColls, _ := cmd.Flags().GetString("org_id_colls")
@@ -142,11 +146,13 @@ func init() {
 	orgsCmd.MarkFlagRequired("redis")
 	orgsCmd.MarkFlagRequired("murl")
 
-	orgsDumpCmd.Flags().StringP("patterns", "p", "apikey-*,tyk-admin-api-*", "Comma separated list of patterns to SCAN for")
+	orgsDumpCmd.Flags().StringP("patterns", "p", "apikey-*,tyk-admin-api-*,cert-*", "Comma separated list of patterns to SCAN for")
 	orgsDumpCmd.PersistentFlags().Int64P("count", "c", 1000, "Passed as COUNT to SCAN, effectively batchsize")
 	orgsDumpCmd.Flags().StringP("org_id_colls", "u", "portal_catalogue,portal_configurations,portal_css,portal_developers,portal_key_requests,portal_menus,portal_pages,tyk_apis,tyk_policies", "These will be queried by org_id")
 	orgsDumpCmd.Flags().StringP("orgid_colls", "v", "tyk_analytics_users", "These will be queried by orgid")
 	orgsDumpCmd.Flags().StringP("agg_colls", "a", "z_tyk_analyticz_,z_tyk_analyticz_aggregate_", "These will have the org_id suffixed to their names")
+	orgsDumpCmd.Flags().StringP("prev_cert_encoding_secret", "pe", "", "Encoding secret of old env")
+	orgsDumpCmd.Flags().StringP("new_cert_encoding_secret", "ne", "", "Encoding secret of new env")
 
 	orgsRestoreCmd.Flags().BoolP("dry_run", "y", false, "Dry run")
 }
