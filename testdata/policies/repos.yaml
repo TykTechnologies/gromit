@@ -173,16 +173,16 @@ policy:
       binary: tyk-sink
       reviewers: [ TykTechnologies/platform-squad ]
       packagename: tyk-sink
-      protected: [ master, release-2, release-1.9 ]
+      protected: [ master, release-2, release-1.8 ]
       branches:
         cgo: false
         goversion: 1.16
-        upgradefromver: 1.7.7
+        upgradefromver: 1.8.2
         pcprivate: true
         configfile: tyk_sink.conf
         versionpackage: github.com/TykTechnologies/tyk-sink/main
       ports:
-        master: [ release-2, release-1.9 ]
+        master: [ release-2 ]
     portal:
       description: |
         Developer portal for the Tyk API Gateway
