@@ -7,6 +7,7 @@ import:
 
 fixed_import_protection:
 	terraform import 'module.tyk.github_branch.release_branches["master"]' tyk:master
+	terraform import 'module.tyk.github_branch.release_branches["release-4-lts"]' tyk:release-4-lts
 	terraform import 'module.tyk-analytics.github_branch.release_branches["master"]' tyk-analytics:master
 	terraform import 'module.tyk-analytics-ui.github_branch.release_branches["master"]' tyk-analytics-ui:master
 	terraform import 'module.tyk-pump.github_branch.release_branches["master"]' tyk-pump:master
