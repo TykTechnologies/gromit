@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -39,25 +40,27 @@ func (r *RepoPolicy) GenTemplate(bundle string) error {
 
 // GenTerraformPolicyTemplate generates the terraform policy file
 // from the given template file.
-func GenTerraformPolicyTemplate(fpath string, fileName string, policy Policies) error {
+func (r *RepoPolicy) GenGpacPolicyTemplate(src string, dst string, fileName string) error {
 
-	opFile := filepath.Join("policy/terraform/github", fileName)
+	opFile := dst + fileName
 	op, err := os.Create(opFile)
 	if err != nil {
 		return err
 	}
+	defer op.Close()
+
 	t := template.Must(template.
-		New(filepath.Base(fileName)).
+		New(filepath.Base(src + fileName)).
 		Funcs(sprig.FuncMap()).
 		Option("missingkey=error").
-		ParseFiles(filepath.Join(fpath, fileName)),
+		ParseFiles(src + fileName),
 	)
-	log.Debug().Str("tmpl", fileName).Str("output", opFile).Msg("rendering terraform tmpl")
+	log.Debug().Interface("repo policy", r).Str("tmpl", src+fileName).Str("output", opFile).Msg("rendering terraform tmpl")
 	// Set current timestamp if not set already
-	// if r.Timestamp == "" {
-	// 	r.SetTimestamp(time.Time{})
-	// }
-	err = t.Execute(op, policy)
+	if r.Timestamp == "" {
+		r.SetTimestamp(time.Time{})
+	}
+	err = t.Execute(op, r)
 	if err != nil {
 		return err
 	}
@@ -65,51 +68,50 @@ func GenTerraformPolicyTemplate(fpath string, fileName string, policy Policies) 
 	return nil
 }
 
-func GenTerraformPolicyTemplate2(fPath string, policy Policies) error {
+func CopyGpacStaticFiles(src string, dst string) error {
 
-	return fs.WalkDir(templates, fPath, func(path string, d fs.DirEntry, errWalk error) error {
+	return fs.WalkDir(templates, src, func(path string, d fs.DirEntry, errWalk error) error {
 		if errWalk != nil {
 			log.Err(errWalk).Msgf("Walk error: (%s)", path)
 			return errWalk
 		}
 
-		if d.IsDir() {
+		// Ignore templatized .tfvars files
+		if filepath.Ext(path) == ".tfvars" {
 			return nil
 		}
 
-		log.Debug().Msgf(path)
-
-		opFile, err := filepath.Rel(fPath, path)
-		log.Debug().Msgf(opFile)
+		opFile, err := filepath.Rel(src, path)
 		if err != nil {
 			return err
 		}
+		inputFile := filepath.Join(dst, opFile)
 
-		op, err := os.Create(filepath.Join("policy/terraform/github", opFile))
-		if err != nil {
-			return err
+		if d.IsDir() {
+			os.Mkdir(inputFile, os.ModePerm)
+			return nil
 		}
 
-		log.Debug().Interface("s", op)
+		fin, err := templates.Open(path)
 
-		t := template.Must(template.
-			New(filepath.Base(path)).
-			Funcs(sprig.FuncMap()).
-			Option("missingkey=error").
-			ParseFS(templates, path),
-		)
-		log.Debug().Str("tmpl", path).Str("output", opFile).Msg("rendering terraform tmpl")
-		// Set current timestamp if not set already
-		// if r.Timestamp == "" {
-		// 	r.SetTimestamp(time.Time{})
-		// }
-		err = t.Execute(op, policy)
 		if err != nil {
-			return err
+			log.Error().Err(err).Msgf("Error while opening %s", path)
 		}
-		log.Debug().Msg("templates rendered successfully")
+		defer fin.Close()
+
+		fout, err := os.Create(inputFile)
+		if err != nil {
+			log.Error().Err(err).Msgf("Error while Create %s", inputFile)
+		}
+		defer fout.Close()
+
+		// Copy file to final destination
+		_, err = io.Copy(fout, fin)
+
+		if err != nil {
+			log.Error().Err(err).Msg("Error while copying file")
+		}
 		return nil
-
 	})
 
 }

@@ -1,16 +1,11 @@
 tyk-analytics-ui_release_branches = [
-{{- range $repo, $repoValue := .Repos }}
-{{- if eq $repo "tyk-analytics-ui" }}
-	{{- $branches := $repoValue.Branches -}}
-	{{- range $branch, $values := $repoValue.Branches.Branch }}
-  { branch    = "{{ $branch }}",
-    reviewers = "{{ or $values.ReviewCount $branches.ReviewCount}}",
-    convos    = "{{ or $values.Convos $branches.Convos}}",
-    {{- if $values.SourceBranch }}
-    source_branch  = "{{ $values.SourceBranch }}",
-    {{- end }}
-  	required_tests = [{{ or $branches.Tests $values.Tests | join "," }}] },
+{{- range $branch, $values := .ReleaseBranches }}
+{ branch    = "{{ $branch }}",
+	reviewers = "{{ $values.ReviewCount }}",
+	convos    = "{{ $values.Convos }}",
+	{{- if $values.SourceBranch }}
+	source_branch  = "{{ $values.SourceBranch }}",
 	{{- end }}
-{{- end }}
+	required_tests = ["{{ $values.Tests | join "," }}"] },
 {{- end }}
 ]

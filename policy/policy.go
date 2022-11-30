@@ -38,47 +38,45 @@ type branchVals struct {
 
 // Policies models the config file structure. The config file may contain one or more repos.
 type Policies struct {
-	Description string
-	PCRepo      string
-	DHRepo      string
-	CSRepo      string
-	PackageName string
-	Reviewers   []string
-	ExposePorts string
-	Binary      string
-	Protected   []string
-	Goversion   string
-	Default     string              // The default git branch(master/main/anything else)
-	Repos       map[string]Policies // map of reponames to branchPolicies
-	Ports       map[string][]string
-	Branches    branchVals
+	Description     string
+	PCRepo          string
+	DHRepo          string
+	CSRepo          string
+	PackageName     string
+	Reviewers       []string
+	ExposePorts     string
+	Binary          string
+	Protected       []string
+	Goversion       string
+	Default         string              // The default git branch(master/main/anything else)
+	Repos           map[string]Policies // map of reponames to branchPolicies
+	Ports           map[string][]string
+	Branches        branchVals
+	ReleaseBranches []string
 }
 
 // RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
 type RepoPolicy struct {
-	Name         string
-	Description  string
-	Protected    []string
-	Default      string
-	PCRepo       string
-	DHRepo       string
-	CSRepo       string
-	Binary       string
-	PackageName  string
-	Reviewers    []string
-	ExposePorts  string
-	Files        map[string][]string
-	Ports        map[string][]string
-	gitRepo      *git.GitRepo
-	Branch       string
-	prBranch     string
-	Branchvals   branchVals
-	prefix       string
-	Timestamp    string
-	ReviewCount  string
-	Convos       bool
-	Tests        []string
-	SourceBranch string
+	Name            string
+	Description     string
+	Protected       []string
+	Default         string
+	PCRepo          string
+	DHRepo          string
+	CSRepo          string
+	Binary          string
+	PackageName     string
+	Reviewers       []string
+	ExposePorts     string
+	Files           map[string][]string
+	Ports           map[string][]string
+	gitRepo         *git.GitRepo
+	Branch          string
+	ReleaseBranches map[string]branchVals
+	prBranch        string
+	Branchvals      branchVals
+	prefix          string
+	Timestamp       string
 }
 
 // GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates
@@ -88,27 +86,42 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	if !found {
 		return RepoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, p.Repos)
 	}
+	log.Info().Msgf("REPO STRUCT: %s", r)
 	var b branchVals
+
 	copier.Copy(&b, r.Branches)
+
 	if ib, found := r.Branches.Branch[branch]; found {
 		copier.CopyWithOption(&b, &ib, copier.Option{IgnoreEmpty: true})
 	}
+
+	releaseBranches := make(map[string]branchVals)
+	for _, releaseBranch := range r.ReleaseBranches {
+		var aux branchVals
+		copier.Copy(&aux, r.Branches)
+		if iaux, found := r.Branches.Branch[releaseBranch]; found {
+			copier.CopyWithOption(&aux, &iaux, copier.Option{IgnoreEmpty: true})
+		}
+		releaseBranches[releaseBranch] = aux
+	}
+
 	return RepoPolicy{
-		Name:        repo,
-		Protected:   append(p.Protected, r.Protected...),
-		Default:     p.Default,
-		Ports:       r.Ports,
-		Branch:      branch,
-		prefix:      prefix,
-		Branchvals:  b,
-		Reviewers:   r.Reviewers,
-		DHRepo:      r.DHRepo,
-		PCRepo:      r.PCRepo,
-		CSRepo:      r.CSRepo,
-		ExposePorts: r.ExposePorts,
-		Binary:      r.Binary,
-		Description: r.Description,
-		PackageName: r.PackageName,
+		Name:            repo,
+		Protected:       append(p.Protected, r.Protected...),
+		Default:         p.Default,
+		Ports:           r.Ports,
+		Branch:          branch,
+		prefix:          prefix,
+		Branchvals:      b,
+		ReleaseBranches: releaseBranches,
+		Reviewers:       r.Reviewers,
+		DHRepo:          r.DHRepo,
+		PCRepo:          r.PCRepo,
+		CSRepo:          r.CSRepo,
+		ExposePorts:     r.ExposePorts,
+		Binary:          r.Binary,
+		Description:     r.Description,
+		PackageName:     r.PackageName,
 	}, nil
 }
 
