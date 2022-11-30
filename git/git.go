@@ -351,7 +351,6 @@ func (r *GitRepo) ReadFile(path string) ([]byte, error) {
 // CreateFile will create a file in a directory, truncating it if it already exists with the embedded git worktree.
 // Any intermediate directories are also created.
 func (r *GitRepo) CreateFile(path string) (billy.File, error) {
-	log.Debug().Msg("Creating File now")
 	op, err := r.fs.Create(path)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
