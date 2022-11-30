@@ -81,35 +81,39 @@ func CopyGpacStaticFiles(src string, dst string) error {
 			return nil
 		}
 
+		// Extract the last path element wether a file or dir
 		opFile, err := filepath.Rel(src, path)
 		if err != nil {
 			return err
 		}
-		inputFile := filepath.Join(dst, opFile)
+		// Build destination file path to be created
+		dstFile := filepath.Join(dst, opFile)
 
+		// If is a dir, create the dst dir and continue walking
 		if d.IsDir() {
-			os.Mkdir(inputFile, os.ModePerm)
+			os.Mkdir(dstFile, os.ModePerm)
 			return nil
 		}
 
+		// Open file to be readed and copied
 		fin, err := templates.Open(path)
-
 		if err != nil {
 			log.Error().Err(err).Msgf("Error while opening %s", path)
 		}
 		defer fin.Close()
 
-		fout, err := os.Create(inputFile)
+		// Create destination file
+		fout, err := os.Create(dstFile)
 		if err != nil {
-			log.Error().Err(err).Msgf("Error while Create %s", inputFile)
+			log.Error().Err(err).Msgf("Error while Create %s", dstFile)
 		}
 		defer fout.Close()
 
-		// Copy file to final destination
+		// Copy original file to final destination
 		_, err = io.Copy(fout, fin)
 
 		if err != nil {
-			log.Error().Err(err).Msg("Error while copying file")
+			log.Error().Err(err).Msgf("Error while copying original file %s over %s", path, dstFile)
 		}
 		return nil
 	})

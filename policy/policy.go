@@ -86,7 +86,7 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	if !found {
 		return RepoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, p.Repos)
 	}
-	log.Info().Msgf("REPO STRUCT: %s", r)
+
 	var b branchVals
 
 	copier.Copy(&b, r.Branches)
@@ -95,6 +95,7 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 		copier.CopyWithOption(&b, &ib, copier.Option{IgnoreEmpty: true})
 	}
 
+	// Build release branches map by iterating over each branch values
 	releaseBranches := make(map[string]branchVals)
 	for _, releaseBranch := range r.ReleaseBranches {
 		var aux branchVals

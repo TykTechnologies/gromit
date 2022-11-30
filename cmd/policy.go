@@ -73,24 +73,26 @@ var gpacSubCmd = &cobra.Command{
 		srcPath := "policy/templates/terraform/github/" //templates relateive path
 		dstPath := "policy/terraform/github/"
 
+		err := os.MkdirAll(dstPath, os.ModePerm)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("Failed to create local destination dir %s", dstPath)
+		}
+
 		for _, repoName := range repos { //assumes repos default value or passing
 			repo, err := repoPolicies.GetRepo(repoName, config.RepoURLPrefix, branch)
 			if err != nil {
-				log.Fatal().Err(err).Msg("getting repo")
+				log.Fatal().Err(err).Msgf("getting repo %s", repoName)
 			}
 			err = repo.GenGpacPolicyTemplate(srcPath, dstPath, repo.Name+".auto.tfvars")
 			if err != nil {
 				log.Fatal().Err(err).Msg("template generation")
 			}
 		}
-		err := policy.CopyGpacStaticFiles("templates/terraform/github", dstPath)
+		err = policy.CopyGpacStaticFiles("templates/terraform/github", dstPath)
 		if err != nil {
-			log.Fatal().Err(err).Msg("copy static files generation")
+			log.Fatal().Err(err).Msg("copy static files")
 		}
 	},
-	// PersistentPostRun: func(cmd *cobra.Command, args []string) {
-	// 	log.Debug().Msg("POST RUUUUUUUUUUUUUUUUUUN")
-	// },
 }
 
 // genSubCmd generates a set of files in an in-memory git repo and pushes it to origin.
