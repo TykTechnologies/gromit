@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TykTechnologies/gromit/config"
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -50,6 +51,7 @@ type Policies struct {
 	Goversion       string
 	Default         string              // The default git branch(master/main/anything else)
 	Repos           map[string]Policies // map of reponames to branchPolicies
+	RepoPolicy      map[string]RepoPolicy
 	Ports           map[string][]string
 	Branches        branchVals
 	ReleaseBranches []string
@@ -77,6 +79,23 @@ type RepoPolicy struct {
 	Branchvals      branchVals
 	prefix          string
 	Timestamp       string
+}
+
+func (p *Policies) GetAllRepos(repos []string) (Policies, error) {
+
+	repoPolicies := make(map[string]RepoPolicy)
+
+	for _, repoName := range repos {
+		repo, err := p.GetRepo(repoName, config.RepoURLPrefix, "master")
+		if err != nil {
+			log.Fatal().Err(err).Msgf("getting repo %s", repoName)
+		}
+		repoPolicies[repoName] = repo
+	}
+
+	return Policies{
+		RepoPolicy: repoPolicies,
+	}, nil
 }
 
 // GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates

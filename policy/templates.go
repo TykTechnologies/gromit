@@ -120,6 +120,55 @@ func CopyGpacStaticFiles(src string, dst string) error {
 
 }
 
+func GenGpacPolicyTemplate2(fPath string, policy Policies) error {
+
+	return fs.WalkDir(templates, fPath, func(path string, d fs.DirEntry, errWalk error) error {
+		if errWalk != nil {
+			log.Err(errWalk).Msgf("Walk error: (%s)", path)
+			return errWalk
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		log.Debug().Msgf(path)
+
+		opFile, err := filepath.Rel(fPath, path)
+		log.Debug().Msgf(opFile)
+		if err != nil {
+			return err
+		}
+
+		op, err := os.Create(filepath.Join("policy/terraform/github", opFile))
+		if err != nil {
+			return err
+		}
+
+		log.Debug().Interface("s", op)
+
+		t := template.Must(template.
+			New(filepath.Base(path)).
+			Funcs(sprig.FuncMap()).
+			Option("missingkey=error").
+			ParseFS(templates, path),
+		)
+		log.Debug().Str("tmpl", path).Str("output", opFile).Msg("rendering terraform tmpl")
+		// Set current timestamp if not set already
+		// if r.Timestamp == "" {
+		// 	r.SetTimestamp(time.Time{})
+		// }
+		err = t.Execute(op, policy)
+		if err != nil {
+			return err
+		}
+		log.Debug().Msg("templates rendered successfully")
+		return nil
+
+	})
+
+}
+
 // renderTemplates walks a bundle tree and calls renderTemplate for each file
 func (r *RepoPolicy) renderTemplates(bundleDir string) error {
 	return fs.WalkDir(templates, bundleDir, func(path string, d fs.DirEntry, err error) error {

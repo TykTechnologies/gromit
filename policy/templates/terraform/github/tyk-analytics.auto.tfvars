@@ -1,5 +1,6 @@
 tyk-analytics_release_branches = [
-{{- range $branch, $values := .ReleaseBranches }}
+{{- with $repo := index .RepoPolicy "tyk-analytics" }}
+{{- range $branch, $values := $repo.ReleaseBranches }}
 { branch    = "{{ $branch }}",
 	reviewers = "{{ $values.ReviewCount }}",
 	convos    = "{{ $values.Convos }}",
@@ -7,5 +8,6 @@ tyk-analytics_release_branches = [
 	source_branch  = "{{ $values.SourceBranch }}",
 	{{- end }}
 	required_tests = ["{{ $values.Tests | join "," }}"] },
+{{- end }}
 {{- end }}
 ]

@@ -1,5 +1,5 @@
 portal_release_branches = [
-{{- range $branch, $values := .ReleaseBranches }}
+{{- range $branch, $values := .RepoPolicy.portal.ReleaseBranches }}
 { branch    = "{{ $branch }}",
 	reviewers = "{{ $values.ReviewCount }}",
 	convos    = "{{ $values.Convos }}",
