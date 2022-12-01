@@ -51,7 +51,6 @@ type Policies struct {
 	Goversion       string
 	Default         string              // The default git branch(master/main/anything else)
 	Repos           map[string]Policies // map of reponames to branchPolicies
-	RepoPolicy      map[string]RepoPolicy
 	Ports           map[string][]string
 	Branches        branchVals
 	ReleaseBranches []string
@@ -75,13 +74,14 @@ type RepoPolicy struct {
 	gitRepo         *git.GitRepo
 	Branch          string
 	ReleaseBranches map[string]branchVals
+	RepoPolicies    map[string]RepoPolicy
 	prBranch        string
 	Branchvals      branchVals
 	prefix          string
 	Timestamp       string
 }
 
-func (p *Policies) GetAllRepos(repos []string) (Policies, error) {
+func (p *Policies) GetAllRepos(repos []string) (RepoPolicy, error) {
 
 	repoPolicies := make(map[string]RepoPolicy)
 
@@ -93,8 +93,8 @@ func (p *Policies) GetAllRepos(repos []string) (Policies, error) {
 		repoPolicies[repoName] = repo
 	}
 
-	return Policies{
-		RepoPolicy: repoPolicies,
+	return RepoPolicy{
+		RepoPolicies: repoPolicies,
 	}, nil
 }
 

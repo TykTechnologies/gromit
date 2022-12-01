@@ -70,41 +70,17 @@ var gpacSubCmd = &cobra.Command{
 	This files can be used for applying the generated terraform manifest and should not be uploaded to the gromit repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		var auxRP policy.Policies
-		auxRP, err := repoPolicies.GetAllRepos(repos)
+		err := os.MkdirAll("gpac", os.ModePerm)
 		if err != nil {
-			log.Fatal().Err(err).Msg("What a mess")
-		}
-		//log.Debug().Interface("Policy", auxRP).Msg("Printing Policy")
-
-		fPath := "templates/terraform/github" //templates relateive path
-		err = policy.GenGpacPolicyTemplate2(fPath, auxRP)
-		if err != nil {
-			log.Fatal().Err(err).Msg("template generation")
+			log.Fatal().Err(err).Msg("Failed to create local dir gpac")
 		}
 
-		// srcPath := "policy/templates/terraform/github/" //templates relateive path
-		// dstPath := "policy/terraform/github/"
+		repoPolicies, err := repoPolicies.GetAllRepos(repos)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to get all repos")
+		}
 
-		// err := os.MkdirAll(dstPath, os.ModePerm)
-		// if err != nil {
-		// 	log.Fatal().Err(err).Msgf("Failed to create local destination dir %s", dstPath)
-		// }
-
-		// for _, repoName := range repos { //assumes repos default value or passing
-		// 	repo, err := repoPolicies.GetRepo(repoName, config.RepoURLPrefix, branch)
-		// 	if err != nil {
-		// 		log.Fatal().Err(err).Msgf("getting repo %s", repoName)
-		// 	}
-		// 	err = repo.GenGpacPolicyTemplate(srcPath, dstPath, repo.Name+".auto.tfvars")
-		// 	if err != nil {
-		// 		log.Fatal().Err(err).Msg("template generation")
-		// 	}
-		// }
-		// err = policy.CopyGpacStaticFiles("templates/terraform/github", dstPath)
-		// if err != nil {
-		// 	log.Fatal().Err(err).Msg("copy static files")
-		// }
+		repoPolicies.GenTemplate("terraform")
 
 	},
 }

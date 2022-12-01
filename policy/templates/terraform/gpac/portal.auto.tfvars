@@ -1,5 +1,5 @@
-tyk_release_branches = [
-{{- with $repo := index .RepoPolicy "tyk" }}
+portal_release_branches = [
+{{- with $repo := index .RepoPolicies "portal" }}
 {{- range $branch, $values := $repo.ReleaseBranches }}
 { branch    = "{{ $branch }}",
 	reviewers = "{{ $values.ReviewCount }}",

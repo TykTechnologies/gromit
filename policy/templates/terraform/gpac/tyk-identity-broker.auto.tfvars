@@ -1,5 +1,5 @@
-tyk-analytics-ui_release_branches = [
-{{- with $repo := index .RepoPolicy "tyk-analytics-ui" }}
+tyk-identity-broker_release_branches = [
+{{- with $repo := index .RepoPolicies "tyk-identity-broker" }}
 {{- range $branch, $values := $repo.ReleaseBranches }}
 { branch    = "{{ $branch }}",
 	reviewers = "{{ $values.ReviewCount }}",

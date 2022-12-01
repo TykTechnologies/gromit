@@ -3,7 +3,6 @@ package policy
 import (
 	"bytes"
 	"embed"
-	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -35,149 +34,19 @@ func (r *RepoPolicy) GenTemplate(bundle string) error {
 	if err != nil {
 		return ErrUnKnownBundle
 	}
-	return r.renderTemplates(bundlePath)
-}
-
-// GenTerraformPolicyTemplate generates the terraform policy file
-// from the given template file.
-func (r *RepoPolicy) GenGpacPolicyTemplate(src string, dst string, fileName string) error {
-
-	opFile := dst + fileName
-	op, err := os.Create(opFile)
-	if err != nil {
-		return err
-	}
-	defer op.Close()
-
-	t := template.Must(template.
-		New(filepath.Base(src + fileName)).
-		Funcs(sprig.FuncMap()).
-		Option("missingkey=error").
-		ParseFiles(src + fileName),
-	)
-	log.Debug().Interface("repo policy", r).Str("tmpl", src+fileName).Str("output", opFile).Msg("rendering terraform tmpl")
-	// Set current timestamp if not set already
-	if r.Timestamp == "" {
-		r.SetTimestamp(time.Time{})
-	}
-	err = t.Execute(op, r)
-	if err != nil {
-		return err
-	}
-	log.Debug().Msg("templates rendered successfully")
-	return nil
-}
-
-func CopyGpacStaticFiles(src string, dst string) error {
-
-	return fs.WalkDir(templates, src, func(path string, d fs.DirEntry, errWalk error) error {
-		if errWalk != nil {
-			log.Err(errWalk).Msgf("Walk error: (%s)", path)
-			return errWalk
-		}
-
-		// Ignore templatized .tfvars files
-		if filepath.Ext(path) == ".tfvars" {
-			return nil
-		}
-
-		// Extract the last path element wether a file or dir
-		opFile, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-		// Build destination file path to be created
-		dstFile := filepath.Join(dst, opFile)
-
-		// If is a dir, create the dst dir and continue walking
-		if d.IsDir() {
-			os.Mkdir(dstFile, os.ModePerm)
-			return nil
-		}
-
-		// Open file to be readed and copied
-		fin, err := templates.Open(path)
-		if err != nil {
-			log.Error().Err(err).Msgf("Error while opening %s", path)
-		}
-		defer fin.Close()
-
-		// Create destination file
-		fout, err := os.Create(dstFile)
-		if err != nil {
-			log.Error().Err(err).Msgf("Error while Create %s", dstFile)
-		}
-		defer fout.Close()
-
-		// Copy original file to final destination
-		_, err = io.Copy(fout, fin)
-
-		if err != nil {
-			log.Error().Err(err).Msgf("Error while copying original file %s over %s", path, dstFile)
-		}
-		return nil
-	})
-
-}
-
-func GenGpacPolicyTemplate2(fPath string, policy Policies) error {
-
-	return fs.WalkDir(templates, fPath, func(path string, d fs.DirEntry, errWalk error) error {
-		if errWalk != nil {
-			log.Err(errWalk).Msgf("Walk error: (%s)", path)
-			return errWalk
-		}
-
-		if d.IsDir() {
-			return nil
-		}
-
-		log.Debug().Msgf(path)
-
-		opFile, err := filepath.Rel(fPath, path)
-		log.Debug().Msgf(opFile)
-		if err != nil {
-			return err
-		}
-
-		op, err := os.Create(filepath.Join("policy/terraform/github", opFile))
-		if err != nil {
-			return err
-		}
-
-		log.Debug().Interface("s", op)
-
-		t := template.Must(template.
-			New(filepath.Base(path)).
-			Funcs(sprig.FuncMap()).
-			Option("missingkey=error").
-			ParseFS(templates, path),
-		)
-		log.Debug().Str("tmpl", path).Str("output", opFile).Msg("rendering terraform tmpl")
-		// Set current timestamp if not set already
-		// if r.Timestamp == "" {
-		// 	r.SetTimestamp(time.Time{})
-		// }
-		err = t.Execute(op, policy)
-		if err != nil {
-			return err
-		}
-		log.Debug().Msg("templates rendered successfully")
-		return nil
-
-	})
-
+	return r.renderTemplates(bundlePath, bundle)
 }
 
 // renderTemplates walks a bundle tree and calls renderTemplate for each file
-func (r *RepoPolicy) renderTemplates(bundleDir string) error {
+func (r *RepoPolicy) renderTemplates(bundleDir string, bundleName string) error {
 	return fs.WalkDir(templates, bundleDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return fmt.Errorf("Walk error: (%s): %v ", path, err)
+			log.Err(err).Msgf("Walk error: (%s)")
+			return err
 		}
 		if d.IsDir() {
 			if strings.HasSuffix(path, ".d") {
-				err := r.renderTemplate(bundleDir, path, true)
+				err := r.renderTemplate(bundleDir, path, true, bundleName)
 				if err != nil {
 					return err
 				}
@@ -193,14 +62,14 @@ func (r *RepoPolicy) renderTemplates(bundleDir string) error {
 			log.Info().Str("dir_path", path).Msg(".d directory exists, so not rendering independently")
 			return nil
 		}
-		return r.renderTemplate(bundleDir, path, false)
+		return r.renderTemplate(bundleDir, path, false, bundleName)
 	})
 }
 
 // renderTemplate will render one template into its corresponding path in the git tree
 // The first two elements of the supplied path will be stripped to remove the templates/<bundle> to derive the
 // path that should be written to in the git repo.
-func (r *RepoPolicy) renderTemplate(bundleDir, path string, isDir bool) error {
+func (r *RepoPolicy) renderTemplate(bundleDir, path string, isDir bool, bundleName string) error {
 
 	var parsePaths []string
 	if isDir {
@@ -218,8 +87,20 @@ func (r *RepoPolicy) renderTemplate(bundleDir, path string, isDir bool) error {
 
 	log.Trace().Str("templatePath", path).Str("outputPath", opFile).Msg("rendering")
 
-	op, err := r.gitRepo.CreateFile(opFile)
+	var op io.WriteCloser
+
+	if bundleName == "terraform" {
+		op, err = os.Create(opFile)
+	} else {
+		op, err = r.gitRepo.CreateFile(opFile)
+	}
+
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to create file %s", opFile)
+		return err
+	}
 	defer op.Close()
+
 	t := template.Must(template.
 		New(filepath.Base(path)).
 		Funcs(sprig.FuncMap()).
@@ -231,7 +112,10 @@ func (r *RepoPolicy) renderTemplate(bundleDir, path string, isDir bool) error {
 		return err
 	}
 	log.Debug().Str("path", opFile).Msg("wrote")
-	_, err = r.gitRepo.AddFile(opFile)
+
+	if bundleName != "terraform" {
+		_, err = r.gitRepo.AddFile(opFile)
+	}
 	if err != nil {
 		return err
 	}

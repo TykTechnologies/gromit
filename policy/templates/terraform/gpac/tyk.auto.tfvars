@@ -1,5 +1,6 @@
-portal_release_branches = [
-{{- range $branch, $values := .RepoPolicy.portal.ReleaseBranches }}
+tyk_release_branches = [
+{{- with $repo := index .RepoPolicies "tyk" }}
+{{- range $branch, $values := $repo.ReleaseBranches }}
 { branch    = "{{ $branch }}",
 	reviewers = "{{ $values.ReviewCount }}",
 	convos    = "{{ $values.Convos }}",
@@ -7,5 +8,6 @@ portal_release_branches = [
 	source_branch  = "{{ $values.SourceBranch }}",
 	{{- end }}
 	required_tests = ["{{ $values.Tests | join "," }}"] },
+{{- end }}
 {{- end }}
 ]
