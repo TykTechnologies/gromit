@@ -31,6 +31,7 @@ type branchVals struct {
 	UpgradeFromVer string                // Versions to test package upgrades from
 	PCPrivate      bool                  // indicates whether package cloud repo is private
 	Branch         map[string]branchVals `copier:"-"`
+	Active         bool
 	ReviewCount    string
 	Convos         bool
 	Tests          []string
@@ -39,21 +40,20 @@ type branchVals struct {
 
 // Policies models the config file structure. The config file may contain one or more repos.
 type Policies struct {
-	Description     string
-	PCRepo          string
-	DHRepo          string
-	CSRepo          string
-	PackageName     string
-	Reviewers       []string
-	ExposePorts     string
-	Binary          string
-	Protected       []string
-	Goversion       string
-	Default         string              // The default git branch(master/main/anything else)
-	Repos           map[string]Policies // map of reponames to branchPolicies
-	Ports           map[string][]string
-	Branches        branchVals
-	ReleaseBranches []string
+	Description string
+	PCRepo      string
+	DHRepo      string
+	CSRepo      string
+	PackageName string
+	Reviewers   []string
+	ExposePorts string
+	Binary      string
+	Protected   []string
+	Goversion   string
+	Default     string              // The default git branch(master/main/anything else)
+	Repos       map[string]Policies // map of reponames to branchPolicies
+	Ports       map[string][]string
+	Branches    branchVals
 }
 
 // RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
@@ -116,13 +116,16 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 
 	// Build release branches map by iterating over each branch values
 	releaseBranches := make(map[string]branchVals)
-	for _, releaseBranch := range r.ReleaseBranches {
-		var aux branchVals
-		copier.Copy(&aux, r.Branches)
-		if iaux, found := r.Branches.Branch[releaseBranch]; found {
-			copier.CopyWithOption(&aux, &iaux, copier.Option{IgnoreEmpty: true})
+
+	for branch, releaseBranch := range r.Branches.Branch {
+		if releaseBranch.Active {
+			var aux branchVals
+			copier.Copy(&aux, r.Branches)
+			if iaux, found := r.Branches.Branch[branch]; found {
+				copier.CopyWithOption(&aux, &iaux, copier.Option{IgnoreEmpty: true})
+			}
+			releaseBranches[branch] = aux
 		}
-		releaseBranches[releaseBranch] = aux
 	}
 
 	return RepoPolicy{
