@@ -22,5 +22,5 @@ tyk_release_branches = [
     reviewers     = 0,
     convos        = false,
     source_branch = "release-4-lts",
-  required_tests = ["Go 1.16 Redis 5"] },
+  required_tests = [] },
 ]  
