@@ -95,12 +95,14 @@ module "tyk-sink" {
 }
 
 module "tyk" {
-  source               = "../../../modules/github-repos"
-  repo                 = "tyk"
-  description          = "Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols"
-  topics               = ["api", "api-gateway", "api-management", "cloudnative", "go", "graphql", "grpc", "k8s", "kubernetes", "microservices", "reverse-proxy", "tyk"]
-  wiki                 = false
-  default_branch       = "master"
-  vulnerability_alerts = true
-  release_branches     = var.tyk_release_branches
+  source                      = "../../../modules/github-repos"
+  repo                        = "tyk"
+  description                 = "Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols"
+  topics                      = ["api", "api-gateway", "api-management", "cloudnative", "go", "graphql", "grpc", "k8s", "kubernetes", "microservices", "reverse-proxy", "tyk"]
+  wiki                        = false
+  default_branch              = "master"
+  vulnerability_alerts        = true
+  squash_merge_commit_message = "PR_BODY"
+  squash_merge_commit_title   = "PR_TITLE"
+  release_branches            = var.tyk_release_branches
 }

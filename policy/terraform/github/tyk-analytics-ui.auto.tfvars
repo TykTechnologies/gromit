@@ -13,4 +13,15 @@ tyk-analytics-ui_release_branches = [
     convos        = false,
     source_branch = "release-4",
   required_tests = ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"] },
+  { branch        = "release-4.3.1",
+    reviewers     = 0,
+    convos        = false,
+    source_branch = "release-4.3",
+  required_tests = ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"] },
+  { branch        = "release-4.0.10",
+    reviewers     = 0,
+    convos        = false,
+    source_branch = "release-4-lts",
+  required_tests = [] },
+
 ]
