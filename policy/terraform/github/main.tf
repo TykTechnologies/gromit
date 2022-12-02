@@ -42,7 +42,7 @@ module "tyk-analytics-ui" {
   visibility                  = "private"
   default_branch              = "master"
   vulnerability_alerts        = true
-  squash_merge_commit_message = "COMMIT_MESSAGES"
+  squash_merge_commit_message = "PR_BODY"
   squash_merge_commit_title   = "PR_TITLE"
   release_branches            = var.tyk-analytics-ui_release_branches
 }
@@ -55,7 +55,7 @@ module "tyk-analytics" {
   visibility                  = "private"
   default_branch              = "master"
   vulnerability_alerts        = true
-  squash_merge_commit_message = "COMMIT_MESSAGES"
+  squash_merge_commit_message = "PR_BODY"
   squash_merge_commit_title   = "PR_TITLE"
   release_branches            = var.tyk-analytics_release_branches
 }
@@ -102,7 +102,7 @@ module "tyk" {
   wiki                        = false
   default_branch              = "master"
   vulnerability_alerts        = true
-  squash_merge_commit_message = "COMMIT_MESSAGES"
+  squash_merge_commit_message = "PR_BODY"
   squash_merge_commit_title   = "PR_TITLE"
   release_branches            = var.tyk_release_branches
 }
