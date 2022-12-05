@@ -75,7 +75,7 @@ var gpacSubCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("Failed to create local dir gpac")
 		}
 
-		repoPolicies, err := repoPolicies.GetAllRepos(repos)
+		repoPolicies, err := repoPolicies.GetAllRepos()
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to get all repos")
 		}

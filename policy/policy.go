@@ -81,11 +81,12 @@ type RepoPolicy struct {
 	Timestamp       string
 }
 
-func (p *Policies) GetAllRepos(repos []string) (RepoPolicy, error) {
+func (p *Policies) GetAllRepos() (RepoPolicy, error) {
 
 	repoPolicies := make(map[string]RepoPolicy)
 
-	for _, repoName := range repos {
+	for repoName := range p.Repos {
+		log.Info().Msgf("Reponame: %s", repoName)
 		repo, err := p.GetRepo(repoName, config.RepoURLPrefix, "master")
 		if err != nil {
 			log.Fatal().Err(err).Msgf("getting repo %s", repoName)
