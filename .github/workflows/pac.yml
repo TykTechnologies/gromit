@@ -11,7 +11,8 @@ env:
 
 jobs:
   terraform:
-    runs-on: tykio/gromit:v1.4.5-rc3
+    runs-on: ubuntu-latest
+    container: tykio/gromit:v1.4.5-rc3
     permissions:
       id-token: write
 
