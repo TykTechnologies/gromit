@@ -20,6 +20,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Inspect gpac
+        run: |
+          pwd
+          ls gpac
+
       - name: Gromit Policy gpac
         run: gromit policy gpac -l trace --textlogs --conf testdata/policies/repos.yaml
 
