@@ -6,7 +6,7 @@ on:
       - testdata/policies/*.yaml
 
 env:
-  TERRAFORM_DIR: "./gpac"
+  TERRAFORM_DIR: "gpac"
   GITHUB_TOKEN: '${{ secrets.ITS_GH_TOKEN }}'
 
 jobs:
