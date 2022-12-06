@@ -2,6 +2,7 @@ package mutex
 
 import (
 	"context"
+	"crypto/tls"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -29,6 +30,14 @@ func GetEtcdClient(host string, timeout time.Duration, user string, pass string)
 		DialTimeout: timeout * time.Second,
 		Username:    user,
 		Password:    pass,
+	})
+}
+
+func GetEtcdTLSClient(host string, tls *tls.Config, timeout time.Duration) (*clientv3.Client, error) {
+	return clientv3.New(clientv3.Config{
+		Endpoints:   []string{host},
+		DialTimeout: timeout * time.Second,
+		TLS:         tls,
 	})
 }
 

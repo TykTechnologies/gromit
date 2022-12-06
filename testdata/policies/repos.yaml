@@ -165,7 +165,7 @@ policy:
       branches:
           cgo: false
           goversion: 1.15
-          upgradefromver: 1.4.0
+          upgradefromver: 1.6.0
           pcprivate: false
           configfile: pump.conf
           versionpackage: github.com/TykTechnologies/tyk-pump/pumps
@@ -213,11 +213,11 @@ policy:
       binary: tyk-sink
       reviewers: [ TykTechnologies/platform-squad ]
       packagename: tyk-sink
-      protected: [ master, release-2, release-1.9 ]
+      protected: [ master, release-2, release-1.8 ]
       branches:
         cgo: false
         goversion: 1.16
-        upgradefromver: 1.7.7
+        upgradefromver: 1.8.2
         pcprivate: true
         configfile: tyk_sink.conf
         versionpackage: github.com/TykTechnologies/tyk-sink/main
@@ -228,7 +228,7 @@ policy:
             active: true
             reviewcount: 1
       ports:
-        master: [ release-2, release-1.9 ]
+        master: [ release-2 ]
     portal:
       description: |
         Portal is a full-featured developer portal, blog and CMS
