@@ -28,9 +28,6 @@ jobs:
       - name: Gromit Policy gpac
         run: gromit policy gpac -l trace --textlogs --conf testdata/policies/repos.yaml
 
-      - name: Cat templates
-        run: cat gpac/main.tf
-
       - uses: actions/setup-node@v3
         with:
           node-version: '16'
