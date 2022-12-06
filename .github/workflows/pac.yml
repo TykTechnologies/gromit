@@ -23,11 +23,9 @@ jobs:
       - name: Gromit Policy gpac
         run: gromit policy gpac -l trace --textlogs --conf testdata/policies/repos.yaml
 
-      - name: Install node for terraform
-        run: |
-          apt update
-          apt install nodejs
-          ln -s /usr/bin/nodejs /usr/local/bin/node
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
 
       - name: Show Directories
         run: |
