@@ -6,7 +6,7 @@ on:
       - testdata/policies/*.yaml
 
 env:
-  TERRAFORM_DIR: "gpac"
+  TERRAFORM_DIR: "./gpac"
   GITHUB_TOKEN: '${{ secrets.ITS_GH_TOKEN }}'
 
 jobs:
@@ -27,11 +27,6 @@ jobs:
         with:
           node-version: '16'
 
-      - name: Show Directories
-        run: |
-          pwd
-          ls
-
       - uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: arn:aws:iam::754489498669:role/gromit-ci
@@ -44,12 +39,13 @@ jobs:
           terraform_wrapper: false
 
       - name: Terraform Init
+        working-directory: ${{ env.TERRAFORM_DIR }}
         id: init
         run: |
-          terraform --version
+          terraform init -input=false
 
-      # - name: Terraform Plan
-      #   # working-directory: ${{ env.TERRAFORM_DIR }}
-      #   id: plan
-      #   run: |
-      #     terraform validate && terraform plan
+      - name: Terraform Plan
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        id: plan
+        run: |
+          terraform validate && terraform plan
