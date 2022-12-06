@@ -7,7 +7,7 @@ tyk-identity-broker_release_branches = [
 	{{- if $values.SourceBranch }}
 	source_branch  = "{{ $values.SourceBranch }}",
 	{{- end }}
-	required_tests = [{{ range $index, $test := $values.Tests }}{{ if $index }},{{ end }}{{ printf "%q" $test }}{{ end }}]},
+	required_tests = [{{ range $index, $test := $values.Tests }}{{ if $index }},{{ end }}"{{ $test }}"{{ end }}]},
 {{- end }}
 {{- end }}
 ]

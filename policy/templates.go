@@ -3,13 +3,13 @@ package policy
 import (
 	"bytes"
 	"embed"
+	"html/template"
 	"io"
 	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/Masterminds/sprig/v3"
