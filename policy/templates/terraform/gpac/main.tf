@@ -102,5 +102,7 @@ module "tyk" {
   wiki                 = false
   default_branch       = "master"
   vulnerability_alerts = true
+  squash_merge_commit_message = "PR_BODY"
+  squash_merge_commit_title   = "PR_TITLE"  
   release_branches     = var.tyk_release_branches
 }
