@@ -23,6 +23,12 @@ jobs:
       - name: Gromit Policy gpac
         run: gromit policy gpac -l trace --textlogs --conf testdata/policies/repos.yaml
 
+      - name: Show Directories
+        run: |
+        pwd
+        ls
+
+
       - uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: arn:aws:iam::754489498669:role/gromit-ci
