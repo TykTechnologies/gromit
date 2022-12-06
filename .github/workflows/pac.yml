@@ -11,7 +11,8 @@ env:
 
 jobs:
   terraform:
-    runs-on: tykio/gromit:v1.4.5-rc3
+    runs-on: ubuntu-latest
+    container: tykio/gromit:v1.4.5-rc3
     permissions:
       id-token: write
 
@@ -22,6 +23,10 @@ jobs:
       - name: Gromit Policy gpac
         run: gromit policy gpac -l trace --textlogs --conf testdata/policies/repos.yaml
 
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
       - uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: arn:aws:iam::754489498669:role/gromit-ci
@@ -30,12 +35,8 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.3.0 
-
-      - name: Terraform Format
-        working-directory: ${{ env.TERRAFORM_DIR }}
-        id: fmt
-        run: terraform fmt -check
+          terraform_version: 1.3.0
+          terraform_wrapper: false
 
       - name: Terraform Init
         working-directory: ${{ env.TERRAFORM_DIR }}

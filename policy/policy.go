@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 
-	"github.com/TykTechnologies/gromit/config"
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -74,29 +74,32 @@ type RepoPolicy struct {
 	gitRepo         *git.GitRepo
 	Branch          string
 	ReleaseBranches map[string]branchVals
-	RepoPolicies    map[string]RepoPolicy
 	prBranch        string
 	Branchvals      branchVals
 	prefix          string
 	Timestamp       string
 }
 
-func (p *Policies) GetAllRepos() (RepoPolicy, error) {
+// RepoPolies aggregates RepoPolicy, indexed by repo name.
+type RepoPolicies map[string]RepoPolicy
 
-	repoPolicies := make(map[string]RepoPolicy)
+// BundleVars is an interface that all datatypes that will be passed to a bundle renderer must satisfy
+type BundleVars interface {
+	renderTemplate(*template.Template, string) error
+}
 
-	for repoName := range p.Repos {
+func (p *Policies) GetAllRepos(prefix string) (RepoPolicies, error) {
+	var rp RepoPolicies
+	for repoName, repoVals := range p.Repos {
 		log.Info().Msgf("Reponame: %s", repoName)
-		repo, err := p.GetRepo(repoName, config.RepoURLPrefix, "master")
+		repo, err := repoVals.GetRepo(repoName, prefix, "master")
 		if err != nil {
-			log.Fatal().Err(err).Msgf("getting repo %s", repoName)
+			return RepoPolicies{}, err
 		}
-		repoPolicies[repoName] = repo
+		rp[repoName] = repo
 	}
 
-	return RepoPolicy{
-		RepoPolicies: repoPolicies,
-	}, nil
+	return rp, nil
 }
 
 // GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates

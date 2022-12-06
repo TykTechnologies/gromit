@@ -1,3 +1,4 @@
+# Touch Policy
 # This file contains github policy that is used to generate all the releng
 # automation, and any other automation including automated PR generation
 # from gromit.
@@ -66,7 +67,7 @@ policy:
           # The go package which contains the `VERSION` string for this REPO.
           versionpackage: github.com/TykTechnologies/tyk/gateway
           #Min number of reviews needed for a PR
-          reviewcount: 2
+          reviewcount: 0
           # Should conversations be resolved before merging
           convos: false
           # Workflows that need to pass before merging
@@ -79,21 +80,26 @@ policy:
           branch:
             master:
               active: true
+              reviewcount: 2
             release-3-lts:
               active: false
               goversion: 1.12
               upgradefromver: 3.0.4
             release-4:
               active: false
-              reviewcount: 0
             release-4.3:
               active: true
-              reviewcount: 0
               sourcebranch: release-4
             release-4.3.0:
               active: true
-              reviewcount: 0
               sourcebranch: release-4
+            release-4.3.1:
+              active: true
+              sourcebranch: release-4.3
+            release-4.0.10:
+              active: true
+              sourcebranch: release-4-lts
+              tests: []
       # Sync-automation specific policy.
       # we can have multiple sync policies for different source branches.
       # policy should be in the form of:
@@ -121,14 +127,14 @@ policy:
       protected: [ release-3-lts, release-4, release-4-lts ]
       branches:
           cgo: true
-          goversion: 1.15
+          goversion: 1.16
           upgradefromver: 3.0.9
           pcprivate: false
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
           convos: false
           tests: ["commit message linter", "test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
-          reviewcount: 2
+          reviewcount: 0
           branch:
             release-3-lts:
               active: false
@@ -136,18 +142,25 @@ policy:
               upgradefromver: 3.0.4
             master:
               active: true
-              goversion: 1.16
+              reviewcount: 2
             release-4:
               active: false
-              goversion: 1.16
             release-4.3:
               active: true
-              reviewcount: 0
               sourcebranch: release-4
+              tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
             release-4.3.0:
               active: true
-              reviewcount: 0
               sourcebranch: release-4
+              tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
+            release-4.3.1:
+              active: true
+              sourcebranch: release-4.3
+              tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
+            release-4.0.10:
+              active: true
+              sourcebranch: release-4-lts
+              tests: []
       ports:
         master: [ release-4, release-4.2 ]
         release-3: [release-3-lts]
@@ -269,16 +282,22 @@ policy:
       branches:
         convos: false
         tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"]
+        reviewcount: 0
         branch:
           master:
             active: true
             reviewcount: 2
           release-4.3:
             active: true
-            reviewcount: 0
             sourcebranch: release-4
           release-4.3.0:
             active: true
-            reviewcount: 0
             sourcebranch: release-4
+          release-4.3.1:
+            active: true
+            sourcebranch: release-4.3
+          release-4.0.10:
+            active: true
+            sourcebranch: release-4-lts
+            tests: []
 

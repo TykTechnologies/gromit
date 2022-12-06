@@ -3,125 +3,117 @@ package policy
 import (
 	"bytes"
 	"embed"
-	"html/template"
-	"io"
+	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/rs/zerolog/log"
 )
 
-//go:embed templates/*/*
+// The clunky /*/* is because embed ignores . prefixed dirs like .github
+//go:embed templates all:templates
 var templates embed.FS
 
-// GenTemplate will render a template bundle from a directory tree rooted at `templates/<bundle>`.
-func (r *RepoPolicy) GenTemplate(bundle string) error {
-	log.Logger = log.With().Str("bundle", bundle).Interface("repo", r.Name).Logger()
-	log.Info().Msg("rendering")
-	// Set current timestamp if not set already
-	if r.Timestamp == "" {
-		r.SetTimestamp(time.Time{})
-	}
-
-	// Check if the given bundle is valid.
-	bundlePath := filepath.Join("templates", bundle)
-	_, err := fs.Stat(templates, bundlePath)
-	if err != nil {
-		return ErrUnKnownBundle
-	}
-	return r.renderTemplates(bundlePath, bundle)
-}
-
-// renderTemplates walks a bundle tree and calls renderTemplate for each file
-func (r *RepoPolicy) renderTemplates(bundleDir string, bundleName string) error {
-	return fs.WalkDir(templates, bundleDir, func(path string, d fs.DirEntry, err error) error {
+// listBundle prints a directory listing of the embedded bundles
+func ListBundles(root string) {
+	fs.WalkDir(templates, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			log.Err(err).Msgf("Walk error: (%s)", path)
 			return err
 		}
 		if d.IsDir() {
-			if strings.HasSuffix(path, ".d") {
-				err := r.renderTemplate(bundleDir, path, true, bundleName)
-				if err != nil {
-					return err
-				}
-				// Skip directory entirely if ".d" directory
-				return fs.SkipDir
-			}
-			return nil
+			fmt.Printf("%s:\n", d.Name())
+		} else {
+			fmt.Printf("%s\n", d.Name())
 		}
-		// check if <file>.d exists, if exists, then already parsed/ will be parsed
-		// as part of the dir parse call.
-		_, statErr := fs.Stat(templates, path+".d")
-		if statErr == nil {
-			log.Info().Str("dir_path", path).Msg(".d directory exists, so not rendering independently")
-			return nil
-		}
-		return r.renderTemplate(bundleDir, path, false, bundleName)
+		return nil
 	})
 }
 
-// renderTemplate will render one template into its corresponding path in the git tree
-// The first two elements of the supplied path will be stripped to remove the templates/<bundle> to derive the
-// path that should be written to in the git repo.
-func (r *RepoPolicy) renderTemplate(bundleDir, path string, isDir bool, bundleName string) error {
-
-	var parsePaths []string
-	if isDir {
-		dir := path
-		path = strings.TrimSuffix(path, ".d")
-		parsePaths = append(parsePaths, dir+"/**", path)
-		log.Info().Strs("parsePaths", parsePaths).Msg(".d exists, so parsing the file as well as dir contents")
-	} else {
-		parsePaths = append(parsePaths, path)
+// getTemplate, given a bundle filesystem and a path will return a
+// template object with the sub templates parsed into it
+func getTemplate(templatePath string) *template.Template {
+	templatePaths := []string{templatePath}
+	log.Trace().Str("template", templatePath).Msg("top level")
+	subTemplates, err := templates.ReadDir(templatePath + ".d")
+	if err == nil {
+		for _, st := range subTemplates {
+			templatePaths = append(templatePaths, st.Name())
+		}
+		log.Trace().Str("template", templatePath).Strs("subtemplates", templatePaths).Msg("subtemplates")
 	}
-	opFile, err := filepath.Rel(bundleDir, path)
+	return template.Must(
+		template.New(filepath.Base(templatePath)).
+			Funcs(sprig.TxtFuncMap()).
+			Option("missingkey=error").
+			ParseFS(templates, templatePaths...))
+}
+
+// RenderBundle for each template file that it encounters
+// bt.renderTemplates walks a bundle tree and calls renderTemplate for each file
+func RenderBundle(bundleDir string, bt BundleVars) error {
+	log.Logger = log.With().Str("bundle", bundleDir).Logger()
+	log.Debug().Msg("rendering")
+
+	basePath := filepath.Join("templates", bundleDir)
+	err := fs.WalkDir(templates, basePath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("path: %s error: %w", path, err)
+		}
+		if d.IsDir() {
+			if strings.HasSuffix(d.Name(), ".d") {
+				return fs.SkipDir
+			}
+		} else {
+			opFile, err := filepath.Rel(basePath, path)
+			if err != nil {
+				return fmt.Errorf("basePath: %s, path: %s, error: %w", basePath, path, err)
+			}
+			return bt.renderTemplate(getTemplate(path), opFile)
+		}
+		return nil
+	})
+
+	return err
+}
+
+// RepoPolicies.renderTemplate only supports creating output on
+// regular filesystems and is not concerned about git repositories
+func (rs *RepoPolicies) renderTemplate(t *template.Template, opFile string) error {
+	log.Trace().Str("outputPath", opFile).Msg("rendering template")
+	op, err := os.Create(opFile)
 	if err != nil {
-		return err
-	}
-
-	log.Trace().Str("templatePath", path).Str("outputPath", opFile).Msg("rendering")
-
-	var op io.WriteCloser
-
-	if bundleName == "terraform" {
-		op, err = os.Create(opFile)
-	} else {
-		op, err = r.gitRepo.CreateFile(opFile)
-	}
-
-	if err != nil {
-		log.Error().Err(err).Msgf("failed to create file %s", opFile)
 		return err
 	}
 	defer op.Close()
 
-	t := template.Must(template.
-		New(filepath.Base(path)).
-		Funcs(sprig.FuncMap()).
-		Option("missingkey=error").
-		ParseFS(templates, parsePaths...))
-	log.Trace().Interface("vars", r).Msg("template vars")
-	err = t.Execute(op, r)
-	if err != nil {
-		return err
-	}
-	log.Debug().Str("path", opFile).Msg("wrote")
-
-	if bundleName != "terraform" {
-		_, err = r.gitRepo.AddFile(opFile)
-	}
-	if err != nil {
-		return err
-	}
-	return nil
+	return t.Execute(op, rs)
 }
 
+// RepoPolicies.renderTemplate will render one template into its corresponding path in the git tree
+//  that should be written to in the git repo.
+func (r *RepoPolicy) renderTemplate(t *template.Template, opFile string) error {
+	// Set current timestamp if not set already
+	if r.Timestamp == "" {
+		r.SetTimestamp(time.Time{})
+	}
+	log.Logger = log.With().Str("repo", r.Name).Logger()
+	log.Debug().Msg("rendering")
+	op, err := r.gitRepo.CreateFile(opFile)
+	if err != nil {
+		return err
+	}
+	defer op.Close()
+
+	return t.Execute(op, r)
+}
+
+// renderPR will return the body of a PR
 func (r *RepoPolicy) renderPR(bundle string) ([]byte, error) {
 	prFile := bundle + ".tmpl"
 	path := filepath.Join("templates", "prs", prFile)
