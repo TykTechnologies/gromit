@@ -40,12 +40,14 @@ jobs:
           terraform_version: 1.3.0
 
       - name: Terraform Init
-        working-directory: ${{ env.TERRAFORM_DIR }}
+        # working-directory: ${{ env.TERRAFORM_DIR }}
         id: init
-        run: terraform init -input=false
+        run: |
+          cd gpac
+          terraform init -input=false
 
       - name: Terraform Plan
-        working-directory: ${{ env.TERRAFORM_DIR }}
+        # working-directory: ${{ env.TERRAFORM_DIR }}
         id: plan
         run: |
           terraform validate && terraform plan
