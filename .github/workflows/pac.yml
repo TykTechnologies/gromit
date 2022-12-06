@@ -25,8 +25,8 @@ jobs:
 
       - name: Show Directories
         run: |
-        pwd
-        ls
+          pwd
+          ls
 
 
       - uses: aws-actions/configure-aws-credentials@v1
