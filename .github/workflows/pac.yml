@@ -3,7 +3,7 @@ name: Policy as Code
 on:
   pull_request:
     paths:
-      - testdata/policies/repos.yaml
+      - testdata/policies/*.yaml
 
 env:
   TERRAFORM_DIR: "./gpac"
@@ -11,7 +11,7 @@ env:
 
 jobs:
   terraform:
-    runs-on: ubuntu-latest
+    runs-on: tykio/gromit:v1.4.5-rc3
     permissions:
       id-token: write
 
