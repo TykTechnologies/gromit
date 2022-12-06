@@ -23,7 +23,7 @@ jobs:
       - name: Gromit Policy gpac
         run: gromit policy gpac -l trace --textlogs --conf testdata/policies/repos.yaml
 
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v1
         with:
           node-version: '14'
 
