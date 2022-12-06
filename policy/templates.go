@@ -41,7 +41,7 @@ func (r *RepoPolicy) GenTemplate(bundle string) error {
 func (r *RepoPolicy) renderTemplates(bundleDir string, bundleName string) error {
 	return fs.WalkDir(templates, bundleDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			log.Err(err).Msgf("Walk error: (%s)")
+			log.Err(err).Msgf("Walk error: (%s)", path)
 			return err
 		}
 		if d.IsDir() {
