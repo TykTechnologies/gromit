@@ -6,7 +6,6 @@ tyk-analytics-ui_release_branches = [
   { branch        = "release-4",
     reviewers     = 0,
     convos        = false,
-    source_branch = "main",
   required_tests = ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"] },
   { branch        = "release-4.3",
     reviewers     = 0,
