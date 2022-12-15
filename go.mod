@@ -17,8 +17,8 @@ require (
 	github.com/mongodb/mongo-tools v0.0.0-20200911144454-4ba3e828ed5c
 	github.com/mongodb/mongo-tools-common v4.0.6+incompatible
 	github.com/rs/zerolog v1.19.0
-	github.com/spf13/cobra v1.6.1
 	github.com/shurcooL/githubv4 v0.0.0-20221021030919-a134b1472cc7
+	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.7.2-0.20210422093502-50f933027707
 	github.com/stretchr/testify v1.7.0
 	go.etcd.io/etcd/client/v3 v3.5.4
