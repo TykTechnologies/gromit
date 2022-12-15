@@ -45,7 +45,7 @@ jobs:
           {{- end }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: ${{`{{matrix.branch}}`}}
           token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
@@ -79,6 +79,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           github-token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
+          result-encoding: string
           script: |
             const response = await github.rest.pulls.create({
               title: '[CI] Sync automation: Syncing commits from master',
@@ -101,3 +102,14 @@ jobs:
               repo: context.repo.repo,
               issue_number: response.data.number,
               labels: ['sync-automation'] });
+            return response.data.number
+
+
+      - name: Enable automerge for the created PR
+        id: enable-automerge
+        run: |
+          gh pr merge $PULL --auto --squash --subject "[CI] Sync automation: Syncing commits from master" --body "Picking CI changes from the commit $COMMIT"
+        env:
+          GITHUB_TOKEN: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
+          PULL: ${{`{{ steps.create-pr.outputs.result }}`}}
+          COMMIT: ${{`{{ github.sha }}`}}

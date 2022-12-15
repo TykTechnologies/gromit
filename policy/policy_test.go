@@ -17,7 +17,7 @@ func TestGenTemplate(t *testing.T) {
 	// timeStamp = time.Time{}
 	//timeStamp := "2021-06-02 06:47:55.826883255 +0000 UTC"
 	// testTimeStr := "Tue May 24 08:30:46 UTC 2022"
-	testTimeStr := "Wed Aug 31 11:49:22 UTC 2022"
+	testTimeStr := "Thu Dec 15 07:17:30 UTC 2022"
 	timeStamp, err := time.Parse(time.UnixDate, testTimeStr)
 	if err != nil {
 		t.Fatalf("Can't parse the test timestamp: %v", err)
