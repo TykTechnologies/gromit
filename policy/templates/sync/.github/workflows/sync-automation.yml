@@ -14,7 +14,7 @@
 {{- end }}
 
 {{- if or (eq .Name "portal") }}
-  {{- $portal_files := list ".github/workflows/api-tests.yml" ".github/workflows/ui-tests.yml" }}
+  {{- $portal_files := list ".github/workflows/api_tests.yml" ".github/workflows/ui_tests.yml" }}
   {{- $files = concat $files $portal_files }}
 {{- end }}
 
