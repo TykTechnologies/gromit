@@ -250,7 +250,6 @@ policy:
         Portal is a full-featured developer portal, blog and CMS
       pcrepo: portal
       dhrepo: tykio/portal
-      csrepo: docker.tyk.io/portal/portal
       exposeports: 80
       reviewers: []
       binary: dev-portal
