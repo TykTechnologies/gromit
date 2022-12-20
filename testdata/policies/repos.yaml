@@ -1,3 +1,4 @@
+# Touch Policy
 # This file contains github policy that is used to generate all the releng
 # automation, and any other automation including automated PR generation
 # from gromit.
@@ -52,12 +53,12 @@ policy:
           # The go version used for this repo. Right now, this value
           # is used for selecting the appropriate golang-cross image
           # used for building the binary, packages and docker images.
-          goversion: 1.15
+          goversion: 1.16
           # The version that's used for upgrade tests. This version
           # will be installed first and will then be upgraded with the
           # recently generated packages. Make sure that this is a version
           # that has candidate packages for all our supported OSes and archs.
-          upgradefromver: 3.0.1
+          upgradefromver: 3.0.8
           # This signifies whether the packagecloud repo for this git repo
           # is private or not.
           pcprivate: false
@@ -65,21 +66,40 @@ policy:
           configfile: tyk.conf
           # The go package which contains the `VERSION` string for this REPO.
           versionpackage: github.com/TykTechnologies/tyk/gateway
+          #Min number of reviews needed for a PR
+          reviewcount: 0
+          # Should conversations be resolved before merging
+          convos: false
+          # Workflows that need to pass before merging
+          tests: ["Go 1.16 Redis 5"]
           # Branch specific policy for different branches starts here.->
           # Different branches could have different policy as older branches
           # could be on a different releaese workflow. To override any branch
           # policy for a specific branch, they could be specified here, under
           # the respective branches.
           branch:
+            master:
+              active: true
+              reviewcount: 2
             release-3-lts:
+              active: false
               goversion: 1.12
               upgradefromver: 3.0.4
-            master:
-              goversion: 1.16
-              upgradefromver: 3.0.8
             release-4:
-              goversion: 1.16
-              upgradefromver: 3.0.8
+              active: false
+            release-4.3:
+              active: true
+              sourcebranch: release-4
+            release-4.3.0:
+              active: true
+              sourcebranch: release-4
+            release-4.3.1:
+              active: true
+              sourcebranch: release-4.3
+            release-4.0.10:
+              active: true
+              sourcebranch: release-4-lts
+              tests: []
       # Sync-automation specific policy.
       # we can have multiple sync policies for different source branches.
       # policy should be in the form of:
@@ -96,7 +116,7 @@ policy:
         release-3-lts: [release-3.0.11]
     tyk-analytics:
       description: |
-        Dashboard for the Tyk API Gateway
+        Tyk Dashboard New Repository
       pcrepo: tyk-dashboard
       dhrepo: tykio/tyk-dashboard
       csrepo: docker.tyk.io/tyk-dashboard/tyk-dashboard
@@ -107,19 +127,40 @@ policy:
       protected: [ release-3-lts, release-4, release-4-lts ]
       branches:
           cgo: true
-          goversion: 1.15
+          goversion: 1.16
           upgradefromver: 3.0.9
           pcprivate: false
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
+          convos: false
+          tests: ["commit message linter", "test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
+          reviewcount: 0
           branch:
             release-3-lts:
+              active: false
               goversion: 1.12
               upgradefromver: 3.0.4
             master:
-              goversion: 1.16
+              active: true
+              reviewcount: 2
             release-4:
-              goversion: 1.16
+              active: false
+            release-4.3:
+              active: true
+              sourcebranch: release-4
+              tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
+            release-4.3.0:
+              active: true
+              sourcebranch: release-4
+              tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
+            release-4.3.1:
+              active: true
+              sourcebranch: release-4.3
+              tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
+            release-4.0.10:
+              active: true
+              sourcebranch: release-4-lts
+              tests: []
       ports:
         master: [ release-4, release-4.2 ]
         release-3: [release-3-lts]
@@ -141,6 +182,12 @@ policy:
           pcprivate: false
           configfile: pump.conf
           versionpackage: github.com/TykTechnologies/tyk-pump/pumps
+          convos: false
+          tests: []
+          branch:
+            master:
+              active: true
+              reviewcount: 2
       ports:
         master: [ release-1.7 ]
     tyk-identity-broker:
@@ -161,6 +208,12 @@ policy:
         pcprivate: false
         configfile: tib.conf
         versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
+        convos: false
+        tests: []
+        branch:
+          master:
+            active: true
+            reviewcount: 1
       ports:
         master: [ release-1.3, release-1.2 ]
     tyk-sink:
@@ -181,11 +234,17 @@ policy:
         pcprivate: true
         configfile: tyk_sink.conf
         versionpackage: github.com/TykTechnologies/tyk-sink/main
+        convos: false
+        tests: []
+        branch:
+          master:
+            active: true
+            reviewcount: 1
       ports:
         master: [ release-2 ]
     portal:
       description: |
-        Developer portal for the Tyk API Gateway
+        Portal is a full-featured developer portal, blog and CMS
       pcrepo: portal
       dhrepo: tykio/portal
       csrepo: docker.tyk.io/portal/portal
@@ -201,5 +260,44 @@ policy:
         pcprivate: false
         configfile: portal.conf
         versionpackage: github.com/TykTechnologies/portal/core
+        convos: false
+        tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)"]
+        branch:
+          master:
+            active: true
+            reviewcount: 1
       ports:
         master: [ release-1.0 ]
+    tyk-analytics-ui:
+      description: |
+        User interface for our dashboard. Backend: https://github.com/TykTechnologies/tyk-analytics
+      pcrepo: tyk-analytics-ui
+      dhrepo: tykio/tyk-analytics-ui
+      csrepo: docker.tyk.io/tyk-analytics-ui/tyk-analytics-ui
+      exposeports: 80
+      reviewers: []
+      binary: tyk-analytics-ui
+      packagename: tyk-analytics-ui
+      protected: [ master ]
+      branches:
+        convos: false
+        tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"]
+        reviewcount: 0
+        branch:
+          master:
+            active: true
+            reviewcount: 2
+          release-4.3:
+            active: true
+            sourcebranch: release-4
+          release-4.3.0:
+            active: true
+            sourcebranch: release-4
+          release-4.3.1:
+            active: true
+            sourcebranch: release-4.3
+          release-4.0.10:
+            active: true
+            sourcebranch: release-4-lts
+            tests: []
+

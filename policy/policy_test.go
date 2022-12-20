@@ -12,7 +12,7 @@ import (
 )
 
 func TestGenTemplate(t *testing.T) {
-	repo := SetupRepo(t, "")
+	repo := SetupTestRepo(t, "")
 	// to set current timestamp - uncomment below line
 	// timeStamp = time.Time{}
 	//timeStamp := "2021-06-02 06:47:55.826883255 +0000 UTC"
@@ -25,9 +25,9 @@ func TestGenTemplate(t *testing.T) {
 	// set test timestamp
 	repo.SetTimestamp(timeStamp)
 	// repo.SetTimestamp(timeStamp)
-	err = repo.GenTemplate("sync")
+	err = RenderBundle("sync", repo)
 	if err != nil {
-		t.Fatalf("Error generating template:  sync-automation: %v", err)
+		t.Fatalf("Error generating template sync-automation: %v", err)
 	}
 	hash, err := repo.Commit("First commit from test", false)
 	if err != nil {
@@ -71,7 +71,7 @@ func TestPolicyConfig(t *testing.T) {
 	assert.EqualValues(t, repo.Branchvals.GoVersion, "1.16")
 }
 
-func SetupRepo(t *testing.T, token string) *RepoPolicy {
+func SetupTestRepo(t *testing.T, token string) *RepoPolicy {
 	var rp Policies
 	config.LoadConfig("../testdata/policies/repos.yaml")
 	err := LoadRepoPolicies(&rp)
