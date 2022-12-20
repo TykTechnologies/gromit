@@ -1,4 +1,4 @@
-$ gromit version
+$ gromit --version
 known at build time
 
 $ gromit help

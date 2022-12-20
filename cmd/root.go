@@ -19,7 +19,6 @@ http://www.apache.org/licenses/LICENSE-2.0
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -30,9 +29,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var cfgFile, logLevel string
-var textLogs bool
-var testLogs bool
+var cfgFile string
 
 // AWScfg is used in cluster, sow, reap and the server
 var AWScfg aws.Config
@@ -40,12 +37,9 @@ var AWScfg aws.Config
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "gromit",
-	Short: "The glue that binds AWS Fargate, Github and DynamoDB",
+	Short: "The glue that binds AWS and Github",
 	Long: `It also has a grab bag of various ops automation.
-Global env vars:
-These vars apply to all commands
-GROMIT_TABLENAME DynamoDB tablename to use for env state
-GROMIT_REPOS Comma separated list of ECR repos to answer for`,
+Each gromit command has its own config section. For instance, the policy command uses the policy key in the config file. Config values can be overridden by environment variables. For instance, policy.prefix can be overridden using the variable $GROMIT_POLICY_PREFIX.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -68,14 +62,14 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "conf", "f", "", "config file (default is $HOME/.config/gromit.yaml)")
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "info", "Log verbosity: trace, info, warn, error")
-	rootCmd.PersistentFlags().BoolVarP(&textLogs, "textlogs", "t", false, "Logs in plain text")
-	rootCmd.PersistentFlags().BoolVar(&testLogs, "testlogs", false, "Logs without timestamp or stack info - for automated tests.")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "conf", "f", "", "YAML config file. If not supplied, embedded defaults will be used")
+	rootCmd.PersistentFlags().String("loglevel", "info", "Log verbosity: trace, debug, info, warn, error/fatal")
+	rootCmd.PersistentFlags().Bool("textlogs", false, "Logs in plain text")
 }
 
 // initConfig reads in config file and env variables if set.
 func initConfig() {
+	logLevel, _ := rootCmd.Flags().GetString("loglevel")
 	ll, err := zerolog.ParseLevel(logLevel)
 	if err != nil {
 		log.Warn().Str("level", logLevel).Msg("Could not parse, defaulting to debug.")
@@ -84,20 +78,7 @@ func initConfig() {
 		zerolog.SetGlobalLevel(ll)
 	}
 	log.Logger = log.With().Str("version", util.Version()).Caller().Logger()
-	if testLogs {
-		// To be used only for cmdtest fixtures.
-		// This flag sets:
-		//		level to info.
-		//		timestamp to a static time.
-		//      only logs basic info
-		//		outputs directly to stderr.
-		zerolog.TimestampFunc = func() time.Time {
-			return (time.Time{})
-		}
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-		log.Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
-		textLogs = false
-	}
+	textLogs, _ := rootCmd.Flags().GetBool("textlogs")
 	if textLogs {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}

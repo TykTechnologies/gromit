@@ -3,17 +3,10 @@ VERSION := $(shell git describe --tags)
 COMMIT := $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
 
-# A directory containing config files
-CONF_VOL := testdata
-UNAME_S := $(shell uname -s)
-
 gromit: */*.go confgen/templates/* policy/templates/* #devenv/terraform/* server/debug/debugger.wasm
 	! ls **/#*#
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
-ifneq ($(UNAME_S),Darwin)
-	sudo setcap 'cap_net_bind_service=+ep' $(@)
-endif
 
 testdata: testdata/base/*
 	[[ $CI ]] || test -n "$(AWS_PROFILE)"
