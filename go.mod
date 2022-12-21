@@ -12,7 +12,7 @@ require (
 	github.com/google/go-cmdtest v0.4.1-0.20220921163831-55ab3332a786
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-github/v47 v47.1.0
-	github.com/gorilla/mux v1.7.4
+	github.com/gorilla/mux v1.8.0
 	github.com/jinzhu/copier v0.3.5
 	github.com/mongodb/mongo-tools v0.0.0-20200911144454-4ba3e828ed5c
 	github.com/mongodb/mongo-tools-common v4.0.6+incompatible
