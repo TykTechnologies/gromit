@@ -17,6 +17,7 @@ import (
 )
 
 // The clunky /*/* is because embed ignores . prefixed dirs like .github
+//
 //go:embed templates all:templates
 var templates embed.FS
 
@@ -40,10 +41,11 @@ func ListBundles(root string) {
 func getTemplate(templatePath string) *template.Template {
 	templatePaths := []string{templatePath}
 	log.Trace().Str("template", templatePath).Msg("top level")
-	subTemplates, err := templates.ReadDir(templatePath + ".d")
+	dsubDir := filepath.Join(templatePath + ".d")
+	subTemplates, err := templates.ReadDir(dsubDir)
 	if err == nil {
 		for _, st := range subTemplates {
-			templatePaths = append(templatePaths, st.Name())
+			templatePaths = append(templatePaths, filepath.Join(dsubDir, st.Name()))
 		}
 		log.Trace().Str("template", templatePath).Strs("subtemplates", templatePaths).Msg("subtemplates")
 	}
@@ -96,7 +98,8 @@ func (rs *RepoPolicies) renderTemplate(t *template.Template, opFile string) erro
 }
 
 // RepoPolicies.renderTemplate will render one template into its corresponding path in the git tree
-//  that should be written to in the git repo.
+//
+//	that should be written to in the git repo.
 func (r *RepoPolicy) renderTemplate(t *template.Template, opFile string) error {
 	// Set current timestamp if not set already
 	if r.Timestamp == "" {
