@@ -31,7 +31,15 @@ env:
   GOPRIVATE: github.com/TykTechnologies
   
 jobs:
-{{- template "goreleaser" . }}
+{{ /* goreleaser step differs between older release-3 versions and the newer versions(older ones doesn't have
+      an  el7 specific config.
+*/ }}
+{{- if eq .Branch "release-3-lts" }}
+  {{ template "goreleaser-r3-lts" }}
+{{- else }}
+  {{- template "goreleaser" . }}
+{{- end }}
+
 {{- template "ci" . }}
 {{- template "tests" . }}
 {{- template "aws" . }}
