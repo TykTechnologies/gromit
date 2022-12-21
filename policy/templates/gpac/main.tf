@@ -21,7 +21,7 @@ provider "github" {
 }
 
 module "portal" {
-  source                 = "../../../modules/github-repos"
+  source                 = "../modules/github-repos"
   repo                   = "portal"
   description            = "Portal is a full-featured developer portal, blog and CMS"
   topics                 = ["portal", "api-gateway"]
@@ -35,7 +35,7 @@ module "portal" {
 }
 
 module "tyk-analytics-ui" {
-  source                      = "../../../modules/github-repos"
+  source                      = "../modules/github-repos"
   repo                        = "tyk-analytics-ui"
   description                 = "User interface for our dashboard. Backend: https://github.com/TykTechnologies/tyk-analytics"
   topics                      = []
@@ -48,7 +48,7 @@ module "tyk-analytics-ui" {
 }
 
 module "tyk-analytics" {
-  source                      = "../../../modules/github-repos"
+  source                      = "../modules/github-repos"
   repo                        = "tyk-analytics"
   description                 = "Tyk Dashboard New Repository"
   topics                      = []
@@ -61,7 +61,7 @@ module "tyk-analytics" {
 }
 
 module "tyk-identity-broker" {
-  source               = "../../../modules/github-repos"
+  source               = "../modules/github-repos"
   repo                 = "tyk-identity-broker"
   description          = "Tyk Authentication Proxy for third-party login"
   topics               = []
@@ -71,7 +71,7 @@ module "tyk-identity-broker" {
 }
 
 module "tyk-pump" {
-  source               = "../../../modules/github-repos"
+  source               = "../modules/github-repos"
   repo                 = "tyk-pump"
   description          = "Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once)."
   topics               = []
@@ -82,7 +82,7 @@ module "tyk-pump" {
 }
 
 module "tyk-sink" {
-  source               = "../../../modules/github-repos"
+  source               = "../modules/github-repos"
   repo                 = "tyk-sink"
   description          = "Tyk RPC Server backend (bridge)"
   topics               = []
@@ -95,14 +95,14 @@ module "tyk-sink" {
 }
 
 module "tyk" {
-  source                      = "../../../modules/github-repos"
-  repo                        = "tyk"
-  description                 = "Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols"
-  topics                      = ["api", "api-gateway", "api-management", "cloudnative", "go", "graphql", "grpc", "k8s", "kubernetes", "microservices", "reverse-proxy", "tyk"]
-  wiki                        = false
-  default_branch              = "master"
-  vulnerability_alerts        = true
+  source               = "../modules/github-repos"
+  repo                 = "tyk"
+  description          = "Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols"
+  topics               = ["api", "api-gateway", "api-management", "cloudnative", "go", "graphql", "grpc", "k8s", "kubernetes", "microservices", "reverse-proxy", "tyk"]
+  wiki                 = false
+  default_branch       = "master"
+  vulnerability_alerts = true
   squash_merge_commit_message = "PR_BODY"
-  squash_merge_commit_title   = "PR_TITLE"
-  release_branches            = var.tyk_release_branches
+  squash_merge_commit_title   = "PR_TITLE"  
+  release_branches     = var.tyk_release_branches
 }

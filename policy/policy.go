@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/TykTechnologies/gromit/git"
@@ -30,6 +31,11 @@ type branchVals struct {
 	UpgradeFromVer string                // Versions to test package upgrades from
 	PCPrivate      bool                  // indicates whether package cloud repo is private
 	Branch         map[string]branchVals `copier:"-"`
+	Active         bool
+	ReviewCount    string
+	Convos         bool
+	Tests          []string
+	SourceBranch   string
 }
 
 // Policies models the config file structure. The config file may contain one or more repos.
@@ -52,25 +58,48 @@ type Policies struct {
 
 // RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
 type RepoPolicy struct {
-	Name        string
-	Description string
-	Protected   []string
-	Default     string
-	PCRepo      string
-	DHRepo      string
-	CSRepo      string
-	Binary      string
-	PackageName string
-	Reviewers   []string
-	ExposePorts string
-	Files       map[string][]string
-	Ports       map[string][]string
-	gitRepo     *git.GitRepo
-	Branch      string
-	prBranch    string
-	Branchvals  branchVals
-	prefix      string
-	Timestamp   string
+	Name            string
+	Description     string
+	Protected       []string
+	Default         string
+	PCRepo          string
+	DHRepo          string
+	CSRepo          string
+	Binary          string
+	PackageName     string
+	Reviewers       []string
+	ExposePorts     string
+	Files           map[string][]string
+	Ports           map[string][]string
+	gitRepo         *git.GitRepo
+	Branch          string
+	ReleaseBranches map[string]branchVals
+	prBranch        string
+	Branchvals      branchVals
+	prefix          string
+	Timestamp       string
+}
+
+// RepoPolies aggregates RepoPolicy, indexed by repo name.
+type RepoPolicies map[string]RepoPolicy
+
+// BundleVars is an interface that all datatypes that will be passed to a bundle renderer must satisfy
+type BundleVars interface {
+	renderTemplate(*template.Template, string) error
+}
+
+func (p *Policies) GetAllRepos(prefix string) (RepoPolicies, error) {
+	var rp RepoPolicies
+	for repoName, repoVals := range p.Repos {
+		log.Info().Msgf("Reponame: %s", repoName)
+		repo, err := repoVals.GetRepo(repoName, prefix, "master")
+		if err != nil {
+			return RepoPolicies{}, err
+		}
+		rp[repoName] = repo
+	}
+
+	return rp, nil
 }
 
 // GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates
@@ -80,27 +109,46 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	if !found {
 		return RepoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, p.Repos)
 	}
+
 	var b branchVals
+
 	copier.Copy(&b, r.Branches)
+
 	if ib, found := r.Branches.Branch[branch]; found {
 		copier.CopyWithOption(&b, &ib, copier.Option{IgnoreEmpty: true})
 	}
+
+	// Build release branches map by iterating over each branch values
+	releaseBranches := make(map[string]branchVals)
+
+	for branch, releaseBranch := range r.Branches.Branch {
+		if releaseBranch.Active {
+			var aux branchVals
+			copier.Copy(&aux, r.Branches)
+			if iaux, found := r.Branches.Branch[branch]; found {
+				copier.CopyWithOption(&aux, &iaux, copier.Option{IgnoreEmpty: true})
+			}
+			releaseBranches[branch] = aux
+		}
+	}
+
 	return RepoPolicy{
-		Name:        repo,
-		Protected:   append(p.Protected, r.Protected...),
-		Default:     p.Default,
-		Ports:       r.Ports,
-		Branch:      branch,
-		prefix:      prefix,
-		Branchvals:  b,
-		Reviewers:   r.Reviewers,
-		DHRepo:      r.DHRepo,
-		PCRepo:      r.PCRepo,
-		CSRepo:      r.CSRepo,
-		ExposePorts: r.ExposePorts,
-		Binary:      r.Binary,
-		Description: r.Description,
-		PackageName: r.PackageName,
+		Name:            repo,
+		Protected:       append(p.Protected, r.Protected...),
+		Default:         p.Default,
+		Ports:           r.Ports,
+		Branch:          branch,
+		prefix:          prefix,
+		Branchvals:      b,
+		ReleaseBranches: releaseBranches,
+		Reviewers:       r.Reviewers,
+		DHRepo:          r.DHRepo,
+		PCRepo:          r.PCRepo,
+		CSRepo:          r.CSRepo,
+		ExposePorts:     r.ExposePorts,
+		Binary:          r.Binary,
+		Description:     r.Description,
+		PackageName:     r.PackageName,
 	}, nil
 }
 

@@ -20,7 +20,7 @@ Available Commands:
   mutex       Interact with MaaS
   orgs        Dump/restore org keys and mongodb
   passwd      Returns the password hash of the given plaintext
-  policy      Mess with the release engineering policy
+  policy      Templatised policies that are driven by the config file
   reap        Reap envs from GROMIT_TABLENAME, using a config tree at <config root path>
   serve       Run endpoint for github requests
   sow         Sow envs creating a config tree at <config root path>
