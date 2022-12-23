@@ -112,7 +112,7 @@ policy:
       # For up to date info on this, please refer to the latest sync automation
       # templates.
       ports:
-        master: [ release-4 , release-4.2]
+        master: [ release-4 , release-4.3]
         release-3-lts: [release-3.0.11]
     tyk-analytics:
       description: |
@@ -162,7 +162,7 @@ policy:
               sourcebranch: release-4-lts
               tests: []
       ports:
-        master: [ release-4, release-4.2 ]
+        master: [ release-4, release-4.3 ]
         release-3: [release-3-lts]
     tyk-pump:
       description: |
