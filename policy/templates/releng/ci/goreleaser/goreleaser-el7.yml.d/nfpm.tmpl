@@ -88,8 +88,8 @@ nfpms:
         type: "config|noreplace"
       - src: app
         dst: /opt/{{ .PackageName }}/app
-      - src: themes
-        dst: /opt/{{ .PackageName }}/themes
+      - src: default.zip
+        dst: /opt/{{ .PackageName }}/default.zip
       - src: public/system
         dst: /opt/{{ .PackageName }}/public/system
       - src: ci/entrypoint.sh
