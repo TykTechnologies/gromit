@@ -16,12 +16,13 @@ http://www.apache.org/licenses/LICENSE-2.0
 package cmd
 
 import (
-	"path/filepath"
-
 	"github.com/TykTechnologies/gromit/policy"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"path/filepath"
+	"io/fs"
+	"os"
 )
 
 var bundleCmd = &cobra.Command{
@@ -47,10 +48,53 @@ var listSubCmd = &cobra.Command{
 	Aliases: []string{"ls"},
 	Args:    cobra.MinimumNArgs(1),
 	Short:   "List the embedded template bundles like a directory listing",
-	Long:    ``,
+	Long:    `Use this when you want to see what is inside this binary.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, bundle := range args {
-			policy.ListBundles(bundle)
+			log.Logger = log.With().Str("bundle", bundle).Logger()
+			bfs, err := fs.Sub(policy.Bundles, filepath.Join("templates", bundle))
+			if err != nil {
+				log.Warn().Err(err).Msg("fetching embedded templates")
+			}
+			b, err := policy.NewBundle(bfs, bundle)
+			if err != nil {
+				log.Fatal().Str("bundle", bundle).Err(err).Msg("could not get")
+			}
+			cmd.Println(b)
+		}
+	},
+}
+
+var localSubCmd = &cobra.Command{
+	Use:     "local <dir>",
+	Aliases: []string{"ls"},
+	Args:    cobra.MinimumNArgs(1),
+	Short:   "Render the locally supplied templates using the RepoPolicy object",
+	Long:    `An easy way to work with templates without having to go through a gromit build. No involvement with git or github, takes the supplied templates and renders output using the config file.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		dir = args[0]
+		log.Logger = log.With().Str("bundle", dir).Logger()
+		opDir, err := cmd.Flags().GetString("output")
+		if err != nil {
+			log.Fatal().Err(err).Msg("output dir")
+		}
+		bfs := os.DirFS(dir)
+		b, err := policy.NewBundle(bfs, dir)
+		if err != nil {
+			log.Fatal().Str("bundle", dir).Err(err).Msg("instantiation")
+		}
+		for _, repo := range repos {
+			log.Logger = log.With().Str("repo", repo).Logger()
+			rp, err := configPolicies.GetRepo(repo, viper.GetString("prefix"), "master")
+			if err != nil {
+				log.Warn().Err(err).Msg("could not get repo")
+				continue
+			}
+			err = b.Render(&rp, opDir, nil)
+			if err != nil {
+				log.Warn().Err(err).Msg("rendering")
+
+			}
 		}
 	},
 }
@@ -64,15 +108,26 @@ var genSubCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		opDir, _ := cmd.Flags().GetString("output")
 		for _, repo := range repos {
+			log.Logger = log.With().Str("repo", repo).Logger()
 			rp, err := configPolicies.GetRepo(repo, viper.GetString("prefix"), "master")
 			if err != nil {
-				log.Warn().Str("repo", repo).Err(err).Msg("could not get repo")
+				log.Warn().Err(err).Msg("could not get repo")
 				continue
 			}
 			for _, bundle := range args {
-				err := policy.RenderBundle(bundle, filepath.Join(opDir, repo), &rp)
+				log.Logger = log.With().Str("bundle", bundle).Logger()
+				bfs, err := fs.Sub(policy.Bundles, filepath.Join("templates", bundle))
 				if err != nil {
-					log.Warn().Str("repo", repo).Str("bundle", bundle).Err(err).Msg("could not render")
+					log.Warn().Err(err).Msg("fetching embedded templates")
+				}
+				b, err := policy.NewBundle(bfs, bundle)
+				if err != nil {
+					log.Warn().Err(err).Msg("instantiation")
+
+				}
+				err = b.Render(&rp, opDir, nil)
+				if err != nil {
+					log.Warn().Err(err).Msg("rendering")
 
 				}
 			}
@@ -80,11 +135,34 @@ var genSubCmd = &cobra.Command{
 	},
 }
 
+var diffSubCmd = &cobra.Command{
+	Use:     "diff <bundle>",
+	Args:    cobra.MinimumNArgs(1),
+	Short:   "Render the bundle and diff it against known good output",
+	Long:    `Known good templates`,
+	Run: func(cmd *cobra.Command, args []string) {
+		repo := repos[0]
+		bundle := args[0]
+		rp, err := configPolicies.GetRepo(repo, viper.GetString("prefix"), "master")
+		if err != nil {
+			log.Warn().Str("repo", repo).Err(err).Msg("could not get repo")
+		}
+		err = policy.RenderBundle(bundle, repo, &rp)
+		if err != nil {
+			log.Warn().Str("repo", repo).Str("bundle", bundle).Err(err).Msg("could not render")
+
+		}
+	},
+}
+
 func init() {
-	genSubCmd.Flags().String("output", "./q", "Output into this directory. Sub-directories will be created for each repo.")
-	genSubCmd.Flags().StringSliceVar(&repos, "repos", []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal", "tyk-analytics-ui"}, "Repos to operate upon, comma separated values accepted.")
+	genSubCmd.Flags().String("output", ".", "Output into this directory. Sub-directories will be created for each repo.")
+	localSubCmd.Flags().String("output", ".", "Output into this directory. Sub-directories will be created for each repo.")
+	bundleCmd.AddCommand(localSubCmd)
 	bundleCmd.AddCommand(listSubCmd)
+	bundleCmd.AddCommand(diffSubCmd)
 	bundleCmd.AddCommand(genSubCmd)
 
+	bundleCmd.PersistentFlags().StringSliceVar(&repos, "repos", []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal", "tyk-analytics-ui"}, "Repos to operate upon, comma separated values accepted.")
 	rootCmd.AddCommand(bundleCmd)
 }

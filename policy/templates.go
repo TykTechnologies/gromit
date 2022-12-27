@@ -2,7 +2,6 @@ package policy
 
 import (
 	"bytes"
-	"embed"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
@@ -15,11 +14,6 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/rs/zerolog/log"
 )
-
-// The clunky /*/* is because embed ignores . prefixed dirs like .github
-//
-//go:embed templates all:templates
-var templates embed.FS
 
 // listBundle prints a directory listing of the embedded bundles
 func ListBundles(root string) {
