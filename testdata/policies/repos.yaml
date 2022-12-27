@@ -84,7 +84,7 @@ policy:
             release-3-lts:
               active: false
               goversion: 1.12
-              upgradefromver: 3.0.4
+              upgradefromver: 3.0.8
             release-4:
               active: false
             release-4.3:
