@@ -25,7 +25,7 @@ func TestGenTemplate(t *testing.T) {
 	// set test timestamp
 	repo.SetTimestamp(timeStamp)
 	// repo.SetTimestamp(timeStamp)
-	err = RenderBundle("sync", repo)
+	err = RenderBundle("sync", ".", repo)
 	if err != nil {
 		t.Fatalf("Error generating template sync-automation: %v", err)
 	}
