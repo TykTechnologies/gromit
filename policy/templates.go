@@ -3,6 +3,7 @@ package policy
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -100,16 +101,22 @@ func (r *RepoPolicy) renderTemplate(t *template.Template, opFile string) error {
 	if r.Timestamp == "" {
 		r.SetTimestamp(time.Time{})
 	}
-	dir, _ := filepath.Split(opFile)
-	err := os.MkdirAll(dir, 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
+	var op io.Writer
+	if strings.HasPrefix(opFile, "-") {
+		op = io.Writer(os.Stdout)
+	} else {
+		dir, _ := filepath.Split(opFile)
+		err := os.MkdirAll(dir, 0755)
+		if err != nil && !os.IsExist(err) {
+			return err
+		}
+		opf, err := os.Create(opFile)
+		if err != nil {
+			return err
+		}
+		defer opf.Close()
+		op = io.Writer(opf)
 	}
-	op, err := os.Create(opFile)
-	if err != nil {
-		return err
-	}
-	defer op.Close()
 
 	return t.Execute(op, r)
 }

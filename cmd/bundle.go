@@ -141,17 +141,7 @@ var diffSubCmd = &cobra.Command{
 	Short:   "Render the bundle and diff it against known good output",
 	Long:    `Known good templates`,
 	Run: func(cmd *cobra.Command, args []string) {
-		repo := repos[0]
-		bundle := args[0]
-		rp, err := configPolicies.GetRepo(repo, viper.GetString("prefix"), "master")
-		if err != nil {
-			log.Warn().Str("repo", repo).Err(err).Msg("could not get repo")
-		}
-		err = policy.RenderBundle(bundle, repo, &rp)
-		if err != nil {
-			log.Warn().Str("repo", repo).Str("bundle", bundle).Err(err).Msg("could not render")
-
-		}
+		log.Fatal().Msg("not implemented yet")
 	},
 }
 
