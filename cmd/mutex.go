@@ -91,7 +91,7 @@ var getSubCmd = &cobra.Command{
 			op, err := exec.Command(script).CombinedOutput()
 			if err != nil {
 				lock.Release()
-				log.Fatal().AnErr("error", err).Bytes("output", op).Msg("could not execute script")
+				cobra.CheckErr(err)
 			}
 			log.Info().Bytes("output", op).Msg("script output")
 			lock.Release()

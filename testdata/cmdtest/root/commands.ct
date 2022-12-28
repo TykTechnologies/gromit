@@ -1,17 +1,15 @@
-$ gromit --version
+$ gromit version
 known at build time
 
 $ gromit help
 It also has a grab bag of various ops automation.
-Global env vars:
-These vars apply to all commands
-GROMIT_TABLENAME DynamoDB tablename to use for env state
-GROMIT_REPOS Comma separated list of ECR repos to answer for
+Each gromit command has its own config section. For instance, the policy command uses the policy key in the config file. Config values can be overridden by environment variables. For instance, policy.prefix can be overridden using the variable $GROMIT_POLICY_PREFIX.
 
 Usage:
   gromit [command]
 
 Available Commands:
+  bundle      Operate on an embedded bundle
   cluster     Manage cluster of tyk components
   completion  Generate completion script
   env         Mess about with the env state
@@ -27,10 +25,9 @@ Available Commands:
   version     Print version
 
 Flags:
-  -f, --conf string       config file (default is $HOME/.config/gromit.yaml)
+  -f, --conf string       YAML config file. If not supplied, embedded defaults will be used
   -h, --help              help for gromit
-  -l, --loglevel string   Log verbosity: trace, info, warn, error (default "info")
-      --testlogs          Logs without timestamp or stack info - for automated tests.
-  -t, --textlogs          Logs in plain text
+      --loglevel string   Log verbosity: trace, debug, info, warn, error/fatal (default "info")
+      --textlogs          Logs in plain text
 
 Use "gromit [command] --help" for more information about a command.
