@@ -11,6 +11,7 @@ import (
 
 	"time"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/osfs"
@@ -25,7 +26,6 @@ import (
 	"github.com/google/go-github/v47/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
-	"golang.org/x/crypto/openpgp"
 	"golang.org/x/oauth2"
 )
 

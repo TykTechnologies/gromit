@@ -57,7 +57,6 @@ var policyCmd = &cobra.Command{
 		}
 		if bundle {
 			cmd.Println("Bundle list, directories have a trailing :")
-			policy.ListBundles(".")
 		}
 	},
 }
@@ -76,7 +75,7 @@ The files are only rendered, applying them requires an org-level PAT. For the pu
 			log.Fatal().Err(err).Strs("repos", repos).Msg("could not aggregate all repos")
 		}
 
-		err = policy.RenderBundle("gpac", policy.BundleVars(&rp))
+		err = policy.RenderBundle("gpac", "", policy.BundleVars(&rp))
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to create local dir gpac")
 		}
@@ -117,7 +116,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 				log.Fatal().Err(err).Msg("creating and switching to new branch for pr")
 			}
 			log.Info().Str("prbranch", prBranch).Msg("Switched to branch")
-			err = policy.RenderBundle("releng", policy.BundleVars(&repo))
+			err = policy.RenderBundle("releng", "", policy.BundleVars(&repo))
 			if err != nil {
 				log.Fatal().Err(err).Msg("template generation")
 			}
@@ -159,18 +158,17 @@ func init() {
 
 	relengSubCmd.Flags().StringVar(&prBranch, "prbranch", "", "The branch that will be used for creating the PR - this is the branch that gets pushed to remote")
 	relengSubCmd.MarkFlagRequired("prbranch")
-	policyCmd.AddCommand(relengSubCmd)
+
 	policyCmd.AddCommand(gpacSubCmd)
+	policyCmd.AddCommand(relengSubCmd)
 
 	docSubCmd.Flags().String("pattern", "^(release-[[:digit:].]+|master)", "Regexp to match release engineering branches")
 	policyCmd.AddCommand(docSubCmd)
 
-	policyCmd.Flags().BoolVar(&bundle, "bundle", false, "List the embedded bundles")
 	policyCmd.PersistentFlags().StringSliceVar(&repos, "repos", []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal", "tyk-analytics-ui"}, "Repos to operate upon, comma separated values accepted.")
 	policyCmd.PersistentFlags().StringVar(&branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
 	policyCmd.PersistentFlags().Bool("sign", false, "Sign commits, requires -k/--key. gpgconf and an active gpg-agent are required if the key is protected by a passphrase.")
 	policyCmd.PersistentFlags().StringVarP(&config.RepoURLPrefix, "prefix", "u", "https://github.com/TykTechnologies", "Prefix to derive the fqdn repo")
-	policyCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output in JSON")
 	policyCmd.PersistentFlags().BoolVarP(&dryRun, "dry", "d", false, "Will not make any changes")
 	policyCmd.PersistentFlags().BoolVarP(&autoMerge, "auto", "a", true, "Will automerge if all requirements are meet")
 	policyCmd.PersistentFlags().StringVar(&ghToken, "token", os.Getenv("GITHUB_TOKEN"), "Github token for private repositories")

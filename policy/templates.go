@@ -2,8 +2,8 @@ package policy
 
 import (
 	"bytes"
-	"embed"
 	"fmt"
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -16,14 +16,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// The clunky /*/* is because embed ignores . prefixed dirs like .github
-//
-//go:embed templates all:templates
-var templates embed.FS
-
 // listBundle prints a directory listing of the embedded bundles
 func ListBundles(root string) {
-	fs.WalkDir(templates, ".", func(path string, d fs.DirEntry, err error) error {
+	if root != "." {
+		root = filepath.Join("templates", root)
+	}
+	fs.WalkDir(templates, root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -36,8 +34,8 @@ func ListBundles(root string) {
 	})
 }
 
-// getTemplate, given a bundle filesystem and a path will return a
-// template object with the sub templates parsed into it
+// getTemplate, given a top level template path will return a template
+// object with the sub templates parsed into it
 func getTemplate(templatePath string) *template.Template {
 	templatePaths := []string{templatePath}
 	log.Trace().Str("template", templatePath).Msg("top level")
@@ -58,9 +56,8 @@ func getTemplate(templatePath string) *template.Template {
 
 // RenderBundle for each template file that it encounters
 // bt.renderTemplates walks a bundle tree and calls renderTemplate for each file
-func RenderBundle(bundleDir string, bt BundleVars) error {
+func RenderBundle(bundleDir, opDir string, bt BundleVars) error {
 	log.Logger = log.With().Str("bundle", bundleDir).Logger()
-	log.Debug().Msg("rendering")
 
 	basePath := filepath.Join("templates", bundleDir)
 	err := fs.WalkDir(templates, basePath, func(path string, d fs.DirEntry, err error) error {
@@ -76,7 +73,7 @@ func RenderBundle(bundleDir string, bt BundleVars) error {
 			if err != nil {
 				return fmt.Errorf("basePath: %s, path: %s, error: %w", basePath, path, err)
 			}
-			return bt.renderTemplate(getTemplate(path), opFile)
+			return bt.renderTemplate(getTemplate(path), filepath.Join(opDir, opFile))
 		}
 		return nil
 	})
@@ -87,7 +84,7 @@ func RenderBundle(bundleDir string, bt BundleVars) error {
 // RepoPolicies.renderTemplate only supports creating output on
 // regular filesystems and is not concerned about git repositories
 func (rs *RepoPolicies) renderTemplate(t *template.Template, opFile string) error {
-	log.Trace().Str("outputPath", opFile).Msg("rendering template")
+	log.Trace().Str("outputPath", opFile).Msg("rendering RepoPolicies template")
 	op, err := os.Create(opFile)
 	if err != nil {
 		return err
@@ -97,21 +94,29 @@ func (rs *RepoPolicies) renderTemplate(t *template.Template, opFile string) erro
 	return t.Execute(op, rs)
 }
 
-// RepoPolicies.renderTemplate will render one template into its corresponding path in the git tree
-//
-//	that should be written to in the git repo.
+// RepoPolicies.renderTemplate will render one template into its corresponding path
 func (r *RepoPolicy) renderTemplate(t *template.Template, opFile string) error {
+	log.Trace().Str("outputPath", opFile).Msg("rendering RepoPolicy template")
 	// Set current timestamp if not set already
 	if r.Timestamp == "" {
 		r.SetTimestamp(time.Time{})
 	}
-	log.Logger = log.With().Str("repo", r.Name).Logger()
-	log.Debug().Msg("rendering")
-	op, err := r.gitRepo.CreateFile(opFile)
-	if err != nil {
-		return err
+	var op io.Writer
+	if strings.HasPrefix(opFile, "-") {
+		op = io.Writer(os.Stdout)
+	} else {
+		dir, _ := filepath.Split(opFile)
+		err := os.MkdirAll(dir, 0755)
+		if err != nil && !os.IsExist(err) {
+			return err
+		}
+		opf, err := os.Create(opFile)
+		if err != nil {
+			return err
+		}
+		defer opf.Close()
+		op = io.Writer(opf)
 	}
-	defer op.Close()
 
 	return t.Execute(op, r)
 }

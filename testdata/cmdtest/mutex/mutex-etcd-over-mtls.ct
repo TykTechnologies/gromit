@@ -1,10 +1,8 @@
-$ gromit mutex get testlock --host ${TEST_ETCD_TLS_HOST} --tlsauth  --script ${TEST_SCRIPT_PATH} --testlogs
-{"level":"info","output":"Sleeping for 15 seconds\n","time":"0001-01-01T00:00:00Z","message":"script output"}
+$ gromit mutex get testlock --host ${TEST_ETCD_TLS_HOST} --tlsauth  --script ${TEST_SCRIPT_PATH} --loglevel fatal
 
 # Runs with a non-existent script file - this should fail and the lock should be released immediately.
-$ gromit mutex get testlock  --host ${TEST_ETCD_TLS_HOST} --tlsauth --script ./non-existent-script.sh --testlogs --> FAIL
-{"level":"fatal","error":"fork/exec ./non-existent-script.sh: no such file or directory","output":"","time":"0001-01-01T00:00:00Z","message":"could not execute script"}
+$ gromit mutex get testlock  --host ${TEST_ETCD_TLS_HOST} --tlsauth --script ./non-existent-script.sh --loglevel fatal --> FAIL
+Error: fork/exec ./non-existent-script.sh: no such file or directory
 
 # Tests if the lock is released immediately from the above run.
-$ gromit mutex get testlock --host ${TEST_ETCD_TLS_HOST} --tlsauth  --script ${TEST_SCRIPT_PATH} --testlogs
-{"level":"info","output":"Sleeping for 15 seconds\n","time":"0001-01-01T00:00:00Z","message":"script output"}
+$ gromit mutex get testlock --host ${TEST_ETCD_TLS_HOST} --tlsauth  --script ${TEST_SCRIPT_PATH} --loglevel fatal

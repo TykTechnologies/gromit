@@ -1,10 +1,12 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
+
+	_ "embed"
 
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/rs/zerolog"
@@ -17,6 +19,9 @@ import (
 var ZoneID, Domain, TableName, RegistryID, RepoURLPrefix string
 var Repos []string
 
+//go:embed config.yaml
+var config []byte
+
 // LoadConfig is a helper function that loads the environment into the
 // global variables TableName, RegistryID and so on defined at the top
 // of this file. It is called from initConfig as well as any tests that
@@ -27,31 +32,19 @@ func LoadConfig(cfgFile string) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 
-	// Local config path
-	var confPath = fmt.Sprintf("%s/.config/%s", os.Getenv("HOME"), appName)
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-		confPath = filepath.Dir(cfgFile)
-		log.Debug().Str("file", cfgFile).Msg("using config file")
-	} else if xdgHome := os.Getenv("XDG_CONFIG_HOME"); xdgHome != "" {
-		confPath = filepath.Join(xdgHome, appName)
-		log.Debug().Str("path", confPath).Msg("looking for config path")
-	} else {
-		log.Debug().Str("path", confPath).Msg("using default config path")
-	}
-
-	viper.AddConfigPath(confPath)
-	viper.Set("confpath", confPath)
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		log.Debug().Str("file", viper.ConfigFileUsed()).Msg("reading config from")
+		log.Debug().Str("file", viper.ConfigFileUsed()).Msg("reading config from, use env vars to override specific parameters")
 	} else {
-		log.Debug().Msg("No config file read, depending on env variables")
+		if err = viper.ReadConfig(bytes.NewReader(config)); err != nil {
+			log.Fatal().Bytes("config", config).Msg("could not read embedded config")
+		} else {
+			log.Debug().Msg("using embedded config, use env vars to override")
+		}
 	}
 	// Look in env first for every viper.Get* call
 	viper.AutomaticEnv()
-	viper.SetEnvPrefix("GROMIT")
+	viper.SetEnvPrefix(strings.ToUpper(appName))
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
 
