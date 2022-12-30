@@ -136,7 +136,7 @@ policy:
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
           convos: false
-          tests: ["commit message linter", "test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
+          tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
           reviewcount: 0
           branch:
             release-3-lts:
