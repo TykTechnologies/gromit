@@ -6,29 +6,27 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
 	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
-	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/memfs"
-	"github.com/go-git/go-billy/v5/osfs"
-	"github.com/go-git/go-billy/v5/util"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
-	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/google/go-github/v47/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
 )
 
+// GitRepo models a local git worktree with the authentication and
+// metadata to push it to github
 type GitRepo struct {
 	Name         string
 	commitOpts   *git.CommitOptions
@@ -36,7 +34,7 @@ type GitRepo struct {
 	branch       string // local branch
 	remoteBranch string // remote branch
 	worktree     *git.Worktree
-	fs           billy.Filesystem
+	dir          string
 	auth         transport.AuthMethod
 	gh           *github.Client
 	ghV4         *githubv4.Client
@@ -46,11 +44,32 @@ type GitRepo struct {
 
 const defaultRemote = "origin"
 
+// InitGit is a constructor for the GitRepo type
+// private repos will ghToken
+func Init(fqdnRepo, branch string, depth int, dir, ghToken string) (*GitRepo, error) {
+	log.Logger = log.With().Str("repo", fqdnRepo).Str("branch", branch).Logger()
+
+	fi, err := os.Stat(dir)
+	if os.IsNotExist(err) || !fi.IsDir() {
+		log.Debug().Str("dir", dir).Msg("does not exist")
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, err
+		}
+	}
+	gitRepo, err := FetchRepo(fqdnRepo, dir, ghToken, depth)
+	if err != nil {
+		return gitRepo, err
+	}
+	err = gitRepo.Checkout(branch)
+	return gitRepo, err
+}
+
 // FetchRepo clones a repo into the given dir or an in-memory fs
 // pass depth=0 for full clone
-// if an authtoken is passed am authenticated github client is enabled
+// if an authtoken is passed authenticated github v3 and v4 clients are enabled
 func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
-	log.Debug().Str("repo", fqdnRepo).Str("dir", dir).Int("depth", depth).Msg("fetching repo")
+	log.Debug().Str("dir", dir).Int("depth", depth).Msg("fetching")
 	opts := &git.CloneOptions{
 		URL:      fqdnRepo,
 		Progress: os.Stdout,
@@ -82,19 +101,12 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 
 	log.Trace().Interface("opts", opts).Msg("git clone options")
 	var repo *git.Repository
-	var fs billy.Filesystem
-	var err error
-	if dir == "" {
-		log.Info().Msg("using in-memory clone")
-		fs = memfs.New()
-		repo, err = git.Clone(memory.NewStorage(), fs, opts)
-	} else {
-		log.Info().Str("dir", dir).Msg("using plain os filesystem clone")
-		fs = osfs.New(dir)
-		repo, err = git.PlainOpen(dir)
-		if err == git.ErrRepositoryNotExists {
-			log.Warn().Str("dir", dir).Msg("existing clone not available - initiating fresh clone")
-			repo, err = git.PlainClone(dir, false, opts)
+	repo, err := git.PlainOpen(dir)
+	if err == git.ErrRepositoryNotExists {
+		log.Warn().Str("dir", dir).Msg("does not seem to be a git repo, initiating clone")
+		repo, err = git.PlainClone(dir, false, opts)
+		if err != nil {
+			return nil, err
 		}
 	}
 	if err != nil {
@@ -109,7 +121,7 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 		auth:     opts.Auth,
 		repo:     repo,
 		worktree: w,
-		fs:       fs,
+		dir:      dir,
 		gh:       gh,
 		ghV4:     ghV4,
 		commitOpts: &git.CommitOptions{
@@ -342,16 +354,10 @@ func (r *GitRepo) Branches(re string) ([]string, error) {
 	return branches, nil
 }
 
-// Readfile reads the corresponding file from the repo and returns
-// the contents as a byte array.
-func (r *GitRepo) ReadFile(path string) ([]byte, error) {
-	return util.ReadFile(r.fs, path)
-}
-
 // CreateFile will create a file in a directory, truncating it if it already exists with the embedded git worktree.
 // Any intermediate directories are also created.
-func (r *GitRepo) CreateFile(path string) (billy.File, error) {
-	op, err := r.fs.Create(path)
+func (r *GitRepo) CreateFile(path string) (*os.File, error) {
+	op, err := os.Create(filepath.Join(r.dir, path))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}

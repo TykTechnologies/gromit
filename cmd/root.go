@@ -34,6 +34,9 @@ var cfgFile string
 // AWScfg is used in cluster, sow, reap and the server
 var AWScfg aws.Config
 
+// Repos is used in git, bundle and policy
+var Repos = []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"}
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "gromit",
