@@ -2,8 +2,9 @@
 # automation, and any other automation including automated PR generation
 # from gromit.
 
-# `prefix` is used to derive the fully qualified github URL for the repos
-prefix: https://github.com/TykTechnologies
+git:
+  # `prefix` is used to derive the fully qualified github URL for the repos
+  prefix: https://github.com/TykTechnologies
 
 # `policy` is the root object for the policy and bundle commands. Any
 # parent policy options provided here can be overridden by repo

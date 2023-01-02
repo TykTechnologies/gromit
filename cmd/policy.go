@@ -28,9 +28,8 @@ import (
 )
 
 var configPolicies policy.Policies
-var repos []string
-var branch string
-var jsonOutput, dryRun, autoMerge, bundle bool
+var Branch string
+var jsonOutput, dryRun, autoMerge bool
 var ghToken string
 var prBranch string
 
@@ -55,9 +54,6 @@ var policyCmd = &cobra.Command{
 		} else {
 			cmd.Println(configPolicies)
 		}
-		if bundle {
-			cmd.Println("Bundle list, directories have a trailing :")
-		}
 	},
 }
 
@@ -72,7 +68,7 @@ The files are only rendered, applying them requires an org-level PAT. For the pu
 
 		rp, err := configPolicies.GetAllRepos(config.RepoURLPrefix)
 		if err != nil {
-			log.Fatal().Err(err).Strs("repos", repos).Msg("could not aggregate all repos")
+			log.Fatal().Err(err).Strs("repos", Repos).Msg("could not aggregate all repos")
 		}
 
 		err = policy.RenderBundle("gpac", "", policy.BundleVars(&rp))
@@ -95,15 +91,15 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 	Run: func(cmd *cobra.Command, args []string) {
 		commitMsg := strings.Join(args, "\n")
 		signingKeyid := viper.GetUint64("signingkey")
-		for _, repoName := range repos {
-			repo, err := configPolicies.GetRepo(repoName, config.RepoURLPrefix, branch)
+		for _, repoName := range Repos {
+			repo, err := configPolicies.GetRepo(repoName, config.RepoURLPrefix, Branch)
 			if err != nil {
 				log.Fatal().Err(err).Msg("getting repo")
 			}
 			// use dir as prefix if operating on multiple repos, append the repo
 			// name to have different directories for different repos.
 			checkoutDir := dir
-			if len(repos) > 1 {
+			if len(Repos) > 1 {
 				checkoutDir = dir + "-" + repoName
 			}
 			err = repo.InitGit(1, signingKeyid, checkoutDir, ghToken)
@@ -128,7 +124,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			}
 			log.Info().Str("hash", hash.String()).Msg("Commited the changes")
 
-			prURL, err := repo.CreatePR("releng", commitMsg, branch, dryRun, autoMerge)
+			prURL, err := repo.CreatePR("releng", commitMsg, Branch, dryRun, autoMerge)
 			if err != nil {
 				log.Fatal().Err(err).Msg("unable to create PR")
 			}
@@ -165,8 +161,8 @@ func init() {
 	docSubCmd.Flags().String("pattern", "^(release-[[:digit:].]+|master)", "Regexp to match release engineering branches")
 	policyCmd.AddCommand(docSubCmd)
 
-	policyCmd.PersistentFlags().StringSliceVar(&repos, "repos", []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal", "tyk-analytics-ui"}, "Repos to operate upon, comma separated values accepted.")
-	policyCmd.PersistentFlags().StringVar(&branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
+	policyCmd.PersistentFlags().StringSliceVar(&Repos, "repos", Repos, "Repos to operate upon, comma separated values accepted.")
+	policyCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
 	policyCmd.PersistentFlags().Bool("sign", false, "Sign commits, requires -k/--key. gpgconf and an active gpg-agent are required if the key is protected by a passphrase.")
 	policyCmd.PersistentFlags().StringVarP(&config.RepoURLPrefix, "prefix", "u", "https://github.com/TykTechnologies", "Prefix to derive the fqdn repo")
 	policyCmd.PersistentFlags().BoolVarP(&dryRun, "dry", "d", false, "Will not make any changes")
