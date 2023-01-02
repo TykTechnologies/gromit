@@ -17,7 +17,7 @@ require (
 	github.com/jinzhu/copier v0.3.5
 	github.com/mongodb/mongo-tools v0.0.0-20200911144454-4ba3e828ed5c
 	github.com/mongodb/mongo-tools-common v4.0.6+incompatible
-	github.com/rs/zerolog v1.19.0
+	github.com/rs/zerolog v1.28.0
 	github.com/shurcooL/githubv4 v0.0.0-20221021030919-a134b1472cc7
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.7.2-0.20210422093502-50f933027707
@@ -37,7 +37,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudflare/circl v1.3.1 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
-	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
+	github.com/coreos/go-systemd/v22 v22.3.3-0.20220203105225-a9a7ef127534 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -60,6 +60,8 @@ require (
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/compress v1.9.5 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.0 // indirect
