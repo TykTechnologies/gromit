@@ -8,7 +8,7 @@ on:
 jobs:
   doctor:
     runs-on: ubuntu-latest
-    container: tykio/gromit:v1.4.5
+    container: tykio/gromit:v1.4.6-rc1
     strategy:
       matrix:
         repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal]
