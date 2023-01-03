@@ -57,10 +57,27 @@ cd <dir>; git checkout <branch>`,
 	},
 }
 
+var diffSubCmd = &cobra.Command{
+	Use:   "diff <dir>",
+	Args:  cobra.MaximumNArgs(1),
+	Short: "Compute if there are differences worth pushing (requires git)",
+	Long:  `Parses the output of git diff --staged -G'(^[^#])' to make a decision. Fails if there are non-trivial diffs, or if there was a problem. This failure mode is chosen so that it can work as a gate.`,
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dir := args[0]
+		dfs, err := git.NonTrivial(dir)
+		if len(dfs) > 0 {
+			return fmt.Errorf("non-trivial diffs in %s for files: %v", dir, dfs)
+		}
+		return err
+	},
+}
+
 func init() {
 	gitCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
 
 	coSubCmd.Flags().String("dir", "", "Directory to check out into, default: <repo>")
 	gitCmd.AddCommand(coSubCmd)
+	gitCmd.AddCommand(diffSubCmd)
 	rootCmd.AddCommand(gitCmd)
 }
