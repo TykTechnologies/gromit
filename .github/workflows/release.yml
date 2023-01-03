@@ -149,6 +149,6 @@ jobs:
         name: Goreleaser
         with:
           version: latest
-          args: release --rm-dist ${{ !startsWith(github.ref, 'refs/tags/') && '--snapshot' }}
+          args: release --rm-dist ${{ !startsWith(github.ref, 'refs/tags/') && '--snapshot' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
