@@ -478,3 +478,8 @@ func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (*githu
 func (r *GitRepo) SetDryRun(dryRun bool) {
 	r.dryRun = dryRun
 }
+
+// (r *GitRepo) ReadFile returns the contents of a file from the worktree.
+func (r *GitRepo) ReadFile(path string) ([]byte, error) {
+	return os.ReadFile(filepath.Join(r.dir, path))
+}

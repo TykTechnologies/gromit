@@ -1,0 +1,34 @@
+$ gromit version
+known at build time
+
+$ gromit help
+It also has a grab bag of various ops automation.
+Each gromit command has its own config section. For instance, the policy command uses the policy key in the config file. Config values can be overridden by environment variables. For instance, policy.prefix can be overridden using the variable $GROMIT_POLICY_PREFIX.
+
+Usage:
+  gromit [command]
+
+Available Commands:
+  bundle      Operate on bundles
+  cluster     Manage cluster of tyk components
+  completion  Generate completion script
+  env         Mess about with the env state
+  git         Top-level git command, use a sub-command to perform an operation
+  help        Help about any command
+  licenser    Get a trial license and writes it to path, overwriting it
+  mutex       Interact with MaaS
+  orgs        Dump/restore org keys and mongodb
+  passwd      Returns the password hash of the given plaintext
+  policy      Templatised policies that are driven by the config file
+  reap        Reap envs from GROMIT_TABLENAME, using a config tree at <config root path>
+  serve       Run endpoint for github requests
+  sow         Sow envs creating a config tree at <config root path>
+  version     Print version
+
+Flags:
+  -f, --conf string       YAML config file. If not supplied, embedded defaults will be used
+  -h, --help              help for gromit
+      --loglevel string   Log verbosity: trace, debug, info, warn, error/fatal (default "info")
+      --textlogs          Logs in plain text
+
+Use "gromit [command] --help" for more information about a command.
