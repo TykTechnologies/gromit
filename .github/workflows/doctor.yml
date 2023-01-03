@@ -13,7 +13,7 @@ jobs:
       matrix:
         repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal]
         branch: [master]
-        bundle: [releng]
+        bundle: [releng, sync]
 
     steps:
       - uses: actions/checkout@v3
