@@ -9,10 +9,11 @@ Usage:
   gromit [command]
 
 Available Commands:
-  bundle      Operate on an embedded bundle
+  bundle      Operate on bundles
   cluster     Manage cluster of tyk components
   completion  Generate completion script
   env         Mess about with the env state
+  git         Top-level git command, use a sub-command to perform an operation
   help        Help about any command
   licenser    Get a trial license and writes it to path, overwriting it
   mutex       Interact with MaaS
