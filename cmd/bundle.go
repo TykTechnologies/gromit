@@ -84,16 +84,6 @@ var genSubCmd = &cobra.Command{
 	},
 }
 
-var diffSubCmd = &cobra.Command{
-	Use:   "diff <bundle>",
-	Args:  cobra.MinimumNArgs(1),
-	Short: "Render the bundle and diff it against known good output",
-	Long:  `Known good templates`,
-	Run: func(cmd *cobra.Command, args []string) {
-		log.Fatal().Msg("not implemented yet")
-	},
-}
-
 func init() {
 	bundleCmd.PersistentFlags().StringVar(&bundle, "bundle", "releng", "Bundle to use, local bundles should start with . or /")
 	bundleCmd.PersistentFlags().StringVar(&repo, "repo", "tyk-pump", "Use parameters from policy.<repo>")

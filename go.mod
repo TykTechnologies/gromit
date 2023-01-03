@@ -21,6 +21,7 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.7.2-0.20210422093502-50f933027707
 	github.com/stretchr/testify v1.8.1
+	github.com/waigani/diffparser v0.0.0-20190828052634-7391f219313d
 	go.etcd.io/etcd/client/v3 v3.5.4
 	golang.org/x/crypto v0.4.0
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
