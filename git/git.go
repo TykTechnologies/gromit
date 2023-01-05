@@ -1,10 +1,11 @@
 package git
 
 import (
+	"bytes"
 	"context"
-	"errors"
+	"embed"
 	"fmt"
-	"net/url"
+	"html/template"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -28,26 +29,25 @@ import (
 // GitRepo models a local git worktree with the authentication and
 // metadata to push it to github
 type GitRepo struct {
-	Name         string
-	commitOpts   *git.CommitOptions
-	repo         *git.Repository
-	branch       string // local branch
-	remoteBranch string // remote branch
-	worktree     *git.Worktree
-	dir          string
-	auth         transport.AuthMethod
-	gh           *github.Client
-	ghV4         *githubv4.Client
-	prs          []string
-	dryRun       bool
+	Name       string
+	Owner      string
+	commitOpts *git.CommitOptions
+	repo       *git.Repository
+	worktree   *git.Worktree
+	dir        string
+	auth       transport.AuthMethod
+	gh         *github.Client
+	ghV4       *githubv4.Client
+	prs        []string
+	dryRun     bool
 }
 
 const defaultRemote = "origin"
 
 // InitGit is a constructor for the GitRepo type
-// private repos will ghToken
-func Init(fqdnRepo, branch string, depth int, dir, ghToken string) (*GitRepo, error) {
-	log.Logger = log.With().Str("repo", fqdnRepo).Str("branch", branch).Logger()
+// private repos will need ghToken
+func Init(repoName, owner, branch string, depth int, dir, ghToken string, clone bool) (*GitRepo, error) {
+	log.Logger = log.With().Str("repo", repoName).Str("branch", branch).Str("owner", owner).Logger()
 
 	fi, err := os.Stat(dir)
 	if os.IsNotExist(err) || !fi.IsDir() {
@@ -56,22 +56,15 @@ func Init(fqdnRepo, branch string, depth int, dir, ghToken string) (*GitRepo, er
 		if err != nil {
 			return nil, err
 		}
+		clone = true
 	}
-	gitRepo, err := FetchRepo(fqdnRepo, dir, ghToken, depth)
-	if err != nil {
-		return gitRepo, err
-	}
-	err = gitRepo.Checkout(branch)
-	return gitRepo, err
-}
 
-// FetchRepo clones a repo into the given dir or an in-memory fs
-// pass depth=0 for full clone
-// if an authtoken is passed authenticated github v3 and v4 clients are enabled
-func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
-	log.Debug().Str("dir", dir).Int("depth", depth).Msg("fetching")
+	var gh *github.Client
+	var ghV4 *githubv4.Client
+
+	fqrn := fmt.Sprintf("https://github.com/%s/%s", owner, repoName)
 	opts := &git.CloneOptions{
-		URL:      fqdnRepo,
+		URL:      fqrn,
 		Progress: os.Stdout,
 		// FIXME: https://github.com/go-git/go-git/issues/207
 		//Depth: depth,
@@ -79,45 +72,29 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 	if depth > 0 {
 		opts.Depth = depth
 	}
-
-	var gh *github.Client     // ghV3client
-	var ghV4 *githubv4.Client // ghV4client
-
-	if authToken != "" {
+	if ghToken != "" {
 		opts.Auth = &http.BasicAuth{
 			Username: "abc123", // anything except an empty string
-			Password: authToken,
+			Password: ghToken,
 		}
-		ctx := context.Background()
-
 		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: authToken},
+			&oauth2.Token{AccessToken: ghToken},
 		)
-		tc := oauth2.NewClient(ctx, ts)
+		tc := oauth2.NewClient(context.Background(), ts)
 
 		gh = github.NewClient(tc)
 		ghV4 = githubv4.NewClient(tc)
 	}
 
-	log.Trace().Interface("opts", opts).Msg("git clone options")
 	var repo *git.Repository
-	repo, err := git.PlainOpen(dir)
-	if err == git.ErrRepositoryNotExists {
-		log.Warn().Str("dir", dir).Msg("does not seem to be a git repo, initiating clone")
+	repo, err = git.PlainOpen(dir)
+	if clone && err == git.ErrRepositoryNotExists {
 		repo, err = git.PlainClone(dir, false, opts)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if err != nil {
-		return nil, err
 	}
 	w, err := repo.Worktree()
-	if err != nil {
-		return nil, err
-	}
 	return &GitRepo{
-		Name:     fqdnRepo,
+		Name:     repoName,
+		Owner:    owner,
 		auth:     opts.Auth,
 		repo:     repo,
 		worktree: w,
@@ -140,52 +117,39 @@ func FetchRepo(fqdnRepo, dir, authToken string, depth int) (*GitRepo, error) {
 func (r *GitRepo) AddFile(path string) (plumbing.Hash, error) {
 	hash, err := r.worktree.Add(path)
 	if err != nil {
-		return plumbing.ZeroHash, fmt.Errorf("adding to worktree: %w", err)
+		return plumbing.ZeroHash, err
 	}
 	return hash, nil
 }
 
-func (r *GitRepo) Head() (*object.Commit, error) {
-	origRef, err := r.repo.Head()
+// Gets the bare branch that is currently checked out
+func (r *GitRepo) Branch() string {
+	h, err := r.repo.Head()
 	if err != nil {
-		return nil, fmt.Errorf("getting hash for original head: %w", err)
+		log.Warn().Err(err).Msg("could not get current branch")
+		return ""
 	}
-	return r.repo.CommitObject(origRef.Hash())
+	refs := strings.Split(h.String(), "/")
+	return refs[len(refs)-1]
 }
 
-// GithubRepoComponents returns the owner and reponame of the
-// github fqdn, returns error if invalid fqdn or if it's not a
-// github URL.
-func (r *GitRepo) GithubRepoComponents() (string, string, error) {
-	u, err := url.Parse(r.Name)
-	if err != nil {
-		return "", "", fmt.Errorf("URL parse error:(%s): %v", r.Name, err)
-	}
-	if u.Hostname() != "github.com" {
-		return "", "", fmt.Errorf("not github prefix: %s", u.Hostname())
-	}
-	s := strings.Split(u.Path, "/")
-	repo := s[len(s)-1]
-	owner := s[1]
-	//owner := strings.TrimPrefix(u.Path, "/")
-	//repo := strings.TrimPrefix(u.Path, owner+"/")
-	return owner, repo, nil
-}
-
-// Commit commits the current worktree
+// Commit adds all unstaged changes and commits the current worktree, confirming if asked
 // Note that this commit will be lost if it is not pushed to a remote.
-func (r *GitRepo) Commit(msg string) (*object.Commit, error) {
+func (r *GitRepo) Commit(msg string) error {
 	newCommitHash, err := r.worktree.Commit(msg, r.commitOpts)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	log.Trace().Str("hash", newCommitHash.String()).Msg("worktree hash")
+	if err != nil {
+		return err
+	}
 	newCommit, err := r.repo.CommitObject(newCommitHash)
 	if err != nil {
-		return nil, fmt.Errorf("getting new commit: %w", err)
+		return fmt.Errorf("getting new commit: %w", err)
 	}
 	log.Trace().Str("hash", newCommit.String()).Msg("new commit")
-	return newCommit, nil
+	return nil
 }
 
 // SwitchBranch will create a new branch and switch the
@@ -208,7 +172,6 @@ func (r *GitRepo) SwitchBranch(branch string) error {
 	if err != nil {
 		return err
 	}
-	r.branch = branch
 	return err
 }
 
@@ -227,49 +190,29 @@ func (r *GitRepo) Checkout(branch string) error {
 	if err != nil {
 		return fmt.Errorf("resetting: %w", err)
 	}
-	refspec := config.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/heads/%s", branch, branch))
-	err = r.repo.Fetch(&git.FetchOptions{
-		RemoteName:      "origin",
-		RefSpecs:        []config.RefSpec{refspec},
-		Auth:            r.auth,
-		Progress:        os.Stdout,
-		InsecureSkipTLS: false,
-	})
-	if err != nil && err != git.NoErrAlreadyUpToDate {
-		log.Debug().Msg("fetching failed, re-trying")
-		err = r.repo.Fetch(&git.FetchOptions{
-			RemoteName:      "origin",
-			RefSpecs:        []config.RefSpec{refspec},
-			Auth:            r.auth,
-			Progress:        os.Stdout,
-			InsecureSkipTLS: false,
-		})
-		if err != nil {
-			return fmt.Errorf("re-tried fetching: %w", err)
-		}
+	localRef := plumbing.NewBranchReferenceName(branch)
+	remoteRef := plumbing.NewRemoteReferenceName("origin", branch)
+	err = r.repo.Storer.SetReference(plumbing.NewSymbolicReference(localRef, remoteRef))
+	if err != nil {
+		return err
 	}
-	branchRef := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch))
 	err = r.worktree.Checkout(&git.CheckoutOptions{
-		Branch: branchRef,
+		Branch: plumbing.ReferenceName(localRef.String()),
 		Force:  true,
 	})
 	if err != nil {
 		return fmt.Errorf("checkout: %w", err)
 	}
-	r.branch = branch
 	return nil
 }
 
 // Push will push the current worktree to origin
 // If remoteBranch is empty, then it pushes to same branch as the local checkout
-func (r *GitRepo) Push(branch, remoteBranch string) error {
-	if remoteBranch == "" {
-		remoteBranch = branch
-	}
-	if remoteBranch == branch {
+func (r *GitRepo) Push(remoteBranch string) error {
+	if remoteBranch == r.Branch() {
 		log.Warn().Msg("pushing to same branch as checkout")
 	}
-	rs := fmt.Sprintf("+refs/heads/%s:refs/heads/%s", branch, remoteBranch)
+	rs := fmt.Sprintf("+refs/heads/%s:refs/heads/%s", r.Branch(), remoteBranch)
 	log.Trace().Str("refspec", rs).Msg("for push")
 	refspec := config.RefSpec(rs)
 	err := refspec.Validate()
@@ -287,11 +230,10 @@ func (r *GitRepo) Push(branch, remoteBranch string) error {
 			Force:           false,
 			InsecureSkipTLS: false,
 		})
-		if err != nil {
+		if err != nil && err != git.NoErrAlreadyUpToDate {
 			return fmt.Errorf("pushing: %w", err)
 		}
 	}
-	r.remoteBranch = remoteBranch
 	return nil
 }
 
@@ -379,49 +321,9 @@ func (r *GitRepo) PRs() []string {
 	return r.prs
 }
 
-// CurrentBranch returns the current branch the worktree points to.
-func (r GitRepo) CurrentBranch() string {
-	return r.branch
-}
-
-// HasGithub returns the status of the github object, if it's initialized, it
-// returns true, otherwise false.
-func (r GitRepo) HasGithub() bool {
-	if r.gh != nil {
-		return true
-	}
-	return false
-}
-
-// GetPRV4 implements graphql github v4 API to get ID of a given PR, if it exists it
-// returns the PR UNIQUE ID (not number, which is diferent) otherwhise will return nil
-// and error
-func (r *GitRepo) GetPRV4(number int, owner string, repo string) (githubv4.ID, error) {
-
-	var getPR struct {
-		Repo struct {
-			PR struct {
-				ID    githubv4.ID
-				Title string
-				Body  string
-			} `graphql:"pullRequest(number: $number)"`
-		} `graphql:"repository(owner: $owner, name: $repo)"`
-	}
-
-	input := map[string]interface{}{
-		"owner":  githubv4.String(owner),
-		"repo":   githubv4.String(repo),
-		"number": githubv4.Int(number),
-	}
-
-	err := r.ghV4.Query(context.Background(), &getPR, input)
-
-	return getPR.Repo.PR.ID, err
-}
-
-// EnableAutoMergePR implements graphQL github v4 API to mutate graphQL PR object to enable automerge
-// feature, will return error only
-func (r *GitRepo) EnableAutoMergePR(id githubv4.ID) error {
+// EnableAutoMergePR uses the graphQL github v4 API with the PR ID
+// (not number) to mutate graphQL PR object to enable automerge
+func (r *GitRepo) enableAutoMerge(prID *string) error {
 	var mutation struct {
 		Automerge struct {
 			ClientMutationID githubv4.String
@@ -438,48 +340,53 @@ func (r *GitRepo) EnableAutoMergePR(id githubv4.ID) error {
 
 	mergeMethod := githubv4.PullRequestMergeMethodSquash
 
-	input := githubv4.EnablePullRequestAutoMergeInput{
+	amInput := githubv4.EnablePullRequestAutoMergeInput{
 		MergeMethod:   &mergeMethod,
-		PullRequestID: id,
+		PullRequestID: prID,
 	}
 
-	err := r.ghV4.Mutate(context.Background(), &mutation, input, nil)
-
-	return err
+	return r.ghV4.Mutate(context.Background(), &mutation, amInput, nil)
 }
 
-func (r *GitRepo) CreatePR(baseBranch string, title string, body string) (*github.PullRequest, error) {
-	if !r.HasGithub() {
-		return nil, errors.New("github object not initialized")
-	}
-	owner, repo, err := r.GithubRepoComponents()
+//go:embed prs
+var prs embed.FS
+
+func (r *GitRepo) CreatePR(title, remoteBranch, bundle string) (*github.PullRequest, error) {
+	tFile := filepath.Join("prs", bundle+".tmpl")
+	t := template.Must(
+		template.New(bundle+".tmpl").
+			Option("missingkey=error").
+			Funcs(template.FuncMap{
+				"now": time.Now().UTC,
+			}).
+			ParseFS(prs, tFile))
+	body := new(bytes.Buffer)
+	err := t.Execute(body, r)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting github comps from fqdn: (%s) : %v", r.Name, err)
+		return nil, err
 	}
-	head := owner + ":" + r.CurrentBranch()
+	localBranch := r.Branch()
 	prOpts := &github.NewPullRequest{
 		Title: github.String(title),
-		Head:  github.String(head),
-		Base:  github.String(baseBranch),
-		Body:  github.String(body),
+		Head:  github.String(remoteBranch),
+		Base:  github.String(localBranch),
+		Body:  github.String(body.String()),
 	}
-
-	pr, _, err := r.gh.PullRequests.Create(context.Background(), owner, repo, prOpts)
+	log.Debug().Interface("propts", prOpts).Str("owner", r.Owner).Str("repo", r.Name).Msg("creating PR")
+	pr, _, err := r.gh.PullRequests.Create(context.Background(), r.Owner, r.Name, prOpts)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating PR:(owner: %s, repo: %s, head: %s,  %v", owner, repo, head, err)
+		return nil, fmt.Errorf("error creating PR for %s:%s: %v", r.Name, localBranch, err)
 	}
 
 	url := pr.GetHTMLURL()
+	log.Debug().Str("pr", url).Msg("created PR")
+
 	r.prs = append(r.prs, url)
+	err = r.enableAutoMerge(pr.NodeID)
 	return pr, err
 }
 
 // (r *GitRepo) SetDryRun(true) will make this repo not perform any destructive action
 func (r *GitRepo) SetDryRun(dryRun bool) {
 	r.dryRun = dryRun
-}
-
-// (r *GitRepo) ReadFile returns the contents of a file from the worktree.
-func (r *GitRepo) ReadFile(path string) ([]byte, error) {
-	return os.ReadFile(filepath.Join(r.dir, path))
 }

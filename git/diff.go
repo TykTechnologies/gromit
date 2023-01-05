@@ -11,7 +11,7 @@ import (
 
 func gitDiff(dir string) (string, error) {
 	var out bytes.Buffer
-	cmd := exec.Command("git", "diff", "-G", "(^[^#])")
+	cmd := exec.Command("git", "diff", "-G", "(^[^#])", "--staged")
 	cmd.Dir = dir
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -29,7 +29,12 @@ func parseDiff(ds string) ([]string, error) {
 	}
 	var dFiles []string
 	for _, df := range d.Files {
-		dFiles = append(dFiles, df.OrigName)
+		fname := df.OrigName
+		if fname == "" {
+			// When a new file is added
+			fname = df.NewName
+		}
+		dFiles = append(dFiles, fname)
 	}
 	return dFiles, nil
 }

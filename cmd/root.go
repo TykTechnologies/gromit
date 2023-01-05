@@ -37,6 +37,9 @@ var AWScfg aws.Config
 // Repos is used in git, bundle and policy
 var Repos = []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"}
 
+// Branch and Owner used in git and policy
+var Branch, Owner string
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "gromit",

@@ -2,14 +2,15 @@ name: Dr. Releng
 
 on:
   pull_request:
-    # paths:
-    #   - policy/templates/**
+    paths:
+      - policy/templates/**
 
 jobs:
   doctor:
     runs-on: ubuntu-latest
     container: tykio/gromit:v1.4.6-rc1
     strategy:
+      fail-fast: false
       matrix:
         repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal]
         branch: [master]
@@ -26,5 +27,5 @@ jobs:
         run: gromit bundle --bundle ${{ matrix.bundle }} --repo ${{ matrix.repo }} gen ${{ matrix.repo }}
 
       - name: Check for zero diffs
+        id: diff
         run: gromit git diff ${{ matrix.repo }}
-
