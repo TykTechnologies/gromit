@@ -16,19 +16,77 @@ http://www.apache.org/licenses/LICENSE-2.0
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"fmt"
 	"os"
+
 	"github.com/TykTechnologies/gromit/git"
-	"github.com/spf13/viper"
+	"github.com/spf13/cobra"
 )
 
 var gitCmd = &cobra.Command{
-	Use:     "git <sub command>",
-	Args:    cobra.MinimumNArgs(1),
-	Short:   "Top-level git command, use a sub-command to perform an operation",
+	Use:   "git <sub command>",
+	Args:  cobra.MinimumNArgs(1),
+	Short: "Top-level git command, use a sub-command to perform an operation",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Fprintln(os.Stderr, "Missing subcommand, see -h")
+	},
+}
+
+var pushSubCmd = &cobra.Command{
+	Use:   "push <dir> <repo> <remote branch> <bundle>",
+	Args:  cobra.MinimumNArgs(4),
+	Short: "Commit, push and create a PR from a local git repo in <dir>",
+	Long: `Uses git.prefix from viper to construct the fully qualified repo name. Any changes will be committed. This command is equivalent to:
+cd <dir>
+git commit -m <msg>
+git push origin
+gh pr create`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dir := args[0]
+		repo := args[1]
+		remoteBranch := args[2]
+		bundle := args[3]
+
+		owner, _ := cmd.Flags().GetString("owner")
+		r, err := git.Init(repo,
+			owner,
+			Branch,
+			1,
+			dir,
+			os.Getenv("GITHUB_TOKEN"), true)
+		if err != nil {
+			return fmt.Errorf("git init %s ./%s: %v", repo, dir, err)
+		}
+		force, _ := cmd.Flags().GetBool("force")
+		dfs, err := git.NonTrivial(dir)
+		if err != nil {
+			return fmt.Errorf("computing diff in %s: %v", dir, err)
+		}
+		if len(dfs) == 0 && !force {
+			cmd.Printf("trivial changes for repo %s branch %s, stopping here", repo, r.Branch())
+			return nil
+		}
+		if len(dfs) > 0 {
+			msg, _ := cmd.Flags().GetString("msg")
+			err = r.Commit(msg)
+			if err != nil {
+				return fmt.Errorf("git commit %s ./%s: %v", repo, dir, err)
+			}
+		}
+		err = r.Push(remoteBranch)
+		if err != nil {
+			return fmt.Errorf("git push %s %s:%s: %v", repo, r.Branch(), remoteBranch, err)
+		}
+		pr, _ := cmd.Flags().GetBool("pr")
+		if pr {
+			title, _ := cmd.Flags().GetString("title")
+			pr, err := r.CreatePR(title, remoteBranch, bundle)
+			if err != nil {
+				return fmt.Errorf("gh create pr --base %s --head %s: %v", r.Branch(), remoteBranch, err)
+			}
+			cmd.Println(pr)
+		}
+		return nil
 	},
 }
 
@@ -40,34 +98,36 @@ var coSubCmd = &cobra.Command{
 	Long: `Uses git.prefix from viper to construct the fully qualified repo name. Changes can be made in this clone and pushed. This command is equivalent to:
 git clone <git.prefix>/<repo> <dir>
 cd <dir>; git checkout <branch>`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		repo := args[0]
 		dir, _ := cmd.Flags().GetString("dir")
 		if dir == "" {
 			dir = repo
 		}
-		_, err := git.Init(fmt.Sprintf("%s/%s", viper.Get("git.prefix"), repo),
+		r, err := git.Init(repo,
+			Owner,
 			Branch,
 			1,
 			dir,
-			os.Getenv("GITHUB_TOKEN"))
+			os.Getenv("GITHUB_TOKEN"), true)
 		if err != nil {
-			cmd.Println(err)
+			return fmt.Errorf("git init %s: %v", repo, err)
 		}
+		return r.Checkout(Branch)
 	},
 }
 
 var diffSubCmd = &cobra.Command{
-	Use:   "diff <dir>",
-	Args:  cobra.MaximumNArgs(1),
-	Short: "Compute if there are differences worth pushing (requires git)",
-	Long:  `Parses the output of git diff --staged -G'(^[^#])' to make a decision. Fails if there are non-trivial diffs, or if there was a problem. This failure mode is chosen so that it can work as a gate.`,
+	Use:          "diff <dir>",
+	Args:         cobra.MinimumNArgs(1),
+	Short:        "Compute if there are differences worth pushing (requires git)",
+	Long:         `Parses the output of git diff --staged -G'(^[^#])' to make a decision. Fails if there are non-trivial diffs, or if there was a problem. This failure mode is chosen so that it can work as a gate.`,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
 		dfs, err := git.NonTrivial(dir)
 		if len(dfs) > 0 {
-			return fmt.Errorf("non-trivial diffs in %s for files: %v", dir, dfs)
+			return fmt.Errorf("non-trivial diffs in %s: %v", dir, dfs)
 		}
 		return err
 	},
@@ -75,9 +135,16 @@ var diffSubCmd = &cobra.Command{
 
 func init() {
 	gitCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
+	gitCmd.PersistentFlags().StringVar(&Owner, "owner", "TykTechnologies", "Github org")
 
 	coSubCmd.Flags().String("dir", "", "Directory to check out into, default: <repo>")
+	pushSubCmd.Flags().String("msg", "automated push by gromit", "Commit message")
+	pushSubCmd.Flags().Bool("pr", false, "Create PR")
+	pushSubCmd.Flags().Bool("force", false, "Proceed even if there are only trivial changes")
+	pushSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
+	pushSubCmd.MarkFlagsRequiredTogether("pr", "title")
 	gitCmd.AddCommand(coSubCmd)
 	gitCmd.AddCommand(diffSubCmd)
+	gitCmd.AddCommand(pushSubCmd)
 	rootCmd.AddCommand(gitCmd)
 }

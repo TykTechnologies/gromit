@@ -3,12 +3,21 @@ package policy
 import (
 	"bytes"
 	"fmt"
-	"text/template"
 
 	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
+
+// GetRepoPolicy will fetch the RepoPolicy with all overrides processed
+func GetRepoPolicy(repo string) (RepoPolicy, error) {
+	var configPolicies Policies
+	err := LoadRepoPolicies(&configPolicies)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not parse repo policies")
+	}
+	return configPolicies.GetRepo(repo, viper.GetString("prefix"), "master")
+}
 
 // branchVals contains the parameters that are specific to a particular branch in a repo
 type branchVals struct {
@@ -46,11 +55,6 @@ type Policies struct {
 
 // RepoPolies aggregates RepoPolicy, indexed by repo name.
 type RepoPolicies map[string]RepoPolicy
-
-// BundleVars is an interface that all datatypes that will be passed to a bundle renderer must satisfy
-type BundleVars interface {
-	renderTemplate(*template.Template, string) error
-}
 
 func (p *Policies) GetAllRepos(prefix string) (RepoPolicies, error) {
 	var rp RepoPolicies
