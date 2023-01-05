@@ -118,11 +118,10 @@ cd <dir>; git checkout <branch>`,
 }
 
 var diffSubCmd = &cobra.Command{
-	Use:          "diff <dir>",
-	Args:         cobra.MinimumNArgs(1),
-	Short:        "Compute if there are differences worth pushing (requires git)",
-	Long:         `Parses the output of git diff --staged -G'(^[^#])' to make a decision. Fails if there are non-trivial diffs, or if there was a problem. This failure mode is chosen so that it can work as a gate.`,
-	SilenceUsage: true,
+	Use:   "diff <dir>",
+	Args:  cobra.MinimumNArgs(1),
+	Short: "Compute if there are differences worth pushing (requires git)",
+	Long:  `Parses the output of git diff --staged -G'(^[^#])' to make a decision. Fails if there are non-trivial diffs, or if there was a problem. This failure mode is chosen so that it can work as a gate.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
 		dfs, err := git.NonTrivial(dir)
