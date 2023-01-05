@@ -46,6 +46,7 @@ var rootCmd = &cobra.Command{
 	Short: "The glue that binds AWS and Github",
 	Long: `It also has a grab bag of various ops automation.
 Each gromit command has its own config section. For instance, the policy command uses the policy key in the config file. Config values can be overridden by environment variables. For instance, policy.prefix can be overridden using the variable $GROMIT_POLICY_PREFIX.`,
+	SilenceUsage: true,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
