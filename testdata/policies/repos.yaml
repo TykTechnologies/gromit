@@ -247,10 +247,9 @@ policy:
         master: [ release-2 ]
     portal:
       description: |
-        Portal is a full-featured developer portal, blog and CMS
+        Developer portal for the Tyk API Gateway
       pcrepo: portal
       dhrepo: tykio/portal
-      csrepo: docker.tyk.io/portal/portal
       exposeports: 80
       reviewers: []
       binary: dev-portal
