@@ -12,9 +12,7 @@
 
   {{- template "cgo_builds" . }}
 
-
   {{- template "nfpm" . }}
-
 
   {{- template "publishers" . }}
 
@@ -22,7 +20,6 @@
 archives:
   - format: binary
     allow_different_binary_count: true
-
   {{- if eq .Name "tyk" }}
 dockers:
     {{- template "plugin-compiler" . }}
