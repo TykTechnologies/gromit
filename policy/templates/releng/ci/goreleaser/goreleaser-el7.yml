@@ -19,7 +19,9 @@
 # This disables archives
 archives:
   - format: binary
+    
     allow_different_binary_count: true
+
   {{- if eq .Name "tyk" }}
 dockers:
     {{- template "plugin-compiler" . }}

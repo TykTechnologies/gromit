@@ -30,6 +30,6 @@ jobs:
         id: diff
         run: |
           output=$(gromit git --loglevel trace diff ${{ matrix.repo }} 2>&1)
-          echo "::error file=${{ matrix.repo }},line=1,col=1,endColumn=1::${output}"
+          echo "::error file=${{ matrix.repo }}::${output}"
 
       
