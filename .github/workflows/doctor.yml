@@ -28,4 +28,4 @@ jobs:
 
       - name: Check for zero diffs
         id: diff
-        run: gromit git diff ${{ matrix.repo }}
+        run: gromit git --textlogs --loglevel trace diff ${{ matrix.repo }}
