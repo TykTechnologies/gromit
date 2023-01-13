@@ -12,7 +12,9 @@
 
   {{- template "cgo_builds" . }}
 
+
   {{- template "nfpm" . }}
+
 
   {{- template "publishers" . }}
 
