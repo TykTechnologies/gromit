@@ -48,6 +48,7 @@ gh pr create`,
 		bundle := args[3]
 
 		owner, _ := cmd.Flags().GetString("owner")
+		pr, _ := cmd.Flags().GetBool("pr")
 		r, err := git.Init(repo,
 			owner,
 			Branch,
@@ -58,7 +59,7 @@ gh pr create`,
 			return fmt.Errorf("git init %s ./%s: %v", repo, dir, err)
 		}
 		force, _ := cmd.Flags().GetBool("force")
-		dfs, err := git.NonTrivial(dir)
+		dfs, err := git.NonTrivial(dir, pr)
 		if err != nil {
 			return fmt.Errorf("computing diff in %s: %v", dir, err)
 		}
@@ -77,7 +78,6 @@ gh pr create`,
 		if err != nil {
 			return fmt.Errorf("git push %s %s:%s: %v", repo, r.Branch(), remoteBranch, err)
 		}
-		pr, _ := cmd.Flags().GetBool("pr")
 		if pr {
 			title, _ := cmd.Flags().GetString("title")
 			pr, err := r.CreatePR(title, remoteBranch, bundle)
@@ -124,7 +124,8 @@ var diffSubCmd = &cobra.Command{
 	Long:  `Parses the output of git diff --staged -G'(^[^#])' to make a decision. Fails if there are non-trivial diffs, or if there was a problem. This failure mode is chosen so that it can work as a gate.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
-		dfs, err := git.NonTrivial(dir)
+		pr, _ := cmd.Flags().GetBool("pr")
+		dfs, err := git.NonTrivial(dir, pr)
 		if len(dfs) > 0 {
 			return fmt.Errorf("non-trivial diffs in %s: %v", dir, dfs)
 		}

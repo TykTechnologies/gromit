@@ -54,6 +54,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 		bundle = args[0]
 		repo = args[1]
 		branch, _ := cmd.Flags().GetString("branch")
+		pr, _ := cmd.Flags().GetBool("pr")
 		// Checkout code into a dir named repo
 		r, err := git.Init(repo, Owner,
 			Branch,
@@ -80,7 +81,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 		if err != nil {
 			return fmt.Errorf("bundle gen %s: %v", bundle, err)
 		}
-		dfs, err := git.NonTrivial(repo)
+		dfs, err := git.NonTrivial(repo, pr)
 		if len(dfs) == 0 {
 			cmd.Printf("trivial changes for repo %s branch %s, stopping here", repo, r.Branch())
 			return nil
@@ -94,7 +95,6 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 		if err != nil {
 			return fmt.Errorf("git push %s %s:%s: %v", repo, r.Branch(), remoteBranch, err)
 		}
-		pr, _ := cmd.Flags().GetBool("pr")
 		if pr {
 			title, _ := cmd.Flags().GetString("title")
 			pr, err := r.CreatePR(title, remoteBranch, bundle)

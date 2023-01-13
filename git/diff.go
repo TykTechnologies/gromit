@@ -9,9 +9,14 @@ import (
 	"github.com/waigani/diffparser"
 )
 
-func gitDiff(dir string) (string, error) {
+func gitDiff(dir string, isPR bool) (string, error) {
 	var out bytes.Buffer
-	cmd := exec.Command("git", "diff", "-G", "(^[^#])", "--staged")
+	var cmd *exec.Cmd
+	if isPR {
+		cmd = exec.Command("git", "diff", "-G", "(^[^#])", "--staged")
+	} else {
+		cmd = exec.Command("git", "diff", "-G", "(^[^#])")
+	}
 	cmd.Dir = dir
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -39,8 +44,8 @@ func parseDiff(ds string) ([]string, error) {
 	return dFiles, nil
 }
 
-func NonTrivial(dir string) ([]string, error) {
-	ds, err := gitDiff(dir)
+func NonTrivial(dir string, isPR bool) ([]string, error) {
+	ds, err := gitDiff(dir, isPR)
 	if err != nil {
 		return nil, err
 	}
