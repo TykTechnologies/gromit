@@ -34,4 +34,4 @@ jobs:
           gromit git diff ${{ matrix.repo }}
           echo "---OUTPUT START---"
           output="This is an Error"
-          echo "::error file=${{ matrix.repo }},line=1,endLine=10::${output}"
+          echo "::error file=${{ matrix.repo }}::${output}"
