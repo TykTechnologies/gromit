@@ -32,6 +32,5 @@ jobs:
         id: diff
         run: |
           gromit git diff ${{ matrix.repo }}
-          echo "---OUTPUT START---"
-          output="This is an Error"
-          echo "::error file=${{ matrix.repo }}::${output}"
+          echo "OUTPUT=This is an error" >> $GITHUB_ENV
+          echo "::error file=${{ matrix.repo }}::${OUTPUT}"
