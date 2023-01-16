@@ -28,4 +28,6 @@ jobs:
 
       - name: Check for zero diffs
         id: diff
-        run: gromit git diff ${{ matrix.repo }}
+        run: |
+        output=$(gromit git diff ${{ matrix.repo }})
+        echo "::notice file=${{ matrix.repo }}::${output}"
