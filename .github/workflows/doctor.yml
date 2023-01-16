@@ -32,7 +32,9 @@ jobs:
         id: diff
         run: |
           echo 'JSON_OUTPUT<<EOF' >> $GITHUB_ENV
-          curl https://example.com >> $GITHUB_ENV
+          LINE 1 >> $GITHUB_ENV
+          LINE 2 >> $GITHUB_ENV
+          LINE 3 >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
 
       - name: Check output
