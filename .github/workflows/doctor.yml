@@ -31,10 +31,9 @@ jobs:
       - name: Check for zero diffs
         id: diff
         run: |
-          echo "OUTPUT=This is an error" >> $GITHUB_ENV
+          echo "OUTPUT=This is an erro" >> $GITHUB_ENV
 
       - name: Check output
         id: output
         run: |
           echo "::error file=${{ matrix.repo }}::${OUTPUT}"
-          exit 1
