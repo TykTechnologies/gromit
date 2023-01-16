@@ -30,4 +30,5 @@ jobs:
         id: diff
         run: |
           output=$(gromit git diff ${{ matrix.repo }} 2>&1)
+          echo "${output}"
           echo "::error file=${{ matrix.repo }},line=1,endLine=10:::${output}"
