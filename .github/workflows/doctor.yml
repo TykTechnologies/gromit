@@ -31,11 +31,7 @@ jobs:
       - name: Check for zero diffs
         id: diff
         run: |
-          echo 'JSON_OUTPUT<<EOF' >> $GITHUB_ENV
-          echo "LINE 1" >> $GITHUB_ENV
-          echo "LINE 2" >> $GITHUB_ENV
-          echo "LINE 3" >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          echo "OUTPUT=LINE 1%0ALINE 2%0ALINE 3" >> $GITHUB_ENV
 
       - name: Check output
         id: output
