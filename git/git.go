@@ -66,11 +66,8 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string, clone 
 	opts := &git.CloneOptions{
 		URL:      fqrn,
 		Progress: os.Stdout,
-		// FIXME: https://github.com/go-git/go-git/issues/207
-		//Depth: depth,
-	}
-	if depth > 0 {
-		opts.Depth = depth
+		// FIXME: Make a shallow clone https://github.com/go-git/go-git/issues/207
+		Depth: depth,
 	}
 	if ghToken != "" {
 		opts.Auth = &http.BasicAuth{
@@ -87,6 +84,7 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string, clone 
 	}
 
 	var repo *git.Repository
+	// FIXME: when an existing repo is found, git pull
 	repo, err = git.PlainOpen(dir)
 	if clone && err == git.ErrRepositoryNotExists {
 		repo, err = git.PlainClone(dir, false, opts)
@@ -323,7 +321,7 @@ func (r *GitRepo) PRs() []string {
 
 // EnableAutoMergePR uses the graphQL github v4 API with the PR ID
 // (not number) to mutate graphQL PR object to enable automerge
-func (r *GitRepo) enableAutoMerge(prID *string) error {
+func (r *GitRepo) EnableAutoMerge(prID string) error {
 	var mutation struct {
 		Automerge struct {
 			ClientMutationID githubv4.String
@@ -365,25 +363,47 @@ func (r *GitRepo) CreatePR(title, remoteBranch, bundle string) (*github.PullRequ
 	if err != nil {
 		return nil, err
 	}
-	localBranch := r.Branch()
 	prOpts := &github.NewPullRequest{
 		Title: github.String(title),
 		Head:  github.String(remoteBranch),
-		Base:  github.String(localBranch),
+		Base:  github.String(r.Branch()),
 		Body:  github.String(body.String()),
 	}
-	log.Debug().Interface("propts", prOpts).Str("owner", r.Owner).Str("repo", r.Name).Msg("creating PR")
-	pr, _, err := r.gh.PullRequests.Create(context.Background(), r.Owner, r.Name, prOpts)
-	if err != nil {
-		return nil, fmt.Errorf("error creating PR for %s:%s: %v", r.Name, localBranch, err)
+	log.Trace().Interface("propts", prOpts).Str("owner", r.Owner).Str("repo", r.Name).Msg("creating PR")
+	pr, resp, err := r.gh.PullRequests.Create(context.Background(), r.Owner, r.Name, prOpts)
+	// Attempt to detect if a PR already existingPR, complexity due to
+	// https://github.com/google/go-github/issues/1441
+	existingPR := false
+	if e, ok := err.(*github.ErrorResponse); ok {
+		for _, ghErr := range e.Errors {
+			if strings.HasPrefix(ghErr.Message, "A pull request already exists") {
+				log.Debug().Interface("ghErr", ghErr).Interface("resp", resp).Msg("found existing PR")
+				existingPR = true
+				break
+			}
+		}
 	}
+	if !existingPR && err != nil {
+		return nil, fmt.Errorf("error creating PR for %s:%s: %v", r.Name, remoteBranch, err)
+	} else if existingPR {
+		prs, err := r.getPR(remoteBranch)
+		if err != nil {
+			return nil, fmt.Errorf("PR %s:%s exists but could not be fetched: %v", r.Name, remoteBranch, err)
+		}
+		// Only one PR for a given head
+		pr = prs[0]
+	}
+	return pr, nil
+}
 
-	url := pr.GetHTMLURL()
-	log.Debug().Str("pr", url).Msg("created PR")
-
-	r.prs = append(r.prs, url)
-	err = r.enableAutoMerge(pr.NodeID)
-	return pr, err
+// getPR searches for PRs created for the head ref/branch
+func (r *GitRepo) getPR(head string) ([]*github.PullRequest, error) {
+	prlOpts := &github.PullRequestListOptions{
+		Head: head,
+	}
+	prs, resp, err := r.gh.PullRequests.List(context.Background(), r.Owner, r.Name, prlOpts)
+	log.Trace().Interface("resp", resp).Msg("getting existing PR")
+	return prs, err
 }
 
 // (r *GitRepo) SetDryRun(true) will make this repo not perform any destructive action

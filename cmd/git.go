@@ -53,7 +53,8 @@ gh pr create`,
 			Branch,
 			1,
 			dir,
-			os.Getenv("GITHUB_TOKEN"), true)
+			os.Getenv("GITHUB_TOKEN"),
+			true)
 		if err != nil {
 			return fmt.Errorf("git init %s ./%s: %v", repo, dir, err)
 		}
@@ -109,7 +110,8 @@ cd <dir>; git checkout <branch>`,
 			Branch,
 			1,
 			dir,
-			os.Getenv("GITHUB_TOKEN"), true)
+			os.Getenv("GITHUB_TOKEN"),
+			true)
 		if err != nil {
 			return fmt.Errorf("git init %s: %v", repo, err)
 		}
@@ -142,6 +144,7 @@ func init() {
 	pushSubCmd.Flags().Bool("force", false, "Proceed even if there are only trivial changes")
 	pushSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
 	pushSubCmd.MarkFlagsRequiredTogether("pr", "title")
+
 	gitCmd.AddCommand(coSubCmd)
 	gitCmd.AddCommand(diffSubCmd)
 	gitCmd.AddCommand(pushSubCmd)

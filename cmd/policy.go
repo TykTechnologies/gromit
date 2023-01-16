@@ -55,11 +55,13 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 		repo = args[1]
 		branch, _ := cmd.Flags().GetString("branch")
 		// Checkout code into a dir named repo
-		r, err := git.Init(repo, Owner,
+		r, err := git.Init(repo,
+			Owner,
 			Branch,
 			1,
 			repo,
-			os.Getenv("GITHUB_TOKEN"), true)
+			os.Getenv("GITHUB_TOKEN"),
+			true)
 		if err != nil {
 			return fmt.Errorf("git init %s: %v", repo, err)
 		}
@@ -80,14 +82,21 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 		if err != nil {
 			return fmt.Errorf("bundle gen %s: %v", bundle, err)
 		}
+		force, _ := cmd.Flags().GetBool("force")
 		dfs, err := git.NonTrivial(repo)
-		if len(dfs) == 0 {
+		if err != nil {
+			return fmt.Errorf("computing diff in %s: %v", repo, err)
+		}
+		if len(dfs) == 0 && !force {
 			cmd.Printf("trivial changes for repo %s branch %s, stopping here", repo, r.Branch())
 			return nil
 		}
-		err = r.Commit(fmt.Sprintf("gromit policy sync for %s", bundle))
-		if err != nil {
-			return fmt.Errorf("commit: %v", err)
+		if len(dfs) > 0 {
+			msg, _ := cmd.Flags().GetString("msg")
+			err = r.Commit(msg)
+			if err != nil {
+				return fmt.Errorf("git commit %s ./%s: %v", repo, repo, err)
+			}
 		}
 		remoteBranch, _ := cmd.Flags().GetString("remotebranch")
 		err = r.Push(remoteBranch)
@@ -102,6 +111,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 				return fmt.Errorf("gh create pr --base %s --head %s: %v", r.Branch(), remoteBranch, err)
 			}
 			cmd.Println(pr)
+			return r.EnableAutoMerge(pr.GetNodeID())
 		}
 		return nil
 	},
@@ -128,6 +138,7 @@ func init() {
 	syncSubCmd.MarkFlagRequired("branch")
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
 	syncSubCmd.PersistentFlags().StringVar(&Owner, "owner", "TykTechnologies", "Github org")
+	syncSubCmd.Flags().Bool("force", false, "Proceed even if there are only trivial changes")
 
 	policyCmd.AddCommand(syncSubCmd)
 
