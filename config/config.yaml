@@ -123,7 +123,7 @@ policy:
       # For up to date info on this, please refer to the latest sync automation
       # templates.
       ports:
-        master: [ release-4 , release-4.2]
+        master: [ release-4 , release-4.3]
         release-3-lts: [release-3.0.11]
     tyk-analytics:
       description: |
@@ -181,7 +181,7 @@ policy:
               sourcebranch: release-4-lts
               tests: []
       ports:
-        master: [ release-4, release-4.2 ]
+        master: [ release-4, release-4.3 ]
         release-3: [release-3-lts]
     tyk-pump:
       description: |
@@ -263,10 +263,9 @@ policy:
         master: [ release-2 ]
     portal:
       description: |
-        Portal is a full-featured developer portal, blog and CMS
+        Developer portal for the Tyk API Gateway
       pcrepo: portal
       dhrepo: tykio/portal
-      csrepo: docker.tyk.io/portal/portal
       exposeports: 80
       reviewers: []
       binary: dev-portal
@@ -326,4 +325,3 @@ policy:
             active: true
             sourcebranch: release-4-lts
             tests: []
-
