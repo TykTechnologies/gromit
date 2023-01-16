@@ -30,4 +30,4 @@ jobs:
         id: diff
         run: |
         output=$(gromit git diff ${{ matrix.repo }})
-        echo "::notice file=${{ matrix.repo }}::${output}"
+        echo "::notice file=${{ matrix.repo }},line=1,col=5,endColumn=7::${output}"
