@@ -31,9 +31,11 @@ jobs:
       - name: Check for zero diffs
         id: diff
         run: |
-          echo "OUTPUT=This is an erro" >> $GITHUB_ENV
+          echo 'JSON_OUTPUT<<EOF' >> $GITHUB_ENV
+          curl https://example.com >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
 
       - name: Check output
         id: output
         run: |
-          echo "::error file=${{ matrix.repo }}::${OUTPUT}"
+          echo "::error file=${{ matrix.repo }}::${JSON_OUTPUT}"
