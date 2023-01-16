@@ -2,8 +2,8 @@ name: Dr. Releng
 
 on:
   pull_request:
-    paths:
-      - policy/templates/**
+    # paths:
+    #   - policy/templates/**
 
 jobs:
   doctor:
@@ -12,9 +12,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal]
+        repo: [tyk]
+        # repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal]
         branch: [master]
-        bundle: [releng, sync]
+        bundle: [releng]
+        # bundle: [releng, sync]
 
     steps:
       - uses: actions/checkout@v3
@@ -30,6 +32,7 @@ jobs:
         id: diff
         run: |
           gromit git diff ${{ matrix.repo }}
-# output=$(gromit git diff ${{ matrix.repo }} 2>&1)
-# echo "${output}"
+          echo "---OUTPUT START---"
+          output=$(gromit git diff ${{ matrix.repo }} 2>&1)
+          echo $output
 # echo "::error file=${{ matrix.repo }},line=1,endLine=10:::${output}"
