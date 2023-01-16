@@ -321,7 +321,7 @@ policy:
             active: true
             sourcebranch: release-4-lts
             tests: []
-          release-4.0.11:
+          release-4.0.12:
             active: true
             sourcebranch: release-4-lts
             tests: []
