@@ -11,7 +11,7 @@ import (
 
 func gitDiff(dir string) (string, error) {
 	var out bytes.Buffer
-	cmd := exec.Command("git", "diff", "-G", "(^[^#])", "--staged")
+	cmd := exec.Command("git", "diff", "-G", "-w", "--ignore-all-space", "(^[^#])", "HEAD")
 	cmd.Dir = dir
 	cmd.Stdout = &out
 	err := cmd.Run()
