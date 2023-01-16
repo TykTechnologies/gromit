@@ -28,7 +28,7 @@ checksum:
   disable: true
 
 release:
-  disable: tru
+  disable: tr1
   github:
     owner: TykTechnologies
     name: {{ .Name }}
