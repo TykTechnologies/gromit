@@ -31,7 +31,6 @@ jobs:
       - name: Check for zero diffs
         id: diff
         run: |
-# gromit git diff ${{ matrix.repo }}
           echo "OUTPUT=This is an error" >> $GITHUB_ENV
 
       - name: Check output
