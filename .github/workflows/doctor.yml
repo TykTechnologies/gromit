@@ -36,4 +36,5 @@ jobs:
       - name: Check output
         id: output
         run: |
-          echo "::error file=${{ matrix.repo }}, endLine=3::${OUTPUT}"
+          echo "::error file=${{ matrix.repo }}::${OUTPUT}"
+          echo "::warning::multi%0Aline"
