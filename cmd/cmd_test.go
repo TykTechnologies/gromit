@@ -22,7 +22,7 @@ func TestCmd(t *testing.T) {
 		t.Log("Cleaning up..")
 		os.Remove("./gromit")
 	})
-	tcDir := "../testdata/cmdtest"
+	tcDir := "cmdtest"
 	dirs, err := os.ReadDir(tcDir)
 	if err != nil {
 		t.Fatal("can't walk the testcas directory")

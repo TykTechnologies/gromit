@@ -34,12 +34,19 @@ var cfgFile string
 // AWScfg is used in cluster, sow, reap and the server
 var AWScfg aws.Config
 
+// Repos is used in git, bundle and policy
+var Repos = []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"}
+
+// Branch and Owner used in git and policy
+var Branch, Owner string
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "gromit",
 	Short: "The glue that binds AWS and Github",
 	Long: `It also has a grab bag of various ops automation.
 Each gromit command has its own config section. For instance, the policy command uses the policy key in the config file. Config values can be overridden by environment variables. For instance, policy.prefix can be overridden using the variable $GROMIT_POLICY_PREFIX.`,
+	SilenceUsage: true,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },

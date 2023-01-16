@@ -3,6 +3,7 @@ package policy
 import (
 	"embed"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -10,16 +11,12 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/TykTechnologies/gromit/git"
 	"github.com/rs/zerolog/log"
 )
 
 //go:embed templates all:templates
 var Bundles embed.FS
-
-// FIXME: the below is for compatibilty, remove when appropriate
-//
-//go:embed templates all:templates
-var templates embed.FS
 
 // bundleNode of a directory tree
 type bundleNode struct {
@@ -28,8 +25,8 @@ type bundleNode struct {
 	Children []*bundleNode
 }
 
-// bundle is a private type representing a directory tree, it can be instantiated by NewBundle()
-type bundle struct {
+// Bundle represents a directory tree, it can be instantiated by NewBundle()
+type Bundle struct {
 	Name string
 	bfs  fs.FS
 	tree *bundleNode
@@ -37,7 +34,7 @@ type bundle struct {
 
 // Add adds the path into the templateNode tree
 // This code due to ChatGPT
-func (b *bundle) Add(path string) {
+func (b *Bundle) Add(path string) {
 	// Split the path into its components
 	components := strings.Split(path, string(os.PathSeparator))
 
@@ -64,7 +61,7 @@ func (b *bundle) Add(path string) {
 
 // Render will walk a tree given in n, depth first, skipping .d nodes
 // All leaf nodes will be rendered
-func (b *bundle) Render(bv BundleVars, opDir string, n *bundleNode) error {
+func (b *Bundle) Render(bv any, opDir string, n *bundleNode, r *git.GitRepo) error {
 	if n == nil {
 		n = b.tree
 	}
@@ -72,7 +69,7 @@ func (b *bundle) Render(bv BundleVars, opDir string, n *bundleNode) error {
 		return nil
 	}
 	for _, child := range n.Children {
-		err := b.Render(bv, opDir, child)
+		err := b.Render(bv, opDir, child, r)
 		if err != nil {
 			return err
 		}
@@ -87,7 +84,33 @@ func (b *bundle) Render(bv BundleVars, opDir string, n *bundleNode) error {
 				Funcs(sprig.TxtFuncMap()).
 				Option("missingkey=error").
 				ParseFS(b.bfs, templatePaths...))
-		return bv.renderTemplate(t, filepath.Join(opDir, n.path))
+		var op io.Writer
+		opFile := filepath.Join(opDir, n.path)
+		if strings.HasPrefix(opFile, "-") {
+			op = io.Writer(os.Stdout)
+		} else {
+			dir, _ := filepath.Split(opFile)
+			err := os.MkdirAll(dir, 0755)
+			if err != nil && !os.IsExist(err) {
+				return err
+			}
+			opf, err := os.Create(opFile)
+			if err != nil {
+				return err
+			}
+			defer opf.Close()
+			op = io.Writer(opf)
+		}
+		err := t.Execute(op, bv)
+		if err != nil {
+			return fmt.Errorf("rendering to %s: %v", opFile, err)
+		}
+		if r != nil {
+			_, err := r.AddFile(n.path)
+			if err != nil {
+				return fmt.Errorf("staging file %s: %v", n.path, err)
+			}
+		}
 	}
 	return nil
 }
@@ -113,7 +136,7 @@ func (n *bundleNode) findSubTemplates(name string) []string {
 }
 
 // String will provide a human readable bundle listing
-func (b *bundle) String() string {
+func (b *Bundle) String() string {
 	return fmt.Sprintf(b.Name) + b.tree.String(0)
 }
 
@@ -127,8 +150,18 @@ func (n *bundleNode) String(indent int) string {
 }
 
 // Returns a bundle by traversing from templates/<bundleDir>
-func NewBundle(bfs fs.FS, bundleName string) (*bundle, error) {
-	b := &bundle{Name: bundleName,
+func NewBundle(bundleName string) (*Bundle, error) {
+	var bfs fs.FS
+	if strings.HasPrefix(bundleName, ".") || strings.HasPrefix(bundleName, "/") {
+		bfs = os.DirFS(bundleName)
+	} else {
+		var err error
+		bfs, err = fs.Sub(Bundles, filepath.Join("templates", bundleName))
+		if err != nil {
+			log.Fatal().Err(err).Msg("fetching embedded templates")
+		}
+	}
+	b := &Bundle{Name: bundleName,
 		bfs:  bfs,
 		tree: &bundleNode{}}
 

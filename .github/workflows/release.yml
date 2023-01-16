@@ -146,9 +146,9 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
             
       - uses: goreleaser/goreleaser-action@v4
-        name: Goreleaser(snapshot)
+        name: Goreleaser
         with:
           version: latest
-          args: release --rm-dist ${{ !startsWith(github.ref, 'refs/tags/') && '--snapshot' }}
+          args: release --rm-dist ${{ !startsWith(github.ref, 'refs/tags/') && '--snapshot' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
