@@ -31,11 +31,11 @@ jobs:
       - name: Check for zero diffs
         id: diff
         run: |
-          gromit git diff ${{ matrix.repo }}
+# gromit git diff ${{ matrix.repo }}
           echo "OUTPUT=This is an error" >> $GITHUB_ENV
-          echo "::error file=${{ matrix.repo }}::${OUTPUT}"
 
       - name: Check output
         id: output
         run: |
           echo "::error file=${{ matrix.repo }}::${OUTPUT}"
+          exit 1
