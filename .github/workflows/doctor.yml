@@ -29,5 +29,5 @@ jobs:
       - name: Check for zero diffs
         id: diff
         run: |
-          output=$(gromit git diff ${{ matrix.repo }})
+          output=$(gromit git diff ${{ matrix.repo }} 2>&1)
           echo "::error file=${{ matrix.repo }}::${output}"
