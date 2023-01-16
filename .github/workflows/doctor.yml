@@ -40,4 +40,4 @@ jobs:
       - name: Check output
         id: output
         run: |
-          echo "::error file=${{ matrix.repo }}::${JSON_OUTPUT}"
+          echo "::error file=${{ matrix.repo }},line=1::${JSON_OUTPUT}"
