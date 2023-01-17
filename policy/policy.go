@@ -10,13 +10,13 @@ import (
 )
 
 // GetRepoPolicy will fetch the RepoPolicy with all overrides processed
-func GetRepoPolicy(repo string) (RepoPolicy, error) {
+func GetRepoPolicy(repo string, branch string) (RepoPolicy, error) {
 	var configPolicies Policies
 	err := LoadRepoPolicies(&configPolicies)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not parse repo policies")
 	}
-	return configPolicies.GetRepo(repo, viper.GetString("prefix"), "master")
+	return configPolicies.GetRepo(repo, viper.GetString("prefix"), branch)
 }
 
 // branchVals contains the parameters that are specific to a particular branch in a repo
@@ -28,11 +28,15 @@ type branchVals struct {
 	UpgradeFromVer string                // Versions to test package upgrades from
 	PCPrivate      bool                  // indicates whether package cloud repo is private
 	Branch         map[string]branchVals `copier:"-"`
-	Active         bool
-	ReviewCount    string
-	Convos         bool
-	Tests          []string
-	SourceBranch   string
+	// RelengVersion specifies which version of releng bundle to choose for
+	// this branch. The conditions for which version to choose where, is always
+	// within the templates.
+	RelengVersion string
+	Active        bool
+	ReviewCount   string
+	Convos        bool
+	Tests         []string
+	SourceBranch  string
 }
 
 // Policies models the config file structure. The config file may contain one or more repos.
@@ -53,7 +57,7 @@ type Policies struct {
 	Branches    branchVals
 }
 
-// RepoPolies aggregates RepoPolicy, indexed by repo name.
+// RepoPolicies aggregates RepoPolicy, indexed by repo name.
 type RepoPolicies map[string]RepoPolicy
 
 func (p *Policies) GetAllRepos(prefix string) (RepoPolicies, error) {
@@ -83,6 +87,24 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	copier.Copy(&b, r.Branches)
 
 	if ib, found := r.Branches.Branch[branch]; found {
+		// Update inner branch with the correct releng version.
+		// The precedence is: explicit releng version >> source branch version >> common branch version
+		if ib.RelengVersion == "" && ib.SourceBranch != "" {
+			var sb branchVals
+			for sbName := ib.SourceBranch; sbName != ""; sbName = sb.SourceBranch {
+				var exists bool
+				if sb, exists = r.Branches.Branch[sbName]; !exists {
+					return RepoPolicy{}, fmt.Errorf("policy error: source branch: %s, for repo: %s doesn't exist", ib.SourceBranch, repo)
+				}
+				if sb.RelengVersion == "" && sb.SourceBranch == "" {
+					ib.RelengVersion = r.Branches.RelengVersion
+					break
+				}
+				if sb.RelengVersion != "" {
+					ib.RelengVersion = sb.RelengVersion
+				}
+			}
+		}
 		copier.CopyWithOption(&b, &ib, copier.Option{IgnoreEmpty: true})
 	}
 
