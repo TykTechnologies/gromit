@@ -53,7 +53,7 @@ nfpms:
         dst: "/opt/{{ .PackageName }}/apps"
       - src: "templates/*.json"
         dst: "/opt/{{ .PackageName }}/templates"
-  {{- if or (eq .Branch.RelengVersion "release-4.x") (eq .Branch.RelengVersion "release-5.x") -}}
+  {{- if or (eq .Branchvals.RelengVersion "release-4.x") (eq .Branchvals.RelengVersion "release-5.x") }}
       - src: "templates/playground/*"
         dst: "/opt/{{ .PackageName }}/templates/playground"
   {{- end }}
