@@ -71,7 +71,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 		if err != nil {
 			return fmt.Errorf("bundle %s: %v", bundle, err)
 		}
-		rp, err := policy.GetRepoPolicy(repo)
+		rp, err := policy.GetRepoPolicy(repo, branch)
 		if err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repo, err)
 		}
