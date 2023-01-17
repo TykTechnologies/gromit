@@ -6,7 +6,7 @@
     strategy:
       fail-fast: false
       matrix:
-  {{- if and .Branchvals.Cgo (ne .Branchvals.RelengVersion "release-3.x") }} {{/* release-3.x version uses the same image for both el7 and non el7 */}}
+  {{- if and .Branchvals.Cgo (ne .Branchvals.RelengVersion "release-3.x") }}{{/* release-3.x version uses the same image for both el7 and non el7 */}}
         golang_cross: [ {{ .Branchvals.GoVersion }}, {{ .Branchvals.GoVersion }}-el7 ]
   {{- else }}
         golang_cross: [ {{ .Branchvals.GoVersion }} ]
