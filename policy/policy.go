@@ -60,6 +60,8 @@ type Policies struct {
 // RepoPolicies aggregates RepoPolicy, indexed by repo name.
 type RepoPolicies map[string]RepoPolicy
 
+// GetAllRepos returns a map of reponame->repopolicy for all the
+// repos in the policy config.
 func (p *Policies) GetAllRepos(prefix string) (RepoPolicies, error) {
 	var rp RepoPolicies
 	for repoName, repoVals := range p.Repos {
@@ -74,6 +76,29 @@ func (p *Policies) GetAllRepos(prefix string) (RepoPolicies, error) {
 	return rp, nil
 }
 
+func (b *branchVals) getRelengVersion(r Policies, repo string) (string, error) {
+	// Update inner branch with the correct releng version.
+	// The precedence is: explicit releng version >> source branch version >> common branch version
+	if b.RelengVersion == "" && b.SourceBranch != "" {
+		var sb branchVals
+		for sbName := b.SourceBranch; sbName != ""; sbName = sb.SourceBranch {
+			var exists bool
+			if sb, exists = r.Branches.Branch[sbName]; !exists {
+				return "", fmt.Errorf("policy error: source branch: %s, for repo: %s doesn't exist", b.SourceBranch, repo)
+			}
+			if sb.RelengVersion == "" && sb.SourceBranch == "" {
+				b.RelengVersion = r.Branches.RelengVersion
+				break
+			}
+			if sb.RelengVersion != "" {
+				b.RelengVersion = sb.RelengVersion
+			}
+		}
+
+	}
+	return b.RelengVersion, nil
+}
+
 // GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates
 // Though Ports can be defined at the global level they are not practically used and if defined will be ignored.
 func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
@@ -86,25 +111,14 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 
 	copier.Copy(&b, r.Branches)
 
+	// Check if the branch has a branch specific policy in the config and override the
+	// common branch values with the branch specific ones.
 	if ib, found := r.Branches.Branch[branch]; found {
-		// Update inner branch with the correct releng version.
-		// The precedence is: explicit releng version >> source branch version >> common branch version
-		if ib.RelengVersion == "" && ib.SourceBranch != "" {
-			var sb branchVals
-			for sbName := ib.SourceBranch; sbName != ""; sbName = sb.SourceBranch {
-				var exists bool
-				if sb, exists = r.Branches.Branch[sbName]; !exists {
-					return RepoPolicy{}, fmt.Errorf("policy error: source branch: %s, for repo: %s doesn't exist", ib.SourceBranch, repo)
-				}
-				if sb.RelengVersion == "" && sb.SourceBranch == "" {
-					ib.RelengVersion = r.Branches.RelengVersion
-					break
-				}
-				if sb.RelengVersion != "" {
-					ib.RelengVersion = sb.RelengVersion
-				}
-			}
+		relengVer, err := ib.getRelengVersion(r, repo)
+		if err != nil {
+			return RepoPolicy{}, err
 		}
+		log.Debug().Str("Releng version", relengVer).Msg("parsed releng version to use.")
 		copier.CopyWithOption(&b, &ib, copier.Option{IgnoreEmpty: true})
 	}
 
