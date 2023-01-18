@@ -96,6 +96,9 @@ policy:
               goversion: 1.12
               upgradefromver: 3.0.4
               relengversion: release-3.x
+            release-3.0.11:
+              active: false
+              relengversion: release-3.x
             release-4:
               active: false
               relengversion: release-4.x
@@ -112,6 +115,10 @@ policy:
               active: true
               sourcebranch: release-4-lts
               tests: []
+            release-3.0.12:
+              active: true
+              sourcebranch: release-3.0.11
+
       # Sync-automation specific policy.
       # we can have multiple sync policies for different source branches.
       # policy should be in the form of:
