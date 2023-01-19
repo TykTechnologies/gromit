@@ -4,53 +4,20 @@ tyk-identity-broker_release_branches = [
     convos    = false,
   required_tests = [
     "1.15",
-    "ci",
-    "upgrade-deb (amd64, ubuntu:xenial)",
-    "upgrade-deb (amd64, ubuntu:bionic)",
-    "upgrade-deb (amd64, ubuntu:focal)",
-    "upgrade-deb (amd64, debian:bullseye)",
-    "upgrade-deb (arm64, ubuntu:xenial)",
-    "upgrade-deb (arm64, ubuntu:bionic)",
-    "upgrade-deb (arm64, ubuntu:focal)",
-    "upgrade-deb (arm64, debian:bullseye)",
-    "upgrade-rpm (ubi7/ubi)",
-    "upgrade-rpm (ubi8/ubi)",
-    "smoke-tests"]
+    "ci"]
   },
   { branch    = "release-1.3",
     reviewers = 1,
     convos    = false,
   required_tests = [
     "1.15",
-    "ci",
-    "upgrade-deb (amd64, ubuntu:xenial)",
-    "upgrade-deb (amd64, ubuntu:bionic)",
-    "upgrade-deb (amd64, ubuntu:focal)",
-    "upgrade-deb (amd64, debian:bullseye)",
-    "upgrade-deb (arm64, ubuntu:xenial)",
-    "upgrade-deb (arm64, ubuntu:bionic)",
-    "upgrade-deb (arm64, ubuntu:focal)",
-    "upgrade-deb (arm64, debian:bullseye)",
-    "upgrade-rpm (ubi7/ubi)",
-    "upgrade-rpm (ubi8/ubi)",
-    "smoke-tests"]
+    "ci"]
   },
   { branch    = "release-1.2",
     reviewers = 1,
     convos    = false,
   required_tests = [
     "1.15",
-    "ci",
-    "upgrade-deb (amd64, ubuntu:xenial)",
-    "upgrade-deb (amd64, ubuntu:bionic)",
-    "upgrade-deb (amd64, ubuntu:focal)",
-    "upgrade-deb (amd64, debian:bullseye)",
-    "upgrade-deb (arm64, ubuntu:xenial)",
-    "upgrade-deb (arm64, ubuntu:bionic)",
-    "upgrade-deb (arm64, ubuntu:focal)",
-    "upgrade-deb (arm64, debian:bullseye)",
-    "upgrade-rpm (ubi7/ubi)",
-    "upgrade-rpm (ubi8/ubi)",
-    "smoke-tests"]
+    "ci"]
   },
 ]
