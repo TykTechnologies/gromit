@@ -5,10 +5,8 @@ tyk-analytics_release_branches = [
   required_tests = [
     "1.16",
     "1.16-el7",
-    "ci",
     "test (1.16.x, ubuntu-latest, amd64, 15.x)",
     "sqlite",
-    "ci",
     "mongo"]
   },
   { branch    = "release-4",
@@ -17,10 +15,8 @@ tyk-analytics_release_branches = [
   required_tests = [
     "1.16",
     "1.16-el7",
-    "ci",
     "test (1.16.x, ubuntu-latest, amd64, 15.x)",
     "sqlite",
-    "ci",
     "mongo"]
   },
   { branch        = "release-4.3",
@@ -30,10 +26,8 @@ tyk-analytics_release_branches = [
   required_tests = [
     "1.16",
     "1.16-el7",
-    "ci",
     "test (1.16.x, ubuntu-latest, amd64, 15.x)",
     "sqlite",
-    "ci",
     "mongo"]
   },
   { branch        = "release-4.3.0",
@@ -43,10 +37,8 @@ tyk-analytics_release_branches = [
   required_tests = [
     "1.16",
     "1.16-el7",
-    "ci",
     "test (1.16.x, ubuntu-latest, amd64, 15.x)",
     "sqlite",
-    "ci",
     "mongo"]
   },
   { branch        = "release-4.3.1",
@@ -56,10 +48,8 @@ tyk-analytics_release_branches = [
   required_tests = [
     "1.16",
     "1.16-el7",
-    "ci",
     "test (1.16.x, ubuntu-latest, amd64, 15.x)",
     "sqlite",
-    "ci",
     "mongo"]
   },
   { branch        = "release-4.3.2",
@@ -69,10 +59,8 @@ tyk-analytics_release_branches = [
   required_tests = [
     "1.16",
     "1.16-el7",
-    "ci",
     "test (1.16.x, ubuntu-latest, amd64, 15.x)",
     "sqlite",
-    "ci",
     "mongo"]
   },
   { branch        = "release-4.0.10",
@@ -82,10 +70,8 @@ tyk-analytics_release_branches = [
   required_tests = [
     "1.16",
     "1.16-el7",
-    "ci",
     "test (1.16.x, ubuntu-latest, amd64, 15.x)",
     "sqlite",
-    "ci",
     "mongo"]
   },
   { branch        = "release-4.0.11",
@@ -95,10 +81,8 @@ tyk-analytics_release_branches = [
   required_tests = [
     "1.16",
     "1.16-el7",
-    "ci",
     "test (1.16.x, ubuntu-latest, amd64, 15.x)",
     "sqlite",
-    "ci",
     "mongo"]
   }
 ]

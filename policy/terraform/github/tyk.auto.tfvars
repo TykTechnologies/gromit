@@ -5,8 +5,7 @@ tyk_release_branches = [
   required_tests = [ 
     "Go 1.16 Redis 5",
     "1.16",
-    "1.16-el7",
-    "ci"]
+    "1.16-el7"]
   },
   { branch    = "release-4",
     reviewers = 0,
@@ -14,8 +13,7 @@ tyk_release_branches = [
   required_tests = [ 
     "Go 1.16 Redis 5",
     "1.16",
-    "1.16-el7",
-    "ci"]
+    "1.16-el7"]
   },
   { branch        = "release-4.3",
     reviewers     = 0,
@@ -24,8 +22,7 @@ tyk_release_branches = [
   required_tests = [ 
     "Go 1.16 Redis 5",
     "1.16",
-    "1.16-el7",
-    "ci"]
+    "1.16-el7"]
   },
   { branch        = "release-4.3.0",
     reviewers     = 0,
@@ -34,8 +31,7 @@ tyk_release_branches = [
   required_tests = [ 
     "Go 1.16 Redis 5",
     "1.16",
-    "1.16-el7",
-    "ci"]
+    "1.16-el7"]
   },
   { branch        = "release-4.3.1",
     reviewers     = 0,
@@ -44,8 +40,7 @@ tyk_release_branches = [
   required_tests = [ 
     "Go 1.16 Redis 5",
     "1.16",
-    "1.16-el7",
-    "ci"]
+    "1.16-el7"]
   },
   { branch        = "release-4.3.2",
     reviewers     = 0,
@@ -54,8 +49,7 @@ tyk_release_branches = [
   required_tests = [ 
     "Go 1.16 Redis 5",
     "1.16",
-    "1.16-el7",
-    "ci"]
+    "1.16-el7"]
   },
   { branch        = "release-4.0.10",
     reviewers     = 0,
@@ -64,8 +58,7 @@ tyk_release_branches = [
   required_tests = [ 
     "Go 1.15 Redis 5",
     "1.15",
-    "1.15-el7",
-    "ci"]
+    "1.15-el7"]
   },
   { branch        = "release-4.0.11",
     reviewers     = 0,
@@ -74,7 +67,6 @@ tyk_release_branches = [
   required_tests = [ 
     "Go 1.15 Redis 5",
     "1.15",
-    "1.15-el7",
-    "ci"]
+    "1.15-el7"]
   }
 ]  
