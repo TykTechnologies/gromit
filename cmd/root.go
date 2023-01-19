@@ -17,7 +17,6 @@ http://www.apache.org/licenses/LICENSE-2.0
 */
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/TykTechnologies/gromit/util"
@@ -56,7 +55,6 @@ Each gromit command has its own config section. For instance, the policy command
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }
