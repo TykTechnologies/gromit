@@ -7,7 +7,7 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20221026131551-cf6655e29de4
 	github.com/aws/aws-sdk-go-v2 v0.24.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/go-git/go-git/v5 v5.5.1
+	github.com/go-git/go-git/v5 v5.5.2
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/go-cmdtest v0.4.1-0.20220921163831-55ab3332a786
 	github.com/google/go-github/v47 v47.1.0
