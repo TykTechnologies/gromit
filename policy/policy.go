@@ -60,6 +60,7 @@ type Policies struct {
 	VulnerabilityAlerts bool
 	SquashMsg           string
 	SquashTitle         string
+	Visibility          string
 }
 
 // RepoPolicies aggregates RepoPolicy, indexed by repo name.
@@ -164,6 +165,8 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 		VulnerabilityAlerts: p.VulnerabilityAlerts,
 		SquashMsg:           p.SquashMsg,
 		SquashTitle:         p.SquashTitle,
+		Wiki:                p.Wiki,
+		Visibility:          p.Visibility,
 	}, nil
 }
 

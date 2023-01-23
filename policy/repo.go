@@ -36,6 +36,7 @@ type RepoPolicy struct {
 	VulnerabilityAlerts bool
 	SquashMsg           string
 	SquashTitle         string
+	Visibility          string
 }
 
 // Returns the destination branches for a given source branch

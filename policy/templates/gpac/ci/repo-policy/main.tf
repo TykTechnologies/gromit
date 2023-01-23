@@ -26,6 +26,7 @@ module "{{ .Name }}" {
   description          = "{{ .Description }}"
   default_branch       = "{{ .Default }}"
   topics                      = [{{ range $index, $topic := .Topics }}{{ if $index }},{{ end }}"{{ $topic }}"{{ end }}]
+  visibility                  = "{{.Visibility}}"
   wiki                        = {{ .Wiki }}
   vulnerability_alerts        = {{ .VulnerabilityAlerts }}
   squash_merge_commit_message = "{{ .SquashMsg }}"
