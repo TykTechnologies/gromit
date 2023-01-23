@@ -10,13 +10,13 @@ import (
 )
 
 // GetRepoPolicy will fetch the RepoPolicy with all overrides processed
-func GetRepoPolicy(repo string) (RepoPolicy, error) {
+func GetRepoPolicy(repo string, branch string) (RepoPolicy, error) {
 	var configPolicies Policies
 	err := LoadRepoPolicies(&configPolicies)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not parse repo policies")
 	}
-	return configPolicies.GetRepo(repo, viper.GetString("prefix"), "master")
+	return configPolicies.GetRepo(repo, viper.GetString("prefix"), branch)
 }
 
 // branchVals contains the parameters that are specific to a particular branch in a repo
@@ -28,11 +28,15 @@ type branchVals struct {
 	UpgradeFromVer string                // Versions to test package upgrades from
 	PCPrivate      bool                  // indicates whether package cloud repo is private
 	Branch         map[string]branchVals `copier:"-"`
-	Active         bool
-	ReviewCount    string
-	Convos         bool
-	Tests          []string
-	SourceBranch   string
+	// RelengVersion specifies which version of releng bundle to choose for
+	// this branch. The conditions for which version to choose where, is always
+	// within the templates.
+	RelengVersion string
+	Active        bool
+	ReviewCount   string
+	Convos        bool
+	Tests         []string
+	SourceBranch  string
 }
 
 // Policies models the config file structure. The config file may contain one or more repos.
@@ -53,9 +57,11 @@ type Policies struct {
 	Branches    branchVals
 }
 
-// RepoPolies aggregates RepoPolicy, indexed by repo name.
+// RepoPolicies aggregates RepoPolicy, indexed by repo name.
 type RepoPolicies map[string]RepoPolicy
 
+// GetAllRepos returns a map of reponame->repopolicy for all the
+// repos in the policy config.
 func (p *Policies) GetAllRepos(prefix string) (RepoPolicies, error) {
 	var rp RepoPolicies
 	for repoName, repoVals := range p.Repos {
@@ -70,6 +76,29 @@ func (p *Policies) GetAllRepos(prefix string) (RepoPolicies, error) {
 	return rp, nil
 }
 
+func (b *branchVals) getRelengVersion(r Policies, repo string) (string, error) {
+	// Update inner branch with the correct releng version.
+	// The precedence is: explicit releng version >> source branch version >> common branch version
+	if b.RelengVersion == "" && b.SourceBranch != "" {
+		var sb branchVals
+		for sbName := b.SourceBranch; sbName != ""; sbName = sb.SourceBranch {
+			var exists bool
+			if sb, exists = r.Branches.Branch[sbName]; !exists {
+				return "", fmt.Errorf("policy error: source branch: %s, for repo: %s doesn't exist", b.SourceBranch, repo)
+			}
+			if sb.RelengVersion == "" && sb.SourceBranch == "" {
+				b.RelengVersion = r.Branches.RelengVersion
+				break
+			}
+			if sb.RelengVersion != "" {
+				b.RelengVersion = sb.RelengVersion
+			}
+		}
+
+	}
+	return b.RelengVersion, nil
+}
+
 // GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates
 // Though Ports can be defined at the global level they are not practically used and if defined will be ignored.
 func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
@@ -82,7 +111,14 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 
 	copier.Copy(&b, r.Branches)
 
+	// Check if the branch has a branch specific policy in the config and override the
+	// common branch values with the branch specific ones.
 	if ib, found := r.Branches.Branch[branch]; found {
+		relengVer, err := ib.getRelengVersion(r, repo)
+		if err != nil {
+			return RepoPolicy{}, err
+		}
+		log.Debug().Str("Releng version", relengVer).Msg("parsed releng version to use.")
 		copier.CopyWithOption(&b, &ib, copier.Option{IgnoreEmpty: true})
 	}
 

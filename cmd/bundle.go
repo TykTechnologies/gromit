@@ -17,13 +17,14 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/TykTechnologies/gromit/policy"
 	"github.com/spf13/cobra"
 )
 
 var (
-	bundle, repo string
+	bundle, repo, branch string
 )
 
 var bundleCmd = &cobra.Command{
@@ -53,7 +54,8 @@ var genSubCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("bundle %s: %v", bundle, err)
 		}
-		rp, err := policy.GetRepoPolicy(repo)
+		rp, err := policy.GetRepoPolicy(repo, branch)
+		rp.SetTimestamp(time.Now().UTC())
 		if err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repo, err)
 		}
@@ -64,8 +66,10 @@ var genSubCmd = &cobra.Command{
 func init() {
 	bundleCmd.PersistentFlags().StringVar(&bundle, "bundle", "releng", "Bundle to use, local bundles should start with . or /")
 	bundleCmd.PersistentFlags().StringVar(&repo, "repo", "tyk-pump", "Use parameters from policy.<repo>")
+	bundleCmd.PersistentFlags().StringVar(&branch, "branch", "master", "Use branch values from policy.<repo>.branch")
 	bundleCmd.MarkPersistentFlagRequired("bundle")
 	bundleCmd.MarkPersistentFlagRequired("repo")
+	bundleCmd.MarkPersistentFlagRequired("branch")
 	bundleCmd.AddCommand(genSubCmd)
 
 	rootCmd.AddCommand(bundleCmd)
