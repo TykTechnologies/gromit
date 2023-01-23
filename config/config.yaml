@@ -18,6 +18,14 @@ policy:
   # the repos. If a repo has a different default branch, say `main`  - this
   # common policy option can be overridden at the branch policy level.
   default: master
+  # Enables wiki feature for the given repo
+  wiki: false
+  # Enables alerts over vulnerability scans for dependabot and others
+  vulnerabilityalerts: true
+  # Squash merge commit body
+  squashmsg: PR_BODY
+  # Squash merge commit title
+  squashtitle: PR_TITLE
   # Repo specific policies start here->
   repos:
     # Repo specific policy for `tyk` starts here->
@@ -47,16 +55,8 @@ policy:
       protected: [ release-3-lts, release-4 ]
       # Ports exposed by the docker images built for this repo/
       exposeports: "8080"
-      #
-      wiki: false
-      #
-      vulnerabilityalerts: true
-      #
+      # Repository topics
       topics: ["api", "api-gateway", "api-management", "cloudnative", "go", "graphql", "grpc", "k8s", "kubernetes", "microservices", "reverse-proxy", "tyk"]
-      #
-      squashmsg: PR_BODY
-      #
-      squashtitle: PR_TITLE
       # Common branch policy for all branches for this
       # repo starts here->
       branches:

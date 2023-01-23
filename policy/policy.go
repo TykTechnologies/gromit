@@ -49,14 +49,14 @@ type Policies struct {
 	Reviewers           []string
 	ExposePorts         string
 	Binary              string
-	Protected           []string
+	Protected           []string `copier:"-"`
 	Goversion           string
 	Default             string              // The default git branch(master/main/anything else)
 	Repos               map[string]Policies // map of reponames to branchPolicies
 	Ports               map[string][]string
 	Branches            branchVals
 	Wiki                bool
-	Topics              []string
+	Topics              []string `copier:"-"`
 	VulnerabilityAlerts bool
 	SquashMsg           string
 	SquashTitle         string
@@ -115,6 +115,8 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	var b branchVals
 
 	copier.Copy(&b, r.Branches)
+	// Override policy values
+	copier.CopyWithOption(&p, &r, copier.Option{IgnoreEmpty: true})
 
 	// Check if the branch has a branch specific policy in the config and override the
 	// common branch values with the branch specific ones.
@@ -158,10 +160,10 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 		Binary:              r.Binary,
 		Description:         r.Description,
 		PackageName:         r.PackageName,
-		Topics:              r.Topics,
-		VulnerabilityAlerts: r.VulnerabilityAlerts,
-		SquashMsg:           r.SquashMsg,
-		SquashTitle:         r.SquashTitle,
+		Topics:              append(p.Topics, r.Topics...),
+		VulnerabilityAlerts: p.VulnerabilityAlerts,
+		SquashMsg:           p.SquashMsg,
+		SquashTitle:         p.SquashTitle,
 	}, nil
 }
 

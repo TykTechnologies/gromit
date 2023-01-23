@@ -13,7 +13,7 @@ import (
 type RepoPolicy struct {
 	Name                string
 	Description         string
-	Protected           []string
+	Protected           []string `copier:"-"`
 	Default             string
 	PCRepo              string
 	DHRepo              string
@@ -32,7 +32,7 @@ type RepoPolicy struct {
 	prefix              string
 	Timestamp           string
 	Wiki                bool
-	Topics              []string
+	Topics              []string `copier:"-"`
 	VulnerabilityAlerts bool
 	SquashMsg           string
 	SquashTitle         string
