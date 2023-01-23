@@ -11,26 +11,31 @@ import (
 
 // RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
 type RepoPolicy struct {
-	Name            string
-	Description     string
-	Protected       []string
-	Default         string
-	PCRepo          string
-	DHRepo          string
-	CSRepo          string
-	Binary          string
-	PackageName     string
-	Reviewers       []string
-	ExposePorts     string
-	Files           map[string][]string
-	Ports           map[string][]string
-	gitRepo         *git.GitRepo
-	Branch          string
-	ReleaseBranches map[string]branchVals
-	prBranch        string
-	Branchvals      branchVals
-	prefix          string
-	Timestamp       string
+	Name                string
+	Description         string
+	Protected           []string
+	Default             string
+	PCRepo              string
+	DHRepo              string
+	CSRepo              string
+	Binary              string
+	PackageName         string
+	Reviewers           []string
+	ExposePorts         string
+	Files               map[string][]string
+	Ports               map[string][]string
+	gitRepo             *git.GitRepo
+	Branch              string
+	ReleaseBranches     map[string]branchVals
+	prBranch            string
+	Branchvals          branchVals
+	prefix              string
+	Timestamp           string
+	Wiki                bool
+	Topics              []string
+	VulnerabilityAlerts bool
+	SquashMsg           string
+	SquashTitle         string
 }
 
 // Returns the destination branches for a given source branch

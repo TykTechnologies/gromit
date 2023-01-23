@@ -41,20 +41,25 @@ type branchVals struct {
 
 // Policies models the config file structure. The config file may contain one or more repos.
 type Policies struct {
-	Description string
-	PCRepo      string
-	DHRepo      string
-	CSRepo      string
-	PackageName string
-	Reviewers   []string
-	ExposePorts string
-	Binary      string
-	Protected   []string
-	Goversion   string
-	Default     string              // The default git branch(master/main/anything else)
-	Repos       map[string]Policies // map of reponames to branchPolicies
-	Ports       map[string][]string
-	Branches    branchVals
+	Description         string
+	PCRepo              string
+	DHRepo              string
+	CSRepo              string
+	PackageName         string
+	Reviewers           []string
+	ExposePorts         string
+	Binary              string
+	Protected           []string
+	Goversion           string
+	Default             string              // The default git branch(master/main/anything else)
+	Repos               map[string]Policies // map of reponames to branchPolicies
+	Ports               map[string][]string
+	Branches            branchVals
+	Wiki                bool
+	Topics              []string
+	VulnerabilityAlerts bool
+	SquashMsg           string
+	SquashTitle         string
 }
 
 // RepoPolicies aggregates RepoPolicy, indexed by repo name.
@@ -137,22 +142,26 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	}
 
 	return RepoPolicy{
-		Name:            repo,
-		Protected:       append(p.Protected, r.Protected...),
-		Default:         p.Default,
-		Ports:           r.Ports,
-		Branch:          branch,
-		prefix:          prefix,
-		Branchvals:      b,
-		ReleaseBranches: releaseBranches,
-		Reviewers:       r.Reviewers,
-		DHRepo:          r.DHRepo,
-		PCRepo:          r.PCRepo,
-		CSRepo:          r.CSRepo,
-		ExposePorts:     r.ExposePorts,
-		Binary:          r.Binary,
-		Description:     r.Description,
-		PackageName:     r.PackageName,
+		Name:                repo,
+		Protected:           append(p.Protected, r.Protected...),
+		Default:             p.Default,
+		Ports:               r.Ports,
+		Branch:              branch,
+		prefix:              prefix,
+		Branchvals:          b,
+		ReleaseBranches:     releaseBranches,
+		Reviewers:           r.Reviewers,
+		DHRepo:              r.DHRepo,
+		PCRepo:              r.PCRepo,
+		CSRepo:              r.CSRepo,
+		ExposePorts:         r.ExposePorts,
+		Binary:              r.Binary,
+		Description:         r.Description,
+		PackageName:         r.PackageName,
+		Topics:              r.Topics,
+		VulnerabilityAlerts: r.VulnerabilityAlerts,
+		SquashMsg:           r.SquashMsg,
+		SquashTitle:         r.SquashTitle,
 	}, nil
 }
 
