@@ -31,6 +31,13 @@ module "{{ .Name }}" {
   vulnerability_alerts        = {{ .VulnerabilityAlerts }}
   squash_merge_commit_message = "{{ .SquashMsg }}"
   squash_merge_commit_title   = "{{ .SquashTitle }}"
+  {{- if or (eq .Name "tyk-sink") (eq .Name "portal") }}
+  merge_commit = true
+  rebase_merge = true
+  {{- end }}
+  {{- if eq .Name "portal" }}
+  delete_branch_on_merge = false
+  {{- end }}
   release_branches     = [
 {{- range $branch, $values := .ReleaseBranches }}
 { branch    = "{{ $branch }}",
