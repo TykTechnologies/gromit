@@ -23,7 +23,7 @@ builds:
 dockers:
   - image_templates:
       - "tykio/gromit:latest"
-      - "tykio/gromit:{{.Env.MM_TAG}}"
+      - "tykio/gromit:v{{ .Major }}.{{ .Minor }}{{.Prerelease}}"
       - "tykio/gromit:{{.Tag}}"
     use: buildx
     build_flag_templates:
