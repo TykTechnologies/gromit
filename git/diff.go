@@ -15,6 +15,7 @@ import (
 var Reset = "\033[0m"
 var Red = "\033[31m"
 var Green = "\033[32m"
+var Yellow = "\033[33m"
 var LBlue = "\033[94m"
 var White = "\033[97m"
 
@@ -39,7 +40,7 @@ func prettyPrint(out string) {
 	red := regexp.MustCompile(`^-[^-]{2}.*`)
 	green := regexp.MustCompile(`^\+[^\+]{2}.*`)
 	lblue := regexp.MustCompile(`^@@ .*`)
-	white := regexp.MustCompile(`(^-{3} .*)|(^\+{3} .*)|(^diff --git .*)|(^index [\d|\w]{8}..[\d|\w]{8}.*)`)
+	yellow := regexp.MustCompile(`(^-{3} .*)|(^\+{3} .*)|(^diff --git .*)|(^index [\d|\w]{7,8}..[\d|\w]{7,8}.*)`)
 
 	scanner := bufio.NewScanner(strings.NewReader(out))
 	for scanner.Scan() {
@@ -50,8 +51,8 @@ func prettyPrint(out string) {
 			fmt.Println(Red + scanner.Text())
 		} else if lblue.MatchString(scanner.Text()) {
 			fmt.Println(LBlue + scanner.Text())
-		} else if white.MatchString(scanner.Text()) {
-			fmt.Println(White + scanner.Text())
+		} else if yellow.MatchString(scanner.Text()) {
+			fmt.Println(Yellow + scanner.Text())
 		} else {
 			fmt.Println(Reset + scanner.Text())
 		}
