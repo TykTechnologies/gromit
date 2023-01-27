@@ -28,7 +28,10 @@ jobs:
 
       - name: Check for zero diffs
         id: diff
-        run: gromit git diff ${{ matrix.repo }}
+        run: |
+          gromit git diff ${{ matrix.repo }} 2>${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt
+          OUTPUT=$(<${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt)
+          echo "::error file=${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt::${OUTPUT}"
 
       # - name: Check for zero diffs
       #   id: diff
