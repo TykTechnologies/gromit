@@ -30,11 +30,15 @@ jobs:
 
       - name: Check for zero diffs
         id: diff
-        run: |
-          echo "OUTPUT=LINE 1%0ALINE 2%0ALINE 3" >> $GITHUB_ENV
+        run: gromit git diff ${{ matrix.repo }}
 
-      - name: Check output
-        id: output
-        run: |
-          echo "::error file=${{ matrix.repo }}::${OUTPUT}"
-          echo "::warning::multi%0Aline"
+      # - name: Check for zero diffs
+      #   id: diff
+      #   run: |
+      #     echo "OUTPUT=LINE 1%0ALINE 2%0ALINE 3" >> $GITHUB_ENV
+
+      # - name: Check output
+      #   id: output
+      #   run: |
+      #     echo "::error file=${{ matrix.repo }}::${OUTPUT}"
+      #     echo "::warning::multi%0Aline"
