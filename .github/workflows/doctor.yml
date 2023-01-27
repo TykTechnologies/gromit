@@ -30,12 +30,14 @@ jobs:
         id: diff
         run: |
           gromit git diff ${{ matrix.repo }} 2>${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt
-          echo "OUTPUT=$(<${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt)" >> $GITHUB_OUTPUT
+          echo "output=$(<${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt)" >> $GITHUB_OUTPUT
 
       - name: Check output
         if: ${{ always() }}
         id: output
-        run: echo "::error file=${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt,line=1,col=1::${{steps.diff.outputs.OUTPUT}}"
+        run: |
+          cat ${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt
+          echo "::error file=${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt,line=1,col=1::${{steps.diff.outputs.output}}"
         
 
       # - name: Check for zero diffs
