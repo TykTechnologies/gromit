@@ -2,7 +2,6 @@ package config
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"strings"
 
@@ -28,14 +27,17 @@ var config []byte
 // need it
 func LoadConfig(cfgFile string) {
 	appName := util.Name()
-	viper.AddConfigPath(fmt.Sprintf("/conf/%s", appName))
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
+	// Use the passed config file if it exists.
+	viper.SetConfigFile(cfgFile)
 
 	// If a config file is found, read it in.
+	// Use the embedded config otherwise
 	if err := viper.ReadInConfig(); err == nil {
 		log.Debug().Str("file", viper.ConfigFileUsed()).Msg("reading config from, use env vars to override specific parameters")
 	} else {
+		log.Debug().Err(err).Msg("Error parsing config file, using embedded config")
+		// have to explicitly set the config type for viper to parse the io.Reader stream.
+		viper.SetConfigType("yaml")
 		if err = viper.ReadConfig(bytes.NewReader(config)); err != nil {
 			log.Fatal().Bytes("config", config).Msg("could not read embedded config")
 		} else {
