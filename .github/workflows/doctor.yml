@@ -33,6 +33,7 @@ jobs:
           echo "OUTPUT=$(<${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt)" >> $GITHUB_OUTPUT
 
       - name: Check output
+        if: ${{ always() }}
         id: output
         run: echo "::error file=${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt,line=1,col=1::${{steps.diff.outputs.OUTPUT}}"
         
