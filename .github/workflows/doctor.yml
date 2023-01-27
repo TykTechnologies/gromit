@@ -36,8 +36,8 @@ jobs:
         if: ${{ always() }}
         id: output
         run: |
-          output=$(<${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt)
-          echo "::error file=${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt,line=1,col=1::${output}"
+          output=$(cat ${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt)
+          echo "::error file=${{ matrix.repo }},line=1,col=1::${output}"
         
 
       # - name: Check for zero diffs
