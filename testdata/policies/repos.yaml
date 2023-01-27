@@ -75,6 +75,13 @@ policy:
           convos: false
           # Workflows that need to pass before merging
           tests: ["Go 1.16 Redis 5"]
+          # Specifies which version of releng templates to use - this can be
+          # overridden by branch specific policy in the branch section.
+          # Branches automatically inherit the version of the source branch unless
+          # overridden explicitly.
+          # Any branch that doesn't have a source branch and explicit relengversion
+          # will use the version set here.
+          relengversion: release-5.x
           # Branch specific policy for different branches starts here.->
           # Different branches could have different policy as older branches
           # could be on a different releaese workflow. To override any branch
@@ -88,8 +95,13 @@ policy:
               active: false
               goversion: 1.12
               upgradefromver: 3.0.4
+              relengversion: release-3.x
+            release-3.0.11:
+              active: false
+              relengversion: release-3.x
             release-4:
               active: false
+              relengversion: release-4.x
             release-4.3:
               active: true
               sourcebranch: release-4
@@ -103,6 +115,10 @@ policy:
               active: true
               sourcebranch: release-4-lts
               tests: []
+            release-3.0.12:
+              active: true
+              sourcebranch: release-3.0.11
+
       # Sync-automation specific policy.
       # we can have multiple sync policies for different source branches.
       # policy should be in the form of:
