@@ -3,9 +3,8 @@ tyk-analytics_release_branches = [
     reviewers = 2,
     convos    = false,
   required_tests = [
-    "1.16",
-    "1.16-el7",
-    "test (1.16.x, ubuntu-latest, amd64, 15.x)",
+    "1.19-bullseye",
+    "test (1.19.x, ubuntu-latest, amd64, 15.x)",
     "sqlite",
     "mongo"]
   },

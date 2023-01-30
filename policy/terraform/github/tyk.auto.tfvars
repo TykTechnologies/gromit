@@ -3,9 +3,8 @@ tyk_release_branches = [
     reviewers = 2,
     convos    = false,
   required_tests = [ 
-    "Go 1.16 Redis 5",
-    "1.16",
-    "1.16-el7"]
+    "Go 1.19.x Redis 5",
+    "1.19-bullseye"]
   },
   { branch    = "release-4",
     reviewers = 0,
