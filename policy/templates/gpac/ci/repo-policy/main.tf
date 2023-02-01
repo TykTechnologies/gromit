@@ -1,20 +1,11 @@
 terraform {
 
-  # Being used until TFCloud can be used
-  # backend "s3" {
-  #   bucket         = "terraform-state-devenv"
-  #   key            = "github-policy/{{ .Name }}"
-  #   region         = "eu-central-1"
-  #   dynamodb_table = "terraform-state-locks"
-  # }
-
-
-  backend "remote" {
-    hostname     = "app.terraform.io"
-    organization = "Tyk"
-    workspaces {
-      name = "github-policy"
-    }
+  #Being used until TFCloud can be used
+  backend "s3" {
+    bucket         = "terraform-state-devenv"
+    key            = "github-policy/{{ .Name }}"
+    region         = "eu-central-1"
+    dynamodb_table = "terraform-state-locks"
   }
 
   required_providers {
