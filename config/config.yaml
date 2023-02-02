@@ -18,24 +18,14 @@ policy:
   # the repos. If a repo has a different default branch, say `main`  - this
   # common policy option can be overridden at the branch policy level.
   default: master
-  # Public or private 
-  visibility: "private"
-  # Enables wiki feature for the given repo
-  wiki: false
-  # Enables alerts over vulnerability scans for dependabot and others
-  vulnerabilityalerts: false
-  # Squash merge commit body
-  squashmsg: PR_BODY
-  # Squash merge commit title
-  squashtitle: PR_TITLE
   # Repo specific policies start here->
   repos:
     # Repo specific policy for `tyk` starts here->
     tyk:
       # Description for the repo - this will be used as description for
       # deb/rpm packages, docker images etc.
-      description: >-
-        Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols
+      description: |
+        Tyk API Gateway
       # The packagecloud repo name for this git repo.
       pcrepo: tyk-gateway
       # The dockerhub image name for this repo. in the form of repo/image
@@ -57,10 +47,6 @@ policy:
       protected: [ release-3-lts, release-4 ]
       # Ports exposed by the docker images built for this repo/
       exposeports: "8080"
-      # Repository topics
-      topics: ["api", "api-gateway", "api-management", "cloudnative", "go", "graphql", "grpc", "k8s", "kubernetes", "microservices", "reverse-proxy", "tyk"]
-      visibility: "public"
-      vulnerabilityalerts: true
       # Common branch policy for all branches for this
       # repo starts here->
       branches:
@@ -89,7 +75,7 @@ policy:
           # Should conversations be resolved before merging
           convos: false
           # Workflows that need to pass before merging
-          tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
+          tests: ["Go 1.16 Redis 5"]
           # Specifies which version of releng templates to use - this can be
           # overridden by branch specific policy in the branch section.
           # Branches automatically inherit the version of the source branch unless
@@ -129,11 +115,11 @@ policy:
             release-4.0.10:
               active: true
               sourcebranch: release-4-lts
-              tests: [ "Go 1.15 Redis 5","1.15","1.15-el7"]
+              tests: []
             release-4.0.11:
               active: true
               sourcebranch: release-4-lts
-              tests: [ "Go 1.15 Redis 5","1.15","1.15-el7"]
+              tests: []
       # Sync-automation specific policy.
       # we can have multiple sync policies for different source branches.
       # policy should be in the form of:
@@ -149,7 +135,7 @@ policy:
         master: [ release-4 , release-4.2]
         release-3-lts: [release-3.0.11]
     tyk-analytics:
-      description: >-
+      description: |
         Tyk Dashboard New Repository
       pcrepo: tyk-dashboard
       dhrepo: tykio/tyk-dashboard
@@ -159,8 +145,6 @@ policy:
       reviewers: []
       packagename: tyk-dashboard
       protected: [ release-3-lts, release-4, release-4-lts ]
-      wiki: true
-      vulnerabilityalerts: true
       branches:
           cgo: true
           goversion: 1.16
@@ -169,7 +153,7 @@ policy:
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
           convos: false
-          tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo"]
+          tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
           reviewcount: 0
           branch:
             release-3-lts:
@@ -184,27 +168,33 @@ policy:
             release-4.3:
               active: true
               sourcebranch: release-4
+              tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
             release-4.3.0:
               active: true
               sourcebranch: release-4
+              tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
             release-4.3.1:
               active: true
               sourcebranch: release-4.3
+              tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
             release-4.3.2:
               active: true
               sourcebranch: release-4.3
+              tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "sqlite", "ci", "mongo"]
             release-4.0.10:
               active: true
               sourcebranch: release-4-lts
+              tests: []
             release-4.0.11:
               active: true
               sourcebranch: release-4-lts
+              tests: []
       ports:
-        master: [ release-4, release-4.3 ]
+        master: [ release-4, release-4.2 ]
         release-3: [release-3-lts]
     tyk-pump:
-      description: >-
-        Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once).
+      description: |
+        Archive analytics for the Tyk API Gateway
       pcrepo: tyk-pump
       dhrepo: tykio/tyk-pump-docker-pub
       csrepo: docker.tyk.io/tyk-pump/tyk-pump
@@ -213,10 +203,6 @@ policy:
       binary: tyk-pump
       packagename: tyk-pump
       protected: [ release-1.6, release-1.5 ]
-      squashmsg: COMMIT_MESSAGES
-      squashtitle: COMMIT_OR_PR_TITLE
-      visibility: "public"
-      vulnerabilityalerts: true
       branches:
           cgo: false
           goversion: 1.15
@@ -225,19 +211,16 @@ policy:
           configfile: pump.conf
           versionpackage: github.com/TykTechnologies/tyk-pump/pumps
           convos: false
-          tests: ["1.15"]
+          tests: []
           branch:
             master:
-              active: true
-              reviewcount: 2
-            release-1.7:
               active: true
               reviewcount: 2
       ports:
         master: [ release-1.7 ]
     tyk-identity-broker:
-      description: >-
-        Tyk Authentication Proxy for third-party login
+      description: |
+        Bridge between various Identity Management systems and Tyk API Gateway
       pcrepo: tyk-identity-broker
       dhrepo: tykio/tyk-identity-broker
       csrepo: docker.tyk.io/tyk-identity-broker/tyk-identity-broker
@@ -246,11 +229,6 @@ policy:
       reviewers: [ TykTechnologies/platform-squad ]
       packagename: tyk-identity-broker
       protected: [ master, release-1.3, release-1.2 ]
-      wiki: true
-      squashmsg: COMMIT_MESSAGES
-      squashtitle: COMMIT_OR_PR_TITLE
-      visibility: "public"
-      vulnerabilityalerts: true
       branches:
         cgo: false
         goversion: 1.15
@@ -259,22 +237,16 @@ policy:
         configfile: tib.conf
         versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
         convos: false
-        tests: ["1.15"]
+        tests: []
         branch:
           master:
-            active: true
-            reviewcount: 1
-          release-1.3:
-            active: true
-            reviewcount: 1
-          release-1.2:
             active: true
             reviewcount: 1
       ports:
         master: [ release-1.3, release-1.2 ]
     tyk-sink:
-      description: >-
-       Tyk RPC server backend (bridge)
+      description: |
+        Tyk RPC server backend (bridge)
       pcrepo: tyk-mdcb
       dhrepo: tykio/tyk-mdcb-docker
       csrepo: docker.tyk.io/tyk-sink/tyk-sink
@@ -283,9 +255,6 @@ policy:
       reviewers: [ TykTechnologies/platform-squad ]
       packagename: tyk-sink
       protected: [ master, release-2, release-1.8 ]
-      wiki: true
-      squashmsg: COMMIT_MESSAGES
-      squashtitle: COMMIT_OR_PR_TITLE
       branches:
         cgo: false
         goversion: 1.16
@@ -294,18 +263,15 @@ policy:
         configfile: tyk_sink.conf
         versionpackage: github.com/TykTechnologies/tyk-sink/main
         convos: false
-        tests: ["1.16"]
+        tests: []
         branch:
           master:
-            active: true
-            reviewcount: 1
-          release-2:
             active: true
             reviewcount: 1
       ports:
         master: [ release-2 ]
     portal:
-      description: >-
+      description: |
         Portal is a full-featured developer portal, blog and CMS
       pcrepo: portal
       dhrepo: tykio/portal
@@ -315,10 +281,6 @@ policy:
       binary: dev-portal
       packagename: portal
       protected: [ master, release-1.0 ]
-      topics: [ api-gateway, portal ]
-      wiki: true
-      squashmsg: COMMIT_MESSAGES
-      squashtitle: COMMIT_OR_PR_TITLE      
       branches:
         cgo: true
         goversion: 1.15
@@ -327,19 +289,15 @@ policy:
         configfile: portal.conf
         versionpackage: github.com/TykTechnologies/portal/core
         convos: false
-        tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)","1.15","1.15-el7"]
+        tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)"]
         branch:
-          master:
-            active: true
-            reviewcount: 1
-        release-1.0:
           master:
             active: true
             reviewcount: 1
       ports:
         master: [ release-1.0 ]
     tyk-analytics-ui:
-      description: >-
+      description: |
         User interface for our dashboard. Backend: https://github.com/TykTechnologies/tyk-analytics
       pcrepo: tyk-analytics-ui
       dhrepo: tykio/tyk-analytics-ui
@@ -349,8 +307,6 @@ policy:
       binary: tyk-analytics-ui
       packagename: tyk-analytics-ui
       protected: [ master ]
-      wiki: true
-      vulnerabilityalerts: true
       branches:
         convos: false
         tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"]
@@ -379,3 +335,4 @@ policy:
             active: true
             sourcebranch: release-4-lts
             tests: []
+
