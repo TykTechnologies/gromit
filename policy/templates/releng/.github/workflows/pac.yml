@@ -38,4 +38,6 @@ jobs:
         working-directory: ${{`{{ env.TERRAFORM_DIR }}`}}
         id: plan
         run: |
+          echo "::group::Terraform Plan"
           terraform validate && terraform plan
+          echo "::endgroup::"
