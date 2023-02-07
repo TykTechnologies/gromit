@@ -18,6 +18,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+  {{- if eq .Visibility "private"}}
+          token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
+  {{- end }}
+  {{- if eq .Name "tyk-analytics"}}
+          submodules: true
+  {{- end }}
 
       - uses: aws-actions/configure-aws-credentials@v1
         with:
