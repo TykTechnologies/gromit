@@ -213,7 +213,7 @@ policy:
               active: true
               sourcebranch: release-4-lts
       ports:
-        master: [ release-4, release-4.2 ]
+        master: [ release-4, release-4.3 ]
         release-3: [release-3-lts]
     tyk-pump:
       description: >-
