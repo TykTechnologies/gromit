@@ -2,8 +2,8 @@ name: Dr. Releng
 
 on:
   pull_request:
-    # paths:
-    #   - policy/templates/**
+    paths:
+      - policy/templates/**
 
 jobs:
   doctor:
