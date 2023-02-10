@@ -69,7 +69,6 @@ func init() {
 	bundleCmd.PersistentFlags().StringVar(&branch, "branch", "master", "Use branch values from policy.<repo>.branch")
 	bundleCmd.MarkPersistentFlagRequired("bundle")
 	bundleCmd.MarkPersistentFlagRequired("repo")
-	bundleCmd.MarkPersistentFlagRequired("branch")
 	bundleCmd.AddCommand(genSubCmd)
 
 	rootCmd.AddCommand(bundleCmd)
