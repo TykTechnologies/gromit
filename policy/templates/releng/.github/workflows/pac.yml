@@ -3,29 +3,29 @@ name: Policy as Code
 on:
   pull_request:
     paths:
-      - testdata/policies/*.yaml
+      - ci/repo-policy/**
 
 env:
-  TERRAFORM_DIR: "./gpac"
-  GITHUB_TOKEN: '${{ secrets.ITS_GH_TOKEN }}'
+  TERRAFORM_DIR: "./ci/repo-policy"
+  GITHUB_TOKEN: ${{`{{ secrets.ITS_GH_TOKEN }}`}}
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    container: tykio/gromit:v1.4.5-rc3
     permissions:
       id-token: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Gromit Policy gpac
-        run: gromit policy gpac -l trace --textlogs --conf testdata/policies/repos.yaml
-
-      - uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          fetch-depth: 1
+  {{- if eq .Visibility "private"}}
+          token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
+  {{- end }}
+  {{- if eq .Name "tyk-analytics"}}
+          submodules: true
+  {{- end }}
 
       - uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -36,15 +36,16 @@ jobs:
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.3.0
-          terraform_wrapper: false
 
       - name: Terraform Init
-        working-directory: ${{ env.TERRAFORM_DIR }}
+        working-directory: ${{`{{ env.TERRAFORM_DIR }}`}}
         id: init
         run: terraform init -input=false
 
       - name: Terraform Plan
-        working-directory: ${{ env.TERRAFORM_DIR }}
+        working-directory: ${{`{{ env.TERRAFORM_DIR }}`}}
         id: plan
         run: |
+          echo "::group::Terraform Plan"
           terraform validate && terraform plan
+          echo "::endgroup::"
