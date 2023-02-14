@@ -8,7 +8,7 @@ on:
 jobs:
   doctor:
     runs-on: ubuntu-latest
-    container: tykio/gromit:v1.4.6-rc1
+    container: tykio/gromit:v1.5
     strategy:
       fail-fast: false
       matrix:
@@ -24,8 +24,16 @@ jobs:
           path: ${{ matrix.repo }}
 
       - name: Generate
-        run: gromit bundle --bundle ${{ matrix.bundle }} --repo ${{ matrix.repo }} gen ${{ matrix.repo }}
+        run: gromit bundle --bundle ${{ matrix.bundle }} --branch ${{matrix.branch}} --repo ${{ matrix.repo }} gen ${{ matrix.repo }}
 
       - name: Check for zero diffs
         id: diff
-        run: gromit git diff ${{ matrix.repo }}
+        run: |
+          gromit git diff ${{ matrix.repo }} 2>${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt
+
+      - name: Check output
+        if: ${{ always() }}
+        id: output
+        run: |
+          output=$(cat ${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt)
+          echo "::warning::${output}"
