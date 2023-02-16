@@ -318,7 +318,6 @@ policy:
           release-2.1:
             active: true
             reviewcount: 1
-            sourcebranch: master
       ports:
         master: [ release-2 ]
     portal:
