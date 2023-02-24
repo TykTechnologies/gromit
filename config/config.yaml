@@ -238,7 +238,7 @@ policy:
           configfile: pump.conf
           versionpackage: github.com/TykTechnologies/tyk-pump/pumps
           convos: false
-          tests: ["1.15"]
+          tests: ["1.15","Go 1.16 tests"]
           branch:
             master:
               active: true
@@ -318,7 +318,6 @@ policy:
           release-2.1:
             active: true
             reviewcount: 1
-            sourcebranch: master
       ports:
         master: [ release-2 ]
     portal:
