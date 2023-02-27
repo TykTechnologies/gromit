@@ -141,7 +141,7 @@ policy:
               active: true
               sourcebranch: release-4-lts
               tests: [ "Go 1.15 Redis 5","1.15","1.15-el7"]
-            release-5:
+            release-5.0:
               active: true
               sourcebranch: master
             release-5-lts:
@@ -218,7 +218,7 @@ policy:
             release-4.0.12:
               active: true
               sourcebranch: release-4-lts
-            release-5:
+            release-5.0:
               active: true
               sourcebranch: master
             release-5-lts:
@@ -414,7 +414,7 @@ policy:
             active: true
             sourcebranch: release-4-lts
             tests: []
-          release-5:
+          release-5.0:
             active: true
             sourcebranch: master
           release-5-lts:
