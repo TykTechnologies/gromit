@@ -35,7 +35,7 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    container: tykio/gromit:v1.5.2
+    container: tykio/gromit:v1.5
 
     strategy:
       fail-fast: false
