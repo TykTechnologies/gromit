@@ -33,6 +33,7 @@
     - goplugin
   {{- if (eq .Branchvals.RelengVersion "release-5.x") }}
     - header
+    - internal
   {{- else }}{{/* Same values for versions 4.x and 3.x */}}
     - headers
   {{- end }}
