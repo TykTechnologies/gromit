@@ -222,8 +222,8 @@ policy:
       protected: [ master, release-1.3, release-1.2 ]
       branches:
         cgo: false
-        goversion: 1.15
-        upgradefromver: 1.1.0
+        goversion: 1.19
+        upgradefromver: 1.15
         pcprivate: false
         configfile: tib.conf
         versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
