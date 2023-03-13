@@ -266,13 +266,13 @@ policy:
       vulnerabilityalerts: true
       branches:
         cgo: false
-        goversion: 1.15
-        upgradefromver: 1.1.0
+        goversion: 1.16
+        upgradefromver: 1.12
         pcprivate: false
         configfile: tib.conf
         versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
         convos: false
-        tests: ["1.15"]
+        tests: ["1.16"]
         branch:
           master:
             active: true
@@ -282,9 +282,10 @@ policy:
             reviewcount: 1
           release-1.2:
             active: true
+            goversion: 1.15
             reviewcount: 1
       ports:
-        master: [ release-1.3, release-1.2 ]
+        master: [ release-1.3 ]
     tyk-sink:
       description: >-
        Tyk RPC server backend (bridge)
