@@ -9,10 +9,12 @@ dockers:
     - std
   image_templates:
     - "{{$r.DHRepo}}:{{`{{ .Tag }}`}}-{{ $arch }}"
-    {{- if eq $arch "amd64" }}
+    {{- if $r.CSRepo}}
+      {{- if eq $arch "amd64" }}
     - "{{$r.CSRepo}}:{{`{{ .Tag }}`}}"
-    {{- else }}
+      {{- else }}
     - "{{$r.CSRepo}}:{{`{{ .Tag }}`}}-{{ $arch }}"
+      {{- end }}
     {{- end }}
   build_flag_templates:
     - "--build-arg=PORTS={{ $r.ExposePorts }}"
@@ -109,7 +111,12 @@ dockers:
     - dnscache
     - gateway
     - goplugin
+  {{- if (eq .Branchvals.RelengVersion "release-5.x") }}
     - header
+    - internal
+  {{- else }}{{/* Same values for versions 4.x and 3.x */}}
+    - headers
+  {{- end }}
     - log
     - regexp
     - request

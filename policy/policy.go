@@ -2,24 +2,22 @@ package policy
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"net/url"
-	"os"
-	"strings"
-	"time"
 
-	"github.com/TykTechnologies/gromit/git"
-	"github.com/TykTechnologies/gromit/util"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
-var ErrUnknownRepo = errors.New("repo not present in policies")
-var ErrUnknownBranch = errors.New("branch not present in branch policies of repo")
-var ErrUnKnownBundle = errors.New("bundle not present in loaded policy")
+// GetRepoPolicy will fetch the RepoPolicy with all overrides processed
+func GetRepoPolicy(repo string, branch string) (RepoPolicy, error) {
+	var configPolicies Policies
+	err := LoadRepoPolicies(&configPolicies)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not parse repo policies")
+	}
+	return configPolicies.GetRepo(repo, viper.GetString("prefix"), branch)
+}
 
 // branchVals contains the parameters that are specific to a particular branch in a repo
 type branchVals struct {
@@ -30,47 +28,81 @@ type branchVals struct {
 	UpgradeFromVer string                // Versions to test package upgrades from
 	PCPrivate      bool                  // indicates whether package cloud repo is private
 	Branch         map[string]branchVals `copier:"-"`
+	// RelengVersion specifies which version of releng bundle to choose for
+	// this branch. The conditions for which version to choose where, is always
+	// within the templates.
+	RelengVersion string
+	Active        bool
+	ReviewCount   string
+	Convos        bool
+	Tests         []string
+	SourceBranch  string
 }
 
 // Policies models the config file structure. The config file may contain one or more repos.
 type Policies struct {
-	Description string
-	PCRepo      string
-	DHRepo      string
-	CSRepo      string
-	PackageName string
-	Reviewers   []string
-	ExposePorts string
-	Binary      string
-	Protected   []string
-	Goversion   string
-	Default     string              // The default git branch(master/main/anything else)
-	Repos       map[string]Policies // map of reponames to branchPolicies
-	Ports       map[string][]string
-	Branches    branchVals
+	Description         string
+	PCRepo              string
+	DHRepo              string
+	CSRepo              string
+	PackageName         string
+	Reviewers           []string
+	ExposePorts         string
+	Binary              string
+	Protected           []string `copier:"-"`
+	Goversion           string
+	Default             string              // The default git branch(master/main/anything else)
+	Repos               map[string]Policies // map of reponames to branchPolicies
+	Ports               map[string][]string
+	Branches            branchVals
+	Wiki                bool
+	Topics              []string `copier:"-"`
+	VulnerabilityAlerts bool
+	SquashMsg           string
+	SquashTitle         string
+	Visibility          string
 }
 
-// RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
-type RepoPolicy struct {
-	Name        string
-	Description string
-	Protected   []string
-	Default     string
-	PCRepo      string
-	DHRepo      string
-	CSRepo      string
-	Binary      string
-	PackageName string
-	Reviewers   []string
-	ExposePorts string
-	Files       map[string][]string
-	Ports       map[string][]string
-	gitRepo     *git.GitRepo
-	Branch      string
-	prBranch    string
-	Branchvals  branchVals
-	prefix      string
-	Timestamp   string
+// RepoPolicies aggregates RepoPolicy, indexed by repo name.
+type RepoPolicies map[string]RepoPolicy
+
+// GetAllRepos returns a map of reponame->repopolicy for all the
+// repos in the policy config.
+func (p *Policies) GetAllRepos(prefix string) (RepoPolicies, error) {
+	var rp RepoPolicies
+	for repoName, repoVals := range p.Repos {
+		log.Info().Msgf("Reponame: %s", repoName)
+		repo, err := repoVals.GetRepo(repoName, prefix, "master")
+		if err != nil {
+			return RepoPolicies{}, err
+		}
+		rp[repoName] = repo
+	}
+
+	return rp, nil
+}
+
+func (b *branchVals) getRelengVersion(r Policies, repo string) (string, error) {
+	// Update inner branch with the correct releng version.
+	// The precedence is: explicit releng version >> source branch version >> common branch version
+	if b.RelengVersion == "" && b.SourceBranch != "" {
+		var sb branchVals
+		for sbName := b.SourceBranch; sbName != ""; sbName = sb.SourceBranch {
+			var exists bool
+			if sb, exists = r.Branches.Branch[sbName]; !exists {
+				return "", fmt.Errorf("policy error: source branch: %s, for repo: %s doesn't exist", b.SourceBranch, repo)
+			}
+			if sb.RelengVersion == "" && sb.SourceBranch == "" {
+				b.RelengVersion = r.Branches.RelengVersion
+				break
+			}
+			if sb.RelengVersion != "" {
+				b.RelengVersion = sb.RelengVersion
+			}
+		}
+
+	}
+	return b.RelengVersion, nil
 }
 
 // GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates
@@ -80,213 +112,62 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 	if !found {
 		return RepoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, p.Repos)
 	}
+
 	var b branchVals
+
 	copier.Copy(&b, r.Branches)
+	// Override policy values
+	copier.CopyWithOption(&p, &r, copier.Option{IgnoreEmpty: true})
+
+	// Check if the branch has a branch specific policy in the config and override the
+	// common branch values with the branch specific ones.
 	if ib, found := r.Branches.Branch[branch]; found {
+		relengVer, err := ib.getRelengVersion(r, repo)
+		if err != nil {
+			return RepoPolicy{}, err
+		}
+		log.Debug().Str("Releng version", relengVer).Msg("parsed releng version to use.")
 		copier.CopyWithOption(&b, &ib, copier.Option{IgnoreEmpty: true})
 	}
+
+	// Build release branches map by iterating over each branch values
+	releaseBranches := make(map[string]branchVals)
+
+	for branch, releaseBranch := range r.Branches.Branch {
+		if releaseBranch.Active {
+			var aux branchVals
+			copier.Copy(&aux, r.Branches)
+			if iaux, found := r.Branches.Branch[branch]; found {
+				copier.CopyWithOption(&aux, &iaux, copier.Option{IgnoreEmpty: true})
+			}
+			releaseBranches[branch] = aux
+		}
+	}
+
 	return RepoPolicy{
-		Name:        repo,
-		Protected:   append(p.Protected, r.Protected...),
-		Default:     p.Default,
-		Ports:       r.Ports,
-		Branch:      branch,
-		prefix:      prefix,
-		Branchvals:  b,
-		Reviewers:   r.Reviewers,
-		DHRepo:      r.DHRepo,
-		PCRepo:      r.PCRepo,
-		CSRepo:      r.CSRepo,
-		ExposePorts: r.ExposePorts,
-		Binary:      r.Binary,
-		Description: r.Description,
-		PackageName: r.PackageName,
+		Name:                repo,
+		Protected:           append(p.Protected, r.Protected...),
+		Default:             p.Default,
+		Ports:               r.Ports,
+		Branch:              branch,
+		prefix:              prefix,
+		Branchvals:          b,
+		ReleaseBranches:     releaseBranches,
+		Reviewers:           r.Reviewers,
+		DHRepo:              r.DHRepo,
+		PCRepo:              r.PCRepo,
+		CSRepo:              r.CSRepo,
+		ExposePorts:         r.ExposePorts,
+		Binary:              r.Binary,
+		Description:         r.Description,
+		PackageName:         r.PackageName,
+		Topics:              append(p.Topics, r.Topics...),
+		VulnerabilityAlerts: p.VulnerabilityAlerts,
+		SquashMsg:           p.SquashMsg,
+		SquashTitle:         p.SquashTitle,
+		Wiki:                p.Wiki,
+		Visibility:          p.Visibility,
 	}, nil
-}
-
-// SwitchBranch calls the SwitchBranch method of gitRepo and creates a new
-// branch and switches the underlying git repo to the given branch - also
-// sets prBranch to the newly checked out branch.
-func (r *RepoPolicy) SwitchBranch(branch string) error {
-	err := r.gitRepo.SwitchBranch(branch)
-	if err != nil {
-		return err
-	}
-	r.prBranch = branch
-	return nil
-}
-
-// SetTimestamp Sets the given time as the repopolicy timestamp. If called with zero time
-// sets the current time in UTC
-func (r *RepoPolicy) SetTimestamp(ts time.Time) {
-	if ts.IsZero() {
-		ts = time.Now().UTC()
-	}
-	r.Timestamp = ts.Format(time.UnixDate)
-
-}
-
-// GetTimeStamp returns the timestamp currently set for the given repopolicy.
-func (r RepoPolicy) GetTimeStamp() (time.Time, error) {
-	var ts time.Time
-	var err error
-	ts, err = time.Parse(time.UnixDate, r.Timestamp)
-	return ts, err
-}
-
-// Returns the destination branches for a given source branch
-func (r RepoPolicy) DestBranches(srcBranch string) []string {
-	b, found := r.Ports[srcBranch]
-	if !found {
-		return []string{}
-	}
-	return b
-}
-
-// IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
-func (r RepoPolicy) IsProtected(branch string) bool {
-	for _, pb := range r.Protected {
-		if pb == branch {
-			return true
-		}
-	}
-	return false
-}
-
-// InitGit initialises the corresponding git repo by fetching it
-func (r *RepoPolicy) InitGit(depth int, signingKeyid uint64, dir, ghToken string) error {
-	log.Logger = log.With().Str("repo", r.Name).Str("branch", r.Branch).Logger()
-	fqdnRepo := fmt.Sprintf("%s/%s", r.prefix, r.Name)
-
-	var err error
-	r.gitRepo, err = git.FetchRepo(fqdnRepo, dir, ghToken, depth)
-	if err != nil {
-		return err
-	}
-	// checkout the base branch if a non-default base branch was given.
-	if r.Branch != r.Default {
-		log.Info().Str("Default", r.Default).Str("branch", r.Branch).Msg("Non-default branch to be checked out.")
-		err := r.gitRepo.Checkout(r.Branch)
-		if err != nil {
-			return err
-		}
-	}
-	if signingKeyid != 0 {
-		signer, err := util.GetSigningEntity(signingKeyid)
-		if err != nil {
-			return err
-		}
-		err = r.gitRepo.EnableSigning(signer)
-		if err != nil {
-			log.Warn().Err(err).Msg("commits will not be signed")
-		}
-	}
-	return nil
-}
-
-// Commit commits the current worktree and then displays the resulting change as a patch,
-// and returns the hash of the commit object that was committed.
-// It will show the changes commited in the form of a patch to stdout and wait for user confirmation.
-func (r RepoPolicy) Commit(msg string, confirm bool) (plumbing.Hash, error) {
-	origHead, err := r.gitRepo.Head()
-	if err != nil {
-		return plumbing.ZeroHash, fmt.Errorf("getting hash for original head: %w", err)
-	}
-	newCommit, err := r.gitRepo.Commit(msg)
-	if err != nil {
-		return plumbing.ZeroHash, err
-	}
-	patch, err := origHead.Patch(newCommit)
-	if err != nil {
-		return plumbing.ZeroHash, fmt.Errorf("getting diff: %w", err)
-	}
-	err = patch.Encode(os.Stdout)
-	if err != nil {
-		return plumbing.ZeroHash, fmt.Errorf("encoding diff: %w", err)
-	}
-	if confirm {
-		fmt.Printf("\n----End of diff for %s. Control-C to abort, ⏎/Enter to continue.", r.Name)
-		fmt.Scanln()
-	}
-	return newCommit.Hash, nil
-}
-
-// Push will push the current state of the repo to github
-// If the branch is protected, it will be pushed to a branch prefixed with releng/
-// Push should ideally be called only from CreatePR for pushing the changes
-// before creating a PR from the current branch against a base branch.
-func (r RepoPolicy) Push() error {
-	// Never push directly to the base branch. r.Branch has the
-	// base branch for which the policy is applicable for(eg: master, release-4
-	// etc.) Check if current branch is not base branch and it's not protected
-	// before pushing.
-	remoteBranch := r.gitRepo.CurrentBranch()
-	if remoteBranch == r.Branch {
-		return fmt.Errorf("Pushing to the same branch as base branch not supported, remote: %s, base: %s", remoteBranch, r.Branch)
-	}
-	if r.IsProtected(remoteBranch) {
-		return fmt.Errorf("given remote: %s is a protected branch", remoteBranch)
-	}
-	return r.gitRepo.Push(remoteBranch, remoteBranch)
-}
-
-// CreatePR creates a PR on the given github repo for the specified bundle, against the
-// gien baseBranch and title. If dryRun is enabled, it prints out the parameters with
-// which the PR will be generated to stdout. It returns the URL of the PR on success.
-// Returns an empty string and no error on a successful dry run.
-func (r *RepoPolicy) CreatePR(bundle, title, baseBranch string, dryRun bool) (string, error) {
-	prURL := ""
-	if r.Branch == "" {
-		return prURL, fmt.Errorf("unknown local branch on repo %s when creating PR", r.Name)
-	}
-	if r.Timestamp == "" {
-		r.SetTimestamp(time.Time{})
-	}
-
-	// Check if bundle templates are rendered, and get the contents.
-	body, err := r.renderPR(bundle)
-	if err != nil {
-		return prURL, fmt.Errorf("Error rendering PR for the bundle: %s: %v", bundle, err)
-	}
-	log.Info().Msg("successfully rendered pr template")
-
-	owner, err := r.GetOwner()
-	if err != nil {
-		return prURL, err
-	}
-	if dryRun {
-		log.Warn().Msg("only dry-run, not really creating PR")
-		fmt.Println("Only dry-run, not creating actual PR")
-		fmt.Printf("\nPR will be created in \n\tOrg: %s\n\tWith branch: %s\n\tAgainst base Branch: %s\n\tWith title: %s\n", owner, r.gitRepo.CurrentBranch(), baseBranch, title)
-		fmt.Printf("\tWith PR Body: \n%s\n", string(body))
-	} else {
-		// Push and then create PR.
-		err = r.Push()
-		if err != nil {
-			return "", err
-		}
-		log.Info().Str("baseBranch", baseBranch).
-			Str("title", title).Msg("calling CreatePR on github")
-		prURL, err = r.gitRepo.CreatePR(baseBranch, title, string(body))
-		if err != nil {
-			return "", err
-		}
-	}
-	return prURL, nil
-}
-
-// GetOwner returns the owner part of a given github oprg prefix fqdn, returns
-// error if not a valid github fqdn.
-func (r RepoPolicy) GetOwner() (string, error) {
-	u, err := url.Parse(r.prefix)
-	if err != nil {
-		return "", err
-	}
-	if u.Hostname() != "github.com" {
-		return "", fmt.Errorf("not github prefix: %s", u.Hostname())
-	}
-	owner := strings.TrimPrefix(u.Path, "/")
-	return owner, nil
 }
 
 // String representation

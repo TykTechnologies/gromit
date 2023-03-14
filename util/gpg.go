@@ -5,19 +5,19 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/packet"
-	"github.com/TykTechnologies/gromit/util/gpgagent"
-	"strings"
 	"encoding/hex"
 	"fmt"
-)
+	"strings"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/TykTechnologies/gromit/util/gpgagent"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/openpgp/packet"
+)
 
 // GetSigningEntity gets the public keyring from gpg, using the agent
 // Needs the gpgconf binary to find the agent socket path as gpg doesn't seem to set GPG_AUTH_INFO
-// anymore. 
+// anymore.
 func GetSigningEntity(kid uint64) (*openpgp.Entity, error) {
 	// Read keyring from gpg
 	// signkeyReader, err := gpgBinary("--export-secret-keys", strKeyid)

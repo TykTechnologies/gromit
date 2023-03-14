@@ -16,139 +16,137 @@ http://www.apache.org/licenses/LICENSE-2.0
 package cmd
 
 import (
-	"encoding/json"
+	"fmt"
 	"os"
-	"strings"
 
-	"github.com/TykTechnologies/gromit/config"
+	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/policy"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var repoPolicies policy.Policies
-var repos []string
-var branch string
-var jsonOutput, dryRun bool
-var ghToken string
-var prBranch string
+var dryRun, autoMerge bool
 
 // policyCmd represents the policy command
 var policyCmd = &cobra.Command{
 	Use:   "policy",
-	Short: "Mess with the release engineering policy",
-	Long: `Controls the automation that is active in each repo for each branch.
-Operates directly on github and creates PRs for protected branches. Requires an OAuth2 token and a section in the config file describing the policy. `,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		err := policy.LoadRepoPolicies(&repoPolicies)
+	Short: "Templatised policies that are driven by the config file",
+	Long:  `Policies are driven by a config file. The config file models the variables of all the repositories under management. See https://github.com/TykTechnologies/gromit/tree/master/policy/config.yaml.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		var configPolicies policy.Policies
+		err := policy.LoadRepoPolicies(&configPolicies)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not parse repo policies")
 		}
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		if jsonOutput {
-			json, err := json.Marshal(repoPolicies)
-			if err != nil {
-				log.Fatal().Interface("policies", repoPolicies).Msg("could not marshal policies into JSON")
-			}
-			cmd.Println(string(json))
-		} else {
-			cmd.Println(repoPolicies)
-		}
+		cmd.Println(configPolicies)
 	},
 }
 
-// genSubCmd generates a set of files in an in-memory git repo and pushes it to origin.
-var genSubCmd = &cobra.Command{
-	Use:     "generate <bundle> <commit msg> [commit_msg...]",
-	Aliases: []string{"gen", "add", "new"},
-	Args:    cobra.MinimumNArgs(2),
-	Short:   "(re-)generate the template bundle and update git",
-	Long: `Will render templates, overlaid onto an in-memory git repo. 
+// syncSubCmd generates a set of files in an in-memory git repo and pushes it to origin.
+var syncSubCmd = &cobra.Command{
+	Use:   "sync <bundle> <repo>",
+	Args:  cobra.MinimumNArgs(2),
+	Short: "(re-)generate the template <bundle> and update git",
+	Long: `Operates directly on github and creates PRs for protected branches. Requires an OAuth2 token (for private repos) and a section in the config file describing the policy. Will render templates, overlaid onto a git repo. 
 If the branch is marked protected in the repo policies, a draft PR will be created with the changes and @devops will be asked for a review.
 `,
-	Run: func(cmd *cobra.Command, args []string) {
-		bundle := args[0]
-		commitMsg := strings.Join(args[1:], "\n")
-		signingKeyid := viper.GetUint64("signingkey")
-		cmd.Printf("Generating\n\tbundle: %s\n\tusing branch: %s\n\twith the message: %s\n\tRepos: %s\n",
-			bundle, prBranch, commitMsg, repos)
-		for _, repoName := range repos {
-			repo, err := repoPolicies.GetRepo(repoName, config.RepoURLPrefix, branch)
-			if err != nil {
-				log.Fatal().Err(err).Msg("getting repo")
-			}
-			// use dir as prefix if operating on multiple repos, append the repo
-			// name to have different directories for different repos.
-			checkoutDir := dir
-			if len(repos) > 1 {
-				checkoutDir = dir + "-" + repoName
-			}
-			err = repo.InitGit(1, signingKeyid, checkoutDir, ghToken)
-			if err != nil {
-				log.Fatal().Err(err).Msg("initialising git")
-			}
-
-			err = repo.SwitchBranch(prBranch)
-			if err != nil {
-				log.Fatal().Err(err).Msg("creating and switching to new branch for pr")
-			}
-			log.Info().Str("prbranch", prBranch).Msg("Switched to branch")
-			err = repo.GenTemplate(bundle)
-			if err != nil {
-				log.Fatal().Err(err).Msg("template generation")
-			}
-			// Commit after we generate the files from templates.
-			confirmBeforeCommit := false
-			hash, err := repo.Commit(commitMsg, confirmBeforeCommit)
-			if err != nil {
-				log.Fatal().Err(err).Msg("Unable to commit the changes.")
-			}
-			log.Info().Str("hash", hash.String()).Msg("Commited the changes")
-
-			prURL, err := repo.CreatePR(bundle, commitMsg, branch, dryRun)
-			if err != nil {
-				log.Fatal().Err(err).Msg("unable to create PR")
-			}
-			log.Info().Str("prurl", prURL).Msg("created PR")
+	RunE: func(cmd *cobra.Command, args []string) error {
+		bundle = args[0]
+		repo = args[1]
+		branch, _ := cmd.Flags().GetString("branch")
+		// Checkout code into a dir named repo
+		r, err := git.Init(repo,
+			Owner,
+			Branch,
+			1,
+			repo,
+			os.Getenv("GITHUB_TOKEN"),
+			true)
+		if err != nil {
+			return fmt.Errorf("git init %s: %v", repo, err)
 		}
+		err = r.Checkout(branch)
+		if err != nil {
+			cmd.Printf("git checkout %s:%s: %v", repo, branch, err)
+		}
+		b, err := policy.NewBundle(bundle)
+		if err != nil {
+			return fmt.Errorf("bundle %s: %v", bundle, err)
+		}
+		rp, err := policy.GetRepoPolicy(repo, branch)
+		if err != nil {
+			return fmt.Errorf("repopolicy %s: %v", repo, err)
+		}
+		// Generate bundle into the dir named repo from above
+		err = b.Render(&rp, repo, nil, r)
+		if err != nil {
+			return fmt.Errorf("bundle gen %s: %v", bundle, err)
+		}
+		force, _ := cmd.Flags().GetBool("force")
+		dfs, err := git.NonTrivial(repo)
+		if err != nil {
+			return fmt.Errorf("computing diff in %s: %v", repo, err)
+		}
+		if len(dfs) == 0 && !force {
+			cmd.Printf("trivial changes for repo %s branch %s, stopping here", repo, r.Branch())
+			return nil
+		}
+		if len(dfs) > 0 {
+			msg, _ := cmd.Flags().GetString("msg")
+			err = r.Commit(msg)
+			if err != nil {
+				return fmt.Errorf("git commit %s ./%s: %v", repo, repo, err)
+			}
+		}
+		remoteBranch, _ := cmd.Flags().GetString("remotebranch")
+		err = r.Push(remoteBranch)
+		if err != nil {
+			return fmt.Errorf("git push %s %s:%s: %v", repo, r.Branch(), remoteBranch, err)
+		}
+		pr, _ := cmd.Flags().GetBool("pr")
+		if pr {
+			title, _ := cmd.Flags().GetString("title")
+			pr, err := r.CreatePR(title, remoteBranch, bundle)
+			if err != nil {
+				return fmt.Errorf("gh create pr --base %s --head %s: %v", r.Branch(), remoteBranch, err)
+			}
+			cmd.Println(pr)
+			return r.EnableAutoMerge(pr.GetNodeID())
+		}
+		return nil
 	},
 }
 
 // docSubCmd represents the doctor subcommand
 var docSubCmd = &cobra.Command{
-	Use:     "doctor",
+	Use:     "doctor <repo>",
 	Aliases: []string{"doc", "fix"},
 	Args:    cobra.MinimumNArgs(1),
 	Short:   "Diagnose problems with the release engineering code",
-	Long: `For the supplied repo, release engineering branches release-* and master. For each of these branches, the checks are:
-- sync-automation.yml only exists on the branches defined as a source for the backport branches in the config
-  + if found on an inactive branch, it is removed
-  + if the branch it is found on is protected, a draft PR is created to remove it
-- if deprecated code is found, it is removed (not implemented)
-  + if on a protected branch a draft PR is created`,
+	Long: `For the supplied repo, for all branches known to gromit, generate and apply bundles that are appropriate.
+Then test each repo for non-trivial diffs.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Fatal().Msg("not implemented")
 	},
 }
 
 func init() {
+	syncSubCmd.Flags().String("remotebranch", "", "The branch that will be used for creating the PR - this is the branch that gets pushed to remote")
+	syncSubCmd.Flags().Bool("pr", false, "Create PR")
+	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
+	syncSubCmd.MarkFlagRequired("remotebranch")
+	syncSubCmd.MarkFlagRequired("branch")
+	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
+	syncSubCmd.PersistentFlags().StringVar(&Owner, "owner", "TykTechnologies", "Github org")
+	syncSubCmd.Flags().Bool("force", false, "Proceed even if there are only trivial changes")
 
-	genSubCmd.Flags().StringVar(&prBranch, "prbranch", "", "The branch that will be used for creating the PR - this is the branch that gets pushed to remote")
-	genSubCmd.MarkFlagRequired("prbranch")
-	policyCmd.AddCommand(genSubCmd)
+	policyCmd.AddCommand(syncSubCmd)
 
 	docSubCmd.Flags().String("pattern", "^(release-[[:digit:].]+|master)", "Regexp to match release engineering branches")
 	policyCmd.AddCommand(docSubCmd)
 
-	policyCmd.PersistentFlags().StringSliceVar(&repos, "repos", []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"}, "Repos to operate upon, comma separated values accepted.")
-	policyCmd.PersistentFlags().StringVar(&branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
-	policyCmd.PersistentFlags().Bool("sign", false, "Sign commits, requires -k/--key. gpgconf and an active gpg-agent are required if the key is protected by a passphrase.")
-	policyCmd.PersistentFlags().StringVarP(&config.RepoURLPrefix, "prefix", "u", "https://github.com/TykTechnologies", "Prefix to derive the fqdn repo")
-	policyCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output in JSON")
-	policyCmd.PersistentFlags().BoolVarP(&dryRun, "dry", "d", false, "Will not make any changes")
-	policyCmd.PersistentFlags().StringVar(&ghToken, "token", os.Getenv("GITHUB_TOKEN"), "Github token for private repositories")
-	policyCmd.PersistentFlags().StringVar(&dir, "dir", "", "Use dir for git operations, instead of an in-memory fs, if more than one repos are speified in repos, this will be used as a prefix for dirs.")
+	policyCmd.PersistentFlags().StringSliceVar(&Repos, "repos", Repos, "Repos to operate upon, comma separated values accepted.")
+	policyCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
+	policyCmd.PersistentFlags().BoolVarP(&autoMerge, "auto", "a", true, "Will automerge if all requirements are meet")
 	rootCmd.AddCommand(policyCmd)
 }

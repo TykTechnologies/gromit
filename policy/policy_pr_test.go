@@ -45,17 +45,26 @@ func TestCreatePR(t *testing.T) {
 	title := "Testing sync-automation"
 	base := "master"
 	// Test dry run first.
-	_, err = repo.CreatePR(bundle, title, base, true)
+	_, err = repo.CreatePR(bundle, title, base, true, false)
 	if err != nil {
 		t.Fatalf("Error running CreatePR in dryrun mode: (bundle-%s): %v", bundle, err)
 	}
 	// Push the current changes and create a PR.
-	url, err := repo.CreatePR(bundle, title, base, false)
+	pr, err := repo.CreatePR(bundle, title, base, false, false)
 	if err != nil {
 		t.Fatalf("PR actual run failed: %v", err)
 	}
-	t.Logf("PR URL: %s", url)
+	t.Logf("PR URL: %s", pr.GetHTMLURL())
 
+	// Enable automerge
+	prID, err := repo.gitRepo.GetPRV4(*pr.Number, "tyklabs", "tyk")
+	if err != nil {
+		t.Fatalf("Error querying PR number: %v", err)
+	}
+	err = repo.gitRepo.EnableAutoMergePR(prID)
+	if err != nil {
+		t.Fatalf("Error enabling automerge")
+	}
 	// Delete the remote branch(which also closes the PR)
 	err = repo.gitRepo.DeleteRemoteBranch(newBranch)
 	if err != nil {

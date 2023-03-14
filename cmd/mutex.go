@@ -8,11 +8,16 @@ import (
 	"os/exec"
 
 	"github.com/TykTechnologies/gromit/mutex"
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 var etcdPass, etcdHost, etcdUser, script string
+var hasTLS bool
 var lock mutex.Lock
 
 // mutexCmd represents the mutex command
@@ -23,10 +28,32 @@ var mutexCmd = &cobra.Command{
 This command can be used to synchronise external processes.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		// create client
-		cli, err := mutex.GetEtcdClient(etcdHost, 5, etcdUser, etcdPass)
-		if err != nil {
-			log.Fatal().Err(err).Msg("could not connect to etcd")
+		var cli *clientv3.Client
+		if hasTLS {
+			if !(viper.IsSet("etcd.ca") &&
+				viper.IsSet("etcd.client.cert") &&
+				viper.IsSet("etcd.client.key")) {
+				log.Fatal().Msg("any one of ca, client cert or client key is not set.")
+			}
+			tlsAuth := util.TLSAuthClient{
+				CA:   []byte(viper.GetString("etcd.ca")),
+				Cert: []byte(viper.GetString("etcd.client.cert")),
+				Key:  []byte(viper.GetString("etcd.client.key")),
+			}
+			tlsConfig, err := tlsAuth.GetTLSConfig()
+			if err != nil {
+				log.Fatal().Err(err).Msg("creating TLS config.")
+			}
+			cli, err = mutex.GetEtcdTLSClient(etcdHost, tlsConfig, 5)
+			if err != nil {
+				log.Fatal().Err(err).Msg("could not connect to etcd over TLS")
+			}
+		} else {
+			var err error
+			cli, err = mutex.GetEtcdClient(etcdHost, 5, etcdUser, etcdPass)
+			if err != nil {
+				log.Fatal().Err(err).Msg("could not connect to etcd")
+			}
 		}
 
 		// create a new session
@@ -64,7 +91,7 @@ var getSubCmd = &cobra.Command{
 			op, err := exec.Command(script).CombinedOutput()
 			if err != nil {
 				lock.Release()
-				log.Fatal().AnErr("error", err).Bytes("output", op).Msg("could not execute script")
+				cobra.CheckErr(err)
 			}
 			log.Info().Bytes("output", op).Msg("script output")
 			lock.Release()
@@ -77,10 +104,12 @@ var getSubCmd = &cobra.Command{
 
 // initialization of variables
 func init() {
+	mutexCmd.PersistentFlags().BoolVar(&hasTLS, "tlsauth", false, "Use mTLS auth to connect to etcd, if this is set, --etcdpass and --etcduser are ignored. Cert info will be read from config/ GROMIT_ETCD_CA, GROMIT_ETCD_CLIENT_CERT, GROMIT_ETCD_CLIENT_KEY must be set")
 	mutexCmd.PersistentFlags().StringVar(&etcdPass, "etcdpass", os.Getenv("ETCD_PASS"), "Password for etcd user")
 	mutexCmd.PersistentFlags().StringVar(&etcdUser, "etcduser", "root", "etcd user to connect as")
-	mutexCmd.PersistentFlags().StringVar(&etcdHost, "host", "ec2-3-66-86-193.eu-central-1.compute.amazonaws.com:2379", "etcd host")
+	mutexCmd.PersistentFlags().StringVar(&etcdHost, "host", "", "etcd host")
 	mutexCmd.PersistentFlags().StringVar(&script, "script", "testdata/mutex/script.sh", "script to be run after acquiring lock")
+	mutexCmd.MarkFlagsMutuallyExclusive("tlsauth", "etcduser")
 
 	mutexCmd.AddCommand(getSubCmd)
 	rootCmd.AddCommand(mutexCmd)

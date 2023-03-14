@@ -1,0 +1,39 @@
+name: Dr. Releng
+
+on:
+  pull_request:
+    paths:
+      - policy/templates/**
+
+jobs:
+  doctor:
+    runs-on: ubuntu-latest
+    container: tykio/gromit:v1.5
+    strategy:
+      fail-fast: false
+      matrix:
+        repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal]
+        branch: [master]
+        bundle: [releng, sync]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: TykTechnologies/${{ matrix.repo }}
+          token: ${{ secrets.ORG_GH_TOKEN }}
+          path: ${{ matrix.repo }}
+
+      - name: Generate
+        run: gromit bundle --bundle ${{ matrix.bundle }} --branch ${{matrix.branch}} --repo ${{ matrix.repo }} gen ${{ matrix.repo }}
+
+      - name: Check for zero diffs
+        id: diff
+        run: |
+          gromit git diff ${{ matrix.repo }} 2>${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt
+
+      - name: Check output
+        if: ${{ always() }}
+        id: output
+        run: |
+          output=$(cat ${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt)
+          echo "::warning::${output}"

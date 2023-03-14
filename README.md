@@ -31,70 +31,33 @@ licenser:
   mdcb:
     token: supersekret
     api: mdcb-trial?auth=supersekret
-
-ca: |
-  <paste PEM>
-  
-serve:
-  key : |
-    <paste PEM>
-    
-  cert: |
-    <paste PEM>
-
-client:
-  key: |
-	<paste PEM>
-  
-  cert: |
-	<paste PEM>
 ```
 
 All parameters can also be set by environment variables with the `GROMIT_` prefix. So the environment variable for the config parameter `cluster.domain` would be `GROMIT_CLUSTER_DOMAIN`.
 
 ## Features
 To various degrees of competence, gromit can,
-- wait for new builds from the Release workflow in repos and persist the current state to DB
-- read build state from DB and update the developer environments with latest images
-- manage the meta-automation for the release process ([sync-automation.yml](policy/templates/sync-automation.tmpl "template"))
+- manage templated files that can be rendered into any repo under management
+  * releng
+  * gpac (github policy as code)
+- manage the meta-automation for releng ([sync-automation.yml](policy/templates/sync-automation.tmpl "template"))
 - fetch developer licenses for dashboard and mdcb
 - generate config files from a `text/template`
-- dump redis and mongo data for a classic cloud org to local disk
-- restore redis and mongo data for a classic cloud org from local disk
+- dump redis and mongo data for a classic cloud org to local disk (broken)
+- restore redis and mongo data for a classic cloud org from local disk (broken)
 
 ### Policy Engine for release engineering
-If it is told (via the config file), gromit can manage the forward and back porting of the release engineering code. [RFC](https://tyktech.atlassian.net/wiki/spaces/EN/pages/1030586370/Keeping+release+engineering+code+in+sync) here. Given a policy definition like
-``` yaml
-policy:
-  protected: [ branches_that_are_protected on_github ]
-  files:
-    - file1
-    - .goreleaser.yml
-    - Dockerfile.std
-  repos:
-    tyk:
-      deprecations:
-        <version_when_deprecated>:
-          - file_that_was_deprecated
-          - bin/integration_build.sh
-      backports:
-        release-3.0.5: releng/release-3-lts
-        <source_branch>: <backport_branch>
-    repo2:
-      files:
-        - .github/workflows/update-gomod.yml
-        - .github/workflows/build-assets.yml
-      deprecations:
-        v3.0.1:
-          - .github/workflows/int-image.yml
-          - bin/integration_build.sh
-      backports:
-        release-3.0.5: releng/release-3-lts
-        release-3.1.2: releng/release-3.1
-```
-gromit will generate a `.g/w/sync-automation.yml` file in each `<source_branch>` which will copy all files related to release engineering to `<backport_branch>`. The `<backport_branch>` can be merged into its ancestor branch at periodic intervals. 
+Policies are implemented by rendering template bundles, which are usually embedded into the binary. The rendering is mere text substitution and is agnostic to the language used in the template. It is best to use declarative or some sort of well-understood configuration language like YAML in the templates though.
 
-For the example `tyk` repo above, commits on `release-3.0.5` related to release engineering will be copied to `releng/release-3-lts`. `releng/release-3-lts` can be merged, via a PR manually, or auotmatically, into `release-3-lts` as part of the release process.
+#### releng
+This bundle contains all of the code required to build and test all the artefacts that are created when a release is made. Releases are made by pushing a tag to github. 
+
+#### sync
+This bundle handles the meta-automation to keep the releng bundle in sync across all the release branches. 
+
+#### gpac
+This bundle implements terraform manifests that model the state of the repos under management in github. This is used to [keep track of release branches](https://tyktech.atlassian.net/wiki/spaces/EN/pages/1907228677/Release+branches) as they are created.
+
 
 ### Usage
 ``` shellsession
@@ -144,15 +107,7 @@ This infra is provisioned in the Engg PoC account and can be found in the `deven
 If your AWS account does not have the power to run the tests, please post in #devops.
 
 ## CD
-The [Release](https://github.com/TykTechnologies/gromit/actions?query=workflow%3ARelease) action builds a new docker image and notifies tyk-ci about the new version. Actions on tyk-ci implement further automation.
-
-## Certificates
-Import the cfssl provided certificates into your local trust hierarchy so that you don't have to futz about with command line args for curl and so on.
-
-### ca-certificates
-Copy `rootca.pem` to `/usr/share/ca-certificates/gromit/rootca.crt`, creating the directory if it does not exist.
-Add `gromit/rootca.crt` to `/etc/ca-certificates.conf`.
-Run `sudo dpkg-reconfigure ca-certificates`.
+The [Release](https://github.com/TykTechnologies/gromit/actions?query=workflow%3ARelease) action builds a new docker image.
 
 ### Chrome
 It looks like Chrome doesn't trust the local ca-certificates. You can add it to the per-user nss store in `~/.pki/nssdb` as per [per the docs](https://chromium.googlesource.com/chromium/src/+/master/docs/linux/cert_management.md).

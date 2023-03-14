@@ -20,13 +20,10 @@ builds:
       - -X github.com/TykTechnologies/gromit/util.buildDate={{.Date}}
     mod_timestamp: '{{ .CommitTimestamp }}'
 
-archives:
-- replacements:
-    linux: Linux
-
 dockers:
   - image_templates:
       - "tykio/gromit:latest"
+      - "tykio/gromit:v{{ .Major }}.{{ .Minor }}{{.Prerelease}}"
       - "tykio/gromit:{{.Tag}}"
     use: buildx
     build_flag_templates:

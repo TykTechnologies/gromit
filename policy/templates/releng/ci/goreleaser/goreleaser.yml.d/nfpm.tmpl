@@ -53,8 +53,10 @@ nfpms:
         dst: "/opt/{{ .PackageName }}/apps"
       - src: "templates/*.json"
         dst: "/opt/{{ .PackageName }}/templates"
+  {{- if or (eq .Branchvals.RelengVersion "release-4.x") (eq .Branchvals.RelengVersion "release-5.x") }}
       - src: "templates/playground/*"
         dst: "/opt/{{ .PackageName }}/templates/playground"
+  {{- end }}
       - src: "middleware/*.js"
         dst: "/opt/{{ .PackageName }}/middleware"
       - src: "event_handlers/sample/*.js"
@@ -92,8 +94,8 @@ nfpms:
         type: "config|noreplace"
       - src: app
         dst: /opt/{{ .PackageName }}/app
-      - src: themes
-        dst: /opt/{{ .PackageName }}/themes
+      - src: default.zip
+        dst: /opt/{{ .PackageName }}/default.zip
       - src: public/system
         dst: /opt/{{ .PackageName }}/public/system
       - src: ci/entrypoint.sh
