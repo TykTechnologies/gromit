@@ -48,22 +48,20 @@ tasks:
     vars:
       pr_name: "{{.pr}}-{{.repo}}"
     cmds:
-      - ./gromit git push "{{.git_folder}}/{{.repo}}" "{{.repo}}" "{{.pr_name}}" "{{.bundle}}" --pr --title "{{.pr}}" -f config/config.yaml
+      - ./gromit git push "{{.git_folder}}/{{.repo}}" "{{.repo}}" "{{.pr}}" "{{.bundle}}" --pr --title "{{.pr_name}}" -f config/config.yaml
       - | 
         cd "{{.git_folder}}/{{.repo}}"
         git fetch --all
-        git checkout "{{.pr_name}}"
+        git checkout "{{.pr}}"
 
   gpac:
     cmds:
 
   get-master:
-    vars:
-      pr_name: "{{.pr}}-{{.repo}}"
     dir: "{{.git_folder}}/{{.repo}}"
     cmds:
       - |
-        if [[ "$(git rev-parse --abbrev-ref HEAD)" != "{{.pr_name}}" ]];then
+        if [[ "$(git rev-parse --abbrev-ref HEAD)" != "{{.pr}}" ]];then
           git fetch --all
           git stash save -m "gromit working" || true
           git checkout -f master
