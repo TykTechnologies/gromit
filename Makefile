@@ -3,7 +3,7 @@ VERSION := $(shell git describe --tags)
 COMMIT := $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
 
-gromit: */*.go confgen/templates/* policy/templates/* git/prs/* #devenv/terraform/* server/debug/debugger.wasm
+gromit: clean */*.go confgen/templates/* policy/templates/* git/prs/* #devenv/terraform/* server/debug/debugger.wasm
 	! ls **/#*#
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
