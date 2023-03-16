@@ -60,8 +60,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			Branch,
 			1,
 			repo,
-			os.Getenv("GITHUB_TOKEN"),
-			true)
+			os.Getenv("GITHUB_TOKEN"))
 		if err != nil {
 			return fmt.Errorf("git init %s: %v", repo, err)
 		}

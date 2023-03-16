@@ -10,10 +10,6 @@ git:
 # parent policy options provided here can be overridden by repo
 # specific/ branch specific options.
 policy:
-  # `protected` takes a list of branches which are deemed to be protected.
-  # Gromit wil never directly make any changes on these branches, and will
-  # work only with PRs.
-  protected: [ master ]
   # `default` takes a single branch name which is the default branch for all
   # the repos. If a repo has a different default branch, say `main`  - this
   # common policy option can be overridden at the branch policy level.
@@ -52,9 +48,6 @@ policy:
       packagename: tyk-gateway
       # The name of the binary generated after the build.
       binary: tyk
-      # `protected` specifies repo specific protected branches - this gets
-      # appended to the common protected branches if any.
-      protected: [ release-3-lts, release-4 ]
       # Ports exposed by the docker images built for this repo/
       exposeports: "8080"
       # Repository topics
@@ -171,7 +164,6 @@ policy:
       binary: tyk-analytics
       reviewers: []
       packagename: tyk-dashboard
-      protected: [ release-3-lts, release-4, release-4-lts ]
       wiki: true
       vulnerabilityalerts: true
       branches:
@@ -237,7 +229,6 @@ policy:
       exposeports: "80"
       binary: tyk-pump
       packagename: tyk-pump
-      protected: [ release-1.6, release-1.5 ]
       squashmsg: COMMIT_MESSAGES
       squashtitle: COMMIT_OR_PR_TITLE
       visibility: "public"
@@ -270,7 +261,6 @@ policy:
       binary: tyk-identity-broker
       reviewers: [ TykTechnologies/platform-squad ]
       packagename: tyk-identity-broker
-      protected: [ master, release-1.3, release-1.2 ]
       wiki: true
       squashmsg: COMMIT_MESSAGES
       squashtitle: COMMIT_OR_PR_TITLE
@@ -306,7 +296,6 @@ policy:
       binary: tyk-sink
       reviewers: [ TykTechnologies/platform-squad ]
       packagename: tyk-sink
-      protected: [ master, release-2, release-1.8 ]
       wiki: true
       squashmsg: COMMIT_MESSAGES
       squashtitle: COMMIT_OR_PR_TITLE
@@ -340,7 +329,6 @@ policy:
       reviewers: []
       binary: dev-portal
       packagename: portal
-      protected: [ master, release-1.0 ]
       topics: [ api-gateway, portal ]
       wiki: true
       squashmsg: COMMIT_MESSAGES
@@ -374,7 +362,6 @@ policy:
       reviewers: []
       binary: tyk-analytics-ui
       packagename: tyk-analytics-ui
-      protected: [ master ]
       wiki: true
       vulnerabilityalerts: true
       branches:

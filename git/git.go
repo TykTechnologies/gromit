@@ -46,7 +46,7 @@ const defaultRemote = "origin"
 
 // InitGit is a constructor for the GitRepo type
 // private repos will need ghToken
-func Init(repoName, owner, branch string, depth int, dir, ghToken string, clone bool) (*GitRepo, error) {
+func Init(repoName, owner, branch string, depth int, dir, ghToken string) (*GitRepo, error) {
 	log.Logger = log.With().Str("repo", repoName).Str("branch", branch).Str("owner", owner).Logger()
 
 	fi, err := os.Stat(dir)
@@ -56,21 +56,21 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string, clone 
 		if err != nil {
 			return nil, err
 		}
-		clone = true
 	}
 
 	var gh *github.Client
 	var ghV4 *githubv4.Client
 
 	fqrn := fmt.Sprintf("https://github.com/%s/%s", owner, repoName)
-	opts := &git.CloneOptions{
+	cloneOpts := &git.CloneOptions{
 		URL:      fqrn,
 		Progress: os.Stdout,
 		// FIXME: Make a shallow clone https://github.com/go-git/go-git/issues/207
 		Depth: depth,
+		ReferenceName: plumbing.NewBranchReferenceName(branch),
 	}
 	if ghToken != "" {
-		opts.Auth = &http.BasicAuth{
+		cloneOpts.Auth = &http.BasicAuth{
 			Username: "abc123", // anything except an empty string
 			Password: ghToken,
 		}
@@ -84,16 +84,24 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string, clone 
 	}
 
 	var repo *git.Repository
-	// FIXME: when an existing repo is found, git pull
 	repo, err = git.PlainOpen(dir)
-	if clone && err == git.ErrRepositoryNotExists {
-		repo, err = git.PlainClone(dir, false, opts)
+	if err == git.ErrRepositoryNotExists {
+		repo, err = git.PlainClone(dir, false, cloneOpts)
 	}
 	w, err := repo.Worktree()
+	err = w.Pull(&git.PullOptions{
+		SingleBranch: true,
+		Progress: os.Stdout,
+		Auth: cloneOpts.Auth,
+		ReferenceName: cloneOpts.ReferenceName,
+	})
+	if err == git.NoErrAlreadyUpToDate {
+		err = nil
+	}
 	return &GitRepo{
 		Name:     repoName,
 		Owner:    owner,
-		auth:     opts.Auth,
+		auth:     cloneOpts.Auth,
 		repo:     repo,
 		worktree: w,
 		dir:      dir,
@@ -157,7 +165,7 @@ func (r *GitRepo) SwitchBranch(branch string) error {
 	if err != nil {
 		return err
 	}
-	nbrefName := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch))
+	nbrefName := plumbing.NewBranchReferenceName(branch)
 	nbRef := plumbing.NewHashReference(nbrefName, head.Hash())
 	err = r.repo.Storer.SetReference(nbRef)
 	if err != nil {
@@ -195,7 +203,7 @@ func (r *GitRepo) Checkout(branch string) error {
 		return err
 	}
 	err = r.worktree.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.ReferenceName(localRef.String()),
+		Branch: localRef,
 		Force:  true,
 	})
 	if err != nil {

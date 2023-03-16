@@ -1,7 +1,6 @@
 package policy
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/jinzhu/copier"
@@ -49,7 +48,6 @@ type Policies struct {
 	Reviewers           []string
 	ExposePorts         string
 	Binary              string
-	Protected           []string `copier:"-"`
 	Goversion           string
 	Default             string              // The default git branch(master/main/anything else)
 	Repos               map[string]Policies // map of reponames to branchPolicies
@@ -71,7 +69,6 @@ type RepoPolicies map[string]RepoPolicy
 func (p *Policies) GetAllRepos(prefix string) (RepoPolicies, error) {
 	var rp RepoPolicies
 	for repoName, repoVals := range p.Repos {
-		log.Info().Msgf("Reponame: %s", repoName)
 		repo, err := repoVals.GetRepo(repoName, prefix, "master")
 		if err != nil {
 			return RepoPolicies{}, err
@@ -146,7 +143,6 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 
 	return RepoPolicy{
 		Name:                repo,
-		Protected:           append(p.Protected, r.Protected...),
 		Default:             p.Default,
 		Ports:               r.Ports,
 		Branch:              branch,
@@ -168,25 +164,6 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 		Wiki:                p.Wiki,
 		Visibility:          p.Visibility,
 	}, nil
-}
-
-// String representation
-func (p Policies) String() string {
-	w := new(bytes.Buffer)
-	fmt.Fprintln(w, `Commits landing on the Source branch are automatically sync'd to the list of Destinations. PRs will be created for the protected branch. Other branches will be updated directly.`)
-	fmt.Fprintln(w)
-	fmt.Fprintf(w, "Protected branches: %v\n", p.Protected)
-	fmt.Fprintln(w, "Common Files:")
-	for repo, pols := range p.Repos {
-		fmt.Fprintf(w, "%s\n", repo)
-		fmt.Fprintln(w, " Extra files:")
-		fmt.Fprintln(w, " Ports")
-		for src, dest := range pols.Ports {
-			fmt.Fprintf(w, "   - %s → %s\n", src, dest)
-		}
-	}
-	fmt.Fprintln(w)
-	return w.String()
 }
 
 // LoadRepoPolicies returns the policies as a map of repos to policies

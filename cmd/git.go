@@ -36,7 +36,7 @@ var pushSubCmd = &cobra.Command{
 	Use:   "push <dir> <repo> <remote branch> <bundle>",
 	Args:  cobra.MinimumNArgs(4),
 	Short: "Commit, push and create a PR from a local git repo in <dir>",
-	Long: `Uses git.prefix from viper to construct the fully qualified repo name. Any changes will be committed. This command is equivalent to:
+	Long: `Any changes will be committed. This command is equivalent to:
 cd <dir>
 git commit -m <msg>
 git push origin
@@ -53,8 +53,7 @@ gh pr create`,
 			Branch,
 			1,
 			dir,
-			os.Getenv("GITHUB_TOKEN"),
-			true)
+			os.Getenv("GITHUB_TOKEN"))
 		if err != nil {
 			return fmt.Errorf("git init %s ./%s: %v", repo, dir, err)
 		}
@@ -96,7 +95,7 @@ var coSubCmd = &cobra.Command{
 	Aliases: []string{"checkout"},
 	Args:    cobra.MinimumNArgs(1),
 	Short:   "Make a local copy of a github repo from the TykTechnologies org",
-	Long: `Uses git.prefix from viper to construct the fully qualified repo name. Changes can be made in this clone and pushed. This command is equivalent to:
+	Long: `Changes can be made in this clone and pushed. This command is equivalent to:
 git clone <git.prefix>/<repo> <dir>
 cd <dir>; git checkout <branch>`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -110,8 +109,7 @@ cd <dir>; git checkout <branch>`,
 			Branch,
 			1,
 			dir,
-			os.Getenv("GITHUB_TOKEN"),
-			true)
+			os.Getenv("GITHUB_TOKEN"))
 		if err != nil {
 			return fmt.Errorf("git init %s: %v", repo, err)
 		}
