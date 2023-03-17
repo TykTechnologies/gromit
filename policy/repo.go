@@ -51,11 +51,14 @@ func (r RepoPolicy) DestBranches(srcBranch string) []string {
 }
 
 // GetActiveReleaseBranches returns a slice with all the branches
-// marked active in the branch policy. This function can be called
-// in the sync automation workflow template to get the list of
-// all the active release branches that should be sync'd to.
+// marked active in the branch policy sans master(whichever is set
+// as the default branch). This function can be called in the sync
+// automation workflow template to get the list of all the active
+// release branches that should be sync'd to.
 func (r RepoPolicy) GetActiveReleaseBranches() []string {
-	return maps.Keys(r.ActiveReleaseBranches)
+	rb := r.ActiveReleaseBranches
+	delete(rb, r.Default)
+	return maps.Keys(rb)
 
 }
 
