@@ -18,7 +18,7 @@ policy:
   # the repos. If a repo has a different default branch, say `main`  - this
   # common policy option can be overridden at the branch policy level.
   default: master
-  # Public or private 
+  # Public or private
   visibility: "private"
   # Enables wiki feature for the given repo
   wiki: false
@@ -104,6 +104,14 @@ policy:
           # the respective branches.
           branch:
             master:
+              # For any branch other than master, setting active to true also implies
+              # that it is a sync automation target.
+              # any changes that land in master will be picked and made in to PRs
+              # against all the branches that has active set to `true`.
+              # Please note that the automation picks only ci specific commits. (Selected
+              # workflows form .github/workflows/*, the ci/ directory and some other files.
+              # For up to date info on this, please refer to the latest sync automation
+              # templates.
               active: true
               reviewcount: 2
             release-3-lts:
@@ -146,21 +154,7 @@ policy:
               sourcebranch: master
             release-5-lts:
               active: true
-              sourcebranch: master              
-      # Sync-automation specific policy.
-      # we can have multiple sync policies for different source branches.
-      # policy should be in the form of:
-      #   source branch: <list of target branches>
-      # Once the sync automation is generated and merged to the source branch,
-      # any changes that land in source branch will be picked and made in to PRs
-      # against all the given target branches for the given source branch.
-      # Please note that the automation picks only ci specific commits. (Selected
-      # workflows form .github/workflows/*, the ci/ directory and some other files.
-      # For up to date info on this, please refer to the latest sync automation
-      # templates.
-      ports:
-        master: [ release-4 , release-4.3]
-        release-3-lts: [release-3.0.11]
+              sourcebranch: master
     tyk-analytics:
       description: >-
         Tyk Dashboard New Repository
@@ -224,9 +218,6 @@ policy:
             release-5-lts:
               active: true
               sourcebranch: master
-      ports:
-        master: [ release-4, release-4.3 ]
-        release-3: [release-3-lts]
     tyk-pump:
       description: >-
         Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once).
@@ -258,8 +249,6 @@ policy:
               reviewcount: 2
             release-1.7:
               active: true
-      ports:
-        master: [ release-1.7 ]
     tyk-identity-broker:
       description: >-
         Tyk Authentication Proxy for third-party login
@@ -294,8 +283,6 @@ policy:
             active: true
           release-1.2:
             active: true
-      ports:
-        master: [ release-1.3, release-1.2 ]
     tyk-sink:
       description: >-
        Tyk RPC server backend (bridge)
@@ -328,8 +315,6 @@ policy:
             active: true
           release-2.1:
             active: true
-      ports:
-        master: [ release-2 ]
     portal:
       description: >-
         Portal is a full-featured developer portal, blog and CMS
@@ -344,7 +329,7 @@ policy:
       topics: [ api-gateway, portal ]
       wiki: true
       squashmsg: COMMIT_MESSAGES
-      squashtitle: COMMIT_OR_PR_TITLE      
+      squashtitle: COMMIT_OR_PR_TITLE
       branches:
         cgo: true
         goversion: 1.15
@@ -362,8 +347,6 @@ policy:
         release-1.0:
           master:
             active: true
-      ports:
-        master: [ release-1.0 ]
     tyk-analytics-ui:
       description: >-
         User interface for our dashboard. Backend: https://github.com/TykTechnologies/tyk-analytics
