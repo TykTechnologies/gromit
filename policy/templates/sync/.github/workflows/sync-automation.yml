@@ -41,8 +41,8 @@ jobs:
       fail-fast: false
       matrix:
         branch:
-          {{- range $port := index .Ports .Branch }}
-          - {{ $port }}
+          {{- range $branch := index .GetActiveReleaseBranches }}
+          - {{ $branch }}
           {{- end }}
 
     steps:

@@ -7,36 +7,38 @@ import (
 	"time"
 
 	"github.com/TykTechnologies/gromit/git"
+	"golang.org/x/exp/maps"
 )
 
 // RepoPolicy extracts information from the Policies type for one repo. If you add fields here, the Policies type might have to be updated, and vice versa.
 type RepoPolicy struct {
-	Name                string
-	Description         string
-	Protected           []string `copier:"-"`
-	Default             string
-	PCRepo              string
-	DHRepo              string
-	CSRepo              string
-	Binary              string
-	PackageName         string
-	Reviewers           []string
-	ExposePorts         string
-	Files               map[string][]string
-	Ports               map[string][]string
-	gitRepo             *git.GitRepo
-	Branch              string
-	ReleaseBranches     map[string]branchVals
-	prBranch            string
-	Branchvals          branchVals
-	prefix              string
-	Timestamp           string
-	Wiki                bool
-	Topics              []string `copier:"-"`
-	VulnerabilityAlerts bool
-	SquashMsg           string
-	SquashTitle         string
-	Visibility          string
+	Name                  string
+	Description           string
+	Protected             []string `copier:"-"`
+	Default               string
+	PCRepo                string
+	DHRepo                string
+	CSRepo                string
+	Binary                string
+	PackageName           string
+	Reviewers             []string
+	ExposePorts           string
+	Files                 map[string][]string
+	Ports                 map[string][]string
+	gitRepo               *git.GitRepo
+	Branch                string
+	ActiveReleaseBranches map[string]branchVals
+	prBranch              string
+	Branchvals            branchVals
+	prefix                string
+	Timestamp             string
+	Wiki                  bool
+	Topics                []string `copier:"-"`
+	VulnerabilityAlerts   bool
+	SquashMsg             string
+	SquashTitle           string
+	Visibility            string
+	SyncAutomationTargets []string
 }
 
 // Returns the destination branches for a given source branch
@@ -46,6 +48,18 @@ func (r RepoPolicy) DestBranches(srcBranch string) []string {
 		return []string{}
 	}
 	return b
+}
+
+// GetActiveReleaseBranches returns a slice with all the branches
+// marked active in the branch policy sans master(whichever is set
+// as the default branch). This function can be called in the sync
+// automation workflow template to get the list of all the active
+// release branches that should be sync'd to.
+func (r RepoPolicy) GetActiveReleaseBranches() []string {
+	rb := r.ActiveReleaseBranches
+	delete(rb, r.Default)
+	return maps.Keys(rb)
+
 }
 
 // IsProtected tells you if a branch can be pushed directly to origin or needs to go via a PR
