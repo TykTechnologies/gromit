@@ -280,7 +280,7 @@ policy:
           configfile: pump.conf
           versionpackage: github.com/TykTechnologies/tyk-pump/pumps
           convos: false
-          tests: ["Go 1.16 tests"]
+          tests: ["1.16","Go 1.16 tests"]
           reviewcount: 0
           branch:
             master:
