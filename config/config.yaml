@@ -274,19 +274,21 @@ policy:
       vulnerabilityalerts: true
       branches:
           cgo: false
-          goversion: 1.15
+          goversion: 1.16
           upgradefromver: 1.6.0
           pcprivate: false
           configfile: pump.conf
           versionpackage: github.com/TykTechnologies/tyk-pump/pumps
           convos: false
-          tests: ["1.15","Go 1.16 tests"]
+          tests: ["Go 1.16 tests"]
           reviewcount: 0
           branch:
             master:
               active: true
               reviewcount: 2
             release-1.7:
+              tests: ["1.15"]
+              goversion: 1.15
               active: true
     tyk-identity-broker:
       description: >-
