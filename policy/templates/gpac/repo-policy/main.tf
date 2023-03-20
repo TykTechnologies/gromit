@@ -40,7 +40,7 @@ module "{{ .Name }}" {
   delete_branch_on_merge = false
   {{- end }}
   release_branches     = [
-{{- range $branch, $values := .ReleaseBranches }}
+{{- range $branch, $values := .ActiveReleaseBranches }}
 { branch    = "{{ $branch }}",
 	reviewers = "{{ $values.ReviewCount }}",
 	convos    = "{{ $values.Convos }}",
