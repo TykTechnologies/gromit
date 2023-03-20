@@ -125,6 +125,7 @@ policy:
             release-4.3:
               active: true
               sourcebranch: release-4
+              relengversion: release-4.x
             release-4.3.0:
               active: true
               sourcebranch: release-4
@@ -344,8 +345,7 @@ policy:
           master:
             active: true
             reviewcount: 1
-        release-1.0:
-          master:
+          release-1.0:
             active: true
     tyk-analytics-ui:
       description: >-
