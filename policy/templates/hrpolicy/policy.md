@@ -2,6 +2,17 @@
 
 Default Branch: **{{ .Default }}**
 
+
+### All  Release Branches
+{{ $r := . }}
+
+| Branch | Releng Version | Source Branch | Is Active | Go Version | Tests
+| -------| -------------- | ------------- | --------- | ---------- | -----
+{{- range $branch := index .GetAllReleaseBranches }}
+{{- $b := index $r.AllReleaseBranches $branch }}
+| {{ $branch }} | {{ $b.RelengVersion }} | {{ $b.SourceBranch }} | {{ $b.Active }} | {{ $b.GoVersion }} | {{ $b.Tests }}
+{{- end }}
+
 ### Active Release Branches
 {{ $r := . }}
 
