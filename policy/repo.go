@@ -28,7 +28,6 @@ type RepoPolicy struct {
 	gitRepo               *git.GitRepo
 	Branch                string
 	ActiveReleaseBranches map[string]branchVals
-	AllReleaseBranches    map[string]branchVals
 	prBranch              string
 	Branchvals            branchVals
 	prefix                string
@@ -58,17 +57,6 @@ func (r RepoPolicy) DestBranches(srcBranch string) []string {
 // release branches that should be sync'd to.
 func (r RepoPolicy) GetActiveReleaseBranches() []string {
 	rb := r.ActiveReleaseBranches
-	delete(rb, r.Default)
-	return maps.Keys(rb)
-
-}
-
-// GetAllReleaseBranches returns a slice with all the branches
-// defined under the branches section of the policy sans the default
-// branch. It includes branches marked active true as well as
-// false.
-func (r RepoPolicy) GetAllReleaseBranches() []string {
-	rb := r.AllReleaseBranches
 	delete(rb, r.Default)
 	return maps.Keys(rb)
 

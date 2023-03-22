@@ -132,11 +132,9 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 
 	// Build release branches map by iterating over each branch values
 	activeReleaseBranches := make(map[string]branchVals)
-	allReleaseBranches := make(map[string]branchVals)
 
 	for branch, releaseBranch := range r.Branches.Branch {
 		var activeRb branchVals
-		var allRb branchVals
 		if releaseBranch.Active {
 			copier.Copy(&activeRb, r.Branches)
 			if arb, found := r.Branches.Branch[branch]; found {
@@ -144,11 +142,6 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 			}
 			activeReleaseBranches[branch] = activeRb
 		}
-		copier.Copy(&allRb, r.Branches)
-		if rb, found := r.Branches.Branch[branch]; found {
-			copier.CopyWithOption(&allRb, &rb, copier.Option{IgnoreEmpty: true})
-		}
-		allReleaseBranches[branch] = allRb
 	}
 
 	return RepoPolicy{
@@ -160,7 +153,6 @@ func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
 		prefix:                prefix,
 		Branchvals:            b,
 		ActiveReleaseBranches: activeReleaseBranches,
-		AllReleaseBranches:    allReleaseBranches,
 		Reviewers:             r.Reviewers,
 		DHRepo:                r.DHRepo,
 		PCRepo:                r.PCRepo,
