@@ -10,7 +10,7 @@ Default Branch: **{{ .Default }}**
 | -------| -------------- | ------------- | --------- | ---------- | -----
 {{- range $branch := index .GetAllReleaseBranches }}
 {{- $b := index $r.AllReleaseBranches $branch }}
-| {{ $branch }} | {{ $b.RelengVersion }} | {{ $b.SourceBranch }} | {{ $b.Active }} | {{ $b.GoVersion }} | {{ $b.Tests }}
+| {{ $branch }} | {{ $b.RelengVersion }} | {{ $b.SourceBranch }} | {{ $b.Active }} | {{ $b.GoVersion }} | {{ $b.Tests | join "," }}
 {{- end }}
 
 ### Active Release Branches
