@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TykTechnologies/gromit/git"
 	"golang.org/x/exp/maps"
 )
 
@@ -25,7 +24,6 @@ type RepoPolicy struct {
 	ExposePorts           string
 	Files                 map[string][]string
 	Ports                 map[string][]string
-	gitRepo               *git.GitRepo
 	Branch                string
 	ActiveReleaseBranches map[string]branchVals
 	prBranch              string
