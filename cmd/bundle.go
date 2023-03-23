@@ -59,7 +59,8 @@ var genSubCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repo, err)
 		}
-		return b.Render(&rp, dir, nil, nil)
+		_, err = b.Render(&rp, dir, nil)
+		return err
 	},
 }
 

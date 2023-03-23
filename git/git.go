@@ -13,7 +13,9 @@ import (
 
 	"time"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/TykTechnologies/gromit/policy"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -33,6 +35,7 @@ type GitRepo struct {
 	Owner      string
 	commitOpts *git.CommitOptions
 	repo       *git.Repository
+	RepoPolicy policy.RepoPolicy
 	worktree   *git.Worktree
 	dir        string
 	auth       transport.AuthMethod
@@ -89,16 +92,25 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string, clone 
 	if clone && err == git.ErrRepositoryNotExists {
 		repo, err = git.PlainClone(dir, false, opts)
 	}
-	w, err := repo.Worktree()
+	// Load repo policy for the given repo.
+	rp, err := policy.GetRepoPolicy(repoName, branch)
+	if err != nil {
+		return nil, err
+	}
+	var w *git.Worktree
+	if repo != nil {
+		w, err = repo.Worktree()
+	}
 	return &GitRepo{
-		Name:     repoName,
-		Owner:    owner,
-		auth:     opts.Auth,
-		repo:     repo,
-		worktree: w,
-		dir:      dir,
-		gh:       gh,
-		ghV4:     ghV4,
+		Name:       repoName,
+		Owner:      owner,
+		auth:       opts.Auth,
+		RepoPolicy: rp,
+		repo:       repo,
+		worktree:   w,
+		dir:        dir,
+		gh:         gh,
+		ghV4:       ghV4,
 		commitOpts: &git.CommitOptions{
 			All: false,
 			Author: &object.Signature{
@@ -349,17 +361,20 @@ func (r *GitRepo) EnableAutoMerge(prID string) error {
 //go:embed prs
 var prs embed.FS
 
-func (r *GitRepo) CreatePR(title, remoteBranch, bundle string) (*github.PullRequest, error) {
+func (r *GitRepo) RenderPRBundle(bundle string) (*bytes.Buffer, error) {
+	body := new(bytes.Buffer)
 	tFile := filepath.Join("prs", bundle+".tmpl")
 	t := template.Must(
 		template.New(bundle+".tmpl").
 			Option("missingkey=error").
-			Funcs(template.FuncMap{
-				"now": time.Now().UTC,
-			}).
+			Funcs(sprig.FuncMap()).
 			ParseFS(prs, tFile))
-	body := new(bytes.Buffer)
 	err := t.Execute(body, r)
+	return body, err
+}
+
+func (r *GitRepo) CreatePR(title, remoteBranch, bundle string) (*github.PullRequest, error) {
+	body, err := r.RenderPRBundle(bundle)
 	if err != nil {
 		return nil, err
 	}

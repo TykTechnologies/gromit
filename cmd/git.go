@@ -134,6 +134,40 @@ var diffSubCmd = &cobra.Command{
 	},
 }
 
+var printPolicySubCmd = &cobra.Command{
+	Use:   "print-policy <repo>",
+	Args:  cobra.MinimumNArgs(1),
+	Short: "Prints the git branches policy for the given repo",
+	Long:  "Dumps a markdown formatted output containing all the git release branches information for the given repo.",
+	Run: func(cmd *cobra.Command, args []string) {
+		repo := args[0]
+		owner, _ := cmd.Flags().GetString("owner")
+		r, err := git.Init(repo,
+			owner,
+			Branch,
+			1,
+			os.TempDir(),
+			os.Getenv("GITHUB_TOKEN"),
+			false)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error init git repo: ", err)
+			os.Exit(1)
+		}
+		buf, err := r.RenderPRBundle("policy-dump")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error rendering policy-dump: ", err)
+			os.Exit(1)
+		}
+		_, err = buf.WriteTo(os.Stdout)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error displaying rendered tmpl: ", err)
+			os.Exit(1)
+		}
+
+		os.Exit(0)
+	},
+}
+
 func init() {
 	gitCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
 	gitCmd.PersistentFlags().StringVar(&Owner, "owner", "TykTechnologies", "Github org")
@@ -148,5 +182,6 @@ func init() {
 	gitCmd.AddCommand(coSubCmd)
 	gitCmd.AddCommand(diffSubCmd)
 	gitCmd.AddCommand(pushSubCmd)
+	gitCmd.AddCommand(printPolicySubCmd)
 	rootCmd.AddCommand(gitCmd)
 }

@@ -78,9 +78,18 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			return fmt.Errorf("repopolicy %s: %v", repo, err)
 		}
 		// Generate bundle into the dir named repo from above
-		err = b.Render(&rp, repo, nil, r)
+		files, err := b.Render(&rp, repo, nil)
 		if err != nil {
 			return fmt.Errorf("bundle gen %s: %v", bundle, err)
+		}
+		// Add rendered files to git staging.
+		if r != nil {
+			for _, f := range files {
+				_, err := r.AddFile(f)
+				if err != nil {
+					return fmt.Errorf("staging file to git worktree: %v", err)
+				}
+			}
 		}
 		force, _ := cmd.Flags().GetBool("force")
 		dfs, err := git.NonTrivial(repo)
