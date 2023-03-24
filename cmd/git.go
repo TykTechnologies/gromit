@@ -135,7 +135,7 @@ var diffSubCmd = &cobra.Command{
 }
 
 var printBundleSubCmd = &cobra.Command{
-	Use:   "print-bundle <repo>",
+	Use:   "print-bundle <repo> <bundle>",
 	Args:  cobra.MinimumNArgs(2),
 	Short: "Prints the given PR bundle after rendering, verbatim as the PR body",
 	Long:  "Dumps a markdown formatted output of the PR body for the given pr bundle for the given repo - especially useful if used with policy-dump bundle as it will print the current release branches information for the given repo",
