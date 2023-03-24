@@ -286,6 +286,8 @@ policy:
           master:
             active: true
             reviewcount: 1
+          release-1.4:
+            active: true
           release-1.3:
             active: true
           release-1.2:
@@ -355,8 +357,6 @@ policy:
           release-1.0:
             active: true
             tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)","1.15","1.15-el7"]
-      ports:
-        master: [ release-1.0 ]
     tyk-analytics-ui:
       description: >-
         User interface for our dashboard. Backend: https://github.com/TykTechnologies/tyk-analytics
