@@ -134,13 +134,14 @@ var diffSubCmd = &cobra.Command{
 	},
 }
 
-var printPolicySubCmd = &cobra.Command{
-	Use:   "print-policy <repo>",
-	Args:  cobra.MinimumNArgs(1),
-	Short: "Prints the git branches policy for the given repo",
-	Long:  "Dumps a markdown formatted output containing all the git release branches information for the given repo.",
+var printBundleSubCmd = &cobra.Command{
+	Use:   "print-bundle <repo>",
+	Args:  cobra.MinimumNArgs(2),
+	Short: "Prints the given PR bundle after rendering, verbatim as the PR body",
+	Long:  "Dumps a markdown formatted output of the PR body for the given pr bundle for the given repo - especially useful if used with policy-dump bundle as it will print the current release branches information for the given repo",
 	Run: func(cmd *cobra.Command, args []string) {
 		repo := args[0]
+		bundle := args[1]
 		owner, _ := cmd.Flags().GetString("owner")
 		r, err := git.Init(repo,
 			owner,
@@ -153,9 +154,9 @@ var printPolicySubCmd = &cobra.Command{
 			fmt.Fprintln(os.Stderr, "Error init git repo: ", err)
 			os.Exit(1)
 		}
-		buf, err := r.RenderPRBundle("policy-dump")
+		buf, err := r.RenderPRBundle(bundle)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error rendering policy-dump: ", err)
+			fmt.Fprintf(os.Stderr, "Error rendering bundle: %s, err: %v ", bundle, err)
 			os.Exit(1)
 		}
 		_, err = buf.WriteTo(os.Stdout)
@@ -182,6 +183,6 @@ func init() {
 	gitCmd.AddCommand(coSubCmd)
 	gitCmd.AddCommand(diffSubCmd)
 	gitCmd.AddCommand(pushSubCmd)
-	gitCmd.AddCommand(printPolicySubCmd)
+	gitCmd.AddCommand(printBundleSubCmd)
 	rootCmd.AddCommand(gitCmd)
 }

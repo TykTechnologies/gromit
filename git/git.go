@@ -33,6 +33,7 @@ import (
 type GitRepo struct {
 	Name       string
 	Owner      string
+	branch     string
 	commitOpts *git.CommitOptions
 	repo       *git.Repository
 	RepoPolicy policy.RepoPolicy
@@ -104,6 +105,7 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string, clone 
 	return &GitRepo{
 		Name:       repoName,
 		Owner:      owner,
+		branch:     branch,
 		auth:       opts.Auth,
 		RepoPolicy: rp,
 		repo:       repo,
@@ -134,6 +136,11 @@ func (r *GitRepo) AddFile(path string) (plumbing.Hash, error) {
 
 // Gets the bare branch that is currently checked out
 func (r *GitRepo) Branch() string {
+	// If not checked out( mostly for print bundle cases) - directly give out
+	// the branch that was input.
+	if r.repo == nil {
+		return r.branch
+	}
 	h, err := r.repo.Head()
 	if err != nil {
 		log.Warn().Err(err).Msg("could not get current branch")
