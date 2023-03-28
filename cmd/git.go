@@ -134,14 +134,18 @@ var diffSubCmd = &cobra.Command{
 	},
 }
 
-var printBundleSubCmd = &cobra.Command{
-	Use:   "print-bundle <repo> <bundle>",
+var renderPrTemplate = &cobra.Command{
+	Use:   "render-pr-template <repo> <template-name>",
 	Args:  cobra.MinimumNArgs(2),
-	Short: "Prints the given PR bundle after rendering, verbatim as the PR body",
-	Long:  "Dumps a markdown formatted output of the PR body for the given pr bundle for the given repo - especially useful if used with policy-dump bundle as it will print the current release branches information for the given repo",
+	Short: "Prints the given PR template for the repo  after rendering, verbatim as the PR body - template name to be given without the .tmpl extension",
+	Long: `Dumps a markdown formatted output of the PR body
+for the given pr template for the given repo - especially
+useful if used with policy-dump template as it will print
+the current release branches information for the given repo,
+<template-name> should be given without the .tmpl extension.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		repo := args[0]
-		bundle := args[1]
+		tmpl := args[1]
 		owner, _ := cmd.Flags().GetString("owner")
 		r, err := git.Init(repo,
 			owner,
@@ -154,9 +158,9 @@ var printBundleSubCmd = &cobra.Command{
 			fmt.Fprintln(os.Stderr, "Error init git repo: ", err)
 			os.Exit(1)
 		}
-		buf, err := r.RenderPRBundle(bundle)
+		buf, err := r.RenderPRTemplate(tmpl)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error rendering bundle: %s, err: %v ", bundle, err)
+			fmt.Fprintf(os.Stderr, "Error rendering template: %s, err: %v ", tmpl, err)
 			os.Exit(1)
 		}
 		_, err = buf.WriteTo(os.Stdout)
@@ -183,6 +187,6 @@ func init() {
 	gitCmd.AddCommand(coSubCmd)
 	gitCmd.AddCommand(diffSubCmd)
 	gitCmd.AddCommand(pushSubCmd)
-	gitCmd.AddCommand(printBundleSubCmd)
+	gitCmd.AddCommand(renderPrTemplate)
 	rootCmd.AddCommand(gitCmd)
 }

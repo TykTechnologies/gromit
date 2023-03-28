@@ -368,11 +368,11 @@ func (r *GitRepo) EnableAutoMerge(prID string) error {
 //go:embed prs
 var prs embed.FS
 
-func (r *GitRepo) RenderPRBundle(bundle string) (*bytes.Buffer, error) {
+func (r *GitRepo) RenderPRTemplate(tmplName string) (*bytes.Buffer, error) {
 	body := new(bytes.Buffer)
-	tFile := filepath.Join("prs", bundle+".tmpl")
+	tFile := filepath.Join("prs", tmplName+".tmpl")
 	t := template.Must(
-		template.New(bundle+".tmpl").
+		template.New(tmplName+".tmpl").
 			Option("missingkey=error").
 			Funcs(sprig.FuncMap()).
 			ParseFS(prs, tFile))
@@ -381,7 +381,7 @@ func (r *GitRepo) RenderPRBundle(bundle string) (*bytes.Buffer, error) {
 }
 
 func (r *GitRepo) CreatePR(title, remoteBranch, bundle string) (*github.PullRequest, error) {
-	body, err := r.RenderPRBundle(bundle)
+	body, err := r.RenderPRTemplate(bundle)
 	if err != nil {
 		return nil, err
 	}
