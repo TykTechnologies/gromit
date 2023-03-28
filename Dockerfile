@@ -7,7 +7,7 @@ RUN CGO_ENABLED=0 make gromit
 
 # generate clean image for end users
 FROM alpine:latest
-RUN apk update && apk add git
+RUN apk update && apk add git github-cli
 COPY --from=builder /src/gromit/gromit /usr/bin/
 EXPOSE 443
 RUN mkdir /config /cfssl

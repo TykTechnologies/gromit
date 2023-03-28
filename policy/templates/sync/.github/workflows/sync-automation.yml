@@ -79,8 +79,6 @@ jobs:
       - name: Generate releng bundle using latest gromit templates for {{`${{matrix.branch}}`}}
         id: gromit-bundle-gen
         run: |
-          # add gh cli to gromit container
-          apk add --no-cache github-cli
           # get the tarball for the latest gromit master - it will have the latest version of
           # the templates.
           mkdir /tmp/gromit-src && gh api -H "Accept: application/vnd.github+json"  /repos/TykTechnologies/gromit/tarball/master | tar --strip-components 1 -C /tmp/gromit-src -xzf -
