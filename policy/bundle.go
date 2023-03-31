@@ -69,10 +69,11 @@ func (b *Bundle) Render(bv any, opDir string, n *bundleNode) ([]string, error) {
 		return nil, nil
 	}
 	for _, child := range n.Children {
-		_, err := b.Render(bv, opDir, child)
+		f, err := b.Render(bv, opDir, child)
 		if err != nil {
 			return nil, err
 		}
+		renderedFiles = append(renderedFiles, f...)
 	}
 	if len(n.Children) == 0 {
 		templatePaths := b.tree.findSubTemplates(n.Name + ".d")

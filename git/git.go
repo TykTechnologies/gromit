@@ -37,6 +37,7 @@ type GitRepo struct {
 	commitOpts *git.CommitOptions
 	repo       *git.Repository
 	RepoPolicy policy.RepoPolicy
+	TicketID   string
 	worktree   *git.Worktree
 	dir        string
 	auth       transport.AuthMethod
@@ -132,6 +133,14 @@ func (r *GitRepo) AddFile(path string) (plumbing.Hash, error) {
 		return plumbing.ZeroHash, err
 	}
 	return hash, nil
+}
+
+// SetTicketID sets the given JIRA ticket ID as the ticket ID
+// associated with the given PR/commit.
+// This could be used in the PR templates to associate the PR/commit
+// to the given JIRA ticket.
+func (r *GitRepo) SetTicketID(tID string) {
+	r.TicketID = "[" + tID + "]: "
 }
 
 // Gets the bare branch that is currently checked out
