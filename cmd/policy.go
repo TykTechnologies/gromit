@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/policy"
@@ -74,22 +75,15 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			return fmt.Errorf("bundle %s: %v", bundle, err)
 		}
 		rp, err := policy.GetRepoPolicy(repo, branch)
+		rp.SetTimestamp(time.Now().UTC())
 		if err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repo, err)
 		}
 		// Generate bundle into the dir named repo from above
 		files, err := b.Render(&rp, repo, nil)
+		log.Info().Strs("files", files).Msg("Rendered files")
 		if err != nil {
 			return fmt.Errorf("bundle gen %s: %v", bundle, err)
-		}
-		// Add rendered files to git staging.
-		if r != nil {
-			for _, f := range files {
-				_, err := r.AddFile(f)
-				if err != nil {
-					return fmt.Errorf("staging file to git worktree: %v", err)
-				}
-			}
 		}
 		force, _ := cmd.Flags().GetBool("force")
 		dfs, err := git.NonTrivial(repo)
@@ -100,6 +94,15 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			cmd.Printf("trivial changes for repo %s branch %s, stopping here", repo, r.Branch())
 			return nil
 		}
+
+		// Add rendered files to git staging.
+		for _, f := range files {
+			_, err := r.AddFile(f)
+			if err != nil {
+				return fmt.Errorf("staging file to git worktree: %v", err)
+			}
+		}
+
 		if len(dfs) > 0 {
 			msg, _ := cmd.Flags().GetString("msg")
 			err = r.Commit(msg)
