@@ -123,7 +123,11 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 				return fmt.Errorf("gh create pr --base %s --head %s: %v", r.Branch(), remoteBranch, err)
 			}
 			cmd.Println(pr)
-			return r.EnableAutoMerge(pr.GetNodeID())
+			var auto bool
+			if auto, err = cmd.Flags().GetBool("auto"); err == nil && auto {
+				return r.EnableAutoMerge(pr.GetNodeID())
+			}
+			return err
 		}
 		return nil
 	},
@@ -146,6 +150,7 @@ func init() {
 	syncSubCmd.Flags().String("remotebranch", "", "The branch that will be used for creating the PR - this is the branch that gets pushed to remote")
 	syncSubCmd.Flags().Bool("pr", false, "Create PR")
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
+	syncSubCmd.Flags().String("msg", "Auto generated from templates by gromit", "Commit message for the automated commit by gromit.")
 	syncSubCmd.MarkFlagRequired("remotebranch")
 	syncSubCmd.MarkFlagRequired("branch")
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
