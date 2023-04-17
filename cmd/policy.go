@@ -18,12 +18,12 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/policy"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"time"
 )
 
 var dryRun, autoMerge bool
@@ -61,8 +61,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			Branch,
 			1,
 			repo,
-			os.Getenv("GITHUB_TOKEN"),
-			true)
+			os.Getenv("GITHUB_TOKEN"))
 		if err != nil {
 			return fmt.Errorf("git init %s: %v", repo, err)
 		}
