@@ -13,7 +13,9 @@ import (
 
 	"time"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/TykTechnologies/gromit/policy"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -24,7 +26,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
-	"github.com/Masterminds/sprig/v3"
 )
 
 // GitRepo models a local git worktree with the authentication and
@@ -34,6 +35,7 @@ type GitRepo struct {
 	Owner      string
 	commitOpts *git.CommitOptions
 	repo       *git.Repository
+	RepoPolicy policy.RepoPolicy
 	worktree   *git.Worktree
 	dir        string
 	auth       transport.AuthMethod
@@ -67,7 +69,7 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string) (*GitR
 		URL:      fqrn,
 		Progress: os.Stdout,
 		// FIXME: Make a shallow clone https://github.com/go-git/go-git/issues/207
-		Depth: depth,
+		Depth:         depth,
 		ReferenceName: plumbing.NewBranchReferenceName(branch),
 	}
 	if ghToken != "" {
@@ -89,25 +91,48 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string) (*GitR
 	if err == git.ErrRepositoryNotExists {
 		repo, err = git.PlainClone(dir, false, cloneOpts)
 	}
+	// Load repo policy for the given repo.
+	// TODO: change the hard-coded master to may be use
+	// the checked out branch.
+	rp, err := policy.GetRepoPolicy(repoName, branch)
+	if err != nil {
+		return nil, err
+	}
 	w, err := repo.Worktree()
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting worktree")
+		return nil, err
+	}
 	err = w.Pull(&git.PullOptions{
-		SingleBranch: true,
-		Progress: os.Stdout,
-		Auth: cloneOpts.Auth,
+		SingleBranch:  true,
+		Progress:      os.Stdout,
+		Auth:          cloneOpts.Auth,
 		ReferenceName: cloneOpts.ReferenceName,
 	})
-	if err == git.NoErrAlreadyUpToDate {
+	if err == plumbing.ErrReferenceNotFound {
+		log.Debug().Err(err).Str("branch", branch).Str("remote", fqrn).Msg("does not exist, the branch will get created")
 		err = nil
 	}
+	if err == git.NoErrAlreadyUpToDate {
+		log.Debug().Err(err).Str("branch", branch).Str("remote", fqrn).Msg("brnach already up-to-date")
+		err = nil
+	}
+	// to mitigate https://github.com/go-git/go-git/issues/328 temporarily until it gets fixed.
+	if err == transport.ErrEmptyUploadPackRequest {
+		log.Debug().Err(err).Str("branch", branch).Str("remote", fqrn).Msg("empty upload pack request- https://github.com/go-git/go-git/issues/328")
+		err = nil
+	}
+
 	return &GitRepo{
-		Name:     repoName,
-		Owner:    owner,
-		auth:     cloneOpts.Auth,
-		repo:     repo,
-		worktree: w,
-		dir:      dir,
-		gh:       gh,
-		ghV4:     ghV4,
+		Name:       repoName,
+		Owner:      owner,
+		auth:       cloneOpts.Auth,
+		repo:       repo,
+		worktree:   w,
+		dir:        dir,
+		gh:         gh,
+		ghV4:       ghV4,
+		RepoPolicy: rp,
 		commitOpts: &git.CommitOptions{
 			All: false,
 			Author: &object.Signature{
