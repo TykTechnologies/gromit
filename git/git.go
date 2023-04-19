@@ -154,15 +154,20 @@ func (r *GitRepo) AddFile(path string) (plumbing.Hash, error) {
 	return hash, nil
 }
 
-// Gets the bare branch that is currently checked out
+// Branch returns the short name of the ref HEAD is pointing
+// to - provided the ref is a branch. Returns empty string
+// if ref is not a branch.
 func (r *GitRepo) Branch() string {
 	h, err := r.repo.Head()
 	if err != nil {
 		log.Warn().Err(err).Msg("could not get current branch")
 		return ""
 	}
-	refs := strings.Split(h.String(), "/")
-	return refs[len(refs)-1]
+	if !h.Name().IsBranch() {
+		log.Warn().Msg("HEAD is not a branch")
+		return ""
+	}
+	return h.Name().Short()
 }
 
 // Commit adds all unstaged changes and commits the current worktree, confirming if asked
@@ -262,7 +267,11 @@ func (r *GitRepo) Push(remoteBranch string) error {
 			Force:           false,
 			InsecureSkipTLS: false,
 		})
-		if err != nil && err != git.NoErrAlreadyUpToDate {
+		if err == git.NoErrAlreadyUpToDate {
+			log.Debug().Err(err).Msg("push -already up to date remote")
+			err = nil
+		}
+		if err != nil {
 			return fmt.Errorf("pushing: %w", err)
 		}
 	}
