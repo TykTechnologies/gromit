@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/TykTechnologies/gromit/git"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -118,10 +119,16 @@ the current release branches information for the given repo,
 		repo := args[0]
 		tmpl := args[1]
 		owner, _ := cmd.Flags().GetString("owner")
+
+		deferCleanup := func(dir string, exitCode int) int {
+			log.Debug().Str("dir", dir).Msg("removing temporary dir")
+			os.RemoveAll(dir)
+			return exitCode
+		}
 		tmpDir, err := ioutil.TempDir("", "gromit-")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating temp dir for checkout, err: %v ", err)
-			os.Exit(1)
+			os.Exit(deferCleanup(tmpDir, 1))
 		}
 		r, err := git.Init(repo,
 			owner,
@@ -131,20 +138,20 @@ the current release branches information for the given repo,
 			os.Getenv("GITHUB_TOKEN"))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error init git repo: ", err)
-			os.Exit(1)
+			os.Exit(deferCleanup(tmpDir, 1))
 		}
 		buf, err := r.RenderPRTemplate(tmpl)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error rendering template: %s, err: %v ", tmpl, err)
-			os.Exit(1)
+			os.Exit(deferCleanup(tmpDir, 1))
 		}
 		_, err = buf.WriteTo(os.Stdout)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error displaying rendered tmpl: ", err)
-			os.Exit(1)
+			os.Exit(deferCleanup(tmpDir, 1))
 		}
 
-		os.Exit(0)
+		os.Exit(deferCleanup(tmpDir, 0))
 	},
 }
 
