@@ -239,7 +239,14 @@ policy:
             release-5-lts:
               active: true
               sourcebranch: master
-              tests: ["1.19","1.19-el7","test (1.19.x, ubuntu-latest, amd64, 15.x)","postgres","sqlite","mongo-official","mongo-mgo"]
+              tests:
+                - "1.19"
+                - "1.19-el7"
+                - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
+                - "postgres"
+                - "sqlite"
+                - "mongo-official"
+                - "mongo-mgo"]
             release-5.0.1:
               active: false
               sourcebranch: release-5-lts
