@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/TykTechnologies/gromit/util"
-	"github.com/mongodb/mongo-tools-common/db"
-	"github.com/mongodb/mongo-tools-common/options"
-	"github.com/mongodb/mongo-tools-common/signals"
+	"github.com/mongodb/mongo-tools/common/db"
+	"github.com/mongodb/mongo-tools/common/options"
+	"github.com/mongodb/mongo-tools/common/signals"
 	"github.com/mongodb/mongo-tools/mongodump"
 	"github.com/mongodb/mongo-tools/mongorestore"
 	"github.com/rs/zerolog/log"

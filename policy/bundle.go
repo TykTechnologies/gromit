@@ -11,7 +11,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/TykTechnologies/gromit/git"
 	"github.com/rs/zerolog/log"
 )
 
@@ -61,18 +60,20 @@ func (b *Bundle) Add(path string) {
 
 // Render will walk a tree given in n, depth first, skipping .d nodes
 // All leaf nodes will be rendered
-func (b *Bundle) Render(bv any, opDir string, n *bundleNode, r *git.GitRepo) error {
+func (b *Bundle) Render(bv any, opDir string, n *bundleNode) ([]string, error) {
+	var renderedFiles []string
 	if n == nil {
 		n = b.tree
 	}
 	if strings.HasSuffix(n.Name, ".d") {
-		return nil
+		return nil, nil
 	}
 	for _, child := range n.Children {
-		err := b.Render(bv, opDir, child, r)
+		f, err := b.Render(bv, opDir, child)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		renderedFiles = append(renderedFiles, f...)
 	}
 	if len(n.Children) == 0 {
 		templatePaths := b.tree.findSubTemplates(n.Name + ".d")
@@ -92,27 +93,22 @@ func (b *Bundle) Render(bv any, opDir string, n *bundleNode, r *git.GitRepo) err
 			dir, _ := filepath.Split(opFile)
 			err := os.MkdirAll(dir, 0755)
 			if err != nil && !os.IsExist(err) {
-				return err
+				return nil, err
 			}
 			opf, err := os.Create(opFile)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			defer opf.Close()
 			op = io.Writer(opf)
 		}
 		err := t.Execute(op, bv)
 		if err != nil {
-			return fmt.Errorf("rendering to %s: %v", opFile, err)
+			return nil, fmt.Errorf("rendering to %s: %v", opFile, err)
 		}
-		if r != nil {
-			_, err := r.AddFile(n.path)
-			if err != nil {
-				return fmt.Errorf("staging file %s: %v", n.path, err)
-			}
-		}
+		renderedFiles = append(renderedFiles, n.path)
 	}
-	return nil
+	return renderedFiles, nil
 }
 
 // findSubTemplates finds subtemplates anywhere in the parsed tree but

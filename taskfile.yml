@@ -1,0 +1,74 @@
+version: '3'
+
+vars:
+  git_folder: /Users/kiki/Github
+  repo: tyk
+  bundle: gpac
+  pr: TD-1590/0-reviewers
+
+tasks:
+  render-all:
+    cmds:
+      - task: render
+        vars:
+          repo: tyk
+      - task: render
+        vars:
+          repo: tyk-analytics
+      - task: render
+        vars:
+          repo: tyk-pump
+      - task: render
+        vars:
+          repo: tyk-sink
+      - task: render
+        vars:
+          repo: tyk-identity-broker
+      - task: render
+        vars:
+          repo: tyk-sink
+      - task: render 
+        vars: 
+          repo: tyk-analytics-ui
+      - task: render
+        vars:
+          repo: portal
+
+  render:
+    deps:
+      - task: get-master
+        vars:
+          repo: "{{.repo}}"
+    cmds:
+      - ./gromit bundle gen --bundle "{{.bundle}}" --repo "{{.repo}}" -f config/config.yaml "{{.git_folder}}/{{.repo}}"
+
+  push:
+    preconditions:
+      - if [[ -z "$GITHUB_TOKEN" ]];then exit 1;fi
+    vars:
+      pr_name: "{{.pr}}-{{.repo}}"
+    cmds:
+      - ./gromit git push "{{.git_folder}}/{{.repo}}" "{{.repo}}" "{{.pr}}" "{{.bundle}}" --pr --title "{{.pr_name}}" -f config/config.yaml
+      - | 
+        cd "{{.git_folder}}/{{.repo}}"
+        git fetch --all
+        git checkout "{{.pr}}"
+
+  gpac:
+    cmds:
+
+  get-master:
+    dir: "{{.git_folder}}/{{.repo}}"
+    cmds:
+      - |
+        if [[ "$(git rev-parse --abbrev-ref HEAD)" != "{{.pr}}" ]];then
+          git fetch --all
+          git stash save -m "gromit working" || true
+          git checkout -f master
+          git reset --hard origin/master
+          git pull origin master
+        fi
+
+  make:
+    cmds:
+      - make gromit

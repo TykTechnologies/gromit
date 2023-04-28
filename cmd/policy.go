@@ -23,6 +23,7 @@ import (
 	"github.com/TykTechnologies/gromit/policy"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"time"
 )
 
 var dryRun, autoMerge bool
@@ -60,8 +61,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			Branch,
 			1,
 			repo,
-			os.Getenv("GITHUB_TOKEN"),
-			true)
+			os.Getenv("GITHUB_TOKEN"))
 		if err != nil {
 			return fmt.Errorf("git init %s: %v", repo, err)
 		}
@@ -74,11 +74,13 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			return fmt.Errorf("bundle %s: %v", bundle, err)
 		}
 		rp, err := policy.GetRepoPolicy(repo, branch)
+		rp.SetTimestamp(time.Now().UTC())
 		if err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repo, err)
 		}
 		// Generate bundle into the dir named repo from above
-		err = b.Render(&rp, repo, nil, r)
+		files, err := b.Render(&rp, repo, nil)
+		log.Info().Strs("files", files).Msg("Rendered files")
 		if err != nil {
 			return fmt.Errorf("bundle gen %s: %v", bundle, err)
 		}
@@ -91,6 +93,15 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			cmd.Printf("trivial changes for repo %s branch %s, stopping here", repo, r.Branch())
 			return nil
 		}
+
+		// Add rendered files to git staging.
+		for _, f := range files {
+			_, err := r.AddFile(f)
+			if err != nil {
+				return fmt.Errorf("staging file to git worktree: %v", err)
+			}
+		}
+
 		if len(dfs) > 0 {
 			msg, _ := cmd.Flags().GetString("msg")
 			err = r.Commit(msg)
@@ -111,7 +122,11 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 				return fmt.Errorf("gh create pr --base %s --head %s: %v", r.Branch(), remoteBranch, err)
 			}
 			cmd.Println(pr)
-			return r.EnableAutoMerge(pr.GetNodeID())
+			var auto bool
+			if auto, err = cmd.Flags().GetBool("auto"); err == nil && auto {
+				return r.EnableAutoMerge(pr.GetNodeID())
+			}
+			return err
 		}
 		return nil
 	},
@@ -134,6 +149,7 @@ func init() {
 	syncSubCmd.Flags().String("remotebranch", "", "The branch that will be used for creating the PR - this is the branch that gets pushed to remote")
 	syncSubCmd.Flags().Bool("pr", false, "Create PR")
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
+	syncSubCmd.Flags().String("msg", "Auto generated from templates by gromit", "Commit message for the automated commit by gromit.")
 	syncSubCmd.MarkFlagRequired("remotebranch")
 	syncSubCmd.MarkFlagRequired("branch")
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
