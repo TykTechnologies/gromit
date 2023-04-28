@@ -291,7 +291,7 @@ policy:
       vulnerabilityalerts: true
       branches:
         cgo: false
-        goversion: 1.15
+        goversion: 1.16
         upgradefromver: 1.1.0
         pcprivate: false
         configfile: tib.conf
@@ -308,7 +308,8 @@ policy:
           release-1.3:
             active: true
           release-1.2:
-            active: true
+            active: false
+            goversion: 1.15
             tests: ["1.15"]
     tyk-sink:
       description: >-
