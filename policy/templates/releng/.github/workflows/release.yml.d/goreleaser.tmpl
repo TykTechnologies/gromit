@@ -45,6 +45,10 @@
           token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
           submodules: true
   {{- end }}
+
+      - name: "Add Git safe.directory"
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
       - uses: docker/setup-qemu-action@v2
 
       - uses: docker/setup-buildx-action@v2

@@ -71,7 +71,7 @@ jobs:
           git restore --source {{ $branch }} -- {{ $file }}
         {{- end }}
           git add -A && git commit -m "[CI]: Syncing CI changes to ${{`{{ matrix.branch }}`}}"
-          gromit git push . {{ .Name }} $prbranch --branch $prbranch
+          GITHUB_TOKEN={{`${{ secrets.ORG_GH_TOKEN }}`}} gromit git push . {{ .Name }} $prbranch --branch $prbranch
           echo "prbranch=$prbranch" >> $GITHUB_OUTPUT
           echo "::debug::Commit ${{`{{ github.sha }} syncd for ${{matrix.branch}}`}}"
 
@@ -83,7 +83,7 @@ jobs:
           mkdir /tmp/gromit-src && gh api -H "Accept: application/vnd.github+json"  /repos/TykTechnologies/gromit/tarball/master | tar --strip-components 1 -C /tmp/gromit-src -xzf -
           gromit bundle gen --branch {{`${{ matrix.branch }}`}} --bundle /tmp/gromit-src/policy/templates/releng  --repo {{ .Name }} .
           git add -A && git commit -m "[CI]: Automated releng bundle sync by sync-automation"
-          gromit git push . {{ .Name }} {{`${{ steps.sync-changes.outputs.prbranch }}`}} --branch  {{`${{ steps.sync-changes.outputs.prbranch }}`}}
+          GITHUB_TOKEN={{`${{ secrets.ORG_GH_TOKEN }}`}} gromit git push . {{ .Name }} {{`${{ steps.sync-changes.outputs.prbranch }}`}} --branch  {{`${{ steps.sync-changes.outputs.prbranch }}`}}
         env:
           GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
 
