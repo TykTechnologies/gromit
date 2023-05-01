@@ -18,7 +18,7 @@ require (
 	github.com/shurcooL/githubv4 v0.0.0-20221021030919-a134b1472cc7
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.15.0
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/waigani/diffparser v0.0.0-20190828052634-7391f219313d
 	go.etcd.io/etcd/client/v3 v3.5.7
 	golang.org/x/crypto v0.8.0
