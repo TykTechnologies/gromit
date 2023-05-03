@@ -103,6 +103,7 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string) (*GitR
 		log.Error().Err(err).Msg("Error getting worktree")
 		return nil, err
 	}
+	/*  FIXME: Re enable pulling once issue #305(https://github.com/go-git/go-git/issues/305) is fixed.
 	err = w.Pull(&git.PullOptions{
 		SingleBranch:  true,
 		Progress:      os.Stdout,
@@ -121,7 +122,7 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string) (*GitR
 	if err == transport.ErrEmptyUploadPackRequest {
 		log.Debug().Err(err).Str("branch", branch).Str("remote", fqrn).Msg("empty upload pack request- https://github.com/go-git/go-git/issues/328")
 		err = nil
-	}
+	}*/
 
 	return &GitRepo{
 		Name:       repoName,
