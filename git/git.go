@@ -405,7 +405,7 @@ func (r *GitRepo) RenderPRTemplate(tmplName string) (*bytes.Buffer, error) {
 	return body, err
 }
 
-func (r *GitRepo) CreatePR(title, remoteBranch, bundle string) (*github.PullRequest, error) {
+func (r *GitRepo) CreatePR(title, remoteBranch, bundle string, draft bool) (*github.PullRequest, error) {
 	body, err := r.RenderPRTemplate(bundle)
 	if err != nil {
 		return nil, err
@@ -415,6 +415,7 @@ func (r *GitRepo) CreatePR(title, remoteBranch, bundle string) (*github.PullRequ
 		Head:  github.String(remoteBranch),
 		Base:  github.String(r.Branch()),
 		Body:  github.String(body.String()),
+		Draft: github.Bool(draft),
 	}
 	log.Trace().Interface("propts", prOpts).Str("owner", r.Owner).Str("repo", r.Name).Msg("creating PR")
 	pr, resp, err := r.gh.PullRequests.Create(context.Background(), r.Owner, r.Name, prOpts)
