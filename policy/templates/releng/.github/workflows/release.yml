@@ -30,5 +30,6 @@ env:
 jobs:
 {{- template "goreleaser" . }}
 {{- template "ci" . }}
+{{- template "sbom" . }}
 {{- template "tests" . }}
 {{- template "aws" . }}

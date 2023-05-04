@@ -13,7 +13,9 @@ import (
 
 	"time"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/TykTechnologies/gromit/policy"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -33,6 +35,7 @@ type GitRepo struct {
 	Owner      string
 	commitOpts *git.CommitOptions
 	repo       *git.Repository
+	RepoPolicy policy.RepoPolicy
 	worktree   *git.Worktree
 	dir        string
 	auth       transport.AuthMethod
@@ -46,7 +49,7 @@ const defaultRemote = "origin"
 
 // InitGit is a constructor for the GitRepo type
 // private repos will need ghToken
-func Init(repoName, owner, branch string, depth int, dir, ghToken string, clone bool) (*GitRepo, error) {
+func Init(repoName, owner, branch string, depth int, dir, ghToken string) (*GitRepo, error) {
 	log.Logger = log.With().Str("repo", repoName).Str("branch", branch).Str("owner", owner).Logger()
 
 	fi, err := os.Stat(dir)
@@ -56,21 +59,21 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string, clone 
 		if err != nil {
 			return nil, err
 		}
-		clone = true
 	}
 
 	var gh *github.Client
 	var ghV4 *githubv4.Client
 
 	fqrn := fmt.Sprintf("https://github.com/%s/%s", owner, repoName)
-	opts := &git.CloneOptions{
+	cloneOpts := &git.CloneOptions{
 		URL:      fqrn,
 		Progress: os.Stdout,
 		// FIXME: Make a shallow clone https://github.com/go-git/go-git/issues/207
-		Depth: depth,
+		Depth:         depth,
+		ReferenceName: plumbing.NewBranchReferenceName(branch),
 	}
 	if ghToken != "" {
-		opts.Auth = &http.BasicAuth{
+		cloneOpts.Auth = &http.BasicAuth{
 			Username: "abc123", // anything except an empty string
 			Password: ghToken,
 		}
@@ -84,21 +87,53 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string, clone 
 	}
 
 	var repo *git.Repository
-	// FIXME: when an existing repo is found, git pull
 	repo, err = git.PlainOpen(dir)
-	if clone && err == git.ErrRepositoryNotExists {
-		repo, err = git.PlainClone(dir, false, opts)
+	if err == git.ErrRepositoryNotExists {
+		repo, err = git.PlainClone(dir, false, cloneOpts)
+	}
+	// Load repo policy for the given repo.
+	// TODO: change the hard-coded master to may be use
+	// the checked out branch.
+	rp, err := policy.GetRepoPolicy(repoName, branch)
+	if err != nil {
+		return nil, err
 	}
 	w, err := repo.Worktree()
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting worktree")
+		return nil, err
+	}
+	/*  FIXME: Re enable pulling once issue #305(https://github.com/go-git/go-git/issues/305) is fixed.
+	err = w.Pull(&git.PullOptions{
+		SingleBranch:  true,
+		Progress:      os.Stdout,
+		Auth:          cloneOpts.Auth,
+		ReferenceName: cloneOpts.ReferenceName,
+	})
+	if err == plumbing.ErrReferenceNotFound {
+		log.Debug().Err(err).Str("branch", branch).Str("remote", fqrn).Msg("does not exist, the branch will get created")
+		err = nil
+	}
+	if err == git.NoErrAlreadyUpToDate {
+		log.Debug().Err(err).Str("branch", branch).Str("remote", fqrn).Msg("brnach already up-to-date")
+		err = nil
+	}
+	// to mitigate https://github.com/go-git/go-git/issues/328 temporarily until it gets fixed.
+	if err == transport.ErrEmptyUploadPackRequest {
+		log.Debug().Err(err).Str("branch", branch).Str("remote", fqrn).Msg("empty upload pack request- https://github.com/go-git/go-git/issues/328")
+		err = nil
+	}*/
+
 	return &GitRepo{
-		Name:     repoName,
-		Owner:    owner,
-		auth:     opts.Auth,
-		repo:     repo,
-		worktree: w,
-		dir:      dir,
-		gh:       gh,
-		ghV4:     ghV4,
+		Name:       repoName,
+		Owner:      owner,
+		auth:       cloneOpts.Auth,
+		repo:       repo,
+		worktree:   w,
+		dir:        dir,
+		gh:         gh,
+		ghV4:       ghV4,
+		RepoPolicy: rp,
 		commitOpts: &git.CommitOptions{
 			All: false,
 			Author: &object.Signature{
@@ -120,15 +155,20 @@ func (r *GitRepo) AddFile(path string) (plumbing.Hash, error) {
 	return hash, nil
 }
 
-// Gets the bare branch that is currently checked out
+// Branch returns the short name of the ref HEAD is pointing
+// to - provided the ref is a branch. Returns empty string
+// if ref is not a branch.
 func (r *GitRepo) Branch() string {
 	h, err := r.repo.Head()
 	if err != nil {
 		log.Warn().Err(err).Msg("could not get current branch")
 		return ""
 	}
-	refs := strings.Split(h.String(), "/")
-	return refs[len(refs)-1]
+	if !h.Name().IsBranch() {
+		log.Warn().Msg("HEAD is not a branch")
+		return ""
+	}
+	return h.Name().Short()
 }
 
 // Commit adds all unstaged changes and commits the current worktree, confirming if asked
@@ -157,7 +197,7 @@ func (r *GitRepo) SwitchBranch(branch string) error {
 	if err != nil {
 		return err
 	}
-	nbrefName := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch))
+	nbrefName := plumbing.NewBranchReferenceName(branch)
 	nbRef := plumbing.NewHashReference(nbrefName, head.Hash())
 	err = r.repo.Storer.SetReference(nbRef)
 	if err != nil {
@@ -195,7 +235,7 @@ func (r *GitRepo) Checkout(branch string) error {
 		return err
 	}
 	err = r.worktree.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.ReferenceName(localRef.String()),
+		Branch: localRef,
 		Force:  true,
 	})
 	if err != nil {
@@ -228,7 +268,11 @@ func (r *GitRepo) Push(remoteBranch string) error {
 			Force:           false,
 			InsecureSkipTLS: false,
 		})
-		if err != nil && err != git.NoErrAlreadyUpToDate {
+		if err == git.NoErrAlreadyUpToDate {
+			log.Debug().Err(err).Msg("push -already up to date remote")
+			err = nil
+		}
+		if err != nil {
 			return fmt.Errorf("pushing: %w", err)
 		}
 	}
@@ -349,17 +393,20 @@ func (r *GitRepo) EnableAutoMerge(prID string) error {
 //go:embed prs
 var prs embed.FS
 
-func (r *GitRepo) CreatePR(title, remoteBranch, bundle string) (*github.PullRequest, error) {
-	tFile := filepath.Join("prs", bundle+".tmpl")
-	t := template.Must(
-		template.New(bundle+".tmpl").
-			Option("missingkey=error").
-			Funcs(template.FuncMap{
-				"now": time.Now().UTC,
-			}).
-			ParseFS(prs, tFile))
+func (r *GitRepo) RenderPRTemplate(tmplName string) (*bytes.Buffer, error) {
 	body := new(bytes.Buffer)
+	tFile := filepath.Join("prs", tmplName+".tmpl")
+	t := template.Must(
+		template.New(tmplName+".tmpl").
+			Option("missingkey=error").
+			Funcs(sprig.FuncMap()).
+			ParseFS(prs, tFile))
 	err := t.Execute(body, r)
+	return body, err
+}
+
+func (r *GitRepo) CreatePR(title, remoteBranch, bundle string) (*github.PullRequest, error) {
+	body, err := r.RenderPRTemplate(bundle)
 	if err != nil {
 		return nil, err
 	}
