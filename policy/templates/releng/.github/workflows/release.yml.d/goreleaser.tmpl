@@ -6,13 +6,13 @@
     strategy:
       fail-fast: false
       matrix:
-  {{- if and .Branchvals.Cgo (ne .Branchvals.RelengVersion "release-3.x") }}{{/* release-3.x version uses the same image for both el7 and non el7 */}}
+  {{- if and .Branchvals.Cgo (has "el7"  .Branchvals.Features) }}{{/* release-3.x version uses the same image for both el7 and non el7 */}}
         golang_cross: [ {{ .Branchvals.GoVersion }}, {{ .Branchvals.GoVersion }}-el7 ]
   {{- else }}
         golang_cross: [ {{ .Branchvals.GoVersion }} ]
   {{- end }}
         include:
-  {{- if and .Branchvals.Cgo (ne .Branchvals.RelengVersion "release-3.x") }}
+  {{- if and .Branchvals.Cgo (has "el7" .Branchvals.Features) }}
           - golang_cross: {{ .Branchvals.GoVersion }}-el7
             goreleaser: 'ci/goreleaser/goreleaser-el7.yml'
             rpmvers: 'el/7'
@@ -20,12 +20,12 @@
   {{- end }}
           - golang_cross: {{ .Branchvals.GoVersion }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'
-  {{- if and .Branchvals.Cgo (ne .Branchvals.RelengVersion "release-3.x") }}
-            rpmvers: 'el/8'
-            debvers: 'ubuntu/focal debian/buster debian/bullseye'
-  {{- else }}
-            rpmvers: 'el/7 el/8'
-            debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie ubuntu/focal debian/buster debian/bullseye'
+  {{- if .Branchvals.Cgo }}
+            rpmvers: 'el/8 el/9'
+            debvers: 'ubuntu/bionic ubuntu/focal ubuntu/jammy debian/buster debian/bullseye'
+  {{- else }} {{/* debvers and rpmvers for  pure go repos */}}
+            rpmvers: ' el/7 el/8 el/9'
+            debvers: 'ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/jammy debian/jessie debian/buster debian/bullseye'
   {{- end }}
     outputs:
       tag: ${{`{{ steps.targets.outputs.tag }}`}}

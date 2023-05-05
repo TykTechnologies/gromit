@@ -19,34 +19,4 @@
   dockerfile: ci/images/plugin-compiler/Dockerfile
   extra_files:
     - ci/images/plugin-compiler
-    - go.mod
-    - apidef
-    - certs
-    - checkup
-    - cli
-    - config
-    - coprocess
-    - ctx
-    - dlpython
-    - dnscache
-    - gateway
-    - goplugin
-  {{- if (eq .Branchvals.RelengVersion "release-5.x") }}
-    - header
-    - internal
-  {{- else }}{{/* Same values for versions 4.x and 3.x */}}
-    - headers
-  {{- end }}
-    - log
-    - regexp
-    - request
-    - rpc
-    - signature_validator
-    - storage
-    - tcp
-    - templates
-    - test
-    - testdata
-    - trace
-    - user
 {{- end }}
