@@ -73,7 +73,7 @@ jobs:
           git add -A
           echo "prbranch=$prbranch" >> $GITHUB_OUTPUT
           echo "::debug::Commit ${{`{{ github.sha }} syncd for ${{matrix.branch}}`}}"
-      	  echo "::debug::Generate releng bundle using latest gromit templates for {{`${{matrix.branch}}`}}"
+          echo "::debug::Generate releng bundle using latest gromit templates for {{`${{matrix.branch}}`}}"
           # get the tarball for the latest gromit master - it will have the latest version of
           # the templates.
           mkdir /tmp/gromit-src && gh api -H "Accept: application/vnd.github+json" /repos/TykTechnologies/gromit/tarball/master | tar --strip-components 1 -C /tmp/gromit-src -xzf -
@@ -82,7 +82,7 @@ jobs:
           gromit git push . {{ .Name }} $prbranch --branch $prbranch
         env:
           GITHUB_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-	  # Needed for gh CLI
+          # Needed for gh CLI
           GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
 
       - name: Create PR from the branch.
