@@ -27,41 +27,14 @@ func TestPolicyConfig(t *testing.T) {
 	// test if  branch policy is set correctly for master
 	assert.EqualValues(t, "1.16", repo.Branchvals.GoVersion)
 
-	// master doesn't have any explicit version set, so should be
-	// release-5.x (the common branch value)
-	assert.EqualValues(t, "release-5.x", repo.Branchvals.RelengVersion)
-
 	repo, err = rp.GetRepo("tyk", "https://github.com/tyklabs", "release-4")
 	if err != nil {
 		t.Fatalf("Could not get a repo: %v", err)
 	}
-	// release-4 has explicit value release-4.x set.
-	assert.EqualValues(t, "release-4.x", repo.Branchvals.RelengVersion)
 
 	repo, err = rp.GetRepo("tyk", "https://github.com/tyklabs", "release-4.3")
 	if err != nil {
 		t.Fatalf("Could not get a repo: %v", err)
 	}
-	// release-4.3 has sourcebranch set to release-4, and no explicit
-	// relengversion set, so should inherit the value of release-4
-	assert.EqualValues(t, "release-4.x", repo.Branchvals.RelengVersion)
-
-	repo, err = rp.GetRepo("tyk", "https://github.com/tyklabs", "release-4.3.1")
-	if err != nil {
-		t.Fatalf("Could not get a repo: %v", err)
-	}
-	// release-4.3.1 has sourcebranch set to release-4.3, and no explicit
-	// releng version set, so we should recursively go to the root source
-	// branch and inherit its releng version value.
-	assert.EqualValues(t, "release-4.x", repo.Branchvals.RelengVersion)
-
-	repo, err = rp.GetRepo("tyk", "https://github.com/tyklabs", "release-3.0.12")
-	if err != nil {
-		t.Fatalf("Could not get a repo: %v", err)
-	}
-	// release-3.0.12 has release-3.0.11 as source branch, having no explicitly
-	// set relengversion, and hence the relengversion should be that of release-3.0.11
-	assert.EqualValues(t, "release-3.x", repo.Branchvals.RelengVersion)
-
 
 }

@@ -117,7 +117,8 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 		pr, _ := cmd.Flags().GetBool("pr")
 		if pr {
 			title, _ := cmd.Flags().GetString("title")
-			pr, err := r.CreatePR(title, remoteBranch, bundle)
+			draft, _ := cmd.Flags().GetBool("draft")
+			pr, err := r.CreatePR(title, remoteBranch, bundle, draft)
 			if err != nil {
 				return fmt.Errorf("gh create pr --base %s --head %s: %v", r.Branch(), remoteBranch, err)
 			}
@@ -148,6 +149,7 @@ Then test each repo for non-trivial diffs.`,
 func init() {
 	syncSubCmd.Flags().String("remotebranch", "", "The branch that will be used for creating the PR - this is the branch that gets pushed to remote")
 	syncSubCmd.Flags().Bool("pr", false, "Create PR")
+	syncSubCmd.Flags().Bool("draft", false, "The created PR will be in this mode")
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
 	syncSubCmd.Flags().String("msg", "Auto generated from templates by gromit", "Commit message for the automated commit by gromit.")
 	syncSubCmd.MarkFlagRequired("remotebranch")

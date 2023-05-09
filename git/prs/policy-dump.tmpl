@@ -7,11 +7,11 @@ Default Branch: **{{ $rp.Default }}**
 ### Active  Release Branches
 {{ $r := .RepoPolicy }}
 
-| Branch | Releng Version | Source Branch | Go Version | Tests
+| Branch | Releng Features | Source Branch | Go Version | Tests
 | -------| -------------- | ------------- | ---------- | -----
 {{- range $branch := index $rp.GetActiveReleaseBranches }}
 {{- $b := index $r.ActiveReleaseBranches $branch }}
-| {{ $branch }} | {{ $b.RelengVersion }} | {{ $b.SourceBranch }} | {{ $b.GoVersion }} | {{ $b.Tests | join "," }}
+| {{ $branch }} | {{ $b.Features | join "," }} | {{ $b.SourceBranch }} | {{ $b.GoVersion }} | {{ $b.Tests | join "," }}
 {{- end }}
 
 

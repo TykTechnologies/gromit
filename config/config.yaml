@@ -68,10 +68,6 @@ policy:
           # enabled. This will also generate separate packages for
           # older glibc versions (el7 and non-el7 release workflows)
           cgo: true
-          # The go version used for this repo. Right now, this value
-          # is used for selecting the appropriate golang-cross image
-          # used for building the binary, packages and docker images.
-          goversion: 1.16
           # The version that's used for upgrade tests. This version
           # will be installed first and will then be upgraded with the
           # recently generated packages. Make sure that this is a version
@@ -88,15 +84,6 @@ policy:
           reviewcount: 0
           # Should conversations be resolved before merging
           convos: false
-          # Workflows that need to pass before merging
-          tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
-          # Specifies which version of releng templates to use - this can be
-          # overridden by branch specific policy in the branch section.
-          # Branches automatically inherit the version of the source branch unless
-          # overridden explicitly.
-          # Any branch that doesn't have a source branch and explicit relengversion
-          # will use the version set here.
-          relengversion: release-5.x
           # Branch specific policy for different branches starts here.->
           # Different branches could have different policy as older branches
           # could be on a different releaese workflow. To override any branch
@@ -114,61 +101,49 @@ policy:
               # templates.
               active: true
               reviewcount: 1
-            release-3-lts:
-              active: false
-              goversion: 1.12
-              upgradefromver: 3.0.4
-              relengversion: release-3.x
-            release-4:
-              active: false
-              relengversion: release-4.x
-            release-4.3:
-              active: true
-              sourcebranch: release-4
-            release-4.3.0:
-              active: false
-              sourcebranch: release-4
-            release-4.3.1:
-              active: false
-              sourcebranch: release-4.3
-            release-4.3.2:
-              active: false
-              sourcebranch: release-4.3
-            release-4.3.3:
-              active: false
-              sourcebranch: release-4.3
-            release-4.0.10:
-              active: false
-              sourcebranch: release-4-lts
-              tests: [ "Go 1.15 Redis 5","1.15","1.15-el7"]
-            release-4.0.11:
-              active: false
-              sourcebranch: release-4-lts
-              tests: [ "Go 1.15 Redis 5","1.15","1.15-el7"]
-            release-4.0.12:
-              active: false
-              sourcebranch: release-4-lts
-              tests: [ "Go 1.15 Redis 5","1.15","1.15-el7"]
+              # The go version used for this repo. Right now, this value
+              # is used for selecting the appropriate golang-cross image
+              # used for building the binary, packages and docker images.
+              goversion: 1.19-bullseye
+              # Workflows that need to pass to merge PRs
+              tests:
+                - "Go 1.19.x Redis 5"
+                - "1.19-bullseye"
             release-4-lts:
               active: true
-              tests: [ "Go 1.15 Redis 5","1.15","1.15-el7"]
-              relengversion: release-4.x
-            release-4.0.13:
-              active: false
-              sourcebranch: release-4-lts
-              tests: [ "Go 1.15 Redis 5","1.15","1.15-el7"]
-            release-5.0:
+              tests:
+                - "Go 1.15 Redis 5"
+                - "1.15"
+                - "1.15-el7"
+              # features act as arbitrary flags whose presence/absence can be used to
+              # render a common set of features across branch(es)
+              # For eg: there are some branches that support el/7, and some that doesn't - to
+              # render el/7 support on these branches, we could add  `el7` as a feature of these
+              # branches and write the template conditions accordingly to render the templates
+              # with el7 support based on the presence of this feature flag.
+              features:
+                - el7
+              goversion: 1.15
+            release-5.0.2:
               active: true
-              sourcebranch: master
-              tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
-            release-5.0.1:
-              active: false
               sourcebranch: release-5-lts
-              tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
+              tests:
+                - "Go 1.16 Redis 5"
+                - "1.16"
+                - "1.16-el7"
+              goversion: 1.16
+              features:
+                - el7
             release-5-lts:
               active: true
               sourcebranch: master
-              tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
+              tests:
+                - "Go 1.16 Redis 5"
+                - "1.16"
+                - "1.16-el7"
+              goversion: 1.16
+              features:
+                - el7
     tyk-analytics:
       description: >-
         Tyk Dashboard New Repository
@@ -190,73 +165,51 @@ policy:
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
           convos: false
-          tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo"]
           reviewcount: 0
           branch:
-            release-3-lts:
-              active: false
-              goversion: 1.12
-              upgradefromver: 3.0.4
             master:
               active: true
               reviewcount: 1
-              goversion: 1.19
+              goversion: 1.19-bullseye
               tests:
                 - "1.19"
                 - "1.19-el7"
                 - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
                 - "postgres"
                 - "sqlite"
-                - "mongo-official"
-                - "mongo-mgo"
-            release-4:
-              active: false
-            release-4.3:
-              active: true
-              sourcebranch: release-4
-            release-4.3.0:
-              active: false
-              sourcebranch: release-4
-            release-4.3.1:
-              active: false
-              sourcebranch: release-4.3
-            release-4.3.2:
-              active: false
-              sourcebranch: release-4.3
-            release-4.3.3:
-              active: false
-              sourcebranch: release-4.3
-            release-4.0.10:
-              active: false
-              sourcebranch: release-4-lts
-            release-4.0.11:
-              active: false
-              sourcebranch: release-4-lts
-            release-4.0.12:
-              active: false
-              sourcebranch: release-4-lts
+                - "mongo"
             release-4-lts:
               active: true
-            release-4.0.13:
-              active: false
-              sourcebranch: release-4-lts
-            release-5.0:
+              tests:
+                - "1.16"
+                - "1.16-el7"
+                - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
+                - "sqlite"
+                - "mongo"
+              features:
+                - el7
+            release-5.0.2:
               active: true
               sourcebranch: master
+              tests:
+                - "1.16"
+                - "1.16-el7"
+                - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
+                - "sqlite"
+                - "mongo"
+              features:
+                - el7
             release-5-lts:
               active: true
               sourcebranch: master
               tests:
-                - "1.19"
-                - "1.19-el7"
-                - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
-                - "postgres"
+                - "1.16"
+                - "1.16-el7"
+                - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
                 - "sqlite"
-                - "mongo-official"
-                - "mongo-mgo"
-            release-5.0.1:
-              active: false
-              sourcebranch: release-5-lts
+                - "mongo"
+              features:
+                - el7
     tyk-pump:
       description: >-
         Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once).
