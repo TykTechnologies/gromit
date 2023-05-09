@@ -196,7 +196,7 @@ policy:
       protected: [ release-1.6, release-1.5 ]
       branches:
           cgo: false
-          goversion: 1.15
+          goversion: 1.16
           upgradefromver: 1.6.0
           pcprivate: false
           configfile: pump.conf
