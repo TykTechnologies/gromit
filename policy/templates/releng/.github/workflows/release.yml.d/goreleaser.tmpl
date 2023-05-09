@@ -97,7 +97,7 @@
             *.txt.sig
             *.txt
 
-  {{- if eq .Name "tyk" }}
+  {{- if and (eq .Name "tyk") (not (has "go1.19" .Branchvals.Features) ) }}
       - name: Fix vendor
         run: |
           export GOPATH=/go
@@ -119,7 +119,7 @@
         env:
           GITHUB_TOKEN: ${{`{{ secrets.GITHUB_TOKEN }}`}}
           CGO_ENABLED: {{ if .Branchvals.Cgo }}1{{ else }}0{{ end }}
-  {{- if eq .Name "tyk" }}
+  {{- if and (eq .Name "tyk") (not (has "go1.19" .Branchvals.Features) ) }}
           GO111MODULE: off
   {{- end }}
           NFPM_STD_PASSPHRASE: ${{`{{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
