@@ -325,10 +325,9 @@ policy:
             active: true
     portal:
       description: >-
-        Portal is a full-featured developer portal, blog and CMS
+        Developer portal for the Tyk API Gateway
       pcrepo: portal
       dhrepo: tykio/portal
-      csrepo: docker.tyk.io/portal/portal
       exposeports: 80
       reviewers: []
       binary: dev-portal
@@ -358,6 +357,8 @@ policy:
             tests:
               - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
               - "1.19-bullseye"
+            features:
+              - "go1.19"
           release-1.0:
             active: true
             tests:

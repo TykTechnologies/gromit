@@ -44,6 +44,10 @@ ARG PORTS
 
 EXPOSE $PORTS
 
+{{- if eq .Name "portal" }}
+USER tyk
+{{- end }}
+
 WORKDIR /opt/{{ .PackageName }}/
 
 # Uncomment this to test in dev

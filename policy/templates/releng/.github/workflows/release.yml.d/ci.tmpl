@@ -33,7 +33,7 @@
           echo "region=$region" >> $GITHUB_OUTPUT
 
       - name: Configure AWS credentials for use
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{`{{ steps.aws-creds.outputs.key }}`}}
           aws-secret-access-key: ${{`{{ steps.aws-creds.outputs.secret }}`}}
@@ -52,7 +52,7 @@
       - uses: docker/setup-buildx-action@v2
 
       - name: CI build
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: true
           context: "."
