@@ -10,7 +10,12 @@
           - amd64
           - arm64
         distro:
+        {{- if (has "go1.19" .Branchvals.Features) }}
+          - ubuntu:jammy
+        {{- end }}
+        {{- if (has "el7" .Branchvals.Features) }}
           - ubuntu:xenial
+        {{- end }}
           - ubuntu:bionic
           - ubuntu:focal
           - debian:bullseye
@@ -74,7 +79,12 @@
       fail-fast: false
       matrix:
         distro:
+        {{- if (has "go1.19" .Branchvals.Features) }}
+          - ubi9/ubi
+        {{- end }}
+        {{- if (has "el7" .Branchvals.Features) }}
           - ubi7/ubi
+        {{- end }}
           - ubi8/ubi
 
     steps:

@@ -109,6 +109,14 @@ policy:
               tests:
                 - "Go 1.19.x Redis 5"
                 - "1.19-bullseye"
+              # features act as arbitrary flags whose presence/absence can be used to
+              # render a common set of features across branch(es)
+              # For eg: there are some branches that support el/7, and some that doesn't - to
+              # render el/7 support on these branches, we could add  `el7` as a feature of these
+              # branches and write the template conditions accordingly to render the templates
+              # with el7 support based on the presence of this feature flag.
+              features:
+                - go1.19
             release-4-lts:
               active: true
               tests:
@@ -146,7 +154,7 @@ policy:
                 - el7
     tyk-analytics:
       description: >-
-        Tyk Dashboard New Repository
+        Dashboard for the Tyk API Gateway
       pcrepo: tyk-dashboard
       dhrepo: tykio/tyk-dashboard
       csrepo: docker.tyk.io/tyk-dashboard/tyk-dashboard
@@ -178,6 +186,8 @@ policy:
                 - "postgres"
                 - "sqlite"
                 - "mongo"
+              features:
+                - "go1.19"
             release-4-lts:
               active: true
               tests:
