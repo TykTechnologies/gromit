@@ -90,8 +90,10 @@ nfpms:
       - src: portal.conf
         dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
         type: "config|noreplace"
-      - src: app
-        dst: /opt/{{ .PackageName }}/app
+      - src: app/views
+        dst: /opt/{{ .PackageName }}/app/views
+      - src: bootstrap/views
+        dst: /opt/{{ .PackageName }}/bootstrap/views
       - src: default.zip
         dst: /opt/{{ .PackageName }}/default.zip
       - src: public/system

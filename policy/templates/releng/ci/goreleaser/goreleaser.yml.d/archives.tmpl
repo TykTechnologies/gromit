@@ -37,8 +37,9 @@ archives:
     - pump.example.conf
   {{- end }}
   {{- if eq .Name "portal" }}
-    - "app/*"
     - default.zip
     - "public/system/*"
+    - "bootstrap/views/*"
+    - "app/views/*"
   {{- end }}
 {{end}}

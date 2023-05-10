@@ -4,7 +4,7 @@ dockers:
   {{- range $arch := list "amd64" "arm64" }}
   {{- /* range over all the supported archs.
     Except for the archs, everything else stays the same for docker templates */}}
-# Build {{$r.DHRepo}}, {{$r.CSRepo}} ({{ $arch }})
+# Build {{$r.DHRepo}}{{ if $r.CSRepo }}, {{ $r.CSRepo }}{{ end }} ({{ $arch }})
 - ids:
     - std
   image_templates:
