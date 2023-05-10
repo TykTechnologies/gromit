@@ -346,15 +346,24 @@ policy:
         configfile: portal.conf
         versionpackage: github.com/TykTechnologies/portal/core
         convos: false
-        tests: ["test (1.19.x, ubuntu-latest, amd64, 15.x)","Go 1.19 (bullseye)"]
+        tests:
+          - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
+          - "1.19-bullseye"
         reviewcount: 0
         branch:
           master:
             active: true
             reviewcount: 1
+            goversion: 1.19-bullseye
+            tests:
+              - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
+              - "1.19-bullseye"
           release-1.0:
             active: true
-            tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)","1.15","1.15-el7"]
+            tests:
+              - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
+              - "1.15"
+              - "1.15-el7"
     tyk-analytics-ui:
       description: >-
         User interface for our dashboard. Backend: https://github.com/TykTechnologies/tyk-analytics
