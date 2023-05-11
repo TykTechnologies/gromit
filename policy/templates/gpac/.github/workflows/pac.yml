@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - repo-policy/**
+    branches:
+      - master
 
 env:
   TERRAFORM_DIR: "./repo-policy"
