@@ -17,6 +17,9 @@ import (
 //go:embed templates all:templates
 var Bundles embed.FS
 
+//go:embed template-features all:template-features
+var Features embed.FS
+
 // bundleNode of a directory tree
 type bundleNode struct {
 	Name     string
@@ -146,7 +149,8 @@ func (n *bundleNode) String(indent int) string {
 }
 
 // Returns a bundle by traversing from templates/<bundleDir>
-func NewBundle(bundleName string) (*Bundle, error) {
+// Also traverses template-features/<feature> and adds it to the bundle
+func NewBundle(bundleName string, features []string) (*Bundle, error) {
 	var bfs fs.FS
 	if strings.HasPrefix(bundleName, ".") || strings.HasPrefix(bundleName, "/") {
 		bfs = os.DirFS(bundleName)
@@ -161,7 +165,7 @@ func NewBundle(bundleName string) (*Bundle, error) {
 		bfs:  bfs,
 		tree: &bundleNode{}}
 
-	return b, fs.WalkDir(bfs, ".", func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(bfs, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -174,4 +178,38 @@ func NewBundle(bundleName string) (*Bundle, error) {
 		b.Add(path)
 		return nil
 	})
+	if err != nil {
+		return b, err
+	}
+	// Walk the features
+	for _, feat := range features {
+		var ffs fs.FS
+		if strings.HasPrefix(feat, ".") || strings.HasPrefix(feat, "/") {
+			ffs = os.DirFS(feat)
+		} else {
+			var err error
+			ffs, err = fs.Sub(Features, filepath.Join("template-features", bundleName, feat))
+			if err != nil {
+				log.Fatal().Err(err).Msgf("fetching embedded feature %s", feat)
+			}
+		}
+		err := fs.WalkDir(ffs, ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			// Skip the root node
+			if path == "." {
+				return nil
+			}
+			// Normalize the path to use '/' as the separator
+			path = strings.ReplaceAll(path, string(os.PathSeparator), "/")
+			b.Add(path)
+			return nil
+		})
+		if err != nil {
+			return b, err
+		}		
+	}
+	
+	return b, err
 }

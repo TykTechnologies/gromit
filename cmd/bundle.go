@@ -25,6 +25,7 @@ import (
 
 var (
 	bundle, repo, branch string
+	features []string
 )
 
 var bundleCmd = &cobra.Command{
@@ -34,7 +35,7 @@ var bundleCmd = &cobra.Command{
 	Long: `A bundle is a collection of templates. A template is a top-level file which will be rendered with the same path as it is embedded as.
 A template can have sub-templates which are in directories of the form, <template>.d. The contents of these directories will not be traversed looking for further templates but are collected into the list of files that is passed to template.New().`,
 	Run: func(cmd *cobra.Command, args []string) {
-		b, err := policy.NewBundle(bundle)
+		b, err := policy.NewBundle(bundle, features)
 		if err != nil {
 			cmd.Println(err)
 		}
@@ -50,7 +51,7 @@ var genSubCmd = &cobra.Command{
 	Long:    `This command does not overlay the rendered output into a git tree. You will have to checkout the repo yourself if you want to check the rendered templates into a git repository.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
-		b, err := policy.NewBundle(bundle)
+		b, err := policy.NewBundle(bundle, features)
 		if err != nil {
 			return fmt.Errorf("bundle %s: %v", bundle, err)
 		}
@@ -68,6 +69,7 @@ func init() {
 	bundleCmd.PersistentFlags().StringVar(&bundle, "bundle", "releng", "Bundle to use, local bundles should start with . or /")
 	bundleCmd.PersistentFlags().StringVar(&repo, "repo", "tyk-pump", "Use parameters from policy.<repo>")
 	bundleCmd.PersistentFlags().StringVar(&branch, "branch", "master", "Use branch values from policy.<repo>.branch")
+	bundleCmd.PersistentFlags().StringSliceVar(&features, "features", "", "Features to enable")
 	bundleCmd.MarkPersistentFlagRequired("bundle")
 	bundleCmd.MarkPersistentFlagRequired("repo")
 	bundleCmd.AddCommand(genSubCmd)

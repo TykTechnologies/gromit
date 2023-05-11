@@ -24,7 +24,7 @@ func TestBundleRender(t *testing.T) {
 	for _, d := range dirs {
 		bundleName := d.Name()
 		if d.IsDir() {
-			b, err := NewBundle(bundleName)
+			b, err := NewBundle(bundleName, []string{})
 			if err != nil {
 				t.Logf("Unable to create bundle obj: %v", err)
 				continue
