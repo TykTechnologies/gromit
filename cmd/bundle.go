@@ -69,7 +69,7 @@ func init() {
 	bundleCmd.PersistentFlags().StringVar(&bundle, "bundle", "releng", "Bundle to use, local bundles should start with . or /")
 	bundleCmd.PersistentFlags().StringVar(&repo, "repo", "tyk-pump", "Use parameters from policy.<repo>")
 	bundleCmd.PersistentFlags().StringVar(&branch, "branch", "master", "Use branch values from policy.<repo>.branch")
-	bundleCmd.PersistentFlags().StringSliceVar(&features, "features", "", "Features to enable")
+	bundleCmd.PersistentFlags().StringSliceVar(&features, "feature", nil, "Features to enable")
 	bundleCmd.MarkPersistentFlagRequired("bundle")
 	bundleCmd.MarkPersistentFlagRequired("repo")
 	bundleCmd.AddCommand(genSubCmd)
