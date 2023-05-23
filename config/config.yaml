@@ -182,7 +182,6 @@ policy:
               tests:
                 - "1.19"
                 - "1.19-el7"
-                - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
                 - "postgres"
                 - "sqlite"
                 - "mongo"
@@ -193,7 +192,6 @@ policy:
               tests:
                 - "1.16"
                 - "1.16-el7"
-                - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
                 - "sqlite"
                 - "mongo"
               features:
@@ -204,7 +202,6 @@ policy:
               tests:
                 - "1.16"
                 - "1.16-el7"
-                - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
                 - "sqlite"
                 - "mongo"
               features:
@@ -215,7 +212,6 @@ policy:
               tests:
                 - "1.16"
                 - "1.16-el7"
-                - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
                 - "sqlite"
                 - "mongo"
               features:

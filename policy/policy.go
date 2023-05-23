@@ -164,6 +164,5 @@ func (p Policies) String() string {
 // LoadRepoPolicies returns the policies as a map of repos to policies
 // This will panic if the type assertions fail
 func LoadRepoPolicies(policies *Policies) error {
-	log.Info().Msg("loading repo policies")
 	return viper.UnmarshalKey("policy", policies)
 }

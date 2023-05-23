@@ -1,7 +1,7 @@
-$ gromit version
+$ gromit version --loglevel error
 known at build time
 
-$ gromit help
+$ gromit help --loglevel error
 It also has a grab bag of various ops automation.
 Each gromit command has its own config section. For instance, the policy command uses the policy key in the config file. Config values can be overridden by environment variables. For instance, policy.prefix can be overridden using the variable $GROMIT_POLICY_PREFIX.
 

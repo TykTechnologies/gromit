@@ -69,14 +69,14 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 		if err != nil {
 			cmd.Printf("git checkout %s:%s: %v", repo, branch, err)
 		}
-		b, err := policy.NewBundle(bundle)
-		if err != nil {
-			return fmt.Errorf("bundle %s: %v", bundle, err)
-		}
 		rp, err := policy.GetRepoPolicy(repo, branch)
 		rp.SetTimestamp(time.Now().UTC())
 		if err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repo, err)
+		}
+		b, err := policy.NewBundle(bundle, rp.Branchvals.Features)
+		if err != nil {
+			return fmt.Errorf("bundle %s: %v", bundle, err)
 		}
 		// Generate bundle into the dir named repo from above
 		files, err := b.Render(&rp, repo, nil)
