@@ -12,13 +12,26 @@ terraform {
   required_providers {
     github = {
       source  = "integrations/github"
-      version = "5.16.0"
     }
   }
 }
 
 provider "github" {
   owner = "TykTechnologies"
+}
+
+# Copypasta from modules/github-repos/variables.tf
+# FIXME: Unmodularise the github-repos module
+variable "historical_branches" {
+  type = list(object({
+    branch         = string           # Name of the branch
+    source_branch  = optional(string) # Source of the branch, needed when creating it
+    reviewers      = number           # Min number of reviews needed
+    required_tests = list(string)     # Workflows that need to pass before merging
+    convos         = bool             # Should conversations be resolved before merging
+
+  }))
+  description = "List of branches managed by terraform"
 }
 
 module "{{ .Name }}" {
@@ -39,7 +52,7 @@ module "{{ .Name }}" {
   {{- if eq .Name "portal" }}
   delete_branch_on_merge = false
   {{- end }}
-  release_branches     = [
+  release_branches     = concat(var.historical_branches,[
 {{- range $branch, $values := .ActiveReleaseBranches }}
 { branch    = "{{ $branch }}",
 	reviewers = "{{ $values.ReviewCount }}",
@@ -49,5 +62,5 @@ module "{{ .Name }}" {
 	{{- end }}
 	required_tests = [{{ range $index, $test := $values.Tests }}{{ if $index }},{{ end }}"{{ $test }}"{{ end }}]},
 {{- end }}
-]
+])
 }

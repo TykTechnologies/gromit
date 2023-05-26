@@ -14,4 +14,10 @@ docker_manifests:
     - tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-amd64
     - tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-arm64
   {{- end }}
+  {{- if .CSRepo }}
+  - name_template: {{ .CSRepo }}:{{`{{ .Tag }}`}}
+    image_templates:
+    - {{ .CSRepo }}:{{`{{ .Tag }}`}}-amd64
+    - {{ .CSRepo }}:{{`{{ .Tag }}`}}-arm64
+  {{- end}}
 {{ end }}

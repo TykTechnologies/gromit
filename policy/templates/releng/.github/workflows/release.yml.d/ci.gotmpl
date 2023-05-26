@@ -13,31 +13,12 @@
           token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
           submodules: true
   {{- end }}
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          cli_config_credentials_token: ${{`{{ secrets.TF_API_TOKEN }}`}}
-          terraform_wrapper: false
 
-      - name: Get AWS creds from Terraform remote state
-        id: aws-creds
-        run: |
-          cd ci/terraform
-          terraform init -input=false
-          terraform refresh 2>&1 >/dev/null
-          eval $(terraform output -json {{ .Name }} | jq -r 'to_entries[] | [.key,.value] | join("=")')
-          region=$(terraform output region | xargs)
-          [ -z "$key" -o -z "$secret" -o -z "$region" ] && exit 1
-          echo "secret=$secret" >> $GITHUB_OUTPUT
-          echo "key=$key" >> $GITHUB_OUTPUT
-          echo "region=$region" >> $GITHUB_OUTPUT
-
-      - name: Configure AWS credentials for use
-        uses: aws-actions/configure-aws-credentials@v2
+      - uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{`{{ steps.aws-creds.outputs.key }}`}}
-          aws-secret-access-key: ${{`{{ steps.aws-creds.outputs.secret }}`}}
-          aws-region: ${{`{{ steps.aws-creds.outputs.region }}`}}
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: cipush
+          aws-region: eu-central-1
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -46,6 +27,16 @@
       - uses: actions/download-artifact@v3
         with:
           name: deb
+
+      - name: Docker metadata
+        id: metadata
+        uses: docker/metadata-action@v4
+        with:
+          images: 754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-automated-tests
+          tags: |
+              type=semver,pattern=v{{version}}
+              type=semver,pattern=v{{major}}.{{minor}}
+              type=semver,pattern=v{{major}}
 
       - uses: docker/setup-qemu-action@v2
 
