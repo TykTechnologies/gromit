@@ -184,6 +184,7 @@ policy:
               goversion: 1.19-bullseye
               tests:
                 - "1.19-bullseye"
+                - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
                 - "postgres"
                 - "sqlite"
                 - "mongo-official"
@@ -381,60 +382,6 @@ policy:
               - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
               - "1.15"
               - "1.15-el7"
-    tyk-analytics-ui:
-      description: >-
-        User interface for our dashboard. Backend: https://github.com/TykTechnologies/tyk-analytics
-      pcrepo: tyk-analytics-ui
-      dhrepo: tykio/tyk-analytics-ui
-      csrepo: docker.tyk.io/tyk-analytics-ui/tyk-analytics-ui
-      exposeports: 80
-      reviewers: []
-      binary: tyk-analytics-ui
-      packagename: tyk-analytics-ui
-      protected: [ master ]
-      wiki: true
-      vulnerabilityalerts: true
-      branches:
-        convos: false
-        tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"]
-        reviewcount: 0
-        branch:
-          master:
-            active: true
-            reviewcount: 2
-          release-5.1:
-            active: true
-            sourcebranch: master
-            reviewcount: 0
-            tests: [ "test (1.19.x, 1.16.x, ubuntu-latest, amd64, 15.x)", "test" ]
-          release-5.0.2:
-            active: true
-            sourcebranch: release-5.0.1
-            tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"]
-          release-5-lts:
-            active: true
-            sourcebranch: master
-            tests: ["test (1.16.x, ubuntu-latest, amd64, 16)", "test"]
-          # FIXME: What is the source branch of release-4-lts?
-          # release-4-lts:
-          #   active: true
-"
-                - "sqlite"
-                - "mongo-mgo"
-                - "mongo-official"
-              features:
-                - el7
-            # FIXME: What is the source branch of release-4-lts?
-            # release-4-lts:
-            #   active: true
-            #   tests:
-            #     - "1.16"
-            #     - "1.16-el7"
-            #     - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
-            #     - "sqlite"
-            #     - "mongo"
-            #   features:
-            #     - el7
     tyk-pump:
       description: >-
         Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once).
@@ -595,7 +542,6 @@ policy:
       vulnerabilityalerts: true
       branches:
         convos: false
-        tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"]
         reviewcount: 0
         branch:
           master:

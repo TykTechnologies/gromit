@@ -9,7 +9,7 @@ dockers:
     - std
   image_templates:
     - "{{$r.DHRepo}}:{{`{{ .Tag }}`}}-{{ $arch }}"
-  {{- if .CSRepo }}
+  {{- if $r.CSRepo }}
     - "{{$r.CSRepo}}:{{`{{ .Tag }}`}}-{{ $arch }}"
   {{- end}}
   build_flag_templates:
