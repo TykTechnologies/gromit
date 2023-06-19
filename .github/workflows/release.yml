@@ -27,7 +27,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@v2
 
-      - uses: aws-actions/configure-aws-credentials@v1-node16
+      - uses: aws-actions/configure-aws-credentials@v2.2.0
         with:
           role-to-assume: arn:aws:iam::046805072452:role/gromit-test
           role-session-name: gromitci
