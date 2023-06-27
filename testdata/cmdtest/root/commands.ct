@@ -29,6 +29,6 @@ Flags:
   -f, --conf string       YAML config file. If not supplied, embedded defaults will be used
   -h, --help              help for gromit
       --loglevel string   Log verbosity: trace, debug, info, warn, error/fatal (default "info")
-      --textlogs          Logs in plain text
+      --textlogs          Logs in plain text (default true)
 
 Use "gromit [command] --help" for more information about a command.
