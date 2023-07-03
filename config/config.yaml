@@ -105,6 +105,7 @@ policy:
               # is used for selecting the appropriate golang-cross image
               # used for building the binary, packages and docker images.
               goversion: 1.19-bullseye
+              cleangoversion: 1.19
               # Workflows that need to pass to merge PRs
               tests:
                 - "Go 1.19.x Redis 5"

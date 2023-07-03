@@ -28,4 +28,3 @@ jobs:
 {{- template "goreleaser" . }}
 {{- template "ci" . }}
 {{- template "tests" . }}
-{{- template "aws" . }}

@@ -22,6 +22,7 @@ func GetRepoPolicy(repo string, branch string) (RepoPolicy, error) {
 // branchVals contains the parameters that are specific to a particular branch in a repo
 type branchVals struct {
 	GoVersion      string
+	CleanGoVersion string
 	Cgo            bool
 	ConfigFile     string
 	VersionPackage string                // The package containing version.go
@@ -51,6 +52,7 @@ type Policies struct {
 	Binary              string
 	Protected           []string `copier:"-"`
 	Goversion           string
+	CleanGoVersion      string
 	Default             string              // The default git branch(master/main/anything else)
 	Repos               map[string]Policies // map of reponames to branchPolicies
 	Ports               map[string][]string
