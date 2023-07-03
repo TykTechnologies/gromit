@@ -32,8 +32,8 @@ on:
       - {{ $file }}
     {{- end }}
 
-  env:
-    AUTOMERGE: false
+env:
+  AUTOMERGE: false
 
 jobs:
   sync:
@@ -119,7 +119,7 @@ jobs:
 
       - name: Enable automerge for the created PR
         id: enable-automerge
-        if: ${{ env.AUTOMERGE == 'true' }}
+        if: ${{`{{ env.AUTOMERGE == 'true' `}}}}
         run: |
           gh pr merge $PULL --auto --squash --subject "[CI] Sync automation: Syncing commits from master" --body "Picking CI changes from the commit $COMMIT"
         env:

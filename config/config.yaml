@@ -128,6 +128,16 @@ policy:
                 - "1.19-bullseye"
               features:
                 - go1.19
+            release-5.1.0:
+              active: true
+              sourcebranch: master
+              reviewcount: 0
+              goversion: 1.19-bullseye
+              tests:
+                - "Go 1.19.x Redis 5"
+                - "1.19-bullseye"
+              features:
+                - go1.19
             release-4-lts:
               sourcebranch: master
               active: true
@@ -136,9 +146,9 @@ policy:
               features:
                 - el7
               goversion: 1.15
-            release-5.0.2:
+            release-5.0.3:
               active: true
-              sourcebranch: release-5.0.1
+              sourcebranch: release-5-lts
               tests:
                 - "Go 1.16 Redis 5"
                 - "1.16"
@@ -154,6 +164,13 @@ policy:
                 - "1.16"
                 - "1.16-el7"
               goversion: 1.16
+              features:
+                - el7
+            release-4.0.14:
+              sourcebranch: release-4-lts
+              active: true
+              tests:
+                - "Go 1.15 Redis 6"
               features:
                 - el7
     tyk-analytics:
