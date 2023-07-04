@@ -1,0 +1,184 @@
+name: UI Tests
+
+on:
+  pull_request:
+    branches:
+      - master
+      - release-*
+
+env:
+  GOPRIVATE: github.com/TykTechnologies
+
+jobs:
+  test:
+    if: github.event.pull_request.draft == false
+    strategy:
+      matrix:
+        go-version: [1.19.x]
+        platform: [ubuntu-latest]
+        arch: [amd64]
+        node-version: [15.x]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+    - name: Install Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v2.4.1
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Fix private module deps
+      env:
+        TOKEN: '${{ secrets.ORG_GH_TOKEN }}'
+      run: >
+        git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
+
+    - name: Set up Chrome with proper version
+      uses: abhi1693/setup-browser@v0.3.4
+      with:
+        browser: chrome
+        version: '1097615' #revision for chrome v111
+
+    - name: Checkout of Dashboard
+      uses: actions/checkout@v2
+      with:
+        path: tyk-analytics
+        token: ${{ secrets.ORG_GH_TOKEN }}
+        submodules: true
+
+    - name: Check if GW branch exists
+      id: check_GW_branch
+      env:
+        TOKEN: '${{ secrets.ORG_GH_TOKEN }}'
+      run: |
+        echo "::set-output name=branch::master"
+        if git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk ${{ github.base_ref }}; then
+          echo "::set-output name=branch::${{ github.base_ref	}}"
+        fi
+        if git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk ${{ github.head_ref }}; then
+          echo "::set-output name=branch::${{ github.head_ref	}}"
+        fi
+        if git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk ${{ github.ref }}; then
+          echo "::set-output name=branch::${{ github.ref }}"
+        fi
+        echo "Branch from dash: ${branch}"
+
+    - name: Checkout GW repository
+      uses: actions/checkout@v2
+      with:
+        repository: TykTechnologies/tyk
+        path: tyk
+        token: ${{ secrets.ORG_GH_TOKEN }}
+        submodules: true
+        ref: ${{ steps.check_GW_branch.outputs.branch	 }}
+
+    - name: Check if test framework branch exists
+      id: check_test_branch
+      run: |
+        echo "::set-output name=branch::master"
+        if git ls-remote --exit-code --heads https://github.com/TykTechnologies/tyk-analytics-tests ${{ github.base_ref }}; then
+          echo "::set-output name=branch::${{ github.base_ref	}}"
+        fi
+        if git ls-remote --exit-code --heads https://github.com/TykTechnologies/tyk-analytics-tests ${{ github.head_ref	}}; then
+          echo "::set-output name=branch::${{ github.head_ref	}}"
+        fi
+        if git ls-remote --exit-code --heads https://github.com/TykTechnologies/tyk-analytics-tests ${{ github.ref }}; then
+          echo "::set-output name=branch::${{ github.ref	}}"
+        fi
+    - name: Checkout test repository
+      uses: actions/checkout@master
+      with:
+        repository: TykTechnologies/tyk-analytics-tests
+        submodules: true
+        path: tyk-analytics-tests
+        ref: ${{ steps.check_test_branch.outputs.branch	 }}
+
+    - name: start docker compose
+      run: docker-compose -f ci/testing_env.yml up -d
+      env:
+        TYK_DB_LICENSEKEY: ${{secrets.DASH_LICENSE}}
+        DASH_REPO_PATH: /home/runner/work/tyk-analytics/tyk-analytics/tyk-analytics
+        GW_REPO_PATH: /home/runner/work/tyk-analytics/tyk-analytics/tyk
+        GOPATH: /home/runner/work/tyk-analytics/tyk-analytics
+        GOPRIVATE: github.com/TykTechnologies
+        TOKEN: ${{ secrets.ORG_GH_TOKEN }}
+      working-directory: tyk-analytics-tests
+
+    - name: Install test dependecies
+      run: |
+        npm ci
+      working-directory: tyk-analytics-tests
+
+    - name: Waiting for dashboard
+      run: |
+        while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:3000/hello/)" != "200" ]]; do sleep 60 && echo "waiting for dashboard '$(date +"%T")'"; done
+      timeout-minutes: 15
+
+    - name: Execute UI tests
+      id: test_execution
+      run: |
+        npm run headless-test
+      working-directory: tyk-analytics-tests
+      env:
+        FIXED_CHROME_VERSION: '1097615'
+
+    - name: Archive UI test report
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: ui-test-report
+        path: ./tyk-analytics-tests/results/report/index.html
+
+    - name: Slack notify
+      id: slack_notify
+      if: ${{ always() }}
+      run: |
+        export GIT_BRANCH=$(git branch --show-current)
+        npm run notify-slack
+      working-directory: tyk-analytics-tests
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.DAT_SLACK_WEBHOOK }}
+        WDIO_TEST_ENV: ${{ github.ref }} (commit message -> ${{ github.event.head_commit.message }}${{ github.event.pull_request.title }})
+        FRAMEWORK_REPO: ${{ github.repository }}
+        EVENT_TRIGGER: ${{ github.event_name }} (${{ github.actor }})
+        JOB_RUN_ID: ${{ github.run_id }}
+        JOB_NAME: ${{ github.job }}
+
+    - name: Notify if custom notification failed
+      if: steps.slack_notify.outcome == 'failure' && failure()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.DAT_SLACK_WEBHOOK }}
+        SLACK_TITLE: "Tests were NOT executed!"
+        SLACK_USERNAME: Test automation
+        SLACK_FOOTER: "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|execution details>"
+
+    - name: Getting dashboard logs on failure
+      if: ${{ failure() }}
+      run: docker logs tyk-dashboard
+
+    - name: Comment on PR
+      if: ${{ always() }} && github.event.issue.pull_request
+      uses: mshick/add-pr-comment@v1
+      with:
+        message: |
+          **UI tests result: ${{ steps.test_execution.outcome }}** ${{ env.STATUS }}
+          Branch used: ${{ github.ref }}
+          Commit: ${{ github.event.after }} ${{ github.event.commits[0].message }}
+          Triggered by: ${{ github.event_name }} (@${{ github.actor }})
+          [Execution page](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        repo-token: ${{ secrets.ORG_GH_TOKEN }}
+        allow-repeats: true
+      env:
+        STATUS: "${{ steps.test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}"
+
+    - name: Xray update
+      if: ${{ always() }} && github.event_name != 'pull_request'
+      run: |
+        ./update_xray.sh
+      working-directory: tyk-analytics-tests
+      env:
+        TEST: "QA-890"
+        STATUS: "${{ steps.test_execution.outcome }}"
+        CLIENT_ID: ${{secrets.XRAY_CLIENT_ID}}
+        CLIENT_SECRET: ${{secrets.XRAY_CLIENT_SECRET}}
+        BRANCH: ${{ github.ref }}
