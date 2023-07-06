@@ -1,4 +1,26 @@
-name: API integration Tests
+{{- $dependency := "" }}
+{{- $dependency_repo := "" }}
+{{- $slack_wh_secret := "" }}
+{{- $slack_user := "" }}
+{{- $container_logs:= "" }}
+{{- $qa := "" }}
+{{- if eq .Name "tyk" }}
+    {{- $dependency = "dashboard" }}
+    {{- $dependency_repo = "tyk-analytics" }}
+    {{- $slack_wh_secret = "GW_SLACK_WEBHOOK" }}
+    {{- $slack_user = "API GW test automation" }}
+    {{- $container_logs = "tyk-gateway" }}
+    {{- $qa = "QA-901" }}
+{{- end }}
+{{- if eq .Name "tyk-analytics" }}
+    {{- $dependency = "gw" }}
+    {{- $dependency_repo = "tyk" }}
+    {{- $slack_wh_secret = "DAT_SLACK_WEBHOOK" }}
+    {{- $slack_user = "API Dashboard test automation" }}
+    {{- $container_logs = "tyk-dashboard" }}
+    {{- $qa = "QA-899" -}}
+{{- end -}}
+name: API integration Tests for {{$dependency}}
 
 on:
   pull_request:
@@ -13,11 +35,11 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.19.x]
+        go-version: [{{ .Branchvals.GoVersion }}.x]
         platform: [ubuntu-latest]
         arch: [amd64]
         node-version: [15.x]
-    runs-on: ${{ matrix.platform }}
+    runs-on: ${{`{{ matrix.platform }}`}}
     
     steps:
     - name: Set up Python 3.7
@@ -27,75 +49,76 @@ jobs:
 
     - name: Fix private module deps
       env:
-        TOKEN: '${{ secrets.ORG_GH_TOKEN }}'
+        TOKEN: '${{`{{ secrets.ORG_GH_TOKEN }}`}}'
       run: >
         git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
     
     - name: Checkout
       uses: actions/checkout@v2
       with:
-        path: tyk
-        token: ${{ secrets.ORG_GH_TOKEN }}
+        path: {{ .Name }}
+        token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
         submodules: true
     
     - name: Check if test framework branch exists
       id: check_test_branch
       env:
-        TOKEN: '${{ secrets.ORG_GH_TOKEN }}'
+        TOKEN: '${{`{{ secrets.ORG_GH_TOKEN }}`}}'
       run: |
         echo "branch=master" >> $GITHUB_OUTPUT
-        if [ ! -z "${{ github.head_ref	}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-automated-tests ${{ github.head_ref	}}; then
-          echo "branch=${{ github.head_ref	}}" >> $GITHUB_OUTPUT
+        if [ ! -z "${{`{{ github.head_ref }}`}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-automated-tests ${{`{{ github.head_ref  }}`}}; then
+          echo "branch=${{`{{ github.head_ref }}`}}" >> $GITHUB_OUTPUT
         fi
-        if [ ! -z "${{ github.base_ref	}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-automated-tests ${{ github.base_ref	}}; then
-          echo "branch=${{ github.base_ref	}}" >> $GITHUB_OUTPUT
+        if [ ! -z "${{`{{ github.base_ref }}`}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-automated-tests ${{`{{ github.base_ref  }}`}}; then
+          echo "branch=${{`{{ github.base_ref }}`}}" >> $GITHUB_OUTPUT
         fi
-        if [ ! -z "${{ github.ref	}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-automated-tests ${{ github.ref }}; then
-          echo "branch=${{ github.ref	}}" >> $GITHUB_OUTPUT
+        if [ ! -z "${{`{{ github.ref  }}`}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-automated-tests ${{`{{ github.ref }}`}}; then
+          echo "branch=${{`{{ github.ref  }}`}}" >> $GITHUB_OUTPUT
         fi
 
     - name: Checkout test repository
       uses: actions/checkout@v2
       with:
         repository: TykTechnologies/tyk-automated-tests
-        token: ${{ secrets.ORG_GH_TOKEN }}
+        token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
         path: tyk-automated-tests
-        ref: ${{ steps.check_test_branch.outputs.branch	 }}
+        ref: ${{`{{ steps.check_test_branch.outputs.branch   }}`}}
 
-    - name: Check if dashboard branch exists
-      id: check_dashboard_branch
+
+    - name: Check if {{$dependency}} branch exists
+      id: check_{{$dependency}}_branch
       env:
-        TOKEN: '${{ secrets.ORG_GH_TOKEN }}'
+        TOKEN: '${{`{{ secrets.ORG_GH_TOKEN }}`}}'
       run: |
         echo "branch=master" >> $GITHUB_OUTPUT
-        if [ ! -z "${{ github.head_ref	}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-analytics ${{ github.head_ref	}}; then
-          echo "branch=${{ github.head_ref	}}" >> $GITHUB_OUTPUT
+        if [ ! -z "${{`{{ github.head_ref }}`}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-analytics ${{`{{ github.head_ref  }}`}}; then
+          echo "branch=${{`{{ github.head_ref }}`}}" >> $GITHUB_OUTPUT
         fi
-        if [ ! -z "${{ github.base_ref	}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-analytics ${{ github.base_ref	}}; then
-          echo "branch=${{ github.base_ref	}}" >> $GITHUB_OUTPUT
+        if [ ! -z "${{`{{ github.base_ref }}`}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-analytics ${{`{{ github.base_ref  }}`}}; then
+          echo "branch=${{`{{ github.base_ref }}`}}" >> $GITHUB_OUTPUT
         fi
-        if [ ! -z "${{ github.ref	}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-analytics ${{ github.ref }}; then
-          echo "branch=${{ github.ref	}}" >> $GITHUB_OUTPUT
+        if [ ! -z "${{`{{ github.ref  }}`}}" ] && git ls-remote --exit-code --heads https://${TOKEN}@github.com/TykTechnologies/tyk-analytics ${{`{{ github.ref }}`}}; then
+          echo "branch=${{`{{ github.ref  }}`}}" >> $GITHUB_OUTPUT
         fi
 
-    - name: Checkout dashboard
+    - name: Checkout {{$dependency}}
       uses: actions/checkout@v2
       with:
-        repository: TykTechnologies/tyk-analytics
-        token: ${{ secrets.ORG_GH_TOKEN }}
+        repository: TykTechnologies/{{$dependency_repo}}
+        token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
         submodules: true
-        path: tyk-analytics
-        ref: ${{ steps.check_dashboard_branch.outputs.branch	 }}
+        path: {{$dependency_repo}}
+        ref: ${{`{{ steps.check_`}}{{$dependency}}{{`_branch.outputs.branch }}`}}
 
     - name: start docker compose
       run: docker-compose -f ci/ci_testing_env.yml up -d
       env:
-        TYK_DB_LICENSEKEY: ${{secrets.DASH_LICENSE}}
-        DASH_REPO_PATH: /home/runner/work/tyk/tyk/tyk-analytics
-        GW_REPO_PATH: /home/runner/work/tyk/tyk/tyk
-        GOPATH: /home/runner/work/tyk/tyk
+        TYK_DB_LICENSEKEY: ${{`{{secrets.DASH_LICENSE}}`}}
+        DASH_REPO_PATH: /home/runner/work/{{.Name}}/{{.Name}}/tyk-analytics
+        GW_REPO_PATH: /home/runner/work/{{.Name}}/{{.Name}}/tyk
+        GOPATH: /home/runner/work/{{.Name}}/{{.Name}}
         GOPRIVATE: github.com/TykTechnologies
-        TOKEN: ${{ secrets.ORG_GH_TOKEN }}
+        TOKEN: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
       working-directory: tyk-automated-tests
 
     - name: Install test dependecies
@@ -117,7 +140,11 @@ jobs:
       run: |
         while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:3000/hello/)" != "200" ]]; do sleep 60 && echo "waiting for dashboard '$(date +"%T")'"; done
       timeout-minutes: 15    
-    
+
+    - name: Getting {{.Name}} logs on failure
+      if: ${{`{{ failure() }}`}}      
+      run: docker logs {{$container_logs}}      
+
     - name: Test with pytest
       id: test_execution
       env:
@@ -134,45 +161,48 @@ jobs:
       timeout-minutes: 30
 
     - name: Archive Integration tests report
-      if: ${{ always() }}
+      if: ${{`{{ always() }}`}}
       uses: actions/upload-artifact@v2
       with:
          name: api-test-report
          path: ./tyk-automated-tests/reports/
 
+
     - name: Notify slack
-      if: ${{ always() }}
+      if: ${{`{{ always() }}`}}
       uses: rtCamp/action-slack-notify@v2
       env:
-        SLACK_WEBHOOK: ${{ secrets.GW_SLACK_WEBHOOK }}
-        SLACK_COLOR: ${{ job.status }}
-        SLACK_TITLE: "Result: ${{ steps.test_execution.outcome }}"
-        SLACK_USERNAME: API GW test automation
-        SLACK_FOOTER: "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|execution details>"
-  
+        SLACK_WEBHOOK: ${{`{{ secrets.`}}{{$slack_wh_secret}}}}
+        SLACK_COLOR: ${{`{{ job.status }}`}}
+        SLACK_TITLE: "Result: ${{`{{ steps.test_execution.outcome }}`}}"
+        SLACK_USERNAME: {{$slack_user}}
+        SLACK_MESSAGE: ${{`{{ github.event.head_commit.message }}`}}${{`{{ github.event.pull_request.title }}`}}
+        SLACK_FOOTER: "<https://github.com/${{`{{ github.repository }}`}}/actions/runs/${{`{{ github.run_id }}`}}|execution details>"
+
     - name: Comment on PR
-      if: ${{ always() }} && github.event.issue.pull_request
+      if: ${{`{{ always() }}`}} && github.event.issue.pull_request
       uses: mshick/add-pr-comment@v1
       with:
         message: |
-          **API tests result: ${{ steps.test_execution.outcome }}** ${{ env.STATUS }} 
-          Branch used: ${{ github.ref }}
-          Commit: ${{ github.event.after }} ${{ github.event.commits[0].message }}
-          Triggered by: ${{ github.event_name }} (@${{ github.actor }})
-          [Execution page](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-        repo-token: ${{ secrets.ORG_GH_TOKEN }}
+          **API tests result: ${{`{{ steps.test_execution.outcome }}`}}** ${{`{{ env.STATUS }}`}} 
+          Branch used: ${{`{{ github.ref }}`}}
+          Commit: ${{`{{ github.event.after }}`}} ${{`{{ github.event.commits[0].message }}`}}
+          Triggered by: ${{`{{ github.event_name }}`}} (@${{`{{ github.actor }}`}})
+          [Execution page](https://github.com/${{`{{ github.repository }}`}}/actions/runs/${{`{{ github.run_id }}`}})
+        repo-token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
         allow-repeats: true
       env:
-        STATUS: "${{ steps.test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}"
+        STATUS: "${{`{{ steps.test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}"
        
     - name: Xray update
-      if: ${{ always() }} && github.event_name != 'pull_request'
+      if: ${{`{{ always() }}`}} && github.event_name != 'pull_request'
       run: |
         ./update_xray.sh
       working-directory: tyk-automated-tests
       env:
-        TEST: "QA-901"
-        STATUS: "${{ steps.test_execution.outcome }}"
-        CLIENT_ID: ${{secrets.XRAY_CLIENT_ID}}
-        CLIENT_SECRET: ${{secrets.XRAY_CLIENT_SECRET}}
-        BRANCH: ${{ github.ref }}
+        TEST: "{{$qa}}"
+        STATUS: "${{`{{ steps.test_execution.outcome }}`}}"
+        CLIENT_ID: ${{`{{secrets.XRAY_CLIENT_ID}}`}}
+        CLIENT_SECRET: ${{`{{secrets.XRAY_CLIENT_SECRET}}`}}
+        BRANCH: ${{`{{ github.ref }}`}}
+

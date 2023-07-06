@@ -104,7 +104,7 @@ policy:
               # The go version used for this repo. Right now, this value
               # is used for selecting the appropriate golang-cross image
               # used for building the binary, packages and docker images.
-              goversion: 1.19-bullseye
+              goversion: 1.19
               # Workflows that need to pass to merge PRs
               tests:
                 - "Go 1.19.x Redis 5"
@@ -117,6 +117,7 @@ policy:
               # with el7 support based on the presence of this feature flag.
               features:
                 - go1.19
+                - api-test
             release-4-lts:
               active: true
               tests:
@@ -131,6 +132,7 @@ policy:
               # with el7 support based on the presence of this feature flag.
               features:
                 - el7
+                - api-test
               goversion: 1.15
             release-5.0.2:
               active: true
@@ -142,6 +144,7 @@ policy:
               goversion: 1.16
               features:
                 - el7
+                - api-test
             release-5-lts:
               active: true
               sourcebranch: master
@@ -152,6 +155,7 @@ policy:
               goversion: 1.16
               features:
                 - el7
+                - api-test
     tyk-analytics:
       description: >-
         Dashboard for the Tyk API Gateway
@@ -187,8 +191,11 @@ policy:
                 - "mongo"
               features:
                 - "go1.19"
+                - api-test
+                - ui-test
             release-4-lts:
               active: true
+              goversion: 1.16
               tests:
                 - "1.16"
                 - "1.16-el7"
@@ -196,8 +203,11 @@ policy:
                 - "mongo"
               features:
                 - el7
+                - api-test
+                - ui-test
             release-5.0.2:
               active: true
+              goversion: 1.16
               sourcebranch: master
               tests:
                 - "1.16"
@@ -206,8 +216,11 @@ policy:
                 - "mongo"
               features:
                 - el7
+                - api-test
+                - ui-test
             release-5-lts:
               active: true
+              goversion: 1.16
               sourcebranch: master
               tests:
                 - "1.16"
@@ -216,6 +229,8 @@ policy:
                 - "mongo"
               features:
                 - el7
+                - api-test
+                - ui-test
     tyk-pump:
       description: >-
         Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once).
