@@ -21,19 +21,19 @@ func GetRepoPolicy(repo string, branch string) (RepoPolicy, error) {
 
 // branchVals contains the parameters that are specific to a particular branch in a repo
 type branchVals struct {
-	GoVersion      string
-	CleanGoVersion string
-	Cgo            bool
-	ConfigFile     string
-	VersionPackage string                // The package containing version.go
-	UpgradeFromVer string                // Versions to test package upgrades from
-	PCPrivate      bool                  // indicates whether package cloud repo is private
-	Branch         map[string]branchVals `copier:"-"`
-	Active         bool
-	ReviewCount    string
-	Convos         bool
-	Tests          []string
-	SourceBranch   string
+	GoVersion         string
+	GolangCrossSuffix string
+	Cgo               bool
+	ConfigFile        string
+	VersionPackage    string                // The package containing version.go
+	UpgradeFromVer    string                // Versions to test package upgrades from
+	PCPrivate         bool                  // indicates whether package cloud repo is private
+	Branch            map[string]branchVals `copier:"-"`
+	Active            bool
+	ReviewCount       string
+	Convos            bool
+	Tests             []string
+	SourceBranch      string
 	// List of arbitrary features whose presence/absence can be
 	// used as template conditions to render different
 	// values on different set of branches (eg: el7 for el7 support)
@@ -52,7 +52,7 @@ type Policies struct {
 	Binary              string
 	Protected           []string `copier:"-"`
 	Goversion           string
-	CleanGoVersion      string
+	GolangCrossSuffix   string
 	Default             string              // The default git branch(master/main/anything else)
 	Repos               map[string]Policies // map of reponames to branchPolicies
 	Ports               map[string][]string

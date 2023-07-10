@@ -108,6 +108,7 @@ policy:
               # is used for selecting the appropriate golang-cross image
               # used for building the binary, packages and docker images.
               goversion: 1.19
+              golangcrosssuffix: -bullseye
               # Workflows that need to pass to merge PRs
               tests:
                 - "Go 1.19.x Redis 5"
@@ -123,8 +124,10 @@ policy:
                 - api-test
             release-5.1:
               active: true
+              golangcrosssuffix: -bullseye
             release-5.1.0:
               active: true
+              golangcrosssuffix: -bullseye
             release-4-lts:
               active: true
               tests:
@@ -186,6 +189,7 @@ policy:
               active: true
               reviewcount: 1
               goversion: 1.19
+              golangcrosssuffix: -bullseye
               features:
                 - go1.19
                 - api-test
@@ -194,6 +198,7 @@ policy:
               active: true
               reviewcount: 0
               goversion: 1.19
+              golangcrosssuffix: -bullseye
               features:
                 - go1.19
                 - api-test
@@ -202,6 +207,7 @@ policy:
               active: true
               reviewcount: 0
               goversion: 1.19
+              golangcrosssuffix: -bullseye
               features:
                 - go1.19
                 - api-test
@@ -376,13 +382,17 @@ policy:
           sourcebranch: master
           goversion: 1.19
           tests: ["1.19-bullseye","Go 1.19 tests"]
+          features:
+            - go1.19
           reviewcount: 0
           branch:
             master:
               active: true
               reviewcount: 2
+              golangcrosssuffix: -bullseye
             release-1.8:
               active: true
+              golangcrosssuffix: -bullseye
     tyk-analytics-ui:
       description: >-
         User interface for our dashboard. Backend: https://github.com/TykTechnologies/tyk-analytics
@@ -403,7 +413,8 @@ policy:
         branch:
           master:
             active: true
-            reviewcount: 2
+            reviewcount: 1
+            tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)","test"]
           release-5.1:
             active: true
             reviewcount: 0
@@ -421,5 +432,8 @@ policy:
             active: true
             tests: ["test (1.16.x, ubuntu-latest, amd64, 16)", "test"]
           release-4-lts:
+            active: true
+            tests: []
+          release-4.0.14:
             active: true
             tests: []
