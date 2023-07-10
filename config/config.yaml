@@ -272,8 +272,10 @@ policy:
           master:
             active: true
             reviewcount: 1
+            golangcrosssuffix: -bullseye
           release-1.4:
             active: true
+            golangcrosssuffix: -bullseye
     tyk-sink:
       description: >-
        Tyk RPC server backend (bridge)
