@@ -70,6 +70,7 @@
       DEPDASH_KEY: ${{`{{ secrets.DEPDASH_KEY }}`}}
       ORG_GH_TOKEN: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
 
+{{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") }} 
   tat:
     needs: ci
     uses: tyklabs/tyk-pro/.github/workflows/tests.yml@v1
@@ -80,4 +81,5 @@
       {{- else }}
       {{ .Name }}-version: {{`${{ github.ref_name }}`}}
       {{- end }}
+{{- end }}      
 {{ end }}
