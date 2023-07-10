@@ -123,22 +123,8 @@ policy:
                 - api-test
             release-5.1:
               active: true
-              goversion: 1.19
-              tests:
-                - "Go 1.19.x Redis 5"
-                - "1.19-bullseye"
-              features:
-                - go1.19
-                - api-test
             release-5.1.0:
               active: true
-              goversion: 1.19
-              tests:
-                - "Go 1.19.x Redis 5"
-                - "1.19-bullseye"
-              features:
-                - go1.19
-                - api-test
             release-4-lts:
               active: true
               tests:
@@ -150,10 +136,7 @@ policy:
             release-5.0.3:
               active: true
               sourcebranch: release-5-lts
-              tests:
-                - "Go 1.16 Redis 5"
-                - "1.16"
-                - "1.16-el7"
+              tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
               goversion: 1.16
               features:
                 - el7
@@ -161,10 +144,7 @@ policy:
             release-5-lts:
               active: true
               goversion: 1.16
-              tests:
-                - "Go 1.16 Redis 5"
-                - "1.16"
-                - "1.16-el7"
+              tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
               features:
                 - el7
                 - api-test
@@ -200,32 +180,28 @@ policy:
           sourcebranch: master          
           goversion: 1.16
           reviewcount: 0
+          tests: ["1.19-bullseye","test (1.19.x, ubuntu-latest, amd64, 15.x)","postgres","sqlite","mongo-mgo","mongo-official"]
           branch:
             master:
               active: true
               reviewcount: 1
               goversion: 1.19
-              tests:
-                - "1.19-bullseye"
-                - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
-                - "postgres"
-                - "sqlite"
-                - "mongo-official"
-                - "mongo-mgo"
               features:
-                - "go1.19"
+                - go1.19
                 - api-test
                 - ui-test
             release-5.1:
               active: true
               reviewcount: 0
               goversion: 1.19
-              tests:
-                - "1.19"
-                - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
-                - "postgres"
-                - "sqlite"
-                - "mongo"
+              features:
+                - go1.19
+                - api-test
+                - ui-test
+            release-5.1.0:
+              active: true
+              reviewcount: 0
+              goversion: 1.19
               features:
                 - go1.19
                 - api-test
@@ -233,48 +209,28 @@ policy:
             release-5.0.3:
               active: true
               sourcebranch: release-5-lts
-              tests:
-                - "1.16"
-                - "1.16-el7"
-                - "sqlite"
-                - "mongo-mgo"
-                - "mongo-official"
+              tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo-mgo","mongo-official"]
               features:
                 - el7
                 - api-test
                 - ui-test
             release-5-lts:
               active: true
-              tests:
-                - "1.16"
-                - "1.16-el7"
-                - "sqlite"
-                - "mongo-mgo"
-                - "mongo-official"
+              tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo-mgo","mongo-official"]
               features:
                 - api-test
                 - ui-test
                 - el7
             release-4-lts:
               active: true
-              tests:
-                - "1.16"
-                - "1.16-el7"
-                - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
-                - "sqlite"
-                - "mongo"
+              tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo"]
               features:
                 - api-test
                 - ui-test
                 - el7
             release-4.0.14:
               active: true
-              tests:
-                - "1.16"
-                - "1.16-el7"
-                - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
-                - "sqlite"
-                - "mongo"
+              tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo"]
               features:
                 - api-test
                 - ui-test
