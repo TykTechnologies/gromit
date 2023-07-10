@@ -19,7 +19,7 @@
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie'
   {{- end }}
           - golang_cross: {{ .Branchvals.GoVersion }}{{.Branchvals.GolangCrossSuffix}}
-  {{- if and .Branchvals.Cgo (has "go1.19"  .Branchvals.Features) }}          
+  {{- if and .Branchvals.Cgo (has "go1.19"  .Branchvals.Features) }}
             go_version: {{ .Branchvals.GoVersion }}
   {{- end }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'
@@ -131,14 +131,14 @@
           PKG_SIGNING_KEY: ${{`{{ secrets.SIGNING_KEY }}`}}
   {{- if and .Branchvals.Cgo (has "go1.19" .Branchvals.Features) }}
           GO_VERSION: ${{`{{ matrix.go_version }}`}}
-  {{- end }}          
+  {{- end }}
           GOLANG_CROSS: ${{`{{ matrix.golang_cross }}`}}
           DEBVERS: ${{`{{ matrix.debvers }}`}}
           RPMVERS: ${{`{{ matrix.rpmvers }}`}}
           PACKAGECLOUD_TOKEN: ${{`{{ secrets.PACKAGECLOUD_TOKEN }}`}}
   {{- if eq .Name "tyk" }}
           DOCKER_CLI_EXPERIMENTAL: "enabled"
-          
+
   {{- end }}
       - uses: actions/upload-artifact@v3
         with:
