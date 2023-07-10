@@ -1,45 +1,45 @@
 {{define "archives"}}
 archives:
-- id: std-linux
-  builds:
-  {{- if .Branchvals.Cgo }}
-    - std-linux
-    - std-arm64
-  {{- else }}
-    - std
-  {{- end }}
-  files:
-    - README.md
-    - "ci/install/*"
-  {{- if eq .Name "tyk-analytics" }}
-    - EULA.md
-    - CHANGELOG.md
-    - portal/*
-    - schemas/*
-    - lang/*
-    - tyk_config_sample.config
-  {{- end }}
-  {{- if eq .Name "tyk" }}
-    - "LICENSE.md"
-    - "apps/app_sample.json"
-    - "templates/*.json"
-    - "templates/playground/index.html"
-    - "templates/playground/playground.js"
-    - "middleware/*.js"
-    - "event_handlers/sample/*.js"
-    - "policies/*.json"
-    - "coprocess/*"
-    - tyk.conf.example
-  {{- end }}
-  {{- if eq .Name "tyk-pump" }}
-    - "LICENSE.md"
-    - CHANGELOG.md
-    - pump.example.conf
-  {{- end }}
-  {{- if eq .Name "portal" }}
-    - default.zip
-    - "public/system/*"
-    - "bootstrap/views/*"
-    - "app/views/*"
-  {{- end }}
-{{- end}}
+  - id: std-linux
+    builds:
+    {{- if .Branchvals.Cgo }}
+      - std-linux
+      - std-arm64
+    {{- else }}
+      - std
+    {{- end }}
+    files:
+      - README.md
+      - "ci/install/*"
+    {{- if eq .Name "tyk-analytics" }}
+      - EULA.md
+      - CHANGELOG.md
+      - portal/*
+      - schemas/*
+      - lang/*
+      - tyk_config_sample.config
+    {{- end }}
+    {{- if eq .Name "tyk" }}
+      - "LICENSE.md"
+      - "apps/app_sample.json"
+      - "templates/*.json"
+      - "templates/playground/index.html"
+      - "templates/playground/playground.js"
+      - "middleware/*.js"
+      - "event_handlers/sample/*.js"
+      - "policies/*.json"
+      - "coprocess/*"
+      - tyk.conf.example
+    {{- end }}
+    {{- if eq .Name "tyk-pump" }}
+      - "LICENSE.md"
+      - CHANGELOG.md
+      - pump.example.conf
+    {{- end }}
+    {{- if eq .Name "portal" }}
+      - default.zip
+      - "public/system/*"
+      - "bootstrap/views/*"
+      - "app/views/*"
+    {{- end }}
+  {{- end}}
