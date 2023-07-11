@@ -305,16 +305,10 @@ policy:
           master:
             active: true
             reviewcount: 1
+            golangcrosssuffix: -bullseye
           release-2.3:
             active: true
-          release-2.2:
-            active: true
-            goversion: 1.16
-            test: ["1.16", "postgres", "mongo-official", "mongo-mgo"]
-          release-2:
-            active: false
-            goversion: 1.16
-            test: ["1.16"]
+            golangcrosssuffix: -bullseye
             
     portal:
       description: >-

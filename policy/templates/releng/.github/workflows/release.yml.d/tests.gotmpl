@@ -155,7 +155,6 @@
         env:
           GITHUB_TAG: ${{`{{ github.ref }}`}}
   {{- if or (eq .Name "tyk-analytics") (eq .Name "tyk-sink") }}
-        env:
           TYK_DB_LICENSEKEY: ${{`{{ secrets.DASH_LICENSE }}`}}
   {{- if eq .Name "tyk-sink" }}
           TYK_MDCB_LICENSE: ${{`{{ secrets.MDCB_LICENSE }}`}}
