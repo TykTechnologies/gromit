@@ -22,8 +22,6 @@
 
 {{- template "publishers" . }}
 
-{{- template "archives" . }}
-
 checksum:
   disable: true
 
