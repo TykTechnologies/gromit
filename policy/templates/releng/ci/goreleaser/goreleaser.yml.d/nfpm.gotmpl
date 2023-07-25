@@ -6,7 +6,7 @@ nfpms:
     maintainer: "Tyk <info@tyk.io>"
     description: {{ .Description }}
     package_name: {{ .PackageName }}
-    file_name_template: "{{ .ConventionalFileName }}"
+    file_name_template: {{`{{ .ConventionalFileName }}`}}
     builds:
   {{- if .Branchvals.Cgo }}
       - std-linux

@@ -77,6 +77,7 @@ dockers:
 
     {{- if (eq $r.Name "tyk") }}
 
+      {{- if (has "plugin-compiler" .Branchvals.Features) }}
   # Build plugin-compiler
   - ids:
       - std
@@ -96,5 +97,6 @@ dockers:
     dockerfile: ci/images/plugin-compiler/Dockerfile
     extra_files:
       - ci/images/plugin-compiler
+      {{- end }}
     {{- end}}
   {{end}}{{/* end of definition */}}

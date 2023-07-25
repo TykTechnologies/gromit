@@ -134,6 +134,7 @@ policy:
                 - "Go 1.15 Redis 6"
               features:
                 - el7
+                - plugin-compiler
                 - api-test
               goversion: 1.15
             release-5.0.4:
@@ -143,6 +144,7 @@ policy:
               goversion: 1.16
               features:
                 - el7
+                - plugin-compiler
                 - api-test
             release-5-lts:
               active: true
@@ -150,6 +152,7 @@ policy:
               tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
               features:
                 - el7
+                - plugin-compiler
                 - api-test
             release-4.0.14:
               active: true
@@ -158,6 +161,7 @@ policy:
               tests:
                 - "Go 1.15 Redis 6"
               features:
+                - plugin-compiler
                 - el7
                 - api-test
     tyk-analytics:
