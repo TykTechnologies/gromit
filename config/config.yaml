@@ -90,8 +90,6 @@ policy:
           # policy for a specific branch, they could be specified here, under
           # the respective branches.
           sourcebranch: master
-          features:
-            - api-test
           branch:
             master:
               # For any branch other than master, setting active to true also implies
@@ -121,7 +119,6 @@ policy:
               # with el7 support based on the presence of this feature flag.
               features:
                 - go1.19
-                - api-test
             release-5.1:
               active: true
               golangcrosssuffix: -bullseye
@@ -135,7 +132,6 @@ policy:
               features:
                 - el7
                 - plugin-compiler
-                - api-test
               goversion: 1.15
             release-5.0.4:
               active: true
@@ -145,7 +141,6 @@ policy:
               features:
                 - el7
                 - plugin-compiler
-                - api-test
             release-5-lts:
               active: true
               goversion: 1.16
@@ -153,7 +148,6 @@ policy:
               features:
                 - el7
                 - plugin-compiler
-                - api-test
             release-4.0.14:
               active: true
               sourcebranch: release-4-lts
@@ -163,7 +157,6 @@ policy:
               features:
                 - plugin-compiler
                 - el7
-                - api-test
     tyk-analytics:
       description: >-
         Dashboard for the Tyk API Gateway
@@ -196,8 +189,6 @@ policy:
               golangcrosssuffix: -bullseye
               features:
                 - go1.19
-                - api-test
-                - ui-test
             release-5.1:
               active: true
               reviewcount: 0
@@ -205,8 +196,6 @@ policy:
               golangcrosssuffix: -bullseye
               features:
                 - go1.19
-                - api-test
-                - ui-test
             release-5.1.1:
               active: true
               reviewcount: 0
@@ -214,36 +203,26 @@ policy:
               golangcrosssuffix: -bullseye
               features:
                 - go1.19
-                - api-test
-                - ui-test
             release-5.0.4:
               active: true
               sourcebranch: release-5-lts
               tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo-mgo","mongo-official"]
               features:
                 - el7
-                - api-test
-                - ui-test
             release-5-lts:
               active: true
               tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo-mgo","mongo-official"]
               features:
-                - api-test
-                - ui-test
                 - el7
             release-4-lts:
               active: true
               tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo"]
               features:
-                - api-test
-                - ui-test
                 - el7
             release-4.0.14:
               active: true
               tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo"]
               features:
-                - api-test
-                - ui-test
                 - el7
     tyk-identity-broker:
       description: >-
