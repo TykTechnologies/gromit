@@ -19,11 +19,12 @@ import (
 	"fmt"
 	"os"
 
+	"time"
+
 	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/policy"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"time"
 )
 
 var dryRun, autoMerge bool
@@ -122,7 +123,7 @@ If the branch is marked protected in the repo policies, a draft PR will be creat
 			if err != nil {
 				return fmt.Errorf("gh create pr --base %s --head %s: %v", r.Branch(), remoteBranch, err)
 			}
-			cmd.Println(pr)
+			cmd.Println("PR created: ", *pr.HTMLURL)
 			var auto bool
 			if auto, err = cmd.Flags().GetBool("auto"); err == nil && auto {
 				return r.EnableAutoMerge(pr.GetNodeID())

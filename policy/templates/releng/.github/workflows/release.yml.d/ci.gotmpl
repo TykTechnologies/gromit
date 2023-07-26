@@ -73,6 +73,9 @@
   tat:
     needs: ci
     uses: tyklabs/tyk-pro/.github/workflows/tests.yml@v1
+    permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
     with:
       {{- if or (eq .Name "tyk") (eq .Name "tyk-analytics")}}
       tyk-version: {{`${{ github.ref_name }}`}}
