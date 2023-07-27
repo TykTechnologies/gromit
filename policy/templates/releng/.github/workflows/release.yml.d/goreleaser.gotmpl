@@ -9,7 +9,7 @@
   {{- if and .Branchvals.Cgo (has "el7"  .Branchvals.Features) }}{{/* release-3.x version uses the same image for both el7 and non el7 */}}
         golang_cross: [ {{ .Branchvals.GoVersion }}, {{ .Branchvals.GoVersion }}-el7 ]
   {{- else }}
-        golang_cross: [ {{ .Branchvals.GoVersion }}{{.Branchvals.GolangCrossSuffix}} ]
+        golang_cross: [ {{ .Branchvals.GoVersion }} ]
   {{- end }}
         include:
   {{- if and .Branchvals.Cgo (has "el7" .Branchvals.Features) }}
@@ -18,8 +18,8 @@
             rpmvers: 'el/7 amazon/2'
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie'
   {{- end }}
-          - golang_cross: {{ .Branchvals.GoVersion }}{{.Branchvals.GolangCrossSuffix}}
-  {{- if and .Branchvals.Cgo (has "go1.19"  .Branchvals.Features) }}
+          - golang_cross: {{ .Branchvals.GoVersion }}
+            goreleaser: 'ci/goreleaser/goreleaser.yml'
             go_version: {{ .Branchvals.GoVersion }}
   {{- end }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'

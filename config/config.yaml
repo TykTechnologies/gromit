@@ -107,8 +107,7 @@ policy:
               # The go version used for this repo. Right now, this value
               # is used for selecting the appropriate golang-cross image
               # used for building the binary, packages and docker images.
-              goversion: 1.19
-              golangcrosssuffix: -bullseye
+              goversion: 1.19-bullseye
               # Workflows that need to pass to merge PRs
               tests:
                 - "Go 1.19.x Redis 5"
@@ -124,10 +123,10 @@ policy:
                 - api-test
             release-5.1:
               active: true
-              golangcrosssuffix: -bullseye
+              goversion: 1.19-bullseye
             release-5.1.1:
               active: true
-              golangcrosssuffix: -bullseye
+              goversion: 1.19-bullseye
             release-4-lts:
               active: true
               tests:
@@ -192,8 +191,7 @@ policy:
             master:
               active: true
               reviewcount: 1
-              goversion: 1.19
-              golangcrosssuffix: -bullseye
+              goversion: 1.19-bullseye
               features:
                 - go1.19
                 - api-test
@@ -201,8 +199,7 @@ policy:
             release-5.1:
               active: true
               reviewcount: 0
-              goversion: 1.19
-              golangcrosssuffix: -bullseye
+              goversion: 1.19-bullseye
               features:
                 - go1.19
                 - api-test
@@ -210,8 +207,7 @@ policy:
             release-5.1.1:
               active: true
               reviewcount: 0
-              goversion: 1.19
-              golangcrosssuffix: -bullseye
+              goversion: 1.19-bullseye
               features:
                 - go1.19
                 - api-test
@@ -269,17 +265,17 @@ policy:
         versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
         convos: false
         sourcebranch: master        
-        goversion: 1.19
+        goversion: 1.19-bullseye
         tests: ["1.19-bullseye"]
         reviewcount: 0
         branch:
           master:
             active: true
             reviewcount: 1
-            golangcrosssuffix: -bullseye
+            goversion: 1.19-bullseye
           release-1.4:
             active: true
-            golangcrosssuffix: -bullseye
+            goversion: 1.19-bullseye
     tyk-sink:
       description: >-
        Tyk RPC server backend (bridge)
@@ -302,17 +298,17 @@ policy:
         versionpackage: github.com/TykTechnologies/tyk-sink/main
         convos: false
         sourcebranch: master        
-        goversion: 1.19
+        goversion: 1.19-bullseye
         tests: ["1.19-bullseye", "postgres", "mongo-official", "mongo-mgo"]
         reviewcount: 0
         branch:
           master:
             active: true
             reviewcount: 1
-            golangcrosssuffix: -bullseye
+            goversion: 1.19-bullseye
           release-2.3:
             active: true
-            golangcrosssuffix: -bullseye
+            goversion: 1.19-bullseye
             
     portal:
       description: >-
@@ -339,13 +335,12 @@ policy:
           - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
           - "1.19-bullseye"
         reviewcount: 0
-        goversion: 1.19
+        goversion: 1.19-bullseye
         branch:
           master:
             active: true
             reviewcount: 1
-            goversion: 1.19
-            golangcrosssuffix: -bullseye
+            goversion: 1.19-bullseye
             tests:
               - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
               - "1.19-bullseye"
@@ -381,7 +376,7 @@ policy:
           versionpackage: github.com/TykTechnologies/tyk-pump/pumps
           convos: false
           sourcebranch: master
-          goversion: 1.19
+          goversion: 1.19-bullseye
           tests: ["1.19-bullseye","Go 1.19 tests"]
           features:
             - go1.19
@@ -390,10 +385,10 @@ policy:
             master:
               active: true
               reviewcount: 2
-              golangcrosssuffix: -bullseye
+              goversion: 1.19-bullseye
             release-1.8:
               active: true
-              golangcrosssuffix: -bullseye
+              goversion: 1.19-bullseye
     tyk-analytics-ui:
       description: >-
         User interface for our dashboard. Backend: https://github.com/TykTechnologies/tyk-analytics
