@@ -20,9 +20,6 @@
   {{- end }}
           - golang_cross: {{ .Branchvals.GoVersion }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'
-            go_version: {{ .Branchvals.GoVersion }}
-  {{- end }}
-            goreleaser: 'ci/goreleaser/goreleaser.yml'
   {{- if .Branchvals.Cgo }}
             rpmvers: 'el/8 el/9 amazon/2023'
             debvers: 'ubuntu/bionic ubuntu/focal ubuntu/jammy debian/buster debian/bullseye'
