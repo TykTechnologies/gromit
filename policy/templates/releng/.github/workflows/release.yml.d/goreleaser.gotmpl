@@ -97,7 +97,7 @@
             *.txt.sig
             *.txt
 
-  {{- if and (eq .Name "tyk") (not (has "go1.19" .Branchvals.Features) ) }}
+  {{- if and (eq .Name "tyk") (has "plugin-compiler-fix-vendor" .Branchvals.Features) }}
       - name: Fix vendor
         run: |
           mkdir -p /go/src
