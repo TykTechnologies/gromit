@@ -1,0 +1,23 @@
+{{ define "docker_manifests" }}
+docker_manifests:
+  - name_template: {{ .DHRepo }}:{{`{{ .Tag }}`}}
+    image_templates:
+      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-amd64
+      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-arm64
+  - name_template: {{ .DHRepo }}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}
+    image_templates:
+      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-amd64
+      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-arm64
+  {{- if eq .Name "tyk" }}
+  - name_template: tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}
+    image_templates:
+      - tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-amd64
+      - tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-arm64
+  {{- end }}
+  {{- if .CSRepo }}
+  - name_template: {{ .CSRepo }}:{{`{{ .Tag }}`}}
+    image_templates:
+      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-amd64
+      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-arm64
+  {{- end}}
+{{ end }}

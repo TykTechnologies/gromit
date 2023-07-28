@@ -15,11 +15,13 @@ import (
 )
 
 // Files common to all features
+//
 //go:embed templates all:templates
 var Bundles embed.FS
 
 // Extra files for a feature using the same tree structure as Bundles
 // with a prefix <bundle>/<feature>/
+//
 //go:embed template-features all:template-features
 var Features embed.FS
 
@@ -135,10 +137,10 @@ func fsTreeWalk(b *Bundle, tfs fs.FS) error {
 			return nil
 		}
 		// Do not recurse into sub-templates
-		if (d.IsDir() && strings.HasSuffix(path, ".d")) {
+		if d.IsDir() && strings.HasSuffix(path, ".d") {
 			return fs.SkipDir
 		}
-		if ! d.IsDir() {
+		if !d.IsDir() {
 			templates := []string{path}
 
 			stPath := path + ".d"
@@ -179,7 +181,7 @@ func NewBundle(bundleName string, features []string) (*Bundle, error) {
 	} else {
 		var err error
 		bfs, err = fs.Sub(Bundles, filepath.Join("templates", bundleName))
-		if err != nil { 
+		if err != nil {
 			log.Fatal().Err(err).Msg("fetching embedded templates")
 		}
 	}
@@ -206,15 +208,11 @@ func NewBundle(bundleName string, features []string) (*Bundle, error) {
 				if err != nil {
 					log.Fatal().Err(err).Msgf("fetching embedded feature from %s", featPath)
 				}
+				return b, fsTreeWalk(b, ffs)
 			} else {
-				log.Fatal().Err(err).Msg("could not find embedded feature")
+				log.Info().Err(err).Msg("no files for feature")
 			}
 		}
-		err := fsTreeWalk(b, ffs)
-		if err != nil {
-			return b, err
-		}		
 	}
-	
 	return b, err
 }

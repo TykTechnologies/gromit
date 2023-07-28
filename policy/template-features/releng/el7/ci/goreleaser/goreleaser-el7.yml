@@ -21,11 +21,6 @@ archives:
   - format: binary
     allow_different_binary_count: true
 
-  {{- if eq .Name "tyk" }}
-dockers:
-    {{- template "plugin-compiler" . }}
-  {{- end }}
-
 checksum:
   disable: true
 

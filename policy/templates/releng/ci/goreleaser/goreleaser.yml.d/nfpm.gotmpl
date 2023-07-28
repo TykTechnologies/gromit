@@ -6,6 +6,7 @@ nfpms:
     maintainer: "Tyk <info@tyk.io>"
     description: {{ .Description }}
     package_name: {{ .PackageName }}
+    file_name_template: "{{`{{ .ConventionalFileName }}`}}"
     builds:
   {{- if .Branchvals.Cgo }}
       - std-linux
@@ -152,17 +153,6 @@ nfpms:
       postinstall: "ci/install/post_install.sh"
       postremove: "ci/install/post_remove.sh"
     bindir: "/opt/{{ .PackageName }}"
-    overrides:
-      rpm:
-        file_name_template: '{{`{{ .PackageName }}-{{ replace .Version `}}"-" "~"{{` }}-1.{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}`}}'
-        replacements:
-          amd64: x86_64
-          arm: aarch64
-          arm64: aarch64
-      deb:
-        file_name_template: '{{`{{ .PackageName }}_{{ replace .Version `}}"-" "~"{{` }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}`}}'
-        replacements:
-          arm: arm64
     rpm:
       scripts:
         posttrans: ci/install/post_trans.sh

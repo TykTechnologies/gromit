@@ -3,6 +3,7 @@ builds:
   - id: std-linux
   {{- if eq .Name "tyk"}}
     flags:
+      - -trimpath
       - -tags=goplugin
   {{- end}}
     ldflags:
@@ -15,6 +16,7 @@ builds:
   - id: std-arm64
   {{- if eq .Name "tyk" }}
     flags:
+      - -trimpath
       - -tags=goplugin
   {{- end}}
     ldflags:

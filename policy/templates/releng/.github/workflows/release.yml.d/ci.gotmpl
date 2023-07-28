@@ -1,0 +1,87 @@
+{{ define "ci" }}
+  ci:
+    needs:
+      - goreleaser
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
+
+    steps:
+      - name: Shallow checkout of {{ .Name }}
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+  {{- if eq .Name "tyk-analytics" }}
+          token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
+          submodules: true
+  {{- end }}
+
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: cipush
+          aws-region: eu-central-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: deb
+
+      - name: Docker metadata
+        id: metadata
+        uses: docker/metadata-action@v4
+        with:
+          images: {{`${{ steps.login-ecr.outputs.registry }}`}}/{{ .Name }}
+          flavor: |
+            latest=false
+            prefix=v
+          tags: |
+              type=semver,pattern=v{{`{{version}}`}}
+              type=semver,pattern=v{{`{{major}}.{{minor}}`}}
+              type=semver,pattern=v{{`{{major}}`}}
+              type=ref,event=branch
+
+      - uses: docker/setup-qemu-action@v2
+
+      - uses: docker/setup-buildx-action@v2
+
+      - name: CI build
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          context: "."
+          file: ci/Dockerfile.std
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            {{`${{ steps.metadata.outputs.tags }}`}}
+            {{`${{ steps.login-ecr.outputs.registry }}`}}/{{ .Name }}:${{`{{ needs.goreleaser.outputs.tag }}`}}
+            {{`${{ steps.login-ecr.outputs.registry }}`}}/{{ .Name }}:${{`{{ github.sha }}`}}
+
+  sbom:
+    needs: ci
+    uses: TykTechnologies/github-actions/.github/workflows/sbom.yaml@main
+    secrets:
+      TF_API_TOKEN: ${{`{{ secrets.TF_API_TOKEN }}`}}
+      DEPDASH_URL: ${{`{{ secrets.DEPDASH_URL }}`}}
+      DEPDASH_KEY: ${{`{{ secrets.DEPDASH_KEY }}`}}
+      ORG_GH_TOKEN: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
+{{ if or (eq .Name "tyk") (eq .Name "tyk-analytics") }}
+  tat:
+    needs: ci
+    uses: tyklabs/tyk-pro/.github/workflows/tests.yml@v1
+    permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
+    with:
+      {{- if or (eq .Name "tyk") (eq .Name "tyk-analytics")}}
+      tyk-version: {{`${{ github.ref_name }}`}}
+      tyk-analytics-version: {{`${{ github.ref_name }}`}}
+      {{- else }}
+      {{ .Name }}-version: {{`${{ github.ref_name }}`}}
+      {{- end }}
+{{- end }}
+{{ end }}

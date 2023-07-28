@@ -15,16 +15,16 @@
   {{- if and .Branchvals.Cgo (has "el7" .Branchvals.Features) }}
           - golang_cross: {{ .Branchvals.GoVersion }}-el7
             goreleaser: 'ci/goreleaser/goreleaser-el7.yml'
-            rpmvers: 'el/7'
+            rpmvers: 'el/7 amazon/2'
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie'
   {{- end }}
           - golang_cross: {{ .Branchvals.GoVersion }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'
   {{- if .Branchvals.Cgo }}
-            rpmvers: 'el/8 el/9'
+            rpmvers: 'el/8 el/9 amazon/2023'
             debvers: 'ubuntu/bionic ubuntu/focal ubuntu/jammy debian/buster debian/bullseye'
   {{- else }} {{/* debvers and rpmvers for  pure go repos */}}
-            rpmvers: ' el/7 el/8 el/9'
+            rpmvers: 'el/7 el/8 el/9 amazon/2 amazon/2023'
             debvers: 'ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/jammy debian/jessie debian/buster debian/bullseye'
   {{- end }}
     outputs:
@@ -97,21 +97,6 @@
             *.txt.sig
             *.txt
 
-  {{- if and (eq .Name "tyk") (not (has "go1.19" .Branchvals.Features) ) }}
-      - name: Fix vendor
-        run: |
-          export GOPATH=/go
-          mkdir -p /go/src || true
-          whereis go
-          go mod tidy
-          go mod vendor
-          echo "Moving vendor"
-          cp -r -f vendor/* $GOPATH/src
-          rm -rf vendor
-          mkdir -p /go/src/github.com/TykTechnologies/tyk
-          cp -r ./* /go/src/github.com/TykTechnologies/tyk
-  {{- end }}
-
       - uses: goreleaser/goreleaser-action@v4
         with:
           version: latest
@@ -126,11 +111,17 @@
           NFPM_PAYG_PASSPHRASE: ${{`{{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
           GPG_FINGERPRINT: 12B5D62C28F57592D1575BD51ED14C59E37DAC20
           PKG_SIGNING_KEY: ${{`{{ secrets.SIGNING_KEY }}`}}
+  {{- if and .Branchvals.Cgo (has "go1.19" .Branchvals.Features) }}
+          GO_VERSION: ${{`{{ matrix.go_version }}`}}
+  {{- end }}
           GOLANG_CROSS: ${{`{{ matrix.golang_cross }}`}}
           DEBVERS: ${{`{{ matrix.debvers }}`}}
           RPMVERS: ${{`{{ matrix.rpmvers }}`}}
           PACKAGECLOUD_TOKEN: ${{`{{ secrets.PACKAGECLOUD_TOKEN }}`}}
+  {{- if eq .Name "tyk" }}
+          DOCKER_CLI_EXPERIMENTAL: "enabled"
 
+  {{- end }}
       - uses: actions/upload-artifact@v3
         with:
           name: deb

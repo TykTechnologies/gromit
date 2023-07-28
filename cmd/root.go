@@ -69,7 +69,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "conf", "f", "", "YAML config file. If not supplied, embedded defaults will be used")
 	rootCmd.PersistentFlags().String("loglevel", "info", "Log verbosity: trace, debug, info, warn, error/fatal")
-	rootCmd.PersistentFlags().Bool("textlogs", false, "Logs in plain text")
+	rootCmd.PersistentFlags().Bool("textlogs", true, "Logs in plain text")
 }
 
 // initConfig reads in config file and env variables if set.
