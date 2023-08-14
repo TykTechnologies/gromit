@@ -289,6 +289,9 @@ policy:
           release-2.3:
             active: true
             goversion: 1.19-bullseye
+          release-2.4:
+            active: true
+            goversion: 1.19-bullseye
             
     portal:
       description: >-
