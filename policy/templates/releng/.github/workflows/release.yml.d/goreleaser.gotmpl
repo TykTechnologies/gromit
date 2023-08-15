@@ -1,8 +1,11 @@
 {{ define "goreleaser" }}
   goreleaser:
-    name: '${{`{{ matrix.golang_cross }}`}}'
+    name: '{{`${{ matrix.golang_cross }}`}}'
     runs-on: ubuntu-latest
-    container: 'tykio/golang-cross:${{`{{ matrix.golang_cross }}`}}'
+    container: 'tykio/golang-cross:{{`${{ matrix.golang_cross }}`}}'
+    permissions:
+      id-token: write   # AWS OIDC JWT
+      contents: read    # actions/checkout
     strategy:
       fail-fast: false
       matrix:
@@ -22,18 +25,18 @@
             goreleaser: 'ci/goreleaser/goreleaser.yml'
   {{- if .Branchvals.Cgo }}
             rpmvers: 'el/8 el/9 amazon/2023'
-            debvers: 'ubuntu/bionic ubuntu/focal ubuntu/jammy debian/buster debian/bullseye'
+            debvers: 'ubuntu/bionic ubuntu/focal ubuntu/jammy debian/buster debian/bullseye debian/bookworm'
   {{- else }} {{/* debvers and rpmvers for  pure go repos */}}
             rpmvers: 'el/7 el/8 el/9 amazon/2 amazon/2023'
-            debvers: 'ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/jammy debian/jessie debian/buster debian/bullseye'
+            debvers: 'ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/jammy debian/jessie debian/buster debian/bullseye debian/bookworm'
   {{- end }}
     outputs:
-      tag: ${{`{{ steps.targets.outputs.tag }}`}}
+      tags: {{`${{ steps.metadata.outputs.tags }}`}}
 
     steps:
       - name: Fix private module deps
         env:
-          TOKEN: '${{`{{ secrets.ORG_GH_TOKEN }}`}}'
+          TOKEN: '{{`${{ secrets.ORG_GH_TOKEN }}`}}'
         run: >
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
 
@@ -42,7 +45,7 @@
         with:
           fetch-depth: 1
   {{- if eq .Name "tyk-analytics" }}
-          token: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
+          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           submodules: true
   {{- end }}
 
@@ -57,8 +60,8 @@
         if: startsWith(github.ref, 'refs/tags')
         uses: docker/login-action@v2
         with:
-          username: ${{`{{ secrets.DOCKER_USERNAME }}`}}
-          password: ${{`{{ secrets.DOCKER_PASSWORD }}`}}
+          username: {{`${{ secrets.DOCKER_USERNAME }}`}}
+          password: {{`${{ secrets.DOCKER_PASSWORD }}`}}
 
   {{- if .CSRepo }}
       - name: Login to Cloudsmith
@@ -66,36 +69,17 @@
         uses: docker/login-action@v2
         with:
           registry: docker.tyk.io
-          username: ${{`{{ secrets.CLOUDSMITH_USERNAME }}`}}
-          password: ${{`{{ secrets.CLOUDSMITH_API_KEY }}`}}
+          username: {{`${{ secrets.CLOUDSMITH_USERNAME }}`}}
+          password: {{`${{ secrets.CLOUDSMITH_API_KEY }}`}}
   {{- end }}
 
-      - name: Unlock agent and set tag
-        id: targets
-        shell: bash
+      - name: Unlock agent
         env:
-          NFPM_STD_PASSPHRASE: ${{`{{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
+          NFPM_STD_PASSPHRASE: {{`${{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
           GPG_FINGERPRINT: 12B5D62C28F57592D1575BD51ED14C59E37DAC20
-          PKG_SIGNING_KEY: ${{`{{ secrets.SIGNING_KEY }}`}}
-        run: |
+          PKG_SIGNING_KEY: {{`${{ secrets.SIGNING_KEY }}`}}
+        run:
           ci/bin/unlock-agent.sh
-          current_tag=${GITHUB_REF##*/}
-          echo "tag=${current_tag}" >> $GITHUB_OUTPUT
-
-      - name: Delete old release assets
-        if: startsWith(github.ref, 'refs/tags')
-        uses: mknejp/delete-release-assets@v1
-        with:
-          token: ${{`{{ github.token }}`}}
-          tag: ${{`{{ github.ref }}`}}
-          fail-if-no-assets: false
-          fail-if-no-release: false
-          assets: |
-            *.deb
-            *.rpm
-            *.tar.gz
-            *.txt.sig
-            *.txt
 
   {{- if and (eq .Name "tyk") (has "plugin-compiler-fix-vendor" .Branchvals.Features) }}
       - name: Fix vendor
@@ -110,31 +94,80 @@
           rm -rf vendor
   {{- end }}
 
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: {{`${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}`}}
+          restore-keys: |
+            {{`${{ runner.os }}-go-`}}
+
       - uses: goreleaser/goreleaser-action@v4
         with:
           version: latest
-          args: release --clean -f ${{`{{ matrix.goreleaser }}`}} ${{`{{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot' || '' }}`}}
+          args: release --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot' || '' }}`}}
         env:
-          GITHUB_TOKEN: ${{`{{ secrets.GITHUB_TOKEN }}`}}
+          GITHUB_TOKEN: {{`${{ secrets.GITHUB_TOKEN }}`}}
           CGO_ENABLED: {{ if .Branchvals.Cgo }}1{{ else }}0{{ end }}
   {{- if and (eq .Name "tyk") (not (has "go1.19" .Branchvals.Features) ) }}
           GO111MODULE: off
   {{- end }}
-          NFPM_STD_PASSPHRASE: ${{`{{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
-          NFPM_PAYG_PASSPHRASE: ${{`{{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
+          NFPM_STD_PASSPHRASE: {{`${{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
+          NFPM_PAYG_PASSPHRASE: {{`${{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
           GPG_FINGERPRINT: 12B5D62C28F57592D1575BD51ED14C59E37DAC20
-          PKG_SIGNING_KEY: ${{`{{ secrets.SIGNING_KEY }}`}}
+          PKG_SIGNING_KEY: {{`${{ secrets.SIGNING_KEY }}`}}
   {{- if and .Branchvals.Cgo (has "go1.19" .Branchvals.Features) }}
-          GO_VERSION: ${{`{{ matrix.go_version }}`}}
+          GO_VERSION: {{`${{ matrix.go_version }}`}}
   {{- end }}
-          GOLANG_CROSS: ${{`{{ matrix.golang_cross }}`}}
-          DEBVERS: ${{`{{ matrix.debvers }}`}}
-          RPMVERS: ${{`{{ matrix.rpmvers }}`}}
-          PACKAGECLOUD_TOKEN: ${{`{{ secrets.PACKAGECLOUD_TOKEN }}`}}
+          GOLANG_CROSS: {{`${{ matrix.golang_cross }}`}}
+          DEBVERS: {{`${{ matrix.debvers }}`}}
+          RPMVERS: {{`${{ matrix.rpmvers }}`}}
+          PACKAGECLOUD_TOKEN: {{`${{ secrets.PACKAGECLOUD_TOKEN }}`}}
   {{- if eq .Name "tyk" }}
           DOCKER_CLI_EXPERIMENTAL: "enabled"
-
   {{- end }}
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: cipush
+          aws-region: eu-central-1
+          # Don't mask to pass it across job boundaries
+          mask-aws-account-id: false
+
+      - uses: aws-actions/amazon-ecr-login@v1
+        id: ecr
+        with:
+          mask-password: 'true'
+
+      - name: Docker metadata for CI
+        id: metadata
+        uses: docker/metadata-action@v4
+        with:
+          images: {{`${{ steps.ecr.outputs.registry }}`}}/{{ .Name }}
+          flavor: |
+            latest=false
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha
+            type=semver,pattern=v{{`{{major}}`}}.{{`{{minor}}`}}
+            type=semver,pattern=v{{`{{version}}`}}
+
+      - name: CI push
+        shell: bash
+        env:
+          t: {{`${{ steps.metadata.outputs.tags }}`}}
+        run: |
+          set +e
+          IFS=$'\n' tags=($t)
+          for tag in $tags; do
+             for arch in amd64 arm64; do 
+                docker tag {{ .DHRepo }}:v0.0.0-${arch} ${tag}-${arch} && docker push ${tag}-${arch}
+             done
+             docker manifest create ${tag} ${tag}-amd64 ${tag}-arm64 && docker manifest push ${tag}
+          done
+
       - uses: actions/upload-artifact@v3
         with:
           name: deb

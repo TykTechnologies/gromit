@@ -1,4 +1,83 @@
 {{ define "tests" }}
+  api-tests:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: [ "sha256", "murmur64" ]
+        db: [ "mongo44", "postgres15" ]
+        include:
+          - db: postgres15
+            markers: "and not sql"
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+  {{- if eq .Name "tyk-analytics" }}
+          submodules: false
+  {{- end }}
+
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: cipush
+          aws-region: eu-central-1
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: 'true'
+
+        # Only {{`${{ github.actor }}`}} has access
+        # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
+      - name: Setup tmate session only in debug mode
+        uses: mxschmitt/action-tmate@v3
+        if: {{`${{ runner.debug == '1' }}`}}
+        with:
+          detached: true
+          limit-access-to-actor: true
+
+      - name: env up
+        shell: bash
+        working-directory: ci/auto
+        env:
+          t: {{`${{ needs.goreleaser.outputs.tags }}`}}
+          TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
+          TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
+        run: |
+          echo CI tags: $t
+          tags=($t)
+          echo First tag: ${tags[0]}
+          echo "registry={{`${{ steps.ecr.outputs.registry }}`}}
+          tyk_image=\${registry}/tyk:{{`${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}}
+          tyk_analytics_image=\${registry}/tyk-analytics:{{`${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}}
+          tyk_sink_image=\${registry}/tyk-sink:{{`${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}}
+          tyk_pump_image=\${registry}/tyk-pump:{{`${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}}
+          # override default with just built tag
+          {{ .Name | replace "-" "_" }}_image=${tags[0]}
+          # base dir for config files
+          confs_dir=./pro
+          # overrides via envvars
+          env_file=local-{{`${{ matrix.db }}`}}.env
+          " > versions.env
+          # Add Tyk component config variations to $env_file
+          cat confs/{{`${{ matrix.conf }}`}}.env >> local-{{`${{ matrix.db }}`}}.env
+          # bring up env
+          docker compose -f pro.yml -f deps.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env up --quiet-pull -d
+
+      - name: Run tests
+        run: |
+          docker run --rm --network auto_default \
+          754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-automated-tests:{{`${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}} \
+          pytest -c pytest_ci.ini -m "not local and not mdcb and not dind {{`${{ matrix.markers }}`}}"
+
+# TODO: PR comment, using just one comment and updating, not a new comment each time
+
   upgrade-deb:
     if: startsWith(github.ref, 'refs/tags')
     services:
@@ -22,6 +101,7 @@
           - ubuntu:bionic
           - ubuntu:focal
           - debian:bullseye
+          - debian:bookworm
 
     steps:
       - uses: actions/checkout@v3
@@ -38,12 +118,12 @@
 
       - name: generate dockerfile
         run: |
-          echo 'FROM ${{`{{ matrix.distro }}`}}
+          echo 'FROM {{`${{ matrix.distro }}`}}
           ARG TARGETARCH
           COPY {{ .PackageName }}*_${TARGETARCH}.deb /{{ .PackageName }}.deb
           RUN apt-get update && apt-get install -y curl
   {{- if .Branchvals.PCPrivate }}
-          RUN curl -u ${{`{{ secrets.PACKAGECLOUD_MASTER_TOKEN }}`}}: -fsSL https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.deb.sh | bash && apt-get install -y {{ .PackageName }}={{ .Branchvals.UpgradeFromVer }}
+          RUN curl -u {{`${{ secrets.PACKAGECLOUD_MASTER_TOKEN }}`}}: -fsSL https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.deb.sh | bash && apt-get install -y {{ .PackageName }}={{ .Branchvals.UpgradeFromVer }}
   {{- else }}
           RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.deb.sh | bash && apt-get install -y {{ .PackageName }}={{ .Branchvals.UpgradeFromVer }}
   {{- end }}
@@ -58,20 +138,20 @@
   {{- end }}
           ' > Dockerfile
 
-      - name: install on ${{`{{ matrix.distro }}`}}
+      - name: install on {{`${{ matrix.distro }}`}}
         uses: docker/build-push-action@v4
         with:
           context: "."
-          platforms: linux/${{`{{ matrix.arch }}`}}
+          platforms: linux/{{`${{ matrix.arch }}`}}
           file: Dockerfile
           push: false
   {{- if eq .Name "tyk" }}
-          tags: test-${{`{{ matrix.distro }}-${{ matrix.arch }}`}}
+          tags: test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
           load: true
 
       - name: Test the built container image with api functionality test.
         run: |
-          docker run --network ${{`{{ job.container.network }}`}} --rm test-${{`{{ matrix.distro }}-${{ matrix.arch }}`}}
+          docker run --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
   {{- end }}
 
   upgrade-rpm:
@@ -85,13 +165,15 @@
       fail-fast: false
       matrix:
         distro:
+          - amazonlinux:2023
         {{- if (has "go1.19" .Branchvals.Features) }}
-          - ubi9/ubi
+          - registry.access.redhat.com/ubi9/ubi
         {{- end }}
         {{- if (has "el7" .Branchvals.Features) }}
-          - ubi7/ubi
+          - amazonlinux:2
+          - registry.access.redhat.com/ubi7/ubi
         {{- end }}
-          - ubi8/ubi
+          - registry.access.redhat.com/ubi8/ubi
 
     steps:
       - uses: actions/checkout@v3
@@ -106,12 +188,12 @@
 
       - name: generate dockerfile
         run: |
-          echo 'FROM registry.access.redhat.com/${{`{{ matrix.distro }}`}}
+          echo 'FROM {{`${{ matrix.distro }}`}}
           COPY {{ .PackageName }}*.x86_64.rpm /{{ .PackageName }}.rpm
           RUN yum install --allowerasing -y curl
 
   {{- if .Branchvals.PCPrivate }}
-          RUN curl -u ${{`{{ secrets.PACKAGECLOUD_MASTER_TOKEN }}`}}: -s https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.rpm.sh | bash && yum install -y {{ .PackageName }}-{{ .Branchvals.UpgradeFromVer }}-1
+          RUN curl -u {{`${{ secrets.PACKAGECLOUD_MASTER_TOKEN }}`}}: -s https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.rpm.sh | bash && yum install -y {{ .PackageName }}-{{ .Branchvals.UpgradeFromVer }}-1
 
   {{- else }}
           RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.rpm.sh | bash && yum install -y {{ .PackageName }}-{{ .Branchvals.UpgradeFromVer }}-1
@@ -130,19 +212,19 @@
   {{- end }}
           ' > Dockerfile
 
-      - name: install on ${{`{{ matrix.distro }}`}}
+      - name: install on {{`${{ matrix.distro }}`}}
         uses: docker/build-push-action@v4
         with:
           context: "."
           file: Dockerfile
           push: false
   {{- if eq .Name "tyk" }}
-          tags: test-${{`{{ matrix.distro }}`}}
+          tags: test-{{`${{ matrix.distro }}`}}
           load: true
 
       - name: Test the built container image with api functionality test.
         run: |
-          docker run --network ${{`{{ job.container.network }}`}} --rm test-${{`{{ matrix.distro }}`}}
+          docker run --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}`}}
   {{- end }}
 
   smoke-tests:
@@ -159,11 +241,11 @@
       - name: Run tests
         shell: bash
         env:
-          GITHUB_TAG: ${{`{{ github.ref }}`}}
+          GITHUB_TAG: {{`${{ github.ref }}`}}
   {{- if or (eq .Name "tyk-analytics") (eq .Name "tyk-sink") }}
-          TYK_DB_LICENSEKEY: ${{`{{ secrets.DASH_LICENSE }}`}}
+          TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
   {{- if eq .Name "tyk-sink" }}
-          TYK_MDCB_LICENSE: ${{`{{ secrets.MDCB_LICENSE }}`}}
+          TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
   {{- end }}        
   {{- end }}
         run: |
@@ -180,7 +262,7 @@
               echo Attempting to test $d
               if [ -d $d ] && [ -e $d/test.sh ]; then
                   cd $d
-                  ./test.sh ${{`{{ needs.goreleaser.outputs.tag }}`}}
+                  ./test.sh {{`${{ needs.goreleaser.outputs.tag }}`}}
                   cd -
               fi
           done
@@ -189,7 +271,7 @@
               echo Attempting to test $d
               if [ -d $d ] && [ -e $d/test.sh ]; then
                   cd $d
-                  ./test.sh ${{`{{ needs.goreleaser.outputs.tag }}`}}
+                  ./test.sh {{`${{ needs.goreleaser.outputs.tag }}`}}
                   cd -
               fi
           done

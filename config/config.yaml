@@ -141,6 +141,22 @@ policy:
               features:
                 - el7
                 - plugin-compiler-fix-vendor
+            release-5.0.5:
+              active: true
+              sourcebranch: release-5-lts
+              tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
+              goversion: 1.16
+              features:
+                - el7
+                - plugin-compiler-fix-vendor
+            release-5.1.12:
+              active: true
+              sourcebranch: release-5.1
+              tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
+              goversion: 1.16
+              features:
+                - el7
+                - plugin-compiler-fix-vendor
             release-5-lts:
               active: true
               goversion: 1.16-bullseye
