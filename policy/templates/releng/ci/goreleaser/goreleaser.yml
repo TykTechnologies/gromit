@@ -22,12 +22,10 @@
 
 {{- template "publishers" . }}
 
-{{- if false }}
 # This disables archives
 archives:
   - format: binary
     allow_different_binary_count: true
-{{- end }}
 
 checksum:
   disable: true
