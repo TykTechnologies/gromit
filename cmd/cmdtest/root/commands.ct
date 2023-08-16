@@ -16,7 +16,6 @@ Available Commands:
   git         Top-level git command, use a sub-command to perform an operation
   help        Help about any command
   licenser    Get a trial license and writes it to path, overwriting it
-  mutex       Interact with MaaS
   orgs        Dump/restore org keys and mongodb
   passwd      Returns the password hash of the given plaintext
   policy      Templatised policies that are driven by the config file
