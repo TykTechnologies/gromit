@@ -148,6 +148,7 @@ policy:
               features:
                 - el7
                 - plugin-compiler-fix-vendor
+                - golang-x-bullseye-suffix
             release-4.0.14:
               active: true
               sourcebranch: release-4-lts

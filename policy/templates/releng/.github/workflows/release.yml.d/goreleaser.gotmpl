@@ -7,9 +7,9 @@
       fail-fast: false
       matrix:
   {{- if and .Branchvals.Cgo (has "el7"  .Branchvals.Features) }}{{/* release-3.x version uses the same image for both el7 and non el7 */}}
-        golang_cross: [ {{ .Branchvals.GoVersion }}, {{ .Branchvals.GoVersion }}-el7 ]
+        golang_cross: [ {{ .Branchvals.GoVersion }}{{- if has "golang-x-bullseye-suffix" .Branchvals.Features}}-bullseye{{- end }}, {{ .Branchvals.GoVersion }}-el7 ]
   {{- else }}
-        golang_cross: [ {{ .Branchvals.GoVersion }} ]
+        golang_cross: [ {{ .Branchvals.GoVersion }}{{- if has "golang-x-bullseye-suffix" .Branchvals.Features}}-bullseye{{- end }} ]
   {{- end }}
         include:
   {{- if and .Branchvals.Cgo (has "el7" .Branchvals.Features) }}
@@ -18,7 +18,7 @@
             rpmvers: 'el/7 amazon/2'
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie'
   {{- end }}
-          - golang_cross: {{ .Branchvals.GoVersion }}
+          - golang_cross: {{ .Branchvals.GoVersion }}{{- if has "golang-x-bullseye-suffix" .Branchvals.Features}}-bullseye{{- end }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'
   {{- if .Branchvals.Cgo }}
             rpmvers: 'el/8 el/9 amazon/2023'
