@@ -8,9 +8,9 @@ dockers:
   - ids:
       - std
     image_templates:
-      - "{{$r.DHRepo}}:{{`{{ .Tag }}`}}-{{ $arch }}"
+      - "{{$r.DHRepo}}:{{`{{ replace .Tag "+" "-" }}`}}-{{ $arch }}"
     {{- if $r.CSRepo }}
-      - "{{$r.CSRepo}}:{{`{{ .Tag }}`}}-{{ $arch }}"
+      - "{{$r.CSRepo}}:{{`{{ replace .Tag "+" "-" }}`}}-{{ $arch }}"
     {{- end}}
     build_flag_templates:
       - "--build-arg=PORTS={{ $r.ExposePorts }}"
@@ -57,7 +57,7 @@ dockers:
   - ids:
       - std
     image_templates:
-      - "tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-{{ $arch }}"
+      - "tykio/tyk-hybrid-docker:{{`{{ replace .Tag "+" "-" }}`}}-{{ $arch }}"
     build_flag_templates:
       - "--platform=linux/{{ $arch }}"
       - "--label=org.opencontainers.image.created={{`{{.Date}}`}}"
