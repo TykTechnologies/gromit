@@ -12,7 +12,7 @@
   {{- if and .Branchvals.Cgo (has "el7"  .Branchvals.Features) }}
         golang_cross: [ {{ .Branchvals.GoVersion }}, {{ if eq .Branch "release-5-lts"}}1.16-el7{{ else if eq .Branch "release-4-lts" }}1.15-el7{{ end }} ]
   {{- else }}
-        golang_cross: [ {{ .Branchvals.GoVersion }} ]
+        golang_cross: [ {{ .Branchvals.Buildenv }} ]
   {{- end }}
         include:
   {{- if and .Branchvals.Cgo (has "el7" .Branchvals.Features) }}
@@ -21,7 +21,7 @@
             rpmvers: 'el/7 amazon/2'
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie'
   {{- end }}
-          - golang_cross: {{ .Branchvals.GoVersion }}
+          - golang_cross: {{ .Branchvals.Buildenv }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'
   {{- if .Branchvals.Cgo }}
             rpmvers: 'el/8 el/9 amazon/2023'
@@ -81,7 +81,7 @@
         run:
           ci/bin/unlock-agent.sh
 
-  {{- if and (eq .Name "tyk") (has "plugin-compiler-fix-vendor" .Branchvals.Features) }}
+  {{- if and (eq .Name "tyk") (has "plugin-compiler-fix-vendor" .Branchvals.Features) -}}
       - name: Fix vendor
         run: |
           mkdir -p /go/src
@@ -158,6 +158,7 @@
         shell: bash
         env:
           t: {{`${{ steps.metadata.outputs.tags }}`}}
+          build_tag: {{`${{ startswith(github.ref, 'refs/tags') && github.ref_name || 'v0.0.0' }}`}}
         run: |
           set +e
           IFS=$'\n' tags=($t)

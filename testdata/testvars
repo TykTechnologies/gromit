@@ -1,7 +1,0 @@
-GROMIT_REPOS="tyk,tyk-analytics,tyk-pump"
-GROMIT_TABLENAME="GromitTest"
-GROMIT_DASH_LICENSE="../testdata/dash.trial"
-GROMIT_REGISTRYID="046805072452"
-XDG_CONFIG_HOME="../testdata"
-TF_VAR_base="base-devenv-euc1-test"
-TF_VAR_infra="infra-devenv-euc1-test"

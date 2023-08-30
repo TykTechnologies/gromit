@@ -1,9 +1,0 @@
-env:
-  ccerts:
-    ca: ../ca.pem
-    key: ccerts/key.pem
-    cert: ccerts/cert.pem
-
-cluster:
-  zoneid: Z0567038GMPM1AEF8DGJ
-  domain: test.tyk.technology

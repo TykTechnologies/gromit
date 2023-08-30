@@ -19,12 +19,6 @@ import (
 //go:embed templates all:templates
 var Bundles embed.FS
 
-// Extra files for a feature using the same tree structure as Bundles
-// with a prefix <bundle>/<feature>/
-//
-//go:embed template-features all:template-features
-var Features embed.FS
-
 // bundleNode of a directory tree
 type bundleNode struct {
 	Name     string
@@ -66,8 +60,7 @@ func (b *Bundle) Add(path string, template *template.Template) {
 	parent.Children = append(parent.Children, &bundleNode{Name: components[len(components)-1], path: path, template: template})
 }
 
-// Render will walk a tree given in n, depth first, skipping .d nodes
-// All leaf nodes will be rendered
+// Render will walk a tree given in n, depth first, rendering leaves
 func (b *Bundle) Render(bv any, opDir string, n *bundleNode) ([]string, error) {
 	var renderedFiles []string
 	if n == nil {
@@ -116,6 +109,11 @@ func (b *Bundle) String() string {
 	return fmt.Sprintf(b.Name) + b.tree.String(0)
 }
 
+// Count is the public function that wraps the implementation
+func (b *Bundle) Count() int {
+	return b.tree.Count(b.tree)
+}
+
 // Print an indented tree
 func (n *bundleNode) String(indent int) string {
 	op := fmt.Sprintf("%s%s\n", strings.Repeat("  ", indent), n.Name)
@@ -123,6 +121,19 @@ func (n *bundleNode) String(indent int) string {
 		op += child.String(indent + 1)
 	}
 	return op
+}
+
+// Count return the number of leaf nodes, which is a count of the
+// files that will be rendered, thanks ChatGPT 3.5(turbo)
+func (n *bundleNode) Count(bn *bundleNode) int {
+	count := 0
+	if len(bn.Children) == 0 {
+		return 1
+	}
+	for _, child := range bn.Children {
+		count += n.Count(child)
+	}
+	return count
 }
 
 // fsTreeWalk will walk the complete tree of tfs and add templates to the supplied Bundle b.
@@ -171,46 +182,33 @@ func fsTreeWalk(b *Bundle, tfs fs.FS) error {
 	return err
 }
 
-// Returns a bundle by traversing from templates/<bundleDir>
-// Also traverses template-features/<feature> and adds it to the bundle
-func NewBundle(bundleName string, features []string) (*Bundle, error) {
-	var bfs fs.FS
-	log.Logger = log.With().Str("bundle", bundleName).Logger()
-	if strings.HasPrefix(bundleName, ".") || strings.HasPrefix(bundleName, "/") {
-		bfs = os.DirFS(bundleName)
-	} else {
-		var err error
-		bfs, err = fs.Sub(Bundles, filepath.Join("templates", bundleName))
-		if err != nil {
-			log.Fatal().Err(err).Msg("fetching embedded templates")
-		}
+// Returns a bundle by traversing from templates/<features>
+func NewBundle(features []string) (*Bundle, error) {
+	b := &Bundle{
+		Name: strings.Join(features, "-"),
+		tree: &bundleNode{},
 	}
-	b := &Bundle{Name: bundleName,
-		tree: &bundleNode{}}
-
-	log.Debug().Msg("walking common tree")
-	err := fsTreeWalk(b, bfs)
-	if err != nil {
-		return b, err
-	}
-	// Walk the features
+	var err error
+	log.Logger = log.With().Strs("features", features).Logger()
 	for _, feat := range features {
 		var ffs fs.FS
-		log.Logger = log.With().Str("feature", feat).Logger()
 		if strings.HasPrefix(feat, ".") || strings.HasPrefix(feat, "/") {
 			ffs = os.DirFS(feat)
 		} else {
-			var err error
-			featPath := filepath.Join("template-features", bundleName, feat)
-			fi, err := fs.Stat(Features, featPath)
+			featPath := filepath.Join("templates", feat)
+			fi, err := fs.Stat(Bundles, featPath)
 			if err == nil && fi.IsDir() {
-				ffs, err = fs.Sub(Features, featPath)
+				ffs, err = fs.Sub(Bundles, featPath)
 				if err != nil {
 					log.Fatal().Err(err).Msgf("fetching embedded feature from %s", featPath)
 				}
-				return b, fsTreeWalk(b, ffs)
+				err = fsTreeWalk(b, ffs)
+				if err != nil {
+					log.Fatal().Err(err).Msgf("walking feature path %s", featPath)
+				}
 			} else {
 				log.Info().Err(err).Msg("no files for feature")
+				return nil, err
 			}
 		}
 	}

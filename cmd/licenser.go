@@ -17,7 +17,6 @@ limitations under the License.
 */
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -59,7 +58,7 @@ Supports:
 		if aws {
 			err = util.UpdateSecret(opPath, license)
 		} else {
-			err = ioutil.WriteFile(opPath, []byte(license), 0444)
+			err = os.WriteFile(opPath, []byte(license), 0444)
 		}
 
 		if err != nil {

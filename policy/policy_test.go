@@ -9,10 +9,10 @@ import (
 
 func TestPolicyConfig(t *testing.T) {
 	var rp Policies
-	config.LoadConfig("../testdata/policies/repos.yaml")
+	config.LoadConfig("../testdata/config-test.yaml")
 	err := LoadRepoPolicies(&rp)
-	t.Logf("Branches: %+v", rp.Branches)
-	t.Logf("Branches.branch: %+v", rp.Branches.Branch)
+	t.Logf("Branches: %+v", rp.Branchvals)
+	t.Logf("Branches.branch: %+v", rp.Branchvals.Branches)
 	if err != nil {
 		t.Fatalf("Could not load policy: %v", err)
 	}
@@ -20,12 +20,11 @@ func TestPolicyConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get a repo: %v", err)
 	}
-	assert.EqualValues(t, repo.Protected, []string{"master", "release-3-lts", "release-4"})
 	// test if branch policy for master is set correctly.
 	assert.EqualValues(t, "3.0.8", repo.Branchvals.UpgradeFromVer)
 	t.Logf("Branchvals: %+v", repo.Branchvals)
 	// test if  branch policy is set correctly for master
-	assert.EqualValues(t, "1.16", repo.Branchvals.GoVersion)
+	assert.EqualValues(t, "1.16", repo.Branchvals.Buildenv)
 
 	repo, err = rp.GetRepo("tyk", "https://github.com/tyklabs", "release-4")
 	if err != nil {

@@ -1,22 +1,27 @@
 package policy
 
 import (
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/TykTechnologies/gromit/config"
-	"errors"
-	"path/filepath"
-	"io/fs"
 )
 
+// TestBundleRender renders all the bundles in templates/ for all the
+// repos in the config file.
 // FIXME: Test (bundle, features, repo) in parallel
 func TestBundleRender(t *testing.T) {
-	dirs, err := Bundles.ReadDir("templates")
+	featDirs, err := Bundles.ReadDir("templates")
 	if err != nil {
-		t.Fatalf("Error reading embed fs: %v", err)
+		t.Fatalf("Error reading embedded fs: %v", err)
+	}
+	var features []string
+	for _, fd := range featDirs {
+		if fd.IsDir() {
+			features = append(features, fd.Name())
+		}
 	}
 	var pol Policies
 	config.LoadConfig("")
@@ -24,48 +29,57 @@ func TestBundleRender(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to load repo policies: %v", err)
 	}
-	for _, d := range dirs {
-		bundleName := d.Name()
-		if d.IsDir() {
-			featDirs, err := Features.ReadDir(filepath.Join("template-features", bundleName))
-			if !(err == nil || errors.Is(err, fs.ErrNotExist)) {
-				t.Fatalf("Unable to load features for bundle %s: %v", bundleName, err)
-			}
-			var features []string
-			for _, feat := range featDirs {
-				features = append(features, feat.Name())
-			}
-			b, err := NewBundle(bundleName, features)
-			if err != nil {
-				t.Logf("Unable to create bundle obj: %v", err)
-				continue
-			}
-			for r := range pol.Repos {
-				t.Logf("Testing bundle %s on repo %s with features %v", bundleName, r, features)
-				rp, err := GetRepoPolicy(r, "master")
-				if err != nil {
-					t.Logf("Error getting repo policy for repo: %s: %v", r, err)
-					t.Fail()
-					continue
-				}
-				rp.SetTimestamp(time.Now().UTC())
-				tmpDir, err := ioutil.TempDir("", r+"-"+bundleName)
-				if err != nil {
-					t.Fatalf("Error creating temp dir: %v", err)
-				}
-				defer os.RemoveAll(tmpDir)
-
-				_, err = b.Render(rp, tmpDir, nil)
-				if err != nil {
-					t.Logf("Error rendering bundle: %s for repo: %s: %v", bundleName, r, err)
-					t.Fail()
-					continue
-				}
-
-			}
-
-		}
-
+	b, err := NewBundle(features)
+	if err != nil {
+		t.Logf("Unable to create bundle obj: %v", err)
 	}
+	for r := range pol.Repos {
+		t.Logf("testing repo %s with features %v", r, features)
+		rp, err := pol.GetRepoPolicy(r, "master")
+		if err != nil {
+			t.Logf("Error getting repo policy for repo: %s: %v", r, err)
+			t.Fail()
+			continue
+		}
+		rp.SetTimestamp(time.Now().UTC())
+		tmpDir, err := os.MkdirTemp("", r+"-"+b.Name)
+		if err != nil {
+			t.Fatalf("Error creating temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
 
+		_, err = b.Render(rp, tmpDir, nil)
+		if err != nil {
+			t.Logf("Error rendering bundle: %s for repo: %s: %v", b.Name, r, err)
+			t.Fail()
+			continue
+		}
+		renderCount, err := countFiles(tmpDir)
+		if err != nil {
+			t.Fatalf("Could not count the rendered files in %s: %v", tmpDir, err)
+		}
+		expectedCount := b.Count()
+		if renderCount != expectedCount {
+			t.Fatalf("Rendered %d files, expected %d", renderCount, expectedCount)
+		}
+	}
+}
+
+func countFiles(tmpDir string) (int, error) {
+	count := 0
+	err := filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		// Skip directories
+		if info.IsDir() {
+			return nil
+		}
+		count++
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }

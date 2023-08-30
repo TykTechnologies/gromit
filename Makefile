@@ -3,16 +3,10 @@ VERSION := $(shell git describe --tags)
 COMMIT := $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
 
-gromit: clean */*.go confgen/templates/* policy/templates/* git/prs/* #devenv/terraform/* server/debug/debugger.wasm
+gromit: clean */*.go confgen/templates/* policy/templates/* git/prs/* # server/debug/debugger.wasm
 	! ls **/#*#
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
-
-testdata: testdata/base/*
-	[[ $CI ]] || test -n "$(AWS_PROFILE)"
-	cd testdata/base
-	terraform init
-	terraform apply -auto-approve
 
 test: 
 	echo Use a config file locally and env variables in CI
@@ -35,4 +29,4 @@ clean:
 	find . -name rice-box.go | xargs rm -fv
 	rm -fv gromit
 
-.PHONY: grun gserve clean
+.PHONY: clean update-test-cases test

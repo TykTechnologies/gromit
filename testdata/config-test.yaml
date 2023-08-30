@@ -1,0 +1,22 @@
+policy:
+  default: master
+  repos:
+    git-tests:
+      description: |
+        Repo for testing git operations
+      pcrepo: git-tests
+      dhrepo: tykio/git-tests
+      csrepo: docker.tyk.io/git-tests
+      exposeports: "3000 5000"
+      binary: git-tests
+      reviewers: []
+      packagename: git-tests
+      features:
+        - releng
+      branch:
+        master:
+          reviewcount: 1
+          goversion: 1.19-bullseye
+          features:
+            - go1.19
+            - el7 

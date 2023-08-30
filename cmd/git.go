@@ -17,11 +17,9 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/TykTechnologies/gromit/git"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -106,55 +104,6 @@ var diffSubCmd = &cobra.Command{
 	},
 }
 
-var renderPrTemplate = &cobra.Command{
-	Use:   "render-pr-template <repo> <template-name>",
-	Args:  cobra.MinimumNArgs(2),
-	Short: "Prints the given PR template for the repo  after rendering, verbatim as the PR body - template name to be given without the .tmpl extension",
-	Long: `Dumps a markdown formatted output of the PR body
-for the given pr template for the given repo - especially
-useful if used with policy-dump template as it will print
-the current release branches information for the given repo,
-<template-name> should be given without the .tmpl extension.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		repo := args[0]
-		tmpl := args[1]
-		owner, _ := cmd.Flags().GetString("owner")
-
-		deferCleanup := func(dir string, exitCode int) int {
-			log.Debug().Str("dir", dir).Msg("removing temporary dir")
-			os.RemoveAll(dir)
-			return exitCode
-		}
-		tmpDir, err := ioutil.TempDir("", "gromit-")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating temp dir for checkout, err: %v ", err)
-			os.Exit(deferCleanup(tmpDir, 1))
-		}
-		r, err := git.Init(repo,
-			owner,
-			Branch,
-			1,
-			tmpDir,
-			os.Getenv("GITHUB_TOKEN"))
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error init git repo: ", err)
-			os.Exit(deferCleanup(tmpDir, 1))
-		}
-		buf, err := r.RenderPRTemplate(tmpl)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error rendering template: %s, err: %v ", tmpl, err)
-			os.Exit(deferCleanup(tmpDir, 1))
-		}
-		_, err = buf.WriteTo(os.Stdout)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error displaying rendered tmpl: ", err)
-			os.Exit(deferCleanup(tmpDir, 1))
-		}
-
-		os.Exit(deferCleanup(tmpDir, 0))
-	},
-}
-
 func init() {
 	gitCmd.PersistentFlags().StringVar(&Branch, "branch", "", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
 	gitCmd.PersistentFlags().StringVar(&Owner, "owner", "TykTechnologies", "Github org")
@@ -166,6 +115,5 @@ func init() {
 	gitCmd.AddCommand(coSubCmd)
 	gitCmd.AddCommand(diffSubCmd)
 	gitCmd.AddCommand(pushSubCmd)
-	gitCmd.AddCommand(renderPrTemplate)
 	rootCmd.AddCommand(gitCmd)
 }
