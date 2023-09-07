@@ -16,13 +16,12 @@ func TestPolicyConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load policy from testdata/config-test.yaml: %v", err)
 	}
-	prettyPol, _ := json.MarshalIndent(pol.Repos["repo0"], "", " ")
+	prettyPol, _ := json.MarshalIndent(pol, "", " ")
 	t.Logf("%s", prettyPol)
 	main, err := pol.GetRepoPolicy("repo0", "main")
 	if err != nil {
 		t.Fatalf("Could not get a repo: %v", err)
 	}
-	t.Logf("Repo: %+v", main)
 	assert.EqualValues(t, "right", main.Branchvals.Buildenv, "testing overrides zero")
 	assert.EqualValues(t, []string{"a", "b", "c", "d"}, main.Branchvals.Features, "testing merging zero")
 	assert.EqualValues(t, "Repo Zero", main.Description, "testing inherited values zero")
