@@ -29,8 +29,8 @@ jobs:
       - name: Check for zero diffs
         id: diff
         run: |
-          git -C ${{ matrix.repo }} diff --exit-code -w --ignore-blank-lines -I"^# Generated on:.*$" HEAD 2>${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt
-
+          gromit git diff ${{ matrix.repo }} 2>${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt
+    
       - name: Check output
         if: ${{ always() }}
         id: output
