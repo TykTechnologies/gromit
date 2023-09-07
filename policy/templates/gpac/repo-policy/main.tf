@@ -89,7 +89,7 @@ module "{{ .Name }}" {
   delete_branch_on_merge = false
   {{- end }}
   release_branches     = concat(var.historical_branches,[
-{{- range $branch, $values := .Branchvals.Branches }}
+{{- range $branch, $values := .Branches }}
 { branch    = "{{ $branch }}",
 	reviewers = "{{ $values.ReviewCount }}",
 	convos    = "{{ $values.Convos }}",

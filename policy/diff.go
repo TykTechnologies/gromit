@@ -1,4 +1,4 @@
-package git
+package policy
 
 import (
 	"bufio"
@@ -78,7 +78,7 @@ func parseDiff(ds string) ([]string, error) {
 	return dFiles, nil
 }
 
-func NonTrivial(dir string) ([]string, error) {
+func NonTrivialDiff(dir string) ([]string, error) {
 	ds, err := gitDiff(dir)
 	if err != nil {
 		return nil, err

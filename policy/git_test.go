@@ -1,4 +1,4 @@
-package git
+package policy
 
 import (
 	"crypto/sha1"

@@ -1,22 +1,31 @@
 policy:
-  default: master
+  features:
+    - a
+  builenv: wrong
   repos:
-    git-tests:
-      description: |
-        Repo for testing git operations
-      pcrepo: git-tests
-      dhrepo: tykio/git-tests
-      csrepo: docker.tyk.io/git-tests
-      exposeports: "3000 5000"
-      binary: git-tests
-      reviewers: []
-      packagename: git-tests
+    repo0:
+      description: >-
+        Repo Zero
+      buildenv: stillwrong
       features:
-        - releng
-      branch:
-        master:
-          reviewcount: 1
-          goversion: 1.19-bullseye
+        - b
+      branches:
+        main:
+          buildenv: right
           features:
-            - go1.19
-            - el7 
+            - c
+            - d
+        dev:
+          buildenv: stillright
+          features:
+            - e
+            - f
+    repo1:
+      description: >-
+        Repo One
+      buildenv: wrong
+      branches:
+        main:
+          buildenv: right
+          features:
+            - e

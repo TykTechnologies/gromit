@@ -1,4 +1,4 @@
-package git
+package policy
 
 import (
 	"bytes"
@@ -16,7 +16,6 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/ProtonMail/go-crypto/openpgp"
-	"github.com/TykTechnologies/gromit/policy"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -30,13 +29,13 @@ import (
 )
 
 // GitRepo models a local git worktree with the authentication and
-// metadata to push it to github
+// enough metadata to allow it to be pushed it to github
 type GitRepo struct {
 	Name       string
 	Owner      string
 	commitOpts *git.CommitOptions
 	repo       *git.Repository
-	RepoPolicy policy.RepoPolicy
+	RepoPolicy RepoPolicy
 	worktree   *git.Worktree
 	dir        string
 	auth       transport.AuthMethod
@@ -93,8 +92,8 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string) (*GitR
 		repo, err = git.PlainClone(dir, false, cloneOpts)
 	}
 	// Load repo policy for the given repo.
-	var cp policy.Policies
-	err = policy.LoadRepoPolicies(&cp)
+	var cp Policies
+	err = LoadRepoPolicies(&cp)
 	if err != nil {
 		log.Fatal().Msg("Could not load config policies")
 	}

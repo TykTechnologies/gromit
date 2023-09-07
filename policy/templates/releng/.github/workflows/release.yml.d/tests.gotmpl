@@ -131,7 +131,7 @@
           ARG TARGETARCH
           COPY {{ .PackageName }}*_${TARGETARCH}.deb /{{ .PackageName }}.deb
           RUN apt-get update && apt-get install -y curl
-  {{- if .Branchvals.PCPrivate }}
+  {{- if .PCPrivate }}
           RUN curl -u {{`${{ secrets.PACKAGECLOUD_MASTER_TOKEN }}`}}: -fsSL https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.deb.sh | bash && apt-get install -y {{ .PackageName }}={{ .Branchvals.UpgradeFromVer }}
   {{- else }}
           RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.deb.sh | bash && apt-get install -y {{ .PackageName }}={{ .Branchvals.UpgradeFromVer }}
@@ -201,7 +201,7 @@
           COPY {{ .PackageName }}*.x86_64.rpm /{{ .PackageName }}.rpm
           RUN yum install --allowerasing -y curl
 
-  {{- if .Branchvals.PCPrivate }}
+  {{- if .PCPrivate }}
           RUN curl -u {{`${{ secrets.PACKAGECLOUD_MASTER_TOKEN }}`}}: -s https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.rpm.sh | bash && yum install -y {{ .PackageName }}-{{ .Branchvals.UpgradeFromVer }}-1
 
   {{- else }}

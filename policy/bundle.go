@@ -61,6 +61,8 @@ func (b *Bundle) Add(path string, template *template.Template) {
 }
 
 // Render will walk a tree given in n, depth first, rendering leaves
+// bv will accept any type which will used directly to render the
+// templates
 func (b *Bundle) Render(bv any, opDir string, n *bundleNode) ([]string, error) {
 	var renderedFiles []string
 	if n == nil {

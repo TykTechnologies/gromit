@@ -21,7 +21,6 @@ import (
 
 	"time"
 
-	"github.com/TykTechnologies/gromit/git"
 	"github.com/TykTechnologies/gromit/policy"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -58,7 +57,7 @@ A PR will be created with the changes and @devops will be asked for a review.
 		repo = args[0]
 		branch, _ := cmd.Flags().GetString("branch")
 		// Checkout code into a dir named repo
-		r, err := git.Init(repo,
+		r, err := policy.Init(repo,
 			Owner,
 			Branch,
 			1,
@@ -87,7 +86,7 @@ A PR will be created with the changes and @devops will be asked for a review.
 			return fmt.Errorf("bundle gen %v: %v", rp.Branchvals.Features, err)
 		}
 		force, _ := cmd.Flags().GetBool("force")
-		dfs, err := git.NonTrivial(repo)
+		dfs, err := policy.NonTrivialDiff(repo)
 		if err != nil {
 			return fmt.Errorf("computing diff in %s: %v", repo, err)
 		}
@@ -135,6 +134,21 @@ A PR will be created with the changes and @devops will be asked for a review.
 	},
 }
 
+var diffSubCmd = &cobra.Command{
+	Use:   "diff <dir>",
+	Args:  cobra.MinimumNArgs(1),
+	Short: "Compute if there are differences worth pushing (requires git)",
+	Long:  `Parses the output of git diff --staged -G'(^[^#])' to make a decision. Fails if there are non-trivial diffs, or if there was a problem. This failure mode is chosen so that it can work as a gate.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dir := args[0]
+		dfs, err := policy.NonTrivialDiff(dir)
+		if len(dfs) > 0 {
+			return fmt.Errorf("non-trivial diffs in %s: %v", dir, dfs)
+		}
+		return err
+	},
+}
+
 // docSubCmd represents the doctor subcommand
 var docSubCmd = &cobra.Command{
 	Use:     "doctor <repo>",
@@ -161,6 +175,7 @@ func init() {
 	syncSubCmd.Flags().Bool("force", false, "Proceed even if there are only trivial changes")
 
 	policyCmd.AddCommand(syncSubCmd)
+	policyCmd.AddCommand(diffSubCmd)
 
 	docSubCmd.Flags().String("pattern", "^(release-[[:digit:].]+|master)", "Regexp to match release engineering branches")
 	policyCmd.AddCommand(docSubCmd)
