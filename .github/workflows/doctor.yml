@@ -30,7 +30,7 @@ jobs:
         id: diff
         run: |
           gromit git diff ${{ matrix.repo }} 2>${{ matrix.repo }}-${{ matrix.bundle }}-${{matrix.branch}}.txt
-    
+
       - name: Check output
         if: ${{ always() }}
         id: output
