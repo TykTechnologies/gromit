@@ -8,7 +8,7 @@
       matrix:
   {{- if and .Branchvals.Cgo (has "el7"  .Branchvals.Features) }}
     {{- if eq .Branch "release-5-lts" }}
-        golang_cross: [ {{ .Branchvals.GoVersion }}-bullseye, {{ .Branchvals.GoVersion }}-el7 ]
+        golang_cross: [ {{ .Branchvals.GoVersion }}, 1.16-el7 ]
     {{- end }}
     {{- if eq .Branch "release-4-lts" }}
         golang_cross: [ {{ .Branchvals.GoVersion }}, {{ .Branchvals.GoVersion }}-el7 ]
