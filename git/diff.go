@@ -21,7 +21,7 @@ var White = "\033[97m"
 
 func gitDiff(dir string) (string, error) {
 	var out bytes.Buffer
-	cmd := exec.Command("git", "diff", "-w", "--ignore-cr-at-eol", "--ignore-blank-lines", "HEAD")
+	cmd := exec.Command("git", "diff", "-w", "--ignore-cr-at-eol", "-I^# Generated on:.*$", "--ignore-blank-lines", "HEAD")
 	cmd.Dir = dir
 	cmd.Stdout = &out
 	err := cmd.Run()
