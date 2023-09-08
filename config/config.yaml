@@ -143,7 +143,7 @@ policy:
                 - plugin-compiler-fix-vendor
             release-5-lts:
               active: true
-              goversion: 1.16
+              goversion: 1.16-bullseye
               tests: ["Go 1.16 Redis 5","1.16-bullseye","1.16-el7"]
               features:
                 - el7

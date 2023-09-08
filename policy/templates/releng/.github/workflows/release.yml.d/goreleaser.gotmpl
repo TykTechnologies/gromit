@@ -6,14 +6,14 @@
     strategy:
       fail-fast: false
       matrix:
-  {{- if and .Branchvals.Cgo (has "el7"  .Branchvals.Features) }}{{/* release-3.x version uses the same image for both el7 and non el7 */}}
-        golang_cross: [ {{ .Branchvals.GoVersion }}, {{ .Branchvals.GoVersion }}-el7 ]
+  {{- if and .Branchvals.Cgo (has "el7"  .Branchvals.Features) }}
+        golang_cross: [ {{ .Branchvals.GoVersion }}, {{ if eq .Branch "release-5-lts"}}1.16-el7{{ else if eq .Branch "release-4-lts" }}1.15-el7{{ end }} ]
   {{- else }}
         golang_cross: [ {{ .Branchvals.GoVersion }} ]
   {{- end }}
         include:
   {{- if and .Branchvals.Cgo (has "el7" .Branchvals.Features) }}
-          - golang_cross: {{ .Branchvals.GoVersion }}-el7
+          - golang_cross: {{ if eq .Branch "release-5-lts"}}1.16-el7{{ else if eq .Branch "release-4-lts" }}1.15-el7{{ end }}
             goreleaser: 'ci/goreleaser/goreleaser-el7.yml'
             rpmvers: 'el/7 amazon/2'
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie'
