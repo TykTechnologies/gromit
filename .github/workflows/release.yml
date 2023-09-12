@@ -23,17 +23,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20"
+          go-version: "1.21"
 
       - uses: docker/setup-buildx-action@v2
-
-      - uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          role-to-assume: arn:aws:iam::046805072452:role/gromit-test
-          role-session-name: gromitci
-          aws-region: eu-central-1
-        
-      - uses: hashicorp/setup-terraform@v2
 
       - uses: actions/cache@v3
         with:
@@ -45,98 +37,6 @@ jobs:
             ${{ runner.os }}-go-
 
       - run: make test
-        env:
-          TEST_ETCD_HOST: ${{ secrets.TEST_ETCD_HOST }}
-          TEST_ETCD_PASS: ${{ secrets.TEST_ETCD_PASS }}
-          TEST_ETCD_USER: ${{ secrets.TEST_ETCD_USER }}
-          TEST_ETCD_TLS_HOST: ${{ secrets.TEST_ETCD_TLS_HOST }}
-          GROMIT_ETCD_CA: ${{ secrets.GROMIT_ETCD_CA }}
-          GROMIT_ETCD_CLIENT_CERT: ${{ secrets.GROMIT_ETCD_CLIENT_CERT }}
-          GROMIT_ETCD_CLIENT_KEY: ${{ secrets.GROMIT_ETCD_CLIENT_KEY }}
-          TEST_SCRIPT_PATH: ${{ github.workspace }}/testdata/mutex/script.sh
-          GROMIT_TABLENAME: GromitTest
-          GROMIT_REPOS: tyk,tyk-analytics,tyk-pump
-          GROMIT_REGISTRYID: "046805072452"
-          GROMIT_CLUSTER_DOMAIN: test.tyk.technology
-          GROMIT_CLUSTER_ZONEID: Z0326653CS8RP88TOKKI
-          GROMIT_CLIENT_KEY: ${{ secrets.GROMIT_CLIENT_KEY }}
-          GROMIT_SERVE_KEY: ${{ secrets.GROMIT_SERVE_KEY }}
-          GROMIT_CA: |
-            -----BEGIN CERTIFICATE-----
-            MIID4jCCAsqgAwIBAgIUZrB9yKVNOgt9g4MAj4Z8cjWVWNYwDQYJKoZIhvcNAQEL
-            BQAwgYgxCzAJBgNVBAYTAlVLMRcwFQYDVQQIEw5HcmVhdGVyIExvbmRvbjEPMA0G
-            A1UEBxMGTG9uZG9uMRkwFwYDVQQKExBUeWsgVGVjaG5vbG9naWVzMQ8wDQYDVQQL
-            EwZEZXZvcHMxIzAhBgNVBAMTGlR5ayBEZXZlbG9wZXIgRW52aXJvbm1lbnRzMB4X
-            DTIwMDYyNTE0NTIwMFoXDTI1MDYyNDE0NTIwMFowgYgxCzAJBgNVBAYTAlVLMRcw
-            FQYDVQQIEw5HcmVhdGVyIExvbmRvbjEPMA0GA1UEBxMGTG9uZG9uMRkwFwYDVQQK
-            ExBUeWsgVGVjaG5vbG9naWVzMQ8wDQYDVQQLEwZEZXZvcHMxIzAhBgNVBAMTGlR5
-            ayBEZXZlbG9wZXIgRW52aXJvbm1lbnRzMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
-            MIIBCgKCAQEArI0TEIeeO7WU/dEqOiSVmLYBBIrysxD4vhlvO8WUmnV6E778dVYk
-            7HTPY7pk4aEJnS9hiYJkS5YPIH5aa3wGEkGkpWMFYa+kgIfRF2LcGUL0pQwDCsCR
-            ev7N9KSUknlLOS6je6oWJKsCDLH9jwyFRvxDMuXf2nWQ0VIg30Txf+cqZhGDbvq+
-            zrlcdvn49rHvPl/92mIHF8hGNyoR5FwdU/VwnEsqic77KIeNpZUfjMcAFQ7ztAQ8
-            21+JVMqLXCbBqfm0INQhDfTKENjvxxC+mWaLETZdzlI1OSk9KuKbt0FsELPFJgt3
-            ciiwvqV4tEKqQrwOj/NigEorFHAG6XmxjQIDAQABo0IwQDAOBgNVHQ8BAf8EBAMC
-            AQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUnU4Q1E/tN5+RIzO2VR5bMUBF
-            mdUwDQYJKoZIhvcNAQELBQADggEBACHrJPFpLw4l2lhHHcFs1+NfCKe5Ftqdrtk8
-            TmImWhu6AdAn7pQ2GG7qKktdUu6/aDO5NWd8B480YScfjq+lXSvotpJiGQYw0RQp
-            lgpYqX9kE+zEL2m5vl83ur8CrCh7pdGfb8iHuhCT04dmk32u6bB8m7RjndSrmFPT
-            4XsFeus88UsueLz9ZP0pPsR4LuMEq2PcCDj5G3ugZqKIaejr4VuTP7NDuAS4qRJJ
-            tHPeqYbwCxbSZumgbU9FygKjyh5zbsguOCYZOjoN11XhXazhIzoEzLjCczcpvO0X
-            s2XKc+hGMJXbo0+3CtjSYHZ87EJOfMolyjnz5H4P6+fIMheXtfA=
-            -----END CERTIFICATE-----
-          GROMIT_SERVE_CERT: |
-            -----BEGIN CERTIFICATE-----
-            MIIEZjCCA06gAwIBAgIUE/ECmrvxSo2ASY6PwMkPxilkU3QwDQYJKoZIhvcNAQEL
-            BQAwgYgxCzAJBgNVBAYTAlVLMRcwFQYDVQQIEw5HcmVhdGVyIExvbmRvbjEPMA0G
-            A1UEBxMGTG9uZG9uMRkwFwYDVQQKExBUeWsgVGVjaG5vbG9naWVzMQ8wDQYDVQQL
-            EwZEZXZvcHMxIzAhBgNVBAMTGlR5ayBEZXZlbG9wZXIgRW52aXJvbm1lbnRzMB4X
-            DTIxMDQxOTA4MzUwMFoXDTIyMDQxOTA4MzUwMFowdzELMAkGA1UEBhMCVUsxFzAV
-            BgNVBAgTDkdyZWF0ZXIgTG9uZG9uMQ8wDQYDVQQHEwZMb25kb24xGTAXBgNVBAoT
-            EFR5ayBUZWNobm9sb2dpZXMxDzANBgNVBAsTBkRldm9wczESMBAGA1UEAxMJVGVz
-            dCBDZXJ0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoWidbYeEHT8F
-            Ycvl12IvuoxK9yLpuCyA+8N27Mmz2u8u6rb2hi1KboyM2qDmQc2wLSukyZs07DPM
-            DdG56pcAfXPubZKrJQTBjIW1r5vikni8a3kDcbN1tYzHcVe0qlxXw70h/PHtwVFN
-            bVBfZvTQJQCePpmYO7F4gdaRRAYkWCylJIsRSF2Ovr0JCH/9OKhGfM7tr0b2PIMx
-            wH/SWCcKqbkXCXiOEHocBgR3zlLYVFFoF+ISQV7Hxaze4Bk597CDZjQnre+Kit5W
-            BZmwOs2zE3fG8aNHlcgNhzZjMF3I5Lz3ZOKcVAIc0L+igc3kAPGk5omWiIICbQCp
-            9K1FhKMQrwIDAQABo4HXMIHUMA4GA1UdDwEB/wQEAwIFoDATBgNVHSUEDDAKBggr
-            BgEFBQcDATAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBTsjQ3smLdtdhQa0C6t8rA7
-            1GV7/zAfBgNVHSMEGDAWgBSdThDUT+03n5EjM7ZVHlsxQEWZ1TAbBgNVHREEFDAS
-            hwR/AAABhwR/AAAChwR/AAADMEIGA1UdHwQ7MDkwN6A1oDOGMWh0dHA6Ly9jZnNz
-            bC5pbnRlcm5hbC5kZXYudHlrLnRlY2hub2xvZ3k6ODg4OC9jcmwwDQYJKoZIhvcN
-            AQELBQADggEBAGfuoOpn6vcgwpyWjLh9oJqBEhzccvric8evHDaNBh0AjpZ4tO2W
-            SmLwpWuc4w9+nNXAj0K0RcOdlKCgGraZbMBmhHbFp2ph76XBZLUH10xPAsLN+0FG
-            fKhaMVtlVpRlOpyA4KjsZBu3KwLUljZQQdn49rLpovycKiDkZk7k2IPbSG8nzr4d
-            RkleMaVFhX+6cLNnaq86qbgqwaxS5aQ01XAzmkkkavgqDzuXvejEFb9TOTR1xPvE
-            7QSL63EjTehzhBbWo+tDT5Wp2unD1n7v7bUBOhj73deTjBstgEocirNMXHtNBtnY
-            5Q3vxmlHUHZa2oqh/qNNMofeU1+eEgU3NCA=
-            -----END CERTIFICATE-----
-          GROMIT_CLIENT_CERT: |
-            -----BEGIN CERTIFICATE-----
-            MIIEBzCCAu+gAwIBAgIUReCRNyjXQYpPzle/GQ+gD1H3y4gwDQYJKoZIhvcNAQEL
-            BQAwgYgxCzAJBgNVBAYTAlVLMRcwFQYDVQQIEw5HcmVhdGVyIExvbmRvbjEPMA0G
-            A1UEBxMGTG9uZG9uMRkwFwYDVQQKExBUeWsgVGVjaG5vbG9naWVzMQ8wDQYDVQQL
-            EwZEZXZvcHMxIzAhBgNVBAMTGlR5ayBEZXZlbG9wZXIgRW52aXJvbm1lbnRzMB4X
-            DTIwMDcxODE2MTgwMFoXDTIxMDcxODE2MTgwMFowezELMAkGA1UEBhMCVUsxFzAV
-            BgNVBAgTDkdyZWF0ZXIgTG9uZG9uMQ8wDQYDVQQHEwZMb25kb24xGTAXBgNVBAoT
-            EFR5ayBUZWNobm9sb2dpZXMxDzANBgNVBAsTBkRldm9wczEWMBQGA1UEAxMNR3Jv
-            bWl0IGNsaWVudDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKIOlEHZ
-            jumD7n7nnVphpCk7ErVMOgUwp5/yJz2N9qrCYCvM6n4q5dQboIp07C5O2xMP5UGg
-            ssJlIPlAORCEBT90LtgWqSg9LUs3BpVDhcB4BaQRLQkPZbC/QgcGwiHX8H/NAtpk
-            WkksA952/ClEa1nc+iXgD5OcDgdZz7xj2TG/dGNsNCowW0KHGwOLlfgm235axVN9
-            k5vRxFOP1NuKJ4GEUcte2WtRtN5F2Pimkx6VX+/oy1mBhrYPL1HkQmPJrXmA2IH2
-            wAugi5YxOW26TVTj52s7WJMQ5TSg++xOc2cASO37PWzFSILTHJvtlXgl3/QzE+Hv
-            gaYzcVPe1HD7vz0CAwEAAaN1MHMwDgYDVR0PAQH/BAQDAgWgMBMGA1UdJQQMMAoG
-            CCsGAQUFBwMCMAwGA1UdEwEB/wQCMAAwHQYDVR0OBBYEFGNzKlgxdEsaG2bCVB12
-            uBkRRcUoMB8GA1UdIwQYMBaAFJ1OENRP7TefkSMztlUeWzFARZnVMA0GCSqGSIb3
-            DQEBCwUAA4IBAQCCsujsn026fJLba35Ceo2h8Kc8B6po6yE7psVNWIKJURgNx6ao
-            Rrk+YsS66T6RgywJUdZAtjAoyVr133C/3SP0P5D+ZOcmz8pfV9zb7mncCoTtY0qU
-            TYcO6H04MjuOw6oiZX0gOaniNKfPQF1OGu49x42NfLTjqIH29KguLidbTKXm9fRV
-            GeCMHS3QJ/YKa/F9dJXbpBqKmMuezGW1YhXXRT4dE5h2AHWLWCgiJCMJIAa2mCtN
-            GdN4BhU95GZ/fUIP96hn8RDo5bp2sl1uoW4L9D2zGHZ2g2QWq1iXeVyTtbuRA6v2
-            t9HxagyE3F1JTp2rrrHZiAv/6UWZz7Eq2qxL
-            -----END CERTIFICATE-----
 
       - name: Login to DockerHub
         if: startsWith(github.ref, 'refs/tags/')
