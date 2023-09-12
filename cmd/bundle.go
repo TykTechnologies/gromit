@@ -20,12 +20,13 @@ import (
 	"time"
 
 	"github.com/TykTechnologies/gromit/policy"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 var (
-	bundle, repo, branch string
-	features []string
+	repo, branch string
+	features     []string
 )
 
 var bundleCmd = &cobra.Command{
@@ -33,9 +34,16 @@ var bundleCmd = &cobra.Command{
 	Aliases: []string{"templates"},
 	Short:   "Operate on bundles",
 	Long: `A bundle is a collection of templates. A template is a top-level file which will be rendered with the same path as it is embedded as.
-A template can have sub-templates which are in directories of the form, <template>.d. The contents of these directories will not be traversed looking for further templates but are collected into the list of files that is passed to template.New().`,
+A template can have sub-templates which are in directories of the form, <template>.d. The contents of these directories will not be traversed looking for further templates but are collected into the list of files that used to instantiate <template>.
+Templates can be organised into features, which is just a directory tree of templates. Rendering the same file from different templates is _not_ supported.`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		err := policy.LoadRepoPolicies(&configPolicies)
+		if err != nil {
+			log.Fatal().Err(err).Msg("could not parse repo policies")
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		b, err := policy.NewBundle(bundle, features)
+		b, err := policy.NewBundle(features)
 		if err != nil {
 			cmd.Println(err)
 		}
@@ -51,11 +59,11 @@ var genSubCmd = &cobra.Command{
 	Long:    `This command does not overlay the rendered output into a git tree. You will have to checkout the repo yourself if you want to check the rendered templates into a git repository.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
-		b, err := policy.NewBundle(bundle, features)
+		b, err := policy.NewBundle(features)
 		if err != nil {
-			return fmt.Errorf("bundle %s: %v", bundle, err)
+			return fmt.Errorf("bundle %v: %v", features, err)
 		}
-		rp, err := policy.GetRepoPolicy(repo, branch)
+		rp, err := configPolicies.GetRepoPolicy(repo, branch)
 		rp.SetTimestamp(time.Now().UTC())
 		if err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repo, err)
@@ -66,11 +74,11 @@ var genSubCmd = &cobra.Command{
 }
 
 func init() {
-	bundleCmd.PersistentFlags().StringVar(&bundle, "bundle", "releng", "Bundle to use, local bundles should start with . or /")
+	bundleCmd.PersistentFlags().StringSliceVar(&features, "features", []string{"releng"}, "Features to use, local features should start with . or /")
 	bundleCmd.PersistentFlags().StringVar(&repo, "repo", "tyk-pump", "Use parameters from policy.<repo>")
 	bundleCmd.PersistentFlags().StringVar(&branch, "branch", "master", "Use branch values from policy.<repo>.branch")
 	bundleCmd.PersistentFlags().StringSliceVar(&features, "feature", nil, "Features to enable")
-	bundleCmd.MarkPersistentFlagRequired("bundle")
+	bundleCmd.MarkPersistentFlagRequired("features")
 	bundleCmd.MarkPersistentFlagRequired("repo")
 	bundleCmd.AddCommand(genSubCmd)
 

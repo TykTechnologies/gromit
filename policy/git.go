@@ -1,9 +1,8 @@
-package git
+package policy
 
 import (
 	"bytes"
 	"context"
-	"embed"
 	"fmt"
 	"html/template"
 	"os"
@@ -13,9 +12,10 @@ import (
 
 	"time"
 
+	_ "embed"
+
 	"github.com/Masterminds/sprig/v3"
 	"github.com/ProtonMail/go-crypto/openpgp"
-	"github.com/TykTechnologies/gromit/policy"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -29,13 +29,13 @@ import (
 )
 
 // GitRepo models a local git worktree with the authentication and
-// metadata to push it to github
+// enough metadata to allow it to be pushed it to github
 type GitRepo struct {
 	Name       string
 	Owner      string
 	commitOpts *git.CommitOptions
 	repo       *git.Repository
-	RepoPolicy policy.RepoPolicy
+	RepoPolicy RepoPolicy
 	worktree   *git.Worktree
 	dir        string
 	auth       transport.AuthMethod
@@ -92,9 +92,12 @@ func Init(repoName, owner, branch string, depth int, dir, ghToken string) (*GitR
 		repo, err = git.PlainClone(dir, false, cloneOpts)
 	}
 	// Load repo policy for the given repo.
-	// TODO: change the hard-coded master to may be use
-	// the checked out branch.
-	rp, err := policy.GetRepoPolicy(repoName, branch)
+	var cp Policies
+	err = LoadRepoPolicies(&cp)
+	if err != nil {
+		log.Fatal().Msg("Could not load config policies")
+	}
+	rp, err := cp.GetRepoPolicy(repoName, branch)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +217,7 @@ func (r *GitRepo) SwitchBranch(branch string) error {
 }
 
 // (r *GitRepo) Checkout fetches the given ref and then checks it out to the worktree
-// Any local changes are lost
+// Any local changes are lost. If the branch does not exist, it is not created.
 func (r *GitRepo) Checkout(branch string) error {
 	err := r.worktree.Clean(&git.CleanOptions{
 		Dir: true,
@@ -245,7 +248,6 @@ func (r *GitRepo) Checkout(branch string) error {
 }
 
 // Push will push the current worktree to origin
-// If remoteBranch is empty, then it pushes to same branch as the local checkout
 func (r *GitRepo) Push(remoteBranch string) error {
 	if remoteBranch == r.Branch() {
 		log.Warn().Msg("pushing to same branch as checkout")
@@ -390,34 +392,44 @@ func (r *GitRepo) EnableAutoMerge(prID string) error {
 	return r.ghV4.Mutate(context.Background(), &mutation, amInput, nil)
 }
 
-//go:embed prs
-var prs embed.FS
-
-func (r *GitRepo) RenderPRTemplate(tmplName string) (*bytes.Buffer, error) {
-	body := new(bytes.Buffer)
-	tFile := filepath.Join("prs", tmplName+".tmpl")
+// RenderPRTemplate will fill in the supplied template body with values from GitRepo
+func (r *GitRepo) RenderPRTemplate(body *string) (*bytes.Buffer, error) {
+	op := new(bytes.Buffer)
 	t := template.Must(
-		template.New(tmplName+".tmpl").
+		template.New("prbody").
 			Option("missingkey=error").
 			Funcs(sprig.FuncMap()).
-			ParseFS(prs, tFile))
-	err := t.Execute(body, r)
-	return body, err
+			Parse(*body))
+	err := t.Execute(op, r)
+	return op, err
 }
 
-func (r *GitRepo) CreatePR(title, remoteBranch, bundle string, draft bool) (*github.PullRequest, error) {
-	body, err := r.RenderPRTemplate(bundle)
+//go:embed prs/main.tmpl
+var prbody string
+
+// CreatePR will create a PR using the user supplied title and the embedded PR body
+// If a PR already exists, it will return that PR
+func (r *GitRepo) CreatePR(prtitle, remoteBranch string, draft bool) (*github.PullRequest, error) {
+	body, err := r.RenderPRTemplate(&prbody)
 	if err != nil {
 		return nil, err
 	}
+	title, err := r.RenderPRTemplate(&prtitle)
+	if err != nil {
+		return nil, err
+	}
+
 	prOpts := &github.NewPullRequest{
-		Title: github.String(title),
+		Title: github.String(title.String()),
 		Head:  github.String(remoteBranch),
 		Base:  github.String(r.Branch()),
 		Body:  github.String(body.String()),
 		Draft: github.Bool(draft),
 	}
 	log.Trace().Interface("propts", prOpts).Str("owner", r.Owner).Str("repo", r.Name).Msg("creating PR")
+	if r.dryRun {
+		return nil, nil
+	}
 	pr, resp, err := r.gh.PullRequests.Create(context.Background(), r.Owner, r.Name, prOpts)
 	// Attempt to detect if a PR already existingPR, complexity due to
 	// https://github.com/google/go-github/issues/1441

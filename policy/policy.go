@@ -1,167 +1,190 @@
 package policy
 
 import (
-	"bytes"
 	"fmt"
+	"net/url"
+	"strings"
+	"time"
+
+	"bytes"
 
 	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
-// GetRepoPolicy will fetch the RepoPolicy with all overrides processed
-func GetRepoPolicy(repo string, branch string) (RepoPolicy, error) {
-	var configPolicies Policies
-	err := LoadRepoPolicies(&configPolicies)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not parse repo policies")
-	}
-	return configPolicies.GetRepo(repo, viper.GetString("prefix"), branch)
+// Policies models the config file structure. Each element here _has_
+// to match the name of the key used in the config yaml. There are
+// three levels at which a particular value can be set: top-level,
+// repo, branch. The top level is applicable for all the repos. The
+// recursive map[string]Policies element embeds this type inside
+// itself, allowing each repo to override any of the values at upper
+// levels
+type Policies struct {
+	Description string
+	PCRepo      string
+	DHRepo      string
+	CSRepo      string
+	PCPrivate   bool
+	PackageName string
+	Reviewers   []string
+	ExposePorts string
+	Binary      string
+	Features    []string
+	Buildenv    string
+	Branches    map[string]branchVals
+	Repos       map[string]Policies
 }
 
-// branchVals contains the parameters that are specific to a particular branch in a repo
+// branchVals contains only the parameters that can be overriden at
+// the branch level. Some elements are overriden, some elements are
+// concatenated. See policy.GetRepo to see how definitions are
+// processed at each level
 type branchVals struct {
-	GoVersion      string
+	Buildenv       string
 	Cgo            bool
 	ConfigFile     string
-	VersionPackage string                // The package containing version.go
-	UpgradeFromVer string                // Versions to test package upgrades from
-	PCPrivate      bool                  // indicates whether package cloud repo is private
-	Branch         map[string]branchVals `copier:"-"`
-	Active         bool
-	ReviewCount    string
+	VersionPackage string
+	UpgradeFromVer string
 	Convos         bool
+	ReviewCount    int
 	Tests          []string
 	SourceBranch   string
-	// List of arbitrary features whose presence/absence can be
-	// used as template conditions to render different
-	// values on different set of branches (eg: el7 for el7 support)
-	Features []string
+	Features       []string
 }
 
-// Policies models the config file structure. The config file may contain one or more repos.
-type Policies struct {
-	Description         string
-	PCRepo              string
-	DHRepo              string
-	CSRepo              string
-	PackageName         string
-	Reviewers           []string
-	ExposePorts         string
-	Binary              string
-	Protected           []string `copier:"-"`
-	Goversion           string
-	Default             string              // The default git branch(master/main/anything else)
-	Repos               map[string]Policies // map of reponames to branchPolicies
-	Ports               map[string][]string
-	Branches            branchVals
-	Wiki                bool
-	Topics              []string `copier:"-"`
-	VulnerabilityAlerts bool
-	SquashMsg           string
-	SquashTitle         string
-	Visibility          string
+// RepoPolicy is used to render templates. It provides an abstraction
+// between config.yaml and the templates. It is instantiated from
+// Policies for a particular repo and branch and the constructor
+// implements all the overriding/merging logic between the various
+// levels of the Policies type.
+type RepoPolicy struct {
+	Name        string
+	Description string
+	Default     string
+	PCPrivate   bool
+	PCRepo      string
+	DHRepo      string
+	CSRepo      string
+	Binary      string
+	PackageName string
+	Reviewers   []string
+	ExposePorts string
+	Branch      string
+	Branchvals  branchVals
+	Branches    map[string]branchVals
+	prBranch    string
+	prefix      string
+	Timestamp   string
+	Visibility  string
 }
 
-// RepoPolicies aggregates RepoPolicy, indexed by repo name.
-type RepoPolicies map[string]RepoPolicy
-
-// GetAllRepos returns a map of reponame->repopolicy for all the
-// repos in the policy config.
-func (p *Policies) GetAllRepos(prefix string) (RepoPolicies, error) {
-	var rp RepoPolicies
-	for repoName, repoVals := range p.Repos {
-		log.Info().Msgf("Reponame: %s", repoName)
-		repo, err := repoVals.GetRepo(repoName, prefix, "master")
-		if err != nil {
-			return RepoPolicies{}, err
-		}
-		rp[repoName] = repo
+// GetOwner returns the owner part of a given github oprg prefix fqdn, returns
+// error if not a valid github fqdn.
+func (r *RepoPolicy) GetOwner() (string, error) {
+	u, err := url.Parse(r.prefix)
+	if err != nil {
+		return "", err
 	}
-
-	return rp, nil
+	if u.Hostname() != "github.com" {
+		return "", fmt.Errorf("not github prefix: %s", u.Hostname())
+	}
+	owner := strings.TrimPrefix(u.Path, "/")
+	return owner, nil
 }
 
-// GetRepo will give you a RepoPolicy struct for a repo which can be used to feed templates
-// Though Ports can be defined at the global level they are not practically used and if defined will be ignored.
-func (p *Policies) GetRepo(repo, prefix, branch string) (RepoPolicy, error) {
+// SetTimestamp Sets the given time as the repopolicy timestamp. If called with zero time
+// sets the current time in UTC
+func (r *RepoPolicy) SetTimestamp(ts time.Time) {
+	if ts.IsZero() {
+		ts = time.Now().UTC()
+	}
+	r.Timestamp = ts.Format(time.UnixDate)
+
+}
+
+// GetTimeStamp returns the timestamp currently set for the given repopolicy.
+func (r *RepoPolicy) GetTimeStamp() (time.Time, error) {
+	var ts time.Time
+	var err error
+	ts, err = time.Parse(time.UnixDate, r.Timestamp)
+	return ts, err
+}
+
+// GetRepoPolicy will fetch the RepoPolicy for the supplied repo with
+// all overrides processed. This is the constructor for RepoPolicy.
+// The supplied branch populates the Branch and Branchvals properties
+// which are used in the templates
+func (p *Policies) GetRepoPolicy(repo, branch string) (RepoPolicy, error) {
 	r, found := p.Repos[repo]
 	if !found {
 		return RepoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, p.Repos)
 	}
-
-	var b branchVals
-
-	copier.Copy(&b, r.Branches)
-	// Override policy values
-	copier.CopyWithOption(&p, &r, copier.Option{IgnoreEmpty: true})
-
-	// Check if the branch has a branch specific policy in the config and override the
-	// common branch values with the branch specific ones.
-	if ib, found := r.Branches.Branch[branch]; found {
-		copier.CopyWithOption(&b, &ib, copier.Option{IgnoreEmpty: true})
+	_, found = r.Branches[branch]
+	if !found {
+		return RepoPolicy{}, fmt.Errorf("branch %s unknown among %v", branch, r.Branches)
 	}
 
-	// Build release branches map by iterating over each branch values
-	releaseBranches := make(map[string]branchVals)
-
-	for branch, releaseBranch := range r.Branches.Branch {
-		if releaseBranch.Active {
-			var aux branchVals
-			copier.Copy(&aux, r.Branches)
-			if iaux, found := r.Branches.Branch[branch]; found {
-				copier.CopyWithOption(&aux, &iaux, copier.Option{IgnoreEmpty: true})
-			}
-			releaseBranches[branch] = aux
-		}
+	allBranches := make(map[string]branchVals)
+	for b, bbv := range r.Branches {
+		var rbv branchVals // repo level branchvals
+		// copy top-level options
+		copier.CopyWithOption(&rbv, &p, copier.Option{IgnoreEmpty: true})
+		// override with branch level
+		copier.CopyWithOption(&rbv, &bbv, copier.Option{IgnoreEmpty: true})
+		// add features from top-level and repo level
+		rbv.Features = append(p.Features, r.Features...)
+		// add features from branch
+		rbv.Features = append(rbv.Features, bbv.Features...)
+		log.Trace().Interface("bv", rbv).Str("branch", b).Msg("computed")
+		allBranches[b] = rbv
 	}
-
 	return RepoPolicy{
-		Name:                  repo,
-		Protected:             append(p.Protected, r.Protected...),
-		Default:               p.Default,
-		Ports:                 r.Ports,
-		Branch:                branch,
-		prefix:                prefix,
-		Branchvals:            b,
-		ActiveReleaseBranches: releaseBranches,
-		Reviewers:             r.Reviewers,
-		DHRepo:                r.DHRepo,
-		PCRepo:                r.PCRepo,
-		CSRepo:                r.CSRepo,
-		ExposePorts:           r.ExposePorts,
-		Binary:                r.Binary,
-		Description:           r.Description,
-		PackageName:           r.PackageName,
-		Topics:                append(p.Topics, r.Topics...),
-		VulnerabilityAlerts:   p.VulnerabilityAlerts,
-		SquashMsg:             p.SquashMsg,
-		SquashTitle:           p.SquashTitle,
-		Wiki:                  p.Wiki,
-		Visibility:            p.Visibility,
+		Name:        repo,
+		Branch:      branch,
+		Branchvals:  allBranches[branch],
+		Branches:    allBranches,
+		Reviewers:   r.Reviewers,
+		DHRepo:      r.DHRepo,
+		PCRepo:      r.PCRepo,
+		PCPrivate:   r.PCPrivate,
+		CSRepo:      r.CSRepo,
+		ExposePorts: r.ExposePorts,
+		Binary:      r.Binary,
+		Description: r.Description,
+		PackageName: r.PackageName,
 	}, nil
 }
 
-// String representation
+// Stringer implementation
 func (p Policies) String() string {
 	w := new(bytes.Buffer)
-	fmt.Fprintln(w, `Commits landing on the Source branch are automatically sync'd to the list of Destinations. PRs will be created for the protected branch. Other branches will be updated directly.`)
-	fmt.Fprintln(w)
-	fmt.Fprintf(w, "Protected branches: %v\n", p.Protected)
-	fmt.Fprintln(w, "Common Files:")
-	for repo, pols := range p.Repos {
-		fmt.Fprintf(w, "%s\n", repo)
-		fmt.Fprintln(w, " Extra files:")
-		fmt.Fprintln(w, " Ports")
-		for src, dest := range pols.Ports {
-			fmt.Fprintf(w, "   - %s → %s\n", src, dest)
+	for repo, crPol := range p.Repos {
+		fmt.Fprintf(w, "%s: package %s, image %s", repo, crPol.PackageName, crPol.DHRepo)
+		for b := range crPol.Branches {
+			rp, err := p.GetRepoPolicy(repo, b)
+			if err != nil {
+				log.Fatal().Str("repo", repo).Err(err).Msg("failed to get policy, this should not happen")
+			}
+			fmt.Fprintf(w, " %s\n", rp)
 		}
 	}
-	fmt.Fprintln(w)
 	return w.String()
 }
 
-// LoadRepoPolicies returns the policies as a map of repos to policies
+// Stringer implementation
+func (rp RepoPolicy) String() string {
+	w := new(bytes.Buffer)
+	fmt.Fprintf(w, " %s: package %s, image %s, features %v", rp.Branch, rp.PackageName, rp.DHRepo, rp.Branchvals.Features)
+	if len(rp.Branchvals.Buildenv) > 0 {
+		fmt.Fprintf(w, " built on %s", rp.Branchvals.Buildenv)
+	} else {
+		fmt.Fprintf(w, " not built")
+	}
+	return w.String()
+}
+
+// LoadRepoPolicies populates the supplied policies with the policy key from a the config file
 // This will panic if the type assertions fail
 func LoadRepoPolicies(policies *Policies) error {
 	return viper.UnmarshalKey("policy", policies)

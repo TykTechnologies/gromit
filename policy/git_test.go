@@ -1,54 +1,61 @@
-//go:build githubtests
-// +build githubtests
-
-package git
+package policy
 
 import (
 	"crypto/sha1"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/TykTechnologies/gromit/config"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/stretchr/testify/assert"
 )
 
-var testRepo = map[string]string{"fqdn": "https://github.com/tyklabs/git-tests.git",
-	"repo":        "tyk",
-	"dir":         "/tmp/gt",
-	"vdir":        "/tmp/gt-v",
+var testRepo = map[string]string{
+	"name":        "git-tests",
+	"owner":       "tyklabs",
 	"branch":      "main",
 	"newbranch":   "testbranch",
 	"filepath":    "testfile.txt",
 	"commitmsg":   "Adding test file.",
-	"filecontent": "Testing git functions"}
+	"filecontent": "Testing git functions",
+}
 
-//"token": ""}
-var fetchDepth int = 1
-
+// Fetch github.com/tyklabs/git-tests in tmpDir and,
+// create new branch testbranch
+// create file, commit and push
+// fetch new branch in tmpVDir
+// compare tmpDir and tmpVDir
+// mock create a PR
 func TestGitFunctions(t *testing.T) {
 	token := os.Getenv("GH_TOKEN")
 	if token == "" {
 		t.Skip("Requires GH_TOKEN be set to a valid gihub PAT to run this test.")
 	}
-	src, err := FetchRepo(testRepo["fqdn"], testRepo["dir"], token, fetchDepth)
+	// Init call needs the policy for that repo
+	config.LoadConfig("../testdata/config-test.yaml")
+	tmpDir, err := os.MkdirTemp("", testRepo["name"])
 	if err != nil {
-		t.Fatalf("Could not fetch repo: %s, with fqdn: %s, with depth: %d to dir %s: (%v)", testRepo["repo"], testRepo["fqdn"], fetchDepth, testRepo["dir"], err)
+		t.Fatalf("Error creating temp dir: %v", err)
 	}
-	err = src.Checkout(testRepo["branch"])
+	defer os.RemoveAll(tmpDir)
+	src, err := Init(testRepo["name"], testRepo["owner"], testRepo["branch"], 1, tmpDir, token)
 	if err != nil {
-		t.Fatalf("Error checking out branch %s: %v", testRepo["branch"], err)
+		t.Fatalf("init %s/%s at %s: (%v)", testRepo["owner"], testRepo["name"], tmpDir, err)
+	}
+	err = src.SwitchBranch("testbranch")
+	if err != nil {
+		t.Fatalf("Error checking out branch %s: %v", testRepo["newbranch"], err)
 	}
 
-	// Get the checksums of all files after fresh clone, before making any changes.
-	startCsums, err := GetDirChecksums(testRepo["dir"])
+	// pristine checksums
+	startCsums, err := GetDirChecksums(tmpDir)
 	if err != nil {
-		t.Fatalf("Can't get checksums for dir: %s. %v", testRepo["dir"], err)
+		t.Fatalf("Can't get checksums for dir: %s. %v", tmpDir, err)
 	}
 
 	// Create a new branch, switch and do the test commit there.
@@ -56,7 +63,7 @@ func TestGitFunctions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can not get head ref: %v", err)
 	}
-	nbrefName := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", testRepo["newbranch"]))
+	nbrefName := plumbing.ReferenceName("refs/heads/testbranch")
 	nbRef := plumbing.NewHashReference(nbrefName, head.Hash())
 	err = src.repo.Storer.SetReference(nbRef)
 	if err != nil {
@@ -67,7 +74,7 @@ func TestGitFunctions(t *testing.T) {
 		Force:  true,
 	})
 
-	// Create a test file, and add and commit it.
+	// Create a test file
 	tFile, err := src.CreateFile(testRepo["filepath"])
 	if err != nil {
 		t.Fatalf("Error creating file %s: %v", testRepo["filepath"], err)
@@ -76,8 +83,7 @@ func TestGitFunctions(t *testing.T) {
 	tFile.Close()
 
 	// Add the checksum of the newly created file to our inital checksumn list.
-	path := testRepo["dir"] + "/" + testRepo["filepath"]
-	tfh, err := os.Open(path)
+	tfh, err := os.Open(filepath.Join(tmpDir, testRepo["filepath"]))
 	if err != nil {
 		t.Fatalf("can't open test file: %s, %v", testRepo["filepath"], err)
 	}
@@ -88,36 +94,38 @@ func TestGitFunctions(t *testing.T) {
 	tfh.Close()
 	startCsums[testRepo["filepath"]] = hex.EncodeToString(sh.Sum(nil))
 
-	h, err := src.worktree.Add(testRepo["filepath"])
-	if err != nil {
-		t.Fatalf("Error adding file %s to worktree: %v", testRepo["filepath"], err)
-	}
-	t.Logf("worktree hash: %s", h.String())
-	_, err = src.AddFile(testRepo["filepath"])
+	// git add
+	h, err := src.AddFile(testRepo["filepath"])
 	if err != nil {
 		t.Fatalf("Unable to add  file %s: %v", testRepo["filepath"], err)
 	}
-	commitObj, err := src.Commit(testRepo["commitmsg"])
+	t.Logf("worktree hash: %s", h.String())
+	err = src.Commit(testRepo["commitmsg"])
 	if err != nil {
 		t.Fatalf("Unable to commit  file %s: %v", testRepo["filepath"], err)
 	}
-	t.Logf("Commit hash: %s", commitObj.Hash.String())
 
-	committedCsums, err := GetDirChecksums(testRepo["dir"])
+	// new checksums
+	committedCsums, err := GetDirChecksums(tmpDir)
 	if err != nil {
 		t.Fatalf("Can't get checksums for dir: %s. %v", testRepo["dir"], err)
 	}
 
-	err = src.Push(testRepo["newbranch"], testRepo["newbranch"])
+	err = src.Push(testRepo["newbranch"])
 	if err != nil {
 		t.Fatalf("error in pushig to remote: %v", err)
 	}
 	t.Logf("Pushed our test chenges to remote")
 
 	t.Logf("Now verifying by pulling the changes..")
-	vSrc, err := FetchRepo(testRepo["fqdn"], testRepo["vdir"], token, fetchDepth)
+	tmpVDir, err := os.MkdirTemp("", testRepo["name"])
 	if err != nil {
-		t.Fatalf("Could not fetch repo: %s, with fqdn: %s, with depth: %d to dir %s: (%v)", testRepo["repo"], testRepo["fqdn"], fetchDepth, testRepo["vdir"], err)
+		t.Fatalf("Error creating temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpVDir)
+	vSrc, err := Init(testRepo["name"], testRepo["owner"], "main", 1, tmpVDir, token)
+	if err != nil {
+		t.Fatalf("init %s/%s at %s: (%v)", testRepo["owner"], testRepo["name"], tmpVDir, err)
 	}
 	err = vSrc.Checkout(testRepo["newbranch"])
 	if err != nil {
@@ -134,28 +142,28 @@ func TestGitFunctions(t *testing.T) {
 	// patch, _ := prevCommit.Patch(hCommit)
 	// _ = patch.Encode(os.Stdout)
 
-	pulledCsums, err := GetDirChecksums(testRepo["vdir"])
+	pulledCsums, err := GetDirChecksums(tmpVDir)
 	if err != nil {
-		t.Fatalf("Can't get checksums for dir: %s. %v", testRepo["vdir"], err)
+		t.Fatalf("Can't get checksums for dir: %s. %v", tmpVDir, err)
 	}
 
 	t.Log("Csum start: ", startCsums)
 	t.Log("Csum post commit:  ", committedCsums)
 	t.Log("Csum after pulling the changes ", pulledCsums)
 
+	src.SetDryRun(true)
+	_, err = src.CreatePR("dry run title", testRepo["newbranch"], true)
+	if err != nil {
+		t.Fatalf("mock PR: %v", err)
+	}
+
 	err = vSrc.DeleteRemoteBranch(testRepo["newbranch"])
 	if err != nil {
 		t.Fatalf("error in deleting  remote branch: %v", err)
 	}
-	t.Logf("Deleting test directories..")
-	if testRepo["dir"] != "" {
-		os.RemoveAll(testRepo["dir"])
-	}
-	if testRepo["vdir"] != "" {
-		os.RemoveAll(testRepo["vdir"])
-	}
 	assert.EqualValues(t, startCsums, committedCsums)
 	assert.EqualValues(t, startCsums, pulledCsums)
+
 }
 
 func GetDirChecksums(dir string) (map[string]string, error) {

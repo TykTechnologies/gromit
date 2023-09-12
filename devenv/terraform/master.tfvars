@@ -1,5 +1,0 @@
-base = "base-prod"
-infra = "infra-prod"
-tyk = "master"
-tyk-analytics = "master"
-tyk-pump = "master"

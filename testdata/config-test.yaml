@@ -1,0 +1,31 @@
+policy:
+  features:
+    - a
+  builenv: wrong
+  repos:
+    repo0:
+      description: >-
+        Repo Zero
+      buildenv: stillwrong
+      features:
+        - b
+      branches:
+        main:
+          buildenv: right
+          features:
+            - c
+            - d
+        dev:
+          buildenv: stillright
+          features:
+            - e
+            - f
+    repo1:
+      description: >-
+        Repo One
+      buildenv: wrong
+      branches:
+        main:
+          buildenv: right
+          features:
+            - e

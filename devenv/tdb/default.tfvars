@@ -1,5 +1,0 @@
-infra = "infra-prod"
-base = "base-prod"
-env_name = "master"
-image = "loadimpact/k6"
-name = "https"
