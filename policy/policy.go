@@ -125,7 +125,6 @@ func (p *Policies) GetRepoPolicy(repo, branch string) (RepoPolicy, error) {
 		return RepoPolicy{}, fmt.Errorf("branch %s unknown among %v", branch, r.Branches)
 	}
 
-	var bv branchVals
 	allBranches := make(map[string]branchVals)
 	for b, bbv := range r.Branches {
 		var rbv branchVals // repo level branchvals
@@ -139,15 +138,11 @@ func (p *Policies) GetRepoPolicy(repo, branch string) (RepoPolicy, error) {
 		rbv.Features = append(rbv.Features, bbv.Features...)
 		log.Trace().Interface("bv", rbv).Str("branch", b).Msg("computed")
 		allBranches[b] = rbv
-		// Save computed branchvals for the requested branch to pass it back
-		if b == branch {
-			bv = rbv
-		}
 	}
 	return RepoPolicy{
 		Name:        repo,
 		Branch:      branch,
-		Branchvals:  bv,
+		Branchvals:  allBranches[branch],
 		Branches:    allBranches,
 		Reviewers:   r.Reviewers,
 		DHRepo:      r.DHRepo,

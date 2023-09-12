@@ -10,18 +10,12 @@ Usage:
 
 Available Commands:
   bundle      Operate on bundles
-  cluster     Manage cluster of tyk components
   completion  Generate completion script
-  env         Mess about with the env state
-  git         Top-level git command, use a sub-command to perform an operation
   help        Help about any command
   licenser    Get a trial license and writes it to path, overwriting it
   orgs        Dump/restore org keys and mongodb
   passwd      Returns the password hash of the given plaintext
   policy      Templatised policies that are driven by the config file
-  reap        Reap envs from GROMIT_TABLENAME, using a config tree at <config root path>
-  serve       Run endpoint for github requests
-  sow         Sow envs creating a config tree at <config root path>
   version     Print version
 
 Flags:
