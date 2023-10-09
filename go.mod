@@ -23,7 +23,7 @@ require (
 	github.com/waigani/diffparser v0.0.0-20190828052634-7391f219313d
 	golang.org/x/crypto v0.12.0
 	golang.org/x/oauth2 v0.8.0
-	golang.org/x/sync v0.3.0
+	golang.org/x/sync v0.4.0
 )
 
 require (
