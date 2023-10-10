@@ -151,6 +151,7 @@
             type=ref,event=branch
             type=ref,event=pr
             type=sha
+            type=sha,format=long,prefix=
             type=semver,pattern=v{{`{{major}}`}}.{{`{{minor}}`}}
             type=semver,pattern=v{{`{{version}}`}}
 
@@ -162,7 +163,7 @@
         run: |
           set +e
           IFS=$'\n' tags=($t)
-          for tag in $tags; do
+          for tag in "${tags[@]}"; do
              for arch in amd64 arm64; do 
                 docker tag {{ .DHRepo }}:v0.0.0-${arch} ${tag}-${arch} && docker push ${tag}-${arch}
              done
