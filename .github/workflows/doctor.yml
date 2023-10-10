@@ -17,7 +17,7 @@ jobs:
         bundle: [releng]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: TykTechnologies/${{ matrix.repo }}
           token: ${{ secrets.ORG_GH_TOKEN }}
