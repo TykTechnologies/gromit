@@ -31,7 +31,6 @@ func gitDiff(dir string) (string, error) {
 	log.Trace().Bytes("output", out.Bytes()).Str("dir", dir).Msg("git diff")
 
 	prettyPrint(out.String())
-
 	return out.String(), nil
 }
 

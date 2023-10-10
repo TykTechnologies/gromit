@@ -88,11 +88,11 @@ func (b *Bundle) Render(bv any, opDir string, n *bundleNode) ([]string, error) {
 			dir, _ := filepath.Split(opFile)
 			err := os.MkdirAll(dir, 0755)
 			if err != nil && !os.IsExist(err) {
-				return nil, err
+				return nil, fmt.Errorf("mkdirall %s: %v", dir, err)
 			}
 			opf, err := os.Create(opFile)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("create %s: %v", opFile, err)
 			}
 			defer opf.Close()
 			op = io.Writer(opf)
@@ -202,15 +202,14 @@ func NewBundle(features []string) (*Bundle, error) {
 			if err == nil && fi.IsDir() {
 				ffs, err = fs.Sub(Bundles, featPath)
 				if err != nil {
-					log.Fatal().Err(err).Msgf("fetching embedded feature from %s", featPath)
+					log.Fatal().Err(err).Msgf("fetching extra files for feature from %s", featPath)
 				}
 				err = fsTreeWalk(b, ffs)
 				if err != nil {
 					log.Fatal().Err(err).Msgf("walking feature path %s", featPath)
 				}
 			} else {
-				log.Info().Err(err).Msg("no files for feature")
-				return nil, err
+				log.Debug().Msgf("assuming no extra files for feature %s", feat)
 			}
 		}
 	}

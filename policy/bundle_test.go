@@ -35,7 +35,7 @@ func TestBundleRender(t *testing.T) {
 	}
 	for r := range pol.Repos {
 		t.Logf("testing repo %s with features %v", r, features)
-		rp, err := pol.GetRepoPolicy(r, "master")
+		rp, err := pol.GetRepoPolicy(r)
 		if err != nil {
 			t.Logf("Error getting repo policy for repo: %s: %v", r, err)
 			t.Fail()
@@ -48,6 +48,12 @@ func TestBundleRender(t *testing.T) {
 		}
 		defer os.RemoveAll(tmpDir)
 
+		err = rp.SetBranch("master")
+		if err != nil {
+			t.Logf("Could not set branch to master for repo: %s", r)
+			t.Fail()
+			continue
+		}
 		_, err = b.Render(rp, tmpDir, nil)
 		if err != nil {
 			t.Logf("Error rendering bundle: %s for repo: %s: %v", b.Name, r, err)
