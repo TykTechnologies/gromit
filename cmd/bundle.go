@@ -25,7 +25,6 @@ import (
 )
 
 var (
-	repoName string
 	features []string
 )
 
@@ -59,6 +58,7 @@ var genSubCmd = &cobra.Command{
 	Long:    `This command does not overlay the rendered output into a git tree. You will have to checkout the repo yourself if you want to check the rendered templates into a git repository.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
+		repoName, _ := cmd.Flags().GetString("repo")
 		b, err := policy.NewBundle(features)
 		if err != nil {
 			return fmt.Errorf("bundle %v: %v", features, err)

@@ -9,27 +9,35 @@
     strategy:
       fail-fast: false
       matrix:
+        golang_cross:
+          - {{ .Branchvals.Buildenv }}
   {{- if has "el7"  .Branchvals.Features }}
-        golang_cross: [ {{ .Branchvals.Buildenv }}, {{ if eq .Branch "release-5-lts"}}1.16-el7{{ else if eq .Branch "release-4-lts" }}1.15-el7{{ end }} ]
-  {{- else }}
-        golang_cross: [ {{ .Branchvals.Buildenv }} ]
-  {{- end }}
+          {{ if eq .Branch "release-5-lts" -}}
+          - 1.16-el7
+          {{ else if eq .Branch "release-4-lts" -}}
+          - 1.15-el7
+          {{ else if eq .Branch "master" -}}
+          - {{ .Branchvals.Buildenv }}-pgo
+          {{- end -}}
+  {{- end }} {{/* el7 */}}
         include:
   {{- if has "el7" .Branchvals.Features }}
-          - golang_cross: {{ if eq .Branch "release-5-lts"}}1.16-el7{{ else if eq .Branch "release-4-lts" }}1.15-el7{{ end }}
+          - golang_cross: {{ if eq .Branch "release-5-lts"}}1.16-el7{{ else if eq .Branch "release-4-lts" }}1.15-el7{{ else if eq .Branch "master" }}1.19-bullseye-pgo{{ end }}
             goreleaser: 'ci/goreleaser/goreleaser-el7.yml'
             rpmvers: 'el/7 amazon/2'
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie'
-  {{- end }}
+            cgo: 0
+  {{- end }} {{/* el7 */}}
           - golang_cross: {{ .Branchvals.Buildenv }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'
+            cgo: {{ if .Branchvals.Cgo }} 1 {{ else }} 0 {{end}}
   {{- if has "el7" .Branchvals.Features }}
             rpmvers: 'el/8 el/9 amazon/2023'
             debvers: 'ubuntu/bionic ubuntu/focal ubuntu/jammy debian/buster debian/bullseye debian/bookworm'
   {{- else }} {{/* debvers and rpmvers for repos that do not need special el7 support */}}
             rpmvers: 'el/7 el/8 el/9 amazon/2 amazon/2023'
             debvers: 'ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/jammy debian/jessie debian/buster debian/bullseye debian/bookworm'
-  {{- end }}
+  {{- end }} {{/* el7 */}}
     outputs:
       tags: {{`${{ steps.metadata.outputs.tags }}`}}
 
@@ -109,7 +117,7 @@
           args: release --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot' || '' }}`}}
         env:
           GITHUB_TOKEN: {{`${{ secrets.GITHUB_TOKEN }}`}}
-          CGO_ENABLED: {{ if .Branchvals.Cgo }}1{{ else }}0{{ end }}
+          CGO_ENABLED: {{`${{ matrix.cgo }}`}} 
   {{- if and (eq .Name "tyk") (or (eq .Branch "release-5-lts" ) (eq .Branch "release-4-lts" )) }}
           GO111MODULE: off
   {{- end }}

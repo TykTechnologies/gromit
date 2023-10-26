@@ -204,13 +204,13 @@ func NewBundle(features []string) (*Bundle, error) {
 				if err != nil {
 					log.Fatal().Err(err).Msgf("fetching extra files for feature from %s", featPath)
 				}
-				err = fsTreeWalk(b, ffs)
-				if err != nil {
-					log.Fatal().Err(err).Msgf("walking feature path %s", featPath)
-				}
 			} else {
 				log.Debug().Msgf("assuming no extra files for feature %s", feat)
 			}
+		}
+		err := fsTreeWalk(b, ffs)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("walking feature %s", feat)
 		}
 	}
 	return b, err

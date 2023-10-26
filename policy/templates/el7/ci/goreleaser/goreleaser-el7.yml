@@ -6,12 +6,14 @@
 # - arm64
 # - amd64
 {{- /* Generate this only if cgo is enabled. */ -}}
-{{- if .Branchvals.Cgo }}
 
   {{- template "before_hooks" . }}
 
+{{- if eq .Branch "master" }}
+  {{- template "builds" . }}
+{{- else }}
   {{- template "cgo_builds" . }}
-
+{{- end }}
   {{- template "nfpm" . }}
 
   {{- template "publishers" . }}
@@ -32,5 +34,3 @@ release:
   prerelease: auto
   draft: true
   name_template: "{{ `{{.ProjectName}}-v{{.Version}}` }}"
-
-{{- end }}

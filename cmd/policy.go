@@ -59,7 +59,7 @@ A PR will be created with the changes and @devops will be asked for a review.
 		if pr && ghToken == "" {
 			return fmt.Errorf("Creating a PR requires GITHUB_TOKEN to be set")
 		}
-		repoName = args[0]
+		repoName := args[0]
 		// Checkout code into a dir named repo
 		repo, err := policy.InitGit(repoName,
 			owner,
