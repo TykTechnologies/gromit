@@ -3,6 +3,9 @@ VERSION := $(shell git describe --tags)
 COMMIT := $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
 
+REPOS := tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal
+GITHUB_TOKEN ?= $(shell pass me/github)
+
 gromit: clean */*.go confgen/templates/* policy/templates/* policy/prs/*
 	! ls **/#*#
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
@@ -19,5 +22,8 @@ update-test-cases:
 clean:
 	find . -name rice-box.go | xargs rm -fv
 	rm -fv gromit
+
+sync: gromit
+	@$(foreach r,$(REPOS), GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit policy sync $(r);)
 
 .PHONY: clean update-test-cases test
