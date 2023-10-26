@@ -259,6 +259,7 @@
         with:
           fetch-depth: 1
 
+{{- if eq .Name "tyk" }}
       - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
@@ -269,13 +270,15 @@
         uses: aws-actions/amazon-ecr-login@v1
         with:
           mask-password: 'true'
-
+{{- end }}
       - name: Run ci/tests
         shell: bash
-        env:
+        env:        
           GITHUB_TAG: {{`${{ github.ref }}`}}
+{{- if eq .Name "tyk" }}
           GATEWAY_IMAGE: {{`${{ steps.ecr.outputs.registry }}/tyk:${{ github.sha }}`}}
           PLUGIN_COMPILER_IMAGE: {{`${{ steps.ecr.outputs.registry }}/tyk-plugin-compiler:sha-${{ github.sha }}`}}
+{{- end }}
   {{- if or (eq .Name "tyk-analytics") (eq .Name "tyk-sink") }}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
   {{- if eq .Name "tyk-sink" }}
