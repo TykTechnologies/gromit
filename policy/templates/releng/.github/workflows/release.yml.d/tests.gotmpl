@@ -276,7 +276,7 @@
         env:        
           GITHUB_TAG: {{`${{ github.ref }}`}}
 {{- if eq .Name "tyk" }}
-          GATEWAY_IMAGE: {{`${{ steps.ecr.outputs.registry }}/tyk:${{ github.sha }}`}}
+          GATEWAY_IMAGE: {{`${{ steps.ecr.outputs.registry }}/tyk:sha-${{ github.sha }}`}}
           PLUGIN_COMPILER_IMAGE: {{`${{ steps.ecr.outputs.registry }}/tyk-plugin-compiler:sha-${{ github.sha }}`}}
 {{- end }}
   {{- if or (eq .Name "tyk-analytics") (eq .Name "tyk-sink") }}
