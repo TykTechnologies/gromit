@@ -175,6 +175,7 @@
           done
 
       - uses: actions/upload-artifact@v3
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         with:
           name: deb
           retention-days: 1
@@ -183,17 +184,11 @@
             !dist/*PAYG*.deb
 
       - uses: actions/upload-artifact@v3
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         with:
           name: rpm
           retention-days: 1
           path: |
             dist/*.rpm
             !dist/*PAYG*.rpm
-  {{- if eq .Name "tyk-analytics" }}
-      - uses: actions/upload-artifact@v3
-        with:
-          name: payg
-          retention-days: 1
-          path: dist/*PAYG*
-  {{- end }}
 {{- end }}{{/* End of definition */}}
