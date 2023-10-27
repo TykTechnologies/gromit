@@ -70,7 +70,7 @@ policy:
           # The build environment used for this repo. Right now, this value
           # is used for selecting the appropriate golang-cross image
           # used for building the binary, packages and docker images.
-          buildenv: 1.19-bookworm
+          buildenv: 1.19-bullseye
           reviewcount: 1
           # Workflows that need to pass to merge PRs
           tests:
