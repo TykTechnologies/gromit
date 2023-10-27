@@ -22,6 +22,11 @@ dist/
 /testdata/config/
 /server/debug/debugger.wasm
 /tyk/
+/tyk-analytics/
+/tyk-pump/
+/tyk-sink/
+/tyk-identity-broker/
+/portal/
 
 # VScode
 *.vscode*

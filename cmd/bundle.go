@@ -25,8 +25,7 @@ import (
 )
 
 var (
-	repo, branch string
-	features     []string
+	features []string
 )
 
 var bundleCmd = &cobra.Command{
@@ -59,25 +58,26 @@ var genSubCmd = &cobra.Command{
 	Long:    `This command does not overlay the rendered output into a git tree. You will have to checkout the repo yourself if you want to check the rendered templates into a git repository.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
+		repoName, _ := cmd.Flags().GetString("repo")
 		b, err := policy.NewBundle(features)
 		if err != nil {
 			return fmt.Errorf("bundle %v: %v", features, err)
 		}
-		rp, err := configPolicies.GetRepoPolicy(repo, branch)
+		rp, err := configPolicies.GetRepoPolicy(repoName)
 		rp.SetTimestamp(time.Now().UTC())
+		rp.SetBranch(Branch)
 		if err != nil {
-			return fmt.Errorf("repopolicy %s: %v", repo, err)
+			return fmt.Errorf("repopolicy %s: %v", repoName, err)
 		}
-		_, err = b.Render(&rp, dir, nil)
+		_, err = b.Render(rp, dir, nil)
 		return err
 	},
 }
 
 func init() {
 	bundleCmd.PersistentFlags().StringSliceVar(&features, "features", []string{"releng"}, "Features to use, local features should start with . or /")
-	bundleCmd.PersistentFlags().StringVar(&repo, "repo", "tyk-pump", "Use parameters from policy.<repo>")
-	bundleCmd.PersistentFlags().StringVar(&branch, "branch", "master", "Use branch values from policy.<repo>.branch")
-	bundleCmd.PersistentFlags().StringSliceVar(&features, "feature", nil, "Features to enable")
+	bundleCmd.PersistentFlags().String("repo", "tyk-pump", "Use parameters from policy.<repo>")
+	bundleCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Use branch values from policy.<repo>.branch")
 	bundleCmd.MarkPersistentFlagRequired("features")
 	bundleCmd.MarkPersistentFlagRequired("repo")
 	bundleCmd.AddCommand(genSubCmd)

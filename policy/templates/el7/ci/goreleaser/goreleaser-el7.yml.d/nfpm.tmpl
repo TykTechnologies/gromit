@@ -8,11 +8,12 @@ nfpms:
     package_name: {{ .PackageName }}
     file_name_template: "{{`{{ .ConventionalFileName }}`}}"
     builds:
-  {{- if .Branchvals.Cgo }}
+  {{- if eq .Branch "master" }}
+      - std
+  {{- else }}
       - std-linux
       - std-arm64
-  {{- else }}
-      - std
+      - std-s390
   {{- end }}
     formats:
       - deb
@@ -104,50 +105,6 @@ nfpms:
         file_info:
           mode: 0775
   {{- end }}
-  {{- template "nfpm-common" . }}
-  {{- if eq .Name "tyk-analytics" }}
-  - id: payg
-    vendor: "Tyk Technologies Ltd"
-    homepage: "https://tyk.io"
-    maintainer: "Tyk <info@tyk.io>"
-    description: "PAYG Dashboard for the Tyk API Gateway"
-    package_name: {{ .PackageName }}-PAYG
-    file_name_template: "{{`{{ .ProjectName }}_PAYG_{{ .Version }}_{{ .Os }}_{{ .Arch }}`}}"
-    builds:
-      - payg
-    formats:
-      - deb
-      - rpm
-    contents:
-      - src: "README.md"
-        dst: "/opt/share/docs/{{ .PackageName }}/README.md"
-      - src: "ci/install/*"
-        dst: "/opt/{{ .PackageName }}/install"
-      - src: ci/install/inits/systemd/system/{{ .PackageName }}.service
-        dst: /lib/systemd/system/{{ .PackageName }}.service
-      - src: ci/install/inits/sysv/init.d/{{ .PackageName }}
-        dst: /etc/init.d/{{ .PackageName }}
-      - src: /opt/{{ .PackageName }}
-        dst: /opt/{{ .Name }}
-        type: "symlink"
-      - src: "EULA.md"
-        dst: "/opt/share/docs/{{ .PackageName }}/EULA.md"
-      - src: "portal/*"
-        dst: "/opt/{{ .PackageName }}/portal"
-      - src: "utils/scripts/*"
-        dst: "/opt/{{ .PackageName }}/utils/scripts"
-      - src: "schemas/*"
-        dst: "/opt/{{ .PackageName }}/schemas"
-      - src: "webclient/lang/*"
-        dst: "/opt/{{ .PackageName }}/lang"
-      - src: tyk_config_sample.config
-        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
-        type: "config|noreplace"
-  {{- template "nfpm-common" . }}
-  {{- end }}
-{{end}}
-
-{{ define "nfpm-common" }}
     scripts:
       preinstall: "ci/install/before_install.sh"
       postinstall: "ci/install/post_install.sh"
@@ -162,4 +119,4 @@ nfpms:
       signature:
         key_file: tyk.io.signing.key
         type: origin
-{{- end }}
+{{end}}

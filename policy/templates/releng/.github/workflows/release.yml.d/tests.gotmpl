@@ -1,4 +1,5 @@
 {{ define "tests" }}
+  {{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") (eq .Name "tyk-sink") }}
   api-tests:
     needs: goreleaser
     runs-on: ubuntu-latest
@@ -94,8 +95,9 @@
         working-directory: tyk-automated-tests/ci/auto
         run: |
           docker run --rm --network auto_default --env-file pytest.env \
-          {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{`${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}} \
+          {{`${{ steps.ecr.outputs.registry }}/tyk-automated-tests:${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}} \
           pytest -c pytest_ci.ini --ci -m "not local and not dind {{`${{ matrix.markers }}`}}"
+  {{- end }} {{/* api-tests */}}
 
 # TODO: PR comment, using just one comment and updating, not a new comment each time
 
@@ -113,14 +115,12 @@
           - amd64
           - arm64
         distro:
-        {{- if (has "go1.19" .Branchvals.Features) }}
-          - ubuntu:jammy
-        {{- end }}
         {{- if (has "el7" .Branchvals.Features) }}
           - ubuntu:xenial
         {{- end }}
           - ubuntu:bionic
           - ubuntu:focal
+          - ubuntu:jammy
           - debian:bullseye
           - debian:bookworm
 
@@ -187,14 +187,12 @@
       matrix:
         distro:
           - amazonlinux:2023
-        {{- if (has "go1.19" .Branchvals.Features) }}
+          - registry.access.redhat.com/ubi8/ubi
           - registry.access.redhat.com/ubi9/ubi
-        {{- end }}
         {{- if (has "el7" .Branchvals.Features) }}
           - amazonlinux:2
           - registry.access.redhat.com/ubi7/ubi
         {{- end }}
-          - registry.access.redhat.com/ubi8/ubi
 
     steps:
       - uses: actions/checkout@v3
@@ -249,9 +247,11 @@
   {{- end }}
 
   smoke-tests:
-    if: startsWith(github.ref, 'refs/tags')
     needs:
       - goreleaser
+    permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
     runs-on: ubuntu-latest
 
     steps:
@@ -259,10 +259,26 @@
         with:
           fetch-depth: 1
 
-      - name: Run tests
+{{- if eq .Name "tyk" }}
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: cipush
+          aws-region: eu-central-1
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: 'true'
+{{- end }}
+      - name: Run ci/tests
         shell: bash
-        env:
+        env:        
           GITHUB_TAG: {{`${{ github.ref }}`}}
+{{- if eq .Name "tyk" }}
+          GATEWAY_IMAGE: {{`${{ steps.ecr.outputs.registry }}/tyk:sha-${{ github.sha }}`}}
+          PLUGIN_COMPILER_IMAGE: {{`${{ steps.ecr.outputs.registry }}/tyk-plugin-compiler:sha-${{ github.sha }}`}}
+{{- end }}
   {{- if or (eq .Name "tyk-analytics") (eq .Name "tyk-sink") }}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
   {{- if eq .Name "tyk-sink" }}

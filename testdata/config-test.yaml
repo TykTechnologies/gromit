@@ -7,6 +7,7 @@ policy:
       description: >-
         Repo Zero
       buildenv: stillwrong
+      configfile: repo0.conf
       features:
         - b
       branches:
