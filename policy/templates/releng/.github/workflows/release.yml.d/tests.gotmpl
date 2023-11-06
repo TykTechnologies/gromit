@@ -76,9 +76,20 @@
           tyk_sink_image=\${registry}/tyk-sink:${sink_image_tag}
           tyk_pump_image=\${registry}/tyk-pump:${pump_image_tag}
           # override default above with just built tag
+{{ if eq .Name "tyk" }}
           tyk_image=${tags[0]}
           tyk_alfa_image=${tags[0]}
           tyk_beta_image=${tags[0]}
+{{- end }}
+{{ if eq .Name "tyk-analytics" }}
+          tyk_analytics_image=${tags[0]}
+{{- end }}
+{{ if eq .Name "tyk-pump" }}
+          pump_image_tag=${tags[0]}
+{{- end }}
+{{ if eq .Name "tyk-sink" }}
+          sink_image_tag=${tags[0]}
+{{- end }}
           # base dir for config files
           confs_dir=./pro-ha
           # pick database to use
@@ -98,6 +109,36 @@
           {{`${{ steps.ecr.outputs.registry }}/tyk-automated-tests:${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}} \
           pytest -c pytest_ci.ini --ci -m "not local and not dind {{`${{ matrix.markers }}`}}"
   {{- end }} {{/* api-tests */}}
+
+      - name: Archive Integration tests report
+        if: {{`${{ always() }}`}}
+        uses: actions/upload-artifact@v2
+        with:
+            name: api-test-report
+            path: ${{ github.workspace }}/reports
+
+      - name: Comment on PR
+        if: {{`${{ always() && !github.event.pull_request.draft }}`}}
+        uses: mshick/add-pr-comment@v2
+        with:
+          message: |
+            **API tests result - {{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}} env: {{`${{ steps.test_execution.outcome }}`}}** {{`${{ env.STATUS }}`}} 
+            Branch used: {{`${{ github.ref }}`}}
+            Commit: {{`${{ github.event.after }}`}} {{`${{ github.event.commits[0].message }}`}}
+            Triggered by: {{`${{ github.event_name }}`}} (@{{`${{ github.actor }}`}})
+            [Execution page](https://github.com/{{`${{ github.repository }}`}}/actions/runs/{{`${{ github.run_id }}`}})
+          repo-token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+          message-id: {{`${{ matrix.msgid }}`}}
+        env:
+          STATUS: "{{`${{ steps.test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}"
+
+      - name: Getting gateway logs on failure
+        if: {{`${{ failure() }}`}}
+        run: docker logs tyk
+
+      - name: Getting dashboard logs on failure
+        if: {{`${{ failure() }}`}}
+        run: docker logs tyk-analytics
 
 # TODO: PR comment, using just one comment and updating, not a new comment each time
 
