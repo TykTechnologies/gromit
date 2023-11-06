@@ -33,6 +33,7 @@ type Policies struct {
 	Cgo            bool
 	ConfigFile     string
 	VersionPackage string
+	VersionKeys    versionKeys
 	UpgradeFromVer string
 	Features       []string
 	Branches       map[string]branchVals `copier:"-"`
@@ -48,12 +49,22 @@ type branchVals struct {
 	Cgo            bool
 	ConfigFile     string
 	VersionPackage string
+	VersionKeys    versionKeys
 	UpgradeFromVer string
 	Convos         bool
 	ReviewCount    int
 	Tests          []string
 	SourceBranch   string
 	Features       []string
+}
+
+// versionKeys holds the information about all the version
+// related variables set during the binary build.
+type versionKeys struct {
+	Version   string
+	Commit    string
+	BuildDate string
+	BuiltBy   string
 }
 
 // RepoPolicy is used to render templates. It provides an abstraction
@@ -76,6 +87,7 @@ type RepoPolicy struct {
 	Cgo            bool
 	ConfigFile     string
 	VersionPackage string
+	VersionKeys    versionKeys
 	UpgradeFromVer string
 	Branch         string
 	Branchvals     branchVals

@@ -55,7 +55,14 @@ policy:
       # The default config file used by the application.
       configfile: tyk.conf
       # The go package which contains the `VERSION` string for this REPO.
-      versionpackage: github.com/TykTechnologies/tyk/gateway
+      versionpackage: github.com/TykTechnologies/tyk/internal/build
+      # The keys to be used for the version related variables that needs to
+      # be filled in during build time.
+      versionkeys:
+        version: Version
+        commit: Commit
+        builddate: BuildDate
+        builtby: BuiltBy
       # Min number of reviews needed for a PR
       reviewcount: 0
       # Should conversations be resolved before merging
@@ -89,7 +96,7 @@ policy:
           features:
             - el7
             - plugin-compiler-fix-vendor
- 
+
     tyk-analytics:
       description: >-
         Dashboard for the Tyk API Gateway
@@ -105,8 +112,13 @@ policy:
       pcprivate: false
       configfile: tyk_analytics.conf
       versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
+      versionkeys:
+        version: VERSION
+        commit: Commit
+        builddate: buildDate
+        builtby: builtBy
       convos: false
-      sourcebranch: master          
+      sourcebranch: master
       buildenv: 1.16
       features:
         - el7
@@ -136,6 +148,11 @@ policy:
       pcprivate: false
       configfile: tib.conf
       versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
+      versionkeys:
+        version: VERSION
+        commit: Commit
+        builddate: buildDate
+        builtby: builtBy
       buildenv: 1.19-bullseye
       tests: ["1.19-bullseye"]
       branches:
@@ -157,13 +174,18 @@ policy:
       pcprivate: true
       configfile: tyk_sink.conf
       versionpackage: github.com/TykTechnologies/tyk-sink/main
-      sourcebranch: master        
+      versionkeys:
+        version: VERSION
+        commit: Commit
+        builddate: buildDate
+        builtby: builtBy
+      sourcebranch: master
       buildenv: 1.19-bullseye
       tests: ["1.19-bullseye", "postgres", "mongo-official", "mongo-mgo"]
       branches:
         master:
           reviewcount: 1
-            
+
     portal:
       description: >-
         Developer portal for the Tyk API Gateway
@@ -177,7 +199,12 @@ policy:
       upgradefromver: 1.0.0
       pcprivate: false
       configfile: portal.conf
-      versionpackage: github.com/TykTechnologies/portal/core
+      versionpackage: github.com/TykTechnologies/portal/model/version
+      versionkeys:
+        version: version
+        commit: commit
+        builddate: buildDate
+        builtby: buildBy
       convos: false
       tests:
         - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
@@ -206,6 +233,11 @@ policy:
       pcprivate: false
       configfile: pump.conf
       versionpackage: github.com/TykTechnologies/tyk-pump/pumps
+      versionkeys:
+        version: VERSION
+        commit: Commit
+        builddate: buildDate
+        builtby: builtBy
       convos: false
       sourcebranch: master
       buildenv: 1.19-bullseye

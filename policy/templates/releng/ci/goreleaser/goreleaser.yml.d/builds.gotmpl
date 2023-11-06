@@ -2,7 +2,7 @@
 builds:
   - id: std
     ldflags:
-      - -X {{.Branchvals.VersionPackage}}.VERSION={{`{{.Version}}`}} -X {{.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}} -X {{.Branchvals.VersionPackage}}.buildDate={{`{{.Date}}`}} -X {{.Branchvals.VersionPackage}}.builtBy=goreleaser
+      - -X {{.Branchvals.VersionPackage}}.{{.Branchvals.VersionKeys.Version}}={{`{{.Version}}`}} -X {{.Branchvals.VersionPackage}}.{{.Branchvals.VersionKeys.Commit}}={{`{{.FullCommit}}`}} -X {{.Branchvals.VersionPackage}}.{{.Branchvals.VersionKeys.BuildDate}}={{`{{.Date}}`}} -X {{.Branchvals.VersionPackage}}.{{.Branchvals.VersionKeys.BuiltBy}}=goreleaser
     goos:
       - linux
     goarch:

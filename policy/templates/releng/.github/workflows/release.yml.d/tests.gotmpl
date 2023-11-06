@@ -272,8 +272,11 @@
           mask-password: 'true'
 {{- end }}
       - name: Run ci/tests
+{{- if not (eq .Name "tyk") }}
+        if: startsWith(github.ref, 'refs/tags')
+{{- end }}
         shell: bash
-        env:        
+        env:
           GITHUB_TAG: {{`${{ github.ref }}`}}
 {{- if eq .Name "tyk" }}
           GATEWAY_IMAGE: {{`${{ steps.ecr.outputs.registry }}/tyk:sha-${{ github.sha }}`}}
@@ -281,15 +284,12 @@
 {{- end }}
   {{- if or (eq .Name "tyk-analytics") (eq .Name "tyk-sink") }}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
+  {{- end }}
   {{- if eq .Name "tyk-sink" }}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
-  {{- end }}        
   {{- end }}
         run: |
           set -eaxo pipefail
-          if [ ! -d smoke-tests ]; then
-             echo "::warning No repo specific smoke tests defined"
-          fi
           if [ ! -d ci/tests ]; then
              echo "::warning No ci tests defined"
              exit 0
@@ -303,6 +303,36 @@
                   cd -
               fi
           done
+
+      - name: Run smoke-tests
+{{- if eq .Name "tyk" }}
+        # This job only runs whenever a tag is created. A tag is required
+        # for a functional plugin compiler build for when the GO_GET=1 env
+        # is provided. The plugin compiler cannot fetch the referenced
+        # commit from a PR, but requires a /heads or /tags reference.
+        #
+        # See https://github.com/golang/go/issues/31191 for more info.
+{{- end }}
+        if: startsWith(github.ref, 'refs/tags')
+        shell: bash
+        env:
+          GITHUB_TAG: {{`${{ github.ref }}`}}
+{{- if eq .Name "tyk" }}
+          GATEWAY_IMAGE: {{`${{ steps.ecr.outputs.registry }}/tyk:sha-${{ github.sha }}`}}
+          PLUGIN_COMPILER_IMAGE: {{`${{ steps.ecr.outputs.registry }}/tyk-plugin-compiler:sha-${{ github.sha }}`}}
+{{- end }}
+  {{- if or (eq .Name "tyk-analytics") (eq .Name "tyk-sink") }}
+          TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
+  {{- end }}
+  {{- if eq .Name "tyk-sink" }}
+          TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
+  {{- end }}
+        run: |
+          set -eaxo pipefail
+          if [ ! -d smoke-tests ]; then
+             echo "::warning No ci tests defined"
+             exit 0
+          fi
           for d in smoke-tests/*/
           do
               echo Attempting to test $d

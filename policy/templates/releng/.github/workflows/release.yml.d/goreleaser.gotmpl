@@ -141,11 +141,13 @@
           mask-aws-account-id: false
 
       - uses: aws-actions/amazon-ecr-login@v1
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         id: ecr
         with:
           mask-password: 'true'
 
       - name: Docker metadata for CI
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         id: metadata
         uses: docker/metadata-action@v4
         with:
@@ -160,6 +162,7 @@
             type=semver,pattern=v{{`{{version}}`}},prefix=v
 
       - name: CI push
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         shell: bash
         env:
           t: {{`${{ steps.metadata.outputs.tags }}`}}
