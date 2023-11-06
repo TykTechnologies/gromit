@@ -72,6 +72,8 @@
           # Start customising the env
           echo "registry={{`${{ steps.ecr.outputs.registry }}`}}
           tyk_image=\${registry}/tyk:${gw_dash_image_tag}
+          tyk_alfa_image=\${registry}/tyk:${gw_dash_image_tag}
+          tyk_beta_image=\${registry}/tyk:${gw_dash_image_tag}
           tyk_analytics_image=\${registry}/tyk-analytics:${gw_dash_image_tag}
           tyk_sink_image=\${registry}/tyk-sink:${sink_image_tag}
           tyk_pump_image=\${registry}/tyk-pump:${pump_image_tag}
@@ -108,7 +110,6 @@
           docker run --rm --network auto_default --env-file pytest.env \
           {{`${{ steps.ecr.outputs.registry }}/tyk-automated-tests:${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}} \
           pytest -c pytest_ci.ini --ci -m "not local and not dind {{`${{ matrix.markers }}`}}"
-  {{- end }} {{/* api-tests */}}
 
       - name: Archive Integration tests report
         if: {{`${{ always() }}`}}
@@ -140,6 +141,40 @@
         if: {{`${{ failure() }}`}}
         run: docker logs tyk-analytics
 
+  xray:
+    needs: api-tests
+    runs-on: ubuntu-latest
+    if: always() && github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout of tyk-automated-tests
+        uses: actions/checkout@v3
+        with:
+          repository: TykTechnologies/tyk-automated-tests
+          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+          ref: {{`${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}}
+          path: tyk-automated-tests
+
+      - name: Xray update
+        run: |
+          ./update_xray.sh
+        working-directory: tyk-automated-tests
+        env:
+        {{ if eq .Name "tyk" }}
+          TEST: "QA-901"
+        {{- end }}
+        {{ if eq .Name "tyk-analytics" }}
+          TEST: "QA-899"
+        {{- end }}
+        {{ if eq .Name "tyk-sink" }}
+          TEST: "QA-1012"
+        {{- end }}
+          STATUS: {{`${{ needs.api-tests.outputs.api_test_result || 'success' }}`}}
+          CLIENT_ID: {{`${{secrets.XRAY_CLIENT_ID}}`}}
+          CLIENT_SECRET: {{`${{secrets.XRAY_CLIENT_SECRET}}`}}
+          BRANCH: {{`${{ github.ref }}`}}       
+
+  {{- end }} {{/* api-tests */}}
 # TODO: PR comment, using just one comment and updating, not a new comment each time
 
   upgrade-deb:
