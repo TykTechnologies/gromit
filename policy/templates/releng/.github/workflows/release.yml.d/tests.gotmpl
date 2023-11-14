@@ -13,7 +13,21 @@
         db: [ "mongo44", "postgres15" ]
         include:
           - db: postgres15
+            conf: "sha256"
             markers: "and not sql"
+            msgid: "1"
+          - db: postgres15
+            conf: "murmur64"
+            markers: "and not sql"
+            msgid: "2"            
+          - db: mongo44
+            conf: "sha256"
+            msgid: "3"
+          - db: mongo44
+            conf: "murmur64"
+            msgid: "4"
+    outputs:
+        api_test_result: ${{ steps.test_result.outputs.pytest_run }}             
 
     steps:
       - uses: actions/checkout@v3
@@ -111,12 +125,39 @@
           {{`${{ steps.ecr.outputs.registry }}/tyk-automated-tests:${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}} \
           pytest -c pytest_ci.ini --ci -m "not local and not dind {{`${{ matrix.markers }}`}}"
 
+      - name: Set test result
+        id: test_result
+        if: always() && steps.test_execution.outcome != 'success'
+        run: echo "pytest_run=${{ steps.test_execution.outcome }}" >> $GITHUB_OUTPUT
+
       - name: Archive Integration tests report
         if: {{`${{ always() }}`}}
         uses: actions/upload-artifact@v2
         with:
             name: api-test-report
             path: ${{ github.workspace }}/reports
+
+      - name: Fetch commit author
+        if: {{`${{ steps.test_execution.outcome != 'success' && !github.event.pull_request.draft }}`}}            
+        run: echo "GIT_USER_EMAIL=$(git show -s --format='%ae' HEAD)" >> $GITHUB_ENV
+
+      - name: Fetch slack user
+        if: {{`${{ steps.test_execution.outcome != 'success' && !github.event.pull_request.draft }}`}}   
+        id: fetch_slack_user
+        uses: TykTechnologies/github-actions/.github/actions/github-to-slack@main
+        with:
+          github_email: {{`${{ env.GIT_USER_EMAIL }}`}}
+    
+      - name: Notify slack
+        if: {{`${{ steps.test_execution.outcome != 'success' && !github.event.pull_request.draft }}`}}
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: {{`${{ secrets.API_TEST_ALERT_SLACK_WEBHOOK }}`}}
+          SLACK_COLOR: {{`${{ job.status }}`}}
+          SLACK_TITLE: "Result: {{`${{ steps.test_execution.outcome }}`}}"
+          SLACK_USERNAME: API INTEGRATION TESTS
+          SLACK_MESSAGE: "*Test*: {{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}, *Author*: {{`${{ steps.fetch_slack_user.outputs.slack-user-name }}`}}"
+          SLACK_FOOTER: "<https://github.com/{{`${{ github.repository }}`}}/actions/runs/{{`${{ github.run_id }}`}}|SEE EXECUTION DETAILS HERE>"
 
       - name: Comment on PR
         if: {{`${{ always() && !github.event.pull_request.draft }}`}}
@@ -144,7 +185,7 @@
   xray:
     needs: api-tests
     runs-on: ubuntu-latest
-    if: always() && github.event_name != 'pull_request'
+    if: always() && github.event_name == 'push'
 
     steps:
       - name: Checkout of tyk-automated-tests
