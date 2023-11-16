@@ -59,7 +59,7 @@
           tyk_pump_image=\${registry}/tyk-pump:${pump_image_tag}
           # override default above with just built tag
           {{ .Name | replace "-" "_" }}_image=${tags[0]}
-    {{- if .eq Name "tyk" }}
+    {{- if eq .Name "tyk" }}
           tyk_alfa_image=\${registry}/tyk:${tags[0]}
           tyk_beta_image=\${registry}/tyk:${tags[0]}
     {{- end }}
