@@ -177,7 +177,7 @@ policy:
       upgradefromver: 1.0.0
       pcprivate: false
       configfile: portal.conf
-      versionpackage: github.com/TykTechnologies/portal/core
+      versionpackage: github.com/TykTechnologies/portal/model/version
       convos: false
       tests:
         - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
