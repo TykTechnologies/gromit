@@ -159,16 +159,16 @@
           ./update_xray.sh
         working-directory: tyk-automated-tests
         env:
-        {{ if eq .Name "tyk" }}
+        {{- if eq .Name "tyk" }}
           TEST: "QA-901"
         {{- end }}
-        {{ if eq .Name "tyk-analytics" }}
+        {{- if eq .Name "tyk-analytics" }}
           TEST: "QA-899"
         {{- end }}
-        {{ if eq .Name "tyk-sink" }}
+        {{- if eq .Name "tyk-sink" }}
           TEST: "QA-1012"
         {{- end }}
-        {{ if eq .Name "tyk-pump" }}
+        {{- if eq .Name "tyk-pump" }}
           TEST: "QA-1307"
         {{- end }}        
           STATUS: {{`${{ needs.api-tests.outputs.api_test_result || 'success' }}`}}
