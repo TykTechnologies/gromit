@@ -259,7 +259,7 @@
         with:
           fetch-depth: 1
 
-{{- if eq .Name "tyk" }}
+{{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") (eq .Name "tyk-sink") (eq .Name "tyk-pump")}}
       - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
@@ -299,7 +299,7 @@
               echo Attempting to test $d
               if [ -d $d ] && [ -e $d/test.sh ]; then
                   cd $d
-                  ./test.sh {{`${{ needs.goreleaser.outputs.tag }}`}}
+                  ./test.sh {{`${{ steps.ecr.outputs.registry }}/{{ .Name }}:sha-${{ github.sha }}`}}
                   cd -
               fi
           done
@@ -308,7 +308,7 @@
               echo Attempting to test $d
               if [ -d $d ] && [ -e $d/test.sh ]; then
                   cd $d
-                  ./test.sh {{`${{ needs.goreleaser.outputs.tag }}`}}
+                  ./test.sh {{`${{ steps.ecr.outputs.registry }}/{{ .Name }}:sha-${{ github.sha }}`}}
                   cd -
               fi
           done
