@@ -1,5 +1,5 @@
 {{ define "tests" }}
-  {{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") (eq .Name "tyk-sink") }}
+  {{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") (eq .Name "tyk-sink") (eq .Name "tyk-pump") }}
   api-tests:
     needs: goreleaser
     runs-on: ubuntu-latest
@@ -92,18 +92,18 @@
           tyk_sink_image=\${registry}/tyk-sink:${sink_image_tag}
           tyk_pump_image=\${registry}/tyk-pump:${pump_image_tag}
           # override default above with just built tag
-{{ if eq .Name "tyk" }}
+{{- if eq .Name "tyk" }}
           tyk_image=${tags[0]}
           tyk_alfa_image=${tags[0]}
           tyk_beta_image=${tags[0]}
 {{- end }}
-{{ if eq .Name "tyk-analytics" }}
+{{- if eq .Name "tyk-analytics" }}
           tyk_analytics_image=${tags[0]}
 {{- end }}
-{{ if eq .Name "tyk-pump" }}
+{{- if eq .Name "tyk-pump" }}
           pump_image_tag=${tags[0]}
 {{- end }}
-{{ if eq .Name "tyk-sink" }}
+{{- if eq .Name "tyk-sink" }}
           sink_image_tag=${tags[0]}
 {{- end }}
           # base dir for config files
@@ -120,6 +120,7 @@
 
       - name: Run tests
         working-directory: tyk-automated-tests/ci/auto
+        id: test_execution
         run: |
           docker run --rm --network auto_default --env-file pytest.env \
           {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{`${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}} \
@@ -201,15 +202,18 @@
           ./update_xray.sh
         working-directory: tyk-automated-tests
         env:
-        {{ if eq .Name "tyk" }}
+        {{- if eq .Name "tyk" }}
           TEST: "QA-901"
         {{- end }}
-        {{ if eq .Name "tyk-analytics" }}
+        {{- if eq .Name "tyk-analytics" }}
           TEST: "QA-899"
         {{- end }}
-        {{ if eq .Name "tyk-sink" }}
+        {{- if eq .Name "tyk-sink" }}
           TEST: "QA-1012"
         {{- end }}
+        {{- if eq .Name "tyk-pump" }}
+          TEST: "QA-1307"
+        {{- end }}        
           STATUS: {{`${{ needs.api-tests.outputs.api_test_result || 'success' }}`}}
           CLIENT_ID: {{`${{secrets.XRAY_CLIENT_ID}}`}}
           CLIENT_SECRET: {{`${{secrets.XRAY_CLIENT_SECRET}}`}}
