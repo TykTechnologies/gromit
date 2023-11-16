@@ -59,8 +59,8 @@
           tyk_pump_image=\${registry}/tyk-pump:${pump_image_tag}
           # override default above with just built tag
           {{ .Name | replace "-" "_" }}_image=${tags[0]}
-          tyk_alfa_image=${tags[0]}
-          tyk_beta_image=${tags[0]}
+          tyk_alfa_image=${tyk_image}
+          tyk_beta_image=${tyk_image}
           # base dir for config files
           confs_dir=./pro-ha
           # pick database to use
