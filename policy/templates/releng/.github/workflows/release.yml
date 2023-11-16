@@ -24,7 +24,7 @@ env:
   
 jobs:
 {{- template "goreleaser" . }}
-{{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") (eq .Name "tyk-sink") }}
+{{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") (eq .Name "tyk-sink") (eq .Name "tyk-pump") }}
   api-tests:
     needs: goreleaser
     runs-on: ubuntu-latest
