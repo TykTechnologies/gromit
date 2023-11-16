@@ -75,6 +75,7 @@
 
       - name: Run tests
         working-directory: tyk-automated-tests/ci/auto
+        id: test_execution
         run: |
           docker run --rm --network auto_default --env-file pytest.env \
           {{`${{ steps.ecr.outputs.registry }}/tyk-automated-tests:${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}} \
