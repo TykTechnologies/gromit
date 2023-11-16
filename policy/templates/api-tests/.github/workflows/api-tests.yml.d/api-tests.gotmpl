@@ -62,9 +62,6 @@
     {{- if .eq Name "tyk" }}
           tyk_alfa_image=\${registry}/tyk:${tags[0]}
           tyk_beta_image=\${registry}/tyk:${tags[0]}
-    {{- else }}
-          tyk_alfa_image=\${registry}/tyk:${gw_dash_image_tag}
-          tyk_beta_image=\${registry}/tyk:${gw_dash_image_tag}
     {{- end }}
           # base dir for config files
           confs_dir=./pro-ha
