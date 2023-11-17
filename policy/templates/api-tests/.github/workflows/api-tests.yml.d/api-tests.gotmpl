@@ -1,18 +1,5 @@
 {{ define "api-tests" }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          submodules: false
-
-      - name: Checkout of tyk-automated-tests
-        uses: actions/checkout@v4
-        with:
-          repository: TykTechnologies/tyk-automated-tests
-          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          ref: {{`${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}}
-          path: tyk-automated-tests
-
       - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
@@ -33,9 +20,16 @@
           detached: true
           limit-access-to-actor: true
 
+      - name: fetch env from tyk-ci
+        env:
+          GH_TOKEN: {{`${{ github.token }}`}}
+        run: |
+          gh release download v1.2 --repo github.com/TykTechnologies/tyk-ci -O env.tgz
+          tar xzvf env.tgz
+
       - name: env up
         shell: bash
-        working-directory: tyk-automated-tests/ci/auto
+        working-directory: auto
         id: env_up
         env:
           t: {{`${{ needs.goreleaser.outputs.tags }}`}}
@@ -54,15 +48,13 @@
           # Start customising the env
           echo "registry={{`${{ steps.ecr.outputs.registry }}`}}
           tyk_image=\${registry}/tyk:${gw_dash_image_tag}
+          tyk_alfa_image=\${registry}/tyk:${tags[0]}
+          tyk_beta_image=\${registry}/tyk:${tags[0]}
           tyk_analytics_image=\${registry}/tyk-analytics:${gw_dash_image_tag}
           tyk_sink_image=\${registry}/tyk-sink:${sink_image_tag}
           tyk_pump_image=\${registry}/tyk-pump:${pump_image_tag}
           # override default above with just built tag
           {{ .Name | replace "-" "_" }}_image=${tags[0]}
-    {{- if .eq Name "tyk" }}
-          tyk_alfa_image=\${registry}/tyk:${tags[0]}
-          tyk_beta_image=\${registry}/tyk:${tags[0]}
-    {{- end }}
           # base dir for config files
           confs_dir=./pro-ha
           # pick database to use
@@ -128,7 +120,7 @@
             Triggered by: {{`${{ github.event_name }}`}} (@{{`${{ github.actor }}`}})
             [Execution page](https://github.com/{{`${{ github.repository }}`}}/actions/runs/{{`${{ github.run_id }}`}})
           repo-token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          message-id: {{`${{ matrix.db }}}}-{{`${{ matrix.conf }}`}}
+          message-id: {{`${{ matrix.db }}-${{ matrix.conf }}`}}
         env:
           STATUS: "{{`${{ steps.test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}"
 

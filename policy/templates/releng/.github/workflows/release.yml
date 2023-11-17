@@ -40,7 +40,7 @@ jobs:
           - db: postgres15
             markers: "and not sql"
 {{- template "api-tests" . }}
-{{ end -}} /* if repo covered by api-tests */
+{{ end -}} {{/* if repo covered by api-tests */}}
 
 {{- template "smoke-tests" . }}
 
