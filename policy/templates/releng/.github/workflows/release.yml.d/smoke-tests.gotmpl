@@ -179,8 +179,8 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
   {{- if eq .Name "tyk-sink" }}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
-  {{- end }} /* mdcb only */
-  {{- end }} /* mdcb or dash */
+  {{- end }}
+  {{- end }}
         run: |
           set -eaxo pipefail
           if [ ! -d smoke-tests ]; then
