@@ -8,7 +8,7 @@ GITHUB_TOKEN ?= $(shell pass me/github)
 
 gromit: clean */*.go confgen/templates/* policy/templates/* policy/prs/*
 	! ls **/#*#
-	diff policy/templates/releng/.github/workflows/release.yml.d/api-tests.gotmpl policy/templates/api-tests/.github/workflows/api-tests.yml.d/api-tests.gotmpl
+	diff policy/templates/releng/.github/workflows/release.yml.d/api-tests.gotmpl policy/templates/api-tests/.github/workflows/api-tests.yml.d/api-tests.gotmpl || cp -v policy/templates/releng/.github/workflows/release.yml.d/api-tests.gotmpl policy/templates/api-tests/.github/workflows/api-tests.yml.d/api-tests.gotmpl
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
 
