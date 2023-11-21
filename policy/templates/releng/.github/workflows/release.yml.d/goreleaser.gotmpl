@@ -142,11 +142,13 @@
 
       - uses: aws-actions/amazon-ecr-login@v1
         id: ecr
+        if: ${{ matrix.golang_cross == '1.19-bullseye' }}
         with:
           mask-password: 'true'
 
       - name: Docker metadata for CI
         id: metadata
+        if: ${{ matrix.golang_cross == '1.19-bullseye' }}
         uses: docker/metadata-action@v5
         with:
           images: {{`${{ steps.ecr.outputs.registry }}`}}/{{ .Name }}
@@ -160,6 +162,7 @@
             type=semver,pattern=v{{`{{version}}`}},prefix=v
 
       - name: CI push
+        if: ${{ matrix.golang_cross == '1.19-bullseye' }}
         shell: bash
         env:
           t: {{`${{ steps.metadata.outputs.tags }}`}}
