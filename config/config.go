@@ -35,7 +35,6 @@ func LoadConfig(cfgFile string) {
 	if err := viper.ReadInConfig(); err == nil {
 		log.Debug().Str("file", viper.ConfigFileUsed()).Msg("reading config from, use env vars to override specific parameters")
 	} else {
-		log.Info().Err(err).Msgf("Could not use config file %s, using embedded config", cfgFile)
 		// have to explicitly set the config type for viper to parse the io.Reader stream.
 		viper.SetConfigType("yaml")
 		if err = viper.ReadConfig(bytes.NewReader(config)); err != nil {

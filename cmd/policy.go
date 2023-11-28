@@ -118,7 +118,8 @@ var diffSubCmd = &cobra.Command{
 	Long:  `Parses the output of git diff --staged -G'(^[^#])' to make a decision. Fails if there are non-trivial diffs, or if there was a problem. This failure mode is chosen so that it can work as a gate.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
-		dfs, err := policy.NonTrivialDiff(dir)
+		colours, _ := cmd.Flags().GetBool("colours")
+		dfs, err := policy.NonTrivialDiff(dir, colours)
 		if len(dfs) > 0 {
 			return fmt.Errorf("non-trivial diffs in %s: %v", dir, dfs)
 		}
@@ -145,6 +146,8 @@ func init() {
 	syncSubCmd.Flags().String("msg", "Auto generated from templates by gromit", "Commit message for the automated commit by gromit.")
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
 	syncSubCmd.PersistentFlags().StringVar(&owner, "owner", "TykTechnologies", "Github org")
+
+	diffSubCmd.Flags().Bool("colours", true, "Use colours in output")
 
 	policyCmd.AddCommand(syncSubCmd)
 	policyCmd.AddCommand(diffSubCmd)

@@ -26,6 +26,7 @@ dockers:
       - "tykio/gromit:v{{ .Major }}.{{ .Minor }}{{.Prerelease}}"
       - "tykio/gromit:{{.Tag}}"
     use: buildx
+    dockerfile: Dockerfile
     build_flag_templates:
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
