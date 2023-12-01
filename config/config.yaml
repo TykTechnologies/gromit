@@ -12,6 +12,7 @@ policy:
   # with el7 support based on the presence of this flag
   features:
     - releng
+  baseimage: debian:bullseye-slim
   # Repo specific policies start here->
   repos:
     # Repo specific policy for `tyk` starts here->
@@ -179,6 +180,7 @@ policy:
       configfile: portal.conf
       versionpackage: github.com/TykTechnologies/portal/model/version
       convos: false
+      baseimage: debian:trixie-slim
       tests:
         - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
         - "1.19-bullseye"

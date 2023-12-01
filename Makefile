@@ -3,7 +3,7 @@ VERSION := $(shell git describe --tags)
 COMMIT := $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
 
-REPOS := tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal
+REPOS ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal
 GITHUB_TOKEN ?= $(shell pass me/github)
 
 gromit: clean */*.go confgen/templates/* policy/templates/* policy/prs/*
