@@ -12,6 +12,8 @@ policy:
   # with el7 support based on the presence of this flag
   features:
     - releng
+  # baseimage what the container images are based on. It needs to be a
+  # debian compatible distro as the Dockerfile assumes apt-get
   baseimage: debian:bullseye-slim
   # Repo specific policies start here->
   repos:
