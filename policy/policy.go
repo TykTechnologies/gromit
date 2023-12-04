@@ -30,6 +30,7 @@ type Policies struct {
 	ExposePorts    string
 	Binary         string
 	Buildenv       string
+	BaseImage      string
 	Cgo            bool
 	ConfigFile     string
 	VersionPackage string
@@ -45,6 +46,7 @@ type Policies struct {
 // processed at each level
 type branchVals struct {
 	Buildenv       string
+	BaseImage      string
 	Cgo            bool
 	ConfigFile     string
 	VersionPackage string
