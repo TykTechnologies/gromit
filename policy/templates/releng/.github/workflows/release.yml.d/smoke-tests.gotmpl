@@ -143,12 +143,13 @@
         run: |
           docker run --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}`}}
   {{ end }}
-  
+
   release-tests:
-    needs: 
+    needs:
       - goreleaser
     permissions:
       id-token: write   # This is required for requesting the JWT
       contents: read    # This is required for actions/checkout
     uses: ./.github/workflows/release-tests.yml
+    secrets: inherit
 {{ end }} /* smoke-tests */

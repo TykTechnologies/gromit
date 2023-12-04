@@ -55,7 +55,7 @@ policy:
       # The default config file used by the application.
       configfile: tyk.conf
       # The go package which contains the `VERSION` string for this REPO.
-      versionpackage: github.com/TykTechnologies/tyk/gateway
+      versionpackage: github.com/TykTechnologies/tyk/internal/build
       # Min number of reviews needed for a PR
       reviewcount: 0
       # Should conversations be resolved before merging
@@ -104,7 +104,7 @@ policy:
       upgradefromver: 3.0.9
       pcprivate: false
       configfile: tyk_analytics.conf
-      versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
+      versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard/internal/build
       convos: false
       sourcebranch: master          
       buildenv: 1.16
@@ -212,4 +212,4 @@ policy:
       tests: ["1.19-bullseye","Go 1.19 tests"]
       branches:
         master:
-          reviewcount: 1
+          reviewcount: 1         
