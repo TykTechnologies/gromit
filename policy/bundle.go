@@ -17,7 +17,7 @@ import (
 // Files common to all features
 //
 //go:embed templates all:templates
-var Bundles embed.FS
+var templates embed.FS
 
 // bundleNode of a directory tree
 type bundleNode struct {
@@ -31,6 +31,21 @@ type bundleNode struct {
 type Bundle struct {
 	Name string
 	tree *bundleNode
+}
+
+// getSubTemplates returns a list of subtemplate definitions that are available to all templates
+func getSubTemplates(subfs fs.FS, root string) ([]string, error) {
+	var stList []string
+	err := fs.WalkDir(subfs, root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			stList = append(stList, path)
+		}
+		return nil
+	})
+	return stList, err
 }
 
 // Add adds the path and corresponding template into the templateNode tree
@@ -140,8 +155,8 @@ func (n *bundleNode) Count(bn *bundleNode) int {
 
 // fsTreeWalk will walk the complete tree of tfs and add templates to the supplied Bundle b.
 // Used to walk both the common bundle and the features bundle
-func fsTreeWalk(b *Bundle, tfs fs.FS) error {
-	err := fs.WalkDir(tfs, ".", func(path string, d fs.DirEntry, err error) error {
+func fsTreeWalk(b *Bundle, tfs fs.FS, root string, subTemps []string) error {
+	err := fs.WalkDir(tfs, root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -154,7 +169,8 @@ func fsTreeWalk(b *Bundle, tfs fs.FS) error {
 			return fs.SkipDir
 		}
 		if !d.IsDir() {
-			templates := []string{path}
+			// The top-level template must be the first element
+			subTemps = append([]string{path}, subTemps...)
 
 			stPath := path + ".d"
 			fi, err := fs.Stat(tfs, stPath)
@@ -164,18 +180,18 @@ func fsTreeWalk(b *Bundle, tfs fs.FS) error {
 					return err
 				}
 				for _, de := range des {
-					templates = append(templates, filepath.Join(stPath, de.Name()))
+					subTemps = append(subTemps, filepath.Join(stPath, de.Name()))
 				}
 			}
 			// Normalize the path to use '/' as the separator
 			path = strings.ReplaceAll(path, string(os.PathSeparator), "/")
-			log.Trace().Strs("subtemplates", templates).Str("template", d.Name()).Msg("adding to bundle")
+			log.Trace().Strs("subtemplates", subTemps).Str("template", d.Name()).Msg("adding to bundle")
 
 			t := template.Must(
 				template.New(d.Name()).
 					Funcs(sprig.TxtFuncMap()).
 					Option("missingkey=error").
-					ParseFS(tfs, templates...))
+					ParseFS(tfs, subTemps...))
 			b.Add(path, t)
 		}
 		return nil
@@ -184,7 +200,7 @@ func fsTreeWalk(b *Bundle, tfs fs.FS) error {
 	return err
 }
 
-// Returns a bundle by traversing from templates/<features>
+// Returns a bundle by walking templates/<features>
 func NewBundle(features []string) (*Bundle, error) {
 	b := &Bundle{
 		Name: strings.Join(features, "-"),
@@ -192,23 +208,13 @@ func NewBundle(features []string) (*Bundle, error) {
 	}
 	var err error
 	log.Logger = log.With().Strs("features", features).Logger()
+	stList, err := getSubTemplates(templates, filepath.Join("templates", "subtemplates"))
+	if err != nil {
+		log.Fatal().Err(err).Msg("walking subtemplates")
+	}
 	for _, feat := range features {
-		var ffs fs.FS
-		if strings.HasPrefix(feat, ".") || strings.HasPrefix(feat, "/") {
-			ffs = os.DirFS(feat)
-		} else {
-			featPath := filepath.Join("templates", feat)
-			fi, err := fs.Stat(Bundles, featPath)
-			if err == nil && fi.IsDir() {
-				ffs, err = fs.Sub(Bundles, featPath)
-				if err != nil {
-					log.Fatal().Err(err).Msgf("fetching extra files for feature from %s", featPath)
-				}
-			} else {
-				log.Debug().Msgf("assuming no extra files for feature %s", feat)
-			}
-		}
-		err := fsTreeWalk(b, ffs)
+		featPath := filepath.Join("templates", feat)
+		err = fsTreeWalk(b, templates, featPath, stList)
 		if err != nil {
 			log.Fatal().Err(err).Msgf("walking feature %s", feat)
 		}

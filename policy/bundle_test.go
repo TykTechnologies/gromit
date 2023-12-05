@@ -13,13 +13,13 @@ import (
 // repos in the config file.
 // FIXME: Test (bundle, features, repo) in parallel
 func TestBundleRender(t *testing.T) {
-	featDirs, err := Bundles.ReadDir("templates")
+	featDirs, err := templates.ReadDir("templates")
 	if err != nil {
 		t.Fatalf("Error reading embedded fs: %v", err)
 	}
 	var features []string
 	for _, fd := range featDirs {
-		if fd.IsDir() {
+		if fd.IsDir() && fd.Name() != "subtemplates" {
 			features = append(features, fd.Name())
 		}
 	}
