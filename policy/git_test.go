@@ -43,13 +43,9 @@ func TestGitFunctions(t *testing.T) {
 		t.Fatalf("Error creating temp dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
-	src, err := Init(testRepo["name"], testRepo["owner"], testRepo["branch"], 1, tmpDir, token)
+	src, err := InitGit(testRepo["name"], testRepo["owner"], testRepo["branch"], tmpDir, token)
 	if err != nil {
 		t.Fatalf("init %s/%s at %s: (%v)", testRepo["owner"], testRepo["name"], tmpDir, err)
-	}
-	err = src.SwitchBranch("testbranch")
-	if err != nil {
-		t.Fatalf("Error checking out branch %s: %v", testRepo["newbranch"], err)
 	}
 
 	// pristine checksums
@@ -123,11 +119,11 @@ func TestGitFunctions(t *testing.T) {
 		t.Fatalf("Error creating temp dir: %v", err)
 	}
 	defer os.RemoveAll(tmpVDir)
-	vSrc, err := Init(testRepo["name"], testRepo["owner"], "main", 1, tmpVDir, token)
+	vSrc, err := InitGit(testRepo["name"], testRepo["owner"], "main", tmpVDir, token)
 	if err != nil {
 		t.Fatalf("init %s/%s at %s: (%v)", testRepo["owner"], testRepo["name"], tmpVDir, err)
 	}
-	err = vSrc.Checkout(testRepo["newbranch"])
+	err = vSrc.FetchBranch(testRepo["newbranch"])
 	if err != nil {
 		t.Fatalf("Error checking out branch %s: %v", testRepo["newbranch"], err)
 	}
@@ -152,7 +148,7 @@ func TestGitFunctions(t *testing.T) {
 	t.Log("Csum after pulling the changes ", pulledCsums)
 
 	src.SetDryRun(true)
-	_, err = src.CreatePR("dry run title", testRepo["newbranch"], true)
+	_, err = src.CreatePR(nil, "dry run title", testRepo["newbranch"], true)
 	if err != nil {
 		t.Fatalf("mock PR: %v", err)
 	}

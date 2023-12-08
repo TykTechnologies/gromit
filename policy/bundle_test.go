@@ -13,13 +13,13 @@ import (
 // repos in the config file.
 // FIXME: Test (bundle, features, repo) in parallel
 func TestBundleRender(t *testing.T) {
-	featDirs, err := Bundles.ReadDir("templates")
+	featDirs, err := templates.ReadDir("templates")
 	if err != nil {
 		t.Fatalf("Error reading embedded fs: %v", err)
 	}
 	var features []string
 	for _, fd := range featDirs {
-		if fd.IsDir() {
+		if fd.IsDir() && fd.Name() != "subtemplates" {
 			features = append(features, fd.Name())
 		}
 	}
@@ -35,7 +35,7 @@ func TestBundleRender(t *testing.T) {
 	}
 	for r := range pol.Repos {
 		t.Logf("testing repo %s with features %v", r, features)
-		rp, err := pol.GetRepoPolicy(r, "master")
+		rp, err := pol.GetRepoPolicy(r)
 		if err != nil {
 			t.Logf("Error getting repo policy for repo: %s: %v", r, err)
 			t.Fail()
@@ -48,6 +48,12 @@ func TestBundleRender(t *testing.T) {
 		}
 		defer os.RemoveAll(tmpDir)
 
+		err = rp.SetBranch("master")
+		if err != nil {
+			t.Logf("Could not set branch to master for repo: %s", r)
+			t.Fail()
+			continue
+		}
 		_, err = b.Render(rp, tmpDir, nil)
 		if err != nil {
 			t.Logf("Error rendering bundle: %s for repo: %s: %v", b.Name, r, err)

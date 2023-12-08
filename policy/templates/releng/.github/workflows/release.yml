@@ -6,7 +6,6 @@
 # - RHEL and AL
 # - docker hub
 # - devenv ECR
-# - AWS mktplace (not active atm)
 # - Cloudsmith
 
 name: Release
@@ -21,10 +20,34 @@ on:
       - 'v*'
 
 env:
-  SLACK_CLI_TOKEN: ${{`{{ secrets.BENDER_TOKEN }}`}}
   GOPRIVATE: github.com/TykTechnologies
   
 jobs:
 {{- template "goreleaser" . }}
-{{- template "sbom" . }}
-{{- template "tests" . }}
+{{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") (eq .Name "tyk-sink") (eq .Name "tyk-pump") }}
+  api-tests:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: [ "sha256", "murmur64" ]
+        db: [ "mongo44", "postgres15" ]
+        include:
+          - db: postgres15
+            markers: "and not sql"
+{{- template "api-tests" . }}
+{{ end -}} {{/* if repo covered by api-tests */}}
+
+{{- template "smoke-tests" . }}
+
+  sbom:
+    needs: goreleaser
+    uses: TykTechnologies/github-actions/.github/workflows/sbom.yaml@main
+    secrets:
+      DEPDASH_URL: ${{`{{ secrets.DEPDASH_URL }}`}}
+      DEPDASH_KEY: ${{`{{ secrets.DEPDASH_KEY }}`}}
+      ORG_GH_TOKEN: ${{`{{ secrets.ORG_GH_TOKEN }}`}}

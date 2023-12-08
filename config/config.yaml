@@ -1,15 +1,20 @@
-# This file contains github policy that is used to generate all the releng
-# automation, and any other automation including automated PR generation
-# from gromit.
+# This file contains the metadata required to manage repos that are services
 
-git:
-  # `prefix` is used to derive the fully qualified github URL for the repos
-  prefix: https://github.com/TykTechnologies
-
-# `policy` is the root object for the policy and bundle commands. Any
-# parent policy options provided here can be overridden by repo
-# specific/ branch specific options.
 policy:
+  # `policy` is the root object for the policy and bundle commands. Any
+  # parent policy options provided here can be overridden by repo
+  # specific/ branch specific options.
+  # features act as flags whose presence/absence can be used to
+  # render a common set of features across branch(es)
+  # For eg: there are some branches that support el/7, and some that doesn't - to
+  # render el/7 support on these branches, add  `el7` as a feature of these
+  # branches and write the template conditions accordingly to render the templates
+  # with el7 support based on the presence of this flag
+  features:
+    - releng
+  # baseimage what the container images are based on. It needs to be a
+  # debian compatible distro as the Dockerfile assumes apt-get
+  baseimage: debian:bullseye-slim
   # Repo specific policies start here->
   repos:
     # Repo specific policy for `tyk` starts here->
@@ -53,19 +58,11 @@ policy:
       # The default config file used by the application.
       configfile: tyk.conf
       # The go package which contains the `VERSION` string for this REPO.
-      versionpackage: github.com/TykTechnologies/tyk/gateway
+      versionpackage: github.com/TykTechnologies/tyk/internal/build
       # Min number of reviews needed for a PR
       reviewcount: 0
       # Should conversations be resolved before merging
       convos: false
-      # features act as flags whose presence/absence can be used to
-      # render a common set of features across branch(es)
-      # For eg: there are some branches that support el/7, and some that doesn't - to
-      # render el/7 support on these branches, add  `el7` as a feature of these
-      # branches and write the template conditions accordingly to render the templates
-      # with el7 support based on the presence of this flag
-      features:
-        - releng
       # Different branches could have different policy as older branches
       # could be on a different releaese workflow. To override any branch
       # policy for a specific branch, they could be specified here, under
@@ -76,18 +73,13 @@ policy:
           # The build environment used for this repo. Right now, this value
           # is used for selecting the appropriate golang-cross image
           # used for building the binary, packages and docker images.
-          buildenv: 1.19-bullseye
+          buildenv: 1.21-bookworm
+          baseimage: bookworm-slim
           reviewcount: 1
           # Workflows that need to pass to merge PRs
           tests:
-            - "Go 1.19.x Redis 5"
-            - "1.19-bullseye"
-          features:
-            - go1.19
-        release-5.1:
-          buildenv: 1.19-bullseye
-        release-5.1.1:
-          buildenv: 1.19-bullseye
+            - "Go 1.21.x Redis 5"
+            - "1.21-bookworm"
         release-4-lts:
           tests:
             - "Go 1.15 Redis 6"
@@ -95,42 +87,13 @@ policy:
             - el7
             - plugin-compiler-fix-vendor
           buildenv: 1.15
-        release-5.0.4:
-          sourcebranch: release-5-lts
-          tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
+        release-5-lts:
           buildenv: 1.16
+          tests: ["Go 1.16 Redis 5","1.16-bullseye","1.16-el7"]
           features:
             - el7
             - plugin-compiler-fix-vendor
-          release-5.0.5:
-            sourcebranch: release-5-lts
-            tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
-            buildenv: 1.16
-            features:
-              - el7
-              - plugin-compiler-fix-vendor
-          release-5.1.12:
-            sourcebranch: release-5.1
-            tests: ["Go 1.16 Redis 5","1.16","1.16-el7"]
-            buildenv: 1.16
-            features:
-              - el7
-              - plugin-compiler-fix-vendor
-          release-5-lts:
-            buildenv: 1.16
-            tests: ["Go 1.16 Redis 5","1.16-bullseye","1.16-el7"]
-            features:
-              - el7
-              - plugin-compiler-fix-vendor
-          release-4.0.14:
-            sourcebranch: release-4-lts
-            buildenv: 1.15
-            tests:
-              - "Go 1.15 Redis 6"
-            features:
-              - plugin-compiler-fix-vendor
-              - el7
-
+ 
     tyk-analytics:
       description: >-
         Dashboard for the Tyk API Gateway
@@ -145,45 +108,23 @@ policy:
       upgradefromver: 3.0.9
       pcprivate: false
       configfile: tyk_analytics.conf
-      versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
+      versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard/internal/build
       convos: false
       sourcebranch: master          
       buildenv: 1.16
+      features:
+        - el7
       reviewcount: 0
-      tests: ["1.19-bullseye","test (1.19.x, ubuntu-latest, amd64, 15.x)","postgres","sqlite","mongo-mgo","mongo-official"]
+      tests: ["1.21-bookworm","test (1.21.x, ubuntu-latest, amd64, 15.x)","postgres","sqlite","mongo-mgo","mongo-official"]
       branches:
         master:
+          baseimage: bookworm-slim
           reviewcount: 1
-          buildenv: 1.19-bullseye
-          features:
-            - go1.19
-        release-5.1:
-          reviewcount: 0
-          buildenv: 1.19-bullseye
-          features:
-            - go1.19
-        release-5.1.1:
-          reviewcount: 0
-          buildenv: 1.19-bullseye
-          features:
-            - go1.19
-        release-5.0.4:
-          sourcebranch: release-5-lts
-          tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo-mgo","mongo-official"]
-          features:
-            - el7
+          buildenv: 1.21-bookworm
         release-5-lts:
           tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo-mgo","mongo-official"]
-          features:
-            - el7
         release-4-lts:
           tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo"]
-          features:
-            - el7
-        release-4.0.14:
-          tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo"]
-          features:
-            - el7
 
     tyk-identity-broker:
       description: >-
@@ -205,7 +146,6 @@ policy:
       branches:
         master:
           reviewcount: 1
-          buildenv: 1.19-bullseye
 
     tyk-sink:
       description: >-
@@ -228,7 +168,6 @@ policy:
       branches:
         master:
           reviewcount: 1
-          buildenv: 1.19-bullseye
             
     portal:
       description: >-
@@ -243,8 +182,9 @@ policy:
       upgradefromver: 1.0.0
       pcprivate: false
       configfile: portal.conf
-      versionpackage: github.com/TykTechnologies/portal/core
+      versionpackage: github.com/TykTechnologies/portal/model/version
       convos: false
+      baseimage: debian:trixie-slim
       tests:
         - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
         - "1.19-bullseye"
@@ -256,14 +196,6 @@ policy:
           tests:
             - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
             - "1.19-bullseye"
-          features:
-            - "go1.19"
-        release-1.0:
-          buildenv: 1.15
-          tests:
-            - "test (1.16.x, ubuntu-latest, amd64, 15.x)"
-            - "1.15"
-            - "1.15-el7"
 
     tyk-pump:
       description: >-
@@ -284,41 +216,6 @@ policy:
       sourcebranch: master
       buildenv: 1.19-bullseye
       tests: ["1.19-bullseye","Go 1.19 tests"]
-      features:
-        - go1.19
       branches:
         master:
-          reviewcount: 1
-          buildenv: 1.19-bullseye
-
-    tyk-analytics-ui:
-      description: >-
-        User interface for our dashboard. Backend: https://github.com/TykTechnologies/tyk-analytics
-      pcrepo: tyk-analytics-ui
-      dhrepo: tykio/tyk-analytics-ui
-      csrepo: docker.tyk.io/tyk-analytics-ui/tyk-analytics-ui
-      exposeports: 80
-      reviewers: []
-      binary: tyk-analytics-ui
-      packagename: tyk-analytics-ui
-      sourcebranch: master
-      branches:
-        master:
-          reviewcount: 1
-          tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)","test"]
-        release-5.1:
-          reviewcount: 0
-          tests: [ "test (1.19.x, 1.16.x, ubuntu-latest, amd64, 15.x)", "test" ]
-        release-5.1.1:
-          sourcebranch: release-5.1
-          reviewcount: 0
-          tests: [ "test (1.19.x, 1.16.x, ubuntu-latest, amd64, 15.x)", "test" ]            
-        release-5.0.4:
-          sourcebranch: release-5-lts
-          tests: ["test (1.16.x, ubuntu-latest, amd64, 15.x)", "test"]
-        release-5-lts:
-          tests: ["test (1.16.x, ubuntu-latest, amd64, 16)", "test"]
-        release-4-lts:
-          tests: []
-        release-4.0.14:
-          tests: []
+          reviewcount: 1         

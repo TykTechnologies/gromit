@@ -3,7 +3,7 @@ builds:
   - id: std
     ldflags:
       - -X {{.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
-      - -X {{ .Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
+      - -X {{.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
       - -X {{.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
       - -X {{.Branchvals.VersionPackage}}.BuiltBy=goreleaser
     goos:
