@@ -21,7 +21,7 @@ var White = "\033[97m"
 
 func gitDiff(dir string) (string, error) {
 	var out bytes.Buffer
-	cmd := exec.Command("git", "diff", "-w", "--ignore-cr-at-eol", "-I^# Generated on:.*$", "--ignore-blank-lines", "HEAD")
+	cmd := exec.Command("git", "diff", "-w", "-U1", "--ignore-cr-at-eol", "-I^# Generated on:.*$", "--ignore-blank-lines", "HEAD")
 	cmd.Dir = dir
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -30,11 +30,10 @@ func gitDiff(dir string) (string, error) {
 	}
 	log.Trace().Bytes("output", out.Bytes()).Str("dir", dir).Msg("git diff")
 
-	prettyPrint(out.String())
 	return out.String(), nil
 }
 
-func prettyPrint(out string) {
+func colourPrint(out string) {
 
 	red := regexp.MustCompile(`^-[^-]{2}.*`)
 	green := regexp.MustCompile(`^\+[^\+]{2}.*`)
@@ -60,6 +59,8 @@ func prettyPrint(out string) {
 
 }
 
+// parseDiffs parses ds, a string containing the diffs and returns the
+// list of files that were changed
 func parseDiff(ds string) ([]string, error) {
 	d, err := diffparser.Parse(ds)
 	if err != nil {
@@ -77,10 +78,15 @@ func parseDiff(ds string) ([]string, error) {
 	return dFiles, nil
 }
 
-func NonTrivialDiff(dir string) ([]string, error) {
+func NonTrivialDiff(dir string, colours bool) ([]string, error) {
 	ds, err := gitDiff(dir)
 	if err != nil {
 		return nil, err
+	}
+	if colours {
+		colourPrint(ds)
+	} else {
+		fmt.Println(ds)
 	}
 	return parseDiff(ds)
 }

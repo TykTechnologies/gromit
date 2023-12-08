@@ -24,7 +24,25 @@ env:
   
 jobs:
 {{- template "goreleaser" . }}
-{{- template "tests" . }}
+{{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") (eq .Name "tyk-sink") (eq .Name "tyk-pump") }}
+  api-tests:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: [ "sha256", "murmur64" ]
+        db: [ "mongo44", "postgres15" ]
+        include:
+          - db: postgres15
+            markers: "and not sql"
+{{- template "api-tests" . }}
+{{ end -}} {{/* if repo covered by api-tests */}}
+
+{{- template "smoke-tests" . }}
 
   sbom:
     needs: goreleaser

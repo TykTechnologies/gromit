@@ -75,8 +75,8 @@ var genSubCmd = &cobra.Command{
 }
 
 func init() {
-	bundleCmd.PersistentFlags().StringSliceVar(&features, "features", []string{"releng"}, "Features to use, local features should start with . or /")
-	bundleCmd.PersistentFlags().String("repo", "tyk-pump", "Use parameters from policy.<repo>")
+	bundleCmd.PersistentFlags().StringSliceVar(&features, "features", []string{"releng"}, "Features to use")
+	bundleCmd.PersistentFlags().String("repo", "", "Use parameters from policy.<repo>")
 	bundleCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Use branch values from policy.<repo>.branch")
 	bundleCmd.MarkPersistentFlagRequired("features")
 	bundleCmd.MarkPersistentFlagRequired("repo")

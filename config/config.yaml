@@ -12,6 +12,9 @@ policy:
   # with el7 support based on the presence of this flag
   features:
     - releng
+  # baseimage what the container images are based on. It needs to be a
+  # debian compatible distro as the Dockerfile assumes apt-get
+  baseimage: debian:bullseye-slim
   # Repo specific policies start here->
   repos:
     # Repo specific policy for `tyk` starts here->
@@ -55,7 +58,7 @@ policy:
       # The default config file used by the application.
       configfile: tyk.conf
       # The go package which contains the `VERSION` string for this REPO.
-      versionpackage: github.com/TykTechnologies/tyk/gateway
+      versionpackage: github.com/TykTechnologies/tyk/internal/build
       # Min number of reviews needed for a PR
       reviewcount: 0
       # Should conversations be resolved before merging
@@ -70,12 +73,13 @@ policy:
           # The build environment used for this repo. Right now, this value
           # is used for selecting the appropriate golang-cross image
           # used for building the binary, packages and docker images.
-          buildenv: 1.19-bullseye
+          buildenv: 1.21-bookworm
+          baseimage: bookworm-slim
           reviewcount: 1
           # Workflows that need to pass to merge PRs
           tests:
-            - "Go 1.19.x Redis 5"
-            - "1.19-bullseye"
+            - "Go 1.21.x Redis 5"
+            - "1.21-bookworm"
         release-4-lts:
           tests:
             - "Go 1.15 Redis 6"
@@ -104,18 +108,19 @@ policy:
       upgradefromver: 3.0.9
       pcprivate: false
       configfile: tyk_analytics.conf
-      versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard
+      versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard/internal/build
       convos: false
       sourcebranch: master          
       buildenv: 1.16
       features:
         - el7
       reviewcount: 0
-      tests: ["1.19-bullseye","test (1.19.x, ubuntu-latest, amd64, 15.x)","postgres","sqlite","mongo-mgo","mongo-official"]
+      tests: ["1.21-bookworm","test (1.21.x, ubuntu-latest, amd64, 15.x)","postgres","sqlite","mongo-mgo","mongo-official"]
       branches:
         master:
+          baseimage: bookworm-slim
           reviewcount: 1
-          buildenv: 1.19-bullseye
+          buildenv: 1.21-bookworm
         release-5-lts:
           tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo-mgo","mongo-official"]
         release-4-lts:
@@ -177,8 +182,9 @@ policy:
       upgradefromver: 1.0.0
       pcprivate: false
       configfile: portal.conf
-      versionpackage: github.com/TykTechnologies/portal/core
+      versionpackage: github.com/TykTechnologies/portal/model/version
       convos: false
+      baseimage: debian:trixie-slim
       tests:
         - "test (1.19.x, ubuntu-latest, amd64, 15.x)"
         - "1.19-bullseye"
@@ -212,4 +218,4 @@ policy:
       tests: ["1.19-bullseye","Go 1.19 tests"]
       branches:
         master:
-          reviewcount: 1
+          reviewcount: 1         

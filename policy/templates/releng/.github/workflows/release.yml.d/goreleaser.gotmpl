@@ -49,7 +49,7 @@
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
 
       - name: Checkout of {{ .Name }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
   {{- if eq .Name "tyk-analytics" }}
@@ -60,13 +60,13 @@
       - name: "Add Git safe.directory"
         run: git config --global --add safe.directory $GITHUB_WORKSPACE
 
-      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-qemu-action@v3
 
-      - uses: docker/setup-buildx-action@v2
+      - uses: docker/setup-buildx-action@v3
 
       - name: Login to DockerHub
         if: startsWith(github.ref, 'refs/tags')
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: {{`${{ secrets.DOCKER_USERNAME }}`}}
           password: {{`${{ secrets.DOCKER_PASSWORD }}`}}
@@ -74,7 +74,7 @@
   {{- if .CSRepo }}
       - name: Login to Cloudsmith
         if: startsWith(github.ref, 'refs/tags')
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: docker.tyk.io
           username: {{`${{ secrets.CLOUDSMITH_USERNAME }}`}}
@@ -111,7 +111,7 @@
           restore-keys: |
             {{`${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}`}}
 
-      - uses: goreleaser/goreleaser-action@v4
+      - uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
           args: release --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot' || '' }}`}}
@@ -132,7 +132,7 @@
   {{- if eq .Name "tyk" }}
           DOCKER_CLI_EXPERIMENTAL: "enabled"
   {{- end }}
-      - uses: aws-actions/configure-aws-credentials@v2
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
           role-session-name: cipush
@@ -140,14 +140,16 @@
           # Don't mask to pass it across job boundaries
           mask-aws-account-id: false
 
-      - uses: aws-actions/amazon-ecr-login@v1
+      - uses: aws-actions/amazon-ecr-login@v2
         id: ecr
+        if: {{`${{ matrix.golang_cross == '1.19-bullseye' }}`}}
         with:
           mask-password: 'true'
 
       - name: Docker metadata for CI
         id: metadata
-        uses: docker/metadata-action@v4
+        if: {{`${{ matrix.golang_cross == '1.19-bullseye' }}`}}
+        uses: docker/metadata-action@v5
         with:
           images: {{`${{ steps.ecr.outputs.registry }}`}}/{{ .Name }}
           flavor: |
@@ -160,6 +162,7 @@
             type=semver,pattern=v{{`{{version}}`}},prefix=v
 
       - name: CI push
+        if: {{`${{ matrix.golang_cross == '1.19-bullseye' }}`}}
         shell: bash
         env:
           t: {{`${{ steps.metadata.outputs.tags }}`}}

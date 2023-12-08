@@ -30,6 +30,7 @@ type Policies struct {
 	ExposePorts    string
 	Binary         string
 	Buildenv       string
+	BaseImage      string
 	Cgo            bool
 	ConfigFile     string
 	VersionPackage string
@@ -45,6 +46,7 @@ type Policies struct {
 // processed at each level
 type branchVals struct {
 	Buildenv       string
+	BaseImage      string
 	Cgo            bool
 	ConfigFile     string
 	VersionPackage string
@@ -191,7 +193,7 @@ func (rp *RepoPolicy) ProcessBranch(opDir, branch, msg string, repo *GitRepo) (s
 	if err != nil {
 		return "", fmt.Errorf("bundle gen %v: %v", rp.Branchvals.Features, err)
 	}
-	dfs, err := NonTrivialDiff(opDir)
+	dfs, err := NonTrivialDiff(opDir, false)
 	if err != nil {
 		return "", fmt.Errorf("computing diff in %s: %v", opDir, err)
 	}
