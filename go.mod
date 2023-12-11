@@ -13,7 +13,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/go-cmdtest v0.4.1-0.20220921163831-55ab3332a786
 	github.com/google/go-github/v47 v47.1.0
-	github.com/jinzhu/copier v0.3.5
+	github.com/jinzhu/copier v0.4.0
 	github.com/mongodb/mongo-tools v0.0.0-20230417150608-e62cf8866c5b
 	github.com/rs/zerolog v1.29.1
 	github.com/shurcooL/githubv4 v0.0.0-20221021030919-a134b1472cc7
