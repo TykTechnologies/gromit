@@ -6,7 +6,7 @@ BUILD_DATE := $(shell date +%FT%T%z)
 REPOS ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal
 GITHUB_TOKEN ?= $(shell pass me/github)
 
-gromit: clean */*.go confgen/templates/* policy/templates/* policy/prs/*
+gromit: clean confgen/templates/* policy/templates/* policy/prs/*
 	! ls **/#*#
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy

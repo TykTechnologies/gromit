@@ -142,13 +142,13 @@
 
       - uses: aws-actions/amazon-ecr-login@v2
         id: ecr
-        if: {{`${{ matrix.golang_cross == '1.19-bullseye' }}`}}
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         with:
           mask-password: 'true'
 
       - name: Docker metadata for CI
         id: metadata
-        if: {{`${{ matrix.golang_cross == '1.19-bullseye' }}`}}
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         uses: docker/metadata-action@v5
         with:
           images: {{`${{ steps.ecr.outputs.registry }}`}}/{{ .Name }}
@@ -162,7 +162,7 @@
             type=semver,pattern=v{{`{{version}}`}},prefix=v
 
       - name: CI push
-        if: {{`${{ matrix.golang_cross == '1.19-bullseye' }}`}}
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
         shell: bash
         env:
           t: {{`${{ steps.metadata.outputs.tags }}`}}
@@ -194,4 +194,4 @@
           path: |
             dist/*.rpm
             !dist/*PAYG*.rpm
-{{- end }}{{/* End of definition */}}
+{{ end -}}{{/* End of definition */}}
