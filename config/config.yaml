@@ -80,6 +80,10 @@ policy:
           tests:
             - "Go 1.21.x Redis 5"
             - "1.21-bullseye"
+            - "api-tests (sha256, mongo44)"
+            - "api-tests (sha256, postgres15)"
+            - "api-tests (murmur64, mongo44)"
+            - "api-tests (murmur64, postgres15)"
         release-4-lts:
           tests:
             - "Go 1.15 Redis 6"
@@ -115,7 +119,17 @@ policy:
       features:
         - el7
       reviewcount: 0
-      tests: ["1.21-bullseye","test (1.21.x, ubuntu-latest, amd64, 15.x)","postgres","sqlite","mongo-mgo","mongo-official"]
+      tests:
+        - "1.21-bullseye"
+        - "test (1.21.x, ubuntu-latest, amd64, 15.x)"
+        - "postgres"
+        - "sqlite"
+        - "mongo-mgo"
+        - "mongo-official"
+        - "api-tests (sha256, mongo44)"
+        - "api-tests (sha256, postgres15)"
+        - "api-tests (murmur64, mongo44)"
+        - "api-tests (murmur64, postgres15)"
       branches:
         master:
           baseimage: debian:bookworm-slim
@@ -164,7 +178,15 @@ policy:
       versionpackage: github.com/TykTechnologies/tyk-sink/main
       sourcebranch: master        
       buildenv: 1.19-bullseye
-      tests: ["1.19-bullseye", "postgres", "mongo-official", "mongo-mgo"]
+      tests:
+        - "1.19-bullseye"
+        - "postgres"
+        - "mongo-official"
+        - "mongo-mgo"
+        - "api-tests (sha256, mongo44)"
+        - "api-tests (sha256, postgres15)"
+        - "api-tests (murmur64, mongo44)"
+        - "api-tests (murmur64, postgres15)"        
       branches:
         master:
           reviewcount: 1
@@ -215,7 +237,13 @@ policy:
       convos: false
       sourcebranch: master
       buildenv: 1.19-bullseye
-      tests: ["1.19-bullseye","Go 1.19 tests"]
+      tests: 
+        - "1.19-bullseye"
+        - "Go 1.19 tests"
+        - "api-tests (sha256, mongo44)"
+        - "api-tests (sha256, postgres15)"
+        - "api-tests (murmur64, mongo44)"
+        - "api-tests (murmur64, postgres15)"        
       branches:
         master:
           reviewcount: 1         
