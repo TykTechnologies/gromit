@@ -73,13 +73,13 @@ policy:
           # The build environment used for this repo. Right now, this value
           # is used for selecting the appropriate golang-cross image
           # used for building the binary, packages and docker images.
-          buildenv: 1.21-bookworm
+          buildenv: 1.21-bullseye
           baseimage: bookworm-slim
           reviewcount: 1
           # Workflows that need to pass to merge PRs
           tests:
             - "Go 1.21.x Redis 5"
-            - "1.21-bookworm"
+            - "1.21-bullseye"
         release-4-lts:
           tests:
             - "Go 1.15 Redis 6"
