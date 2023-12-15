@@ -121,7 +121,6 @@ policy:
       reviewcount: 0
       tests:
         - "1.21-bullseye"
-        - "test (1.21.x, ubuntu-latest, amd64, 15.x)"
         - "postgres"
         - "sqlite"
         - "mongo-mgo"
