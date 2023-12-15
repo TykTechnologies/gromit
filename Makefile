@@ -24,7 +24,7 @@ clean:
 	rm -rf $(REPOS)
 	rm -fv gromit
 
-sync: gromit clean
+sync: clean gromit
 	@$(foreach r,$(REPOS), GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit policy sync $(r);)
 
 .PHONY: clean update-test-cases test
