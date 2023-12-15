@@ -80,7 +80,7 @@
           else
                echo "::error title=API tests {{`${{ matrix.db }} ${{ matrix.conf }}`}}::Test execution failed"
                cat tests.out >> $GITHUB_STEP_SUMMARY
-               docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env logs tyk tyk-analytics
+               docker logs tyk tyk-analytics
                exit 1
           fi
 
