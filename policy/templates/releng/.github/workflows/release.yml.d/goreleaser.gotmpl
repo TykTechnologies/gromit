@@ -11,7 +11,7 @@
       matrix:
         golang_cross:
           - {{ .Branchvals.Buildenv }}
-  {{- if has "el7"  .Branchvals.Features }}
+  {{- if has "el7" .Branchvals.Features }}
           {{ if eq .Branch "release-5-lts" -}}
           - 1.16-el7
           {{ else if eq .Branch "release-4-lts" -}}
@@ -22,7 +22,7 @@
   {{- end }} {{/* el7 */}}
         include:
   {{- if has "el7" .Branchvals.Features }}
-          - golang_cross: {{ if eq .Branch "release-5-lts"}}1.16-el7{{ else if eq .Branch "release-4-lts" }}1.15-el7{{ else if eq .Branch "master" }}1.19-bullseye-pgo{{ end }}
+          - golang_cross: {{ if eq .Branch "release-5-lts"}}1.16-el7{{ else if eq .Branch "release-4-lts" }}1.15-el7{{ else if eq .Branch "master" }}{{ .Branchvals.Buildenv }}-pgo{{ end }}
             goreleaser: 'ci/goreleaser/goreleaser-el7.yml'
             rpmvers: 'el/7 amazon/2'
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie'
@@ -142,13 +142,13 @@
 
       - uses: aws-actions/amazon-ecr-login@v2
         id: ecr
-        if: {{`${{ matrix.golang_cross == '1.19-bullseye' }}`}}
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         with:
           mask-password: 'true'
 
       - name: Docker metadata for CI
         id: metadata
-        if: {{`${{ matrix.golang_cross == '1.19-bullseye' }}`}}
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         uses: docker/metadata-action@v5
         with:
           images: {{`${{ steps.ecr.outputs.registry }}`}}/{{ .Name }}
@@ -162,7 +162,7 @@
             type=semver,pattern=v{{`{{version}}`}},prefix=v
 
       - name: CI push
-        if: {{`${{ matrix.golang_cross == '1.19-bullseye' }}`}}
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
         shell: bash
         env:
           t: {{`${{ steps.metadata.outputs.tags }}`}}
@@ -194,4 +194,4 @@
           path: |
             dist/*.rpm
             !dist/*PAYG*.rpm
-{{- end }}{{/* End of definition */}}
+{{ end -}}{{/* End of definition */}}

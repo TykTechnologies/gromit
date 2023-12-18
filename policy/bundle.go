@@ -51,8 +51,9 @@ func getSubTemplates(subfs fs.FS, root string) ([]string, error) {
 // Add adds the path and corresponding template into the templateNode tree
 // This code due to ChatGPT
 func (b *Bundle) Add(path string, template *template.Template) {
-	// Split the path into its components
-	components := strings.Split(path, string(os.PathSeparator))
+	// Split the path into its components and drop leading template/<bundle>
+	components := strings.Split(path, string(os.PathSeparator))[2:]
+	path = filepath.Join(components...)
 
 	// Find the parent node
 	parent := b.tree
