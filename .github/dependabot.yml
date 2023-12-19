@@ -4,7 +4,16 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - workflows/.+.yml
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      minor:
+        update-types:
+          - "minor"
+          - "patch"
