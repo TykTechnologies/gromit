@@ -6,10 +6,10 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/ProtonMail/go-crypto v0.0.0-20230923063757-afb1ddc0824c
 	github.com/aws/aws-sdk-go-v2 v1.24.0
-	github.com/aws/aws-sdk-go-v2/config v1.18.37
+	github.com/aws/aws-sdk-go-v2/config v1.26.1
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.25.5
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/go-git/go-git/v5 v5.10.1
+	github.com/go-git/go-git/v5 v5.11.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/go-cmdtest v0.4.1-0.20220921163831-55ab3332a786
 	github.com/google/go-github/v47 v47.1.0
@@ -18,10 +18,10 @@ require (
 	github.com/rs/zerolog v1.31.0
 	github.com/shurcooL/githubv4 v0.0.0-20221021030919-a134b1472cc7
 	github.com/spf13/cobra v1.8.0
-	github.com/spf13/viper v1.18.1
+	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	github.com/waigani/diffparser v0.0.0-20190828052634-7391f219313d
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.17.0
 	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611
 	golang.org/x/oauth2 v0.15.0
 	golang.org/x/sync v0.5.0
@@ -32,15 +32,16 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.13.35 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.11 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.16.12 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.10 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.9 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.42 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.35 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.13.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.15.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.21.5 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.7.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.9 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.18.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.26.5 // indirect
 	github.com/aws/smithy-go v1.19.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudflare/circl v1.3.6 // indirect
