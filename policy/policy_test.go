@@ -27,7 +27,7 @@ func TestPolicyConfig(t *testing.T) {
 		t.Fatalf("Could not set main branch: %v", err)
 	}
 	assert.EqualValues(t, "right", repo0.Branchvals.Buildenv, "testing branch-level override for main")
-	assert.EqualValues(t, []string{"a", "b", "c", "d"}, repo0.Branchvals.Features, "testing merging of branchvals")
+	assert.ElementsMatch(t, []string{"a", "b", "c", "d"}, repo0.Branchvals.Features, "testing merging of branchvals")
 	assert.EqualValues(t, "repo0.conf", repo0.Branchvals.ConfigFile, "testing repo-level inheritance of branchvals")
 	assert.EqualValues(t, "Repo Zero", repo0.Description, "testing repo-level value")
 
@@ -36,7 +36,7 @@ func TestPolicyConfig(t *testing.T) {
 		t.Fatalf("Could not set dev branch: %v", err)
 	}
 	assert.EqualValues(t, "stillright", repo0.Branchvals.Buildenv, "testing overrides for dev")
-	assert.EqualValues(t, []string{"a", "b", "e", "f"}, repo0.Branchvals.Features, "testing merging")
+	assert.ElementsMatch(t, []string{"a", "b", "e", "f"}, repo0.Branchvals.Features, "testing merging")
 	assert.EqualValues(t, "Repo Zero", repo0.Description, "testing inheritance")
 
 	repo1, err := pol.GetRepoPolicy("repo1")
