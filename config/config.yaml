@@ -4,14 +4,27 @@ policy:
   # `policy` is the root object for the policy and bundle commands. Any
   # parent policy options provided here can be overridden by repo
   # specific/ branch specific options.
-  # features act as flags whose presence/absence can be used to
-  # render a common set of features across branch(es)
-  # For eg: there are some branches that support el/7, and some that doesn't - to
-  # render el/7 support on these branches, add  `el7` as a feature of these
-  # branches and write the template conditions accordingly to render the templates
-  # with el7 support based on the presence of this flag
+
+  # features act as flags whose presence/absence can be used to render
+  # a common set of features across branch(es) For eg: there are some
+  # branches that support el/7, and some that doesn't - to render el/7
+  # support on these branches, add `el7` as a feature of these
+  # branches and write the template conditions accordingly to render
+  # the templates with el7 support based on the presence of this flag
   features:
     - releng
+  # deletedfiles are files that should not exist, usually the
+  # detritutus of failed experiments or featured than have been
+  # superceded, they will be removed if policy sync encounters them
+  deletedfiles:
+    - .github/workflows/del-env.yml
+    - .github/workflows/sync-automation.yml
+    - bin/dist_push.sh
+    - bin/dist_build.sh
+    - bin/integration_build.sh
+    - ci/Dockerfile.slim
+    - ci/aws
+    - ci/image
   # baseimage what the container images are based on. It needs to be a
   # debian compatible distro as the Dockerfile assumes apt-get
   baseimage: debian:bullseye-slim

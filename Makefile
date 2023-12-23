@@ -2,12 +2,13 @@ SHELL := bash
 VERSION := $(shell git describe --tags)
 COMMIT := $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
+SRC := $(shell find cmd confgen config orgs policy -regextype egrep -regex '.*(go|(go)?tmpl|ya?ml)')
 
 REPOS ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal
 GITHUB_TOKEN ?= $(shell pass me/github)
 
-gromit: confgen/templates/* policy/templates/* policy/prs/*
-	! ls **/#*#
+
+gromit: *.go $(SRC)
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
 
