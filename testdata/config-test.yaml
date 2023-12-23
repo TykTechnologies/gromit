@@ -1,32 +1,41 @@
 policy:
-  features:
-    - a
-  builenv: wrong
-  repos:
-    repo0:
-      description: >-
-        Repo Zero
-      buildenv: stillwrong
-      configfile: repo0.conf
-      features:
-        - b
-      branches:
-        main:
-          buildenv: right
-          features:
-            - c
-            - d
-        dev:
-          buildenv: stillright
-          features:
-            - e
-            - f
-    repo1:
-      description: >-
-        Repo One
-      buildenv: wrong
-      branches:
-        main:
-          buildenv: right
-          features:
-            - e
+  grp0:
+    features:
+      - a
+    builenv: wrong
+    repos:
+      repo0:
+        description: >-
+          Repo Zero
+        buildenv: stillwrong
+        configfile: repo0.conf
+        features:
+          - b
+        branches:
+          main:
+            buildenv: right
+            features:
+              - c
+              - d
+          dev:
+            buildenv: stillright
+            features:
+              - e
+              - f
+      repo1:
+        description: >-
+          Repo One
+        buildenv: wrong
+        branches:
+          main:
+            buildenv: right
+            features:
+              - e
+  grp1:
+    features:
+      - a
+    builenv: maybe
+    repos:
+      repo1:
+        description: >-
+          Repo One again
