@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"time"
 
+	"os"
 	"bytes"
 
 	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
+	"strings"
+	"path/filepath"
 )
 
 // Policies models the config file structure. Each element here _has_
@@ -36,6 +39,7 @@ type Policies struct {
 	VersionPackage string
 	UpgradeFromVer string
 	Features       []string
+	DeletedFiles   []string
 	Branches       map[string]branchVals `copier:"-"`
 	Repos          map[string]Policies   `copier:"-"`
 }
@@ -56,6 +60,7 @@ type branchVals struct {
 	Tests          []string
 	SourceBranch   string
 	Features       []string
+	DeletedFiles   []string
 }
 
 // RepoPolicy is used to render templates. It provides an abstraction
@@ -161,10 +166,10 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 		if err != nil {
 			return rp, err
 		}
-		// add features from top-level and repo level
-		rbv.Features = append(p.Features, r.Features...)
-		// add features from branch
-		rbv.Features = append(rbv.Features, bbv.Features...)
+		// attributes that are unions
+		rbv.Features = newSetFromSlices(p.Features, r.Features, bbv.Features).Members()
+		rbv.DeletedFiles = newSetFromSlices(p.DeletedFiles, r.DeletedFiles, bbv.DeletedFiles).Members()
+
 		log.Trace().Interface("bv", rbv).Str("branch", b).Msg("computed")
 		allBranches[b] = rbv
 	}
@@ -192,6 +197,14 @@ func (rp *RepoPolicy) ProcessBranch(opDir, branch, msg string, repo *GitRepo) (s
 	log.Info().Strs("files", files).Msg("Rendered files")
 	if err != nil {
 		return "", fmt.Errorf("bundle gen %v: %v", rp.Branchvals.Features, err)
+	}
+	if ! strings.HasPrefix(opDir, "-") {
+		for _, f := range rp.Branchvals.DeletedFiles {
+			err := os.RemoveAll(filepath.Join(opDir, f))
+			if err != nil && ! os.IsNotExist(err) {
+				log.Warn().Err(err).Msgf("deleting deprecated file: %s", f)
+			}
+		}
 	}
 	dfs, err := NonTrivialDiff(opDir, false)
 	if err != nil {
