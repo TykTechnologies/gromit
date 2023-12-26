@@ -4,15 +4,28 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
+	"os"
+	"errors"
+	"fmt"
 )
+
+const pk = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA13oqkgO3RaYCMUxskU72
+S5iBxTsc/KDNgcpoV3nujJuxRHC5jj3+bGaNMfpzMFCdzmtIjdkBnefLiCnqeGlT
+CZCK627P1JT9ZRR9R6DGBk5Swr2ZXs0TefIR3HDJmtzBBGj63t9j6VTBYS7fnn2V
+3MQG66cszXr6qPUpaN6EK61oGGs4517Ql1BzxGPdC8GJpr9teqgSLuFeeJwyqBqe
+CxXxNjZ6OMjWqU2IT+lgUS97UbF1ep8iZJUdvwOmFBoWs6cY9SoTdzlzB4q90Kqs
+tapRIa8HM7WWnwmI+i9uGl1QOmZfshOovOgzIZSJh1K43cdFSxgBvpO5ENyLeKai
+ZwIDAQAB
+-----END PUBLIC KEY-----
+`
 
 func TestParseKey(t *testing.T) {
 	cases := []struct {
@@ -36,7 +49,7 @@ func TestParseKey(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			botResp, err := ioutil.ReadFile(tc.botResponse)
+			botResp, err := os.ReadFile(tc.botResponse)
 			if err != nil {
 				t.Fatalf("Could not open file: %s\n", tc.botResponse)
 			}
@@ -44,8 +57,13 @@ func TestParseKey(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Could not get key: %s\n", botResp)
 			}
-			token, err := jwt.Parse(string(lkey), nil)
-			if err.(*jwt.ValidationError).Errors&jwt.ValidationErrorMalformed != 0 {
+			token, err := jwt.Parse(string(lkey), func(token *jwt.Token) (interface{}, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+					return nil, fmt.Errorf("Expected token algorithm '%v' but got '%v'", jwt.SigningMethodRS256.Alg(), token.Method)
+				}
+				return jwt.ParseRSAPublicKeyFromPEM([]byte(pk))
+			})
+			if err != nil && !errors.Is(err, jwt.ErrTokenExpired) {
 				t.Fatalf("Malformed license key: %s %v\n", lkey, err)
 			}
 			if claims, ok := token.Claims.(jwt.MapClaims); ok {
@@ -83,7 +101,7 @@ func TestFetch(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(T *testing.T) {
-			response, err := ioutil.ReadFile(tc.botResponse)
+			response, err := os.ReadFile(tc.botResponse)
 			if err != nil {
 				t.Fatalf("Could not find mock response fixture %s", tc.botResponse)
 			}
