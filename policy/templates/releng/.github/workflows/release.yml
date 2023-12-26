@@ -88,7 +88,7 @@ jobs:
           # Defaults for the matrix
           conf=("sha256" "murmur64")
           db=("mongo44" "postgres15")
-          {{ /* FIXME: get dh repo names from config */ -}}
+          {{/* FIXME: get dh repo names from config */ -}}
           pump=("tykio/tyk-pump-docker-pub:v1.8" "\${ECR}/tyk-pump:master")
           sink=("tykio/tyk-mdcb-docker:v2.4" "\${ECR}/tyk-sink:master")
           if [[ $PR ]]; then
