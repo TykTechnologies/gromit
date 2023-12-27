@@ -6,23 +6,21 @@ import (
 
 	"os"
 	"bytes"
+	"path/filepath"
+	"strings"
 
 	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
-	"strings"
-	"path/filepath"
 )
 
-// Policies models the config file structure. Each element here _has_
-// to match the name of the key used in the config yaml. There are
-// three levels at which a particular value can be set: top-level,
-// repo, branch. The top level is applicable for all the repos. The
-// recursive map[string]Policies element embeds this type inside
+// repoConfig contains all the attributes of a repo. Each element here
+// _has_ to match the name of the key used in the config yaml. The
+// recursive map[string]repoConfig element embeds this type inside
 // itself, allowing each repo to override any of the values at upper
 // levels
-type Policies struct {
+type repoConfig struct {
 	Description    string
 	PCRepo         string
 	DHRepo         string
@@ -41,8 +39,13 @@ type Policies struct {
 	Features       []string
 	DeletedFiles   []string
 	Branches       map[string]branchVals `copier:"-"`
-	Repos          map[string]Policies   `copier:"-"`
+	Repos          map[string]repoConfig `copier:"-"`
 }
+
+// Policies models the config file structure. There are three levels
+// at which a particular value can be set: group-level, repo, branch.
+// The group level is applicable for all the repos in that group. 
+type Policies map[string]repoConfig
 
 // branchVals contains only the parameters that can be overriden at
 // the branch level. Some elements are overriden, some elements are
@@ -128,13 +131,23 @@ func (rp *RepoPolicy) GetAllBranches() []string {
 }
 
 // GetRepoPolicy will fetch the RepoPolicy for the supplied repo with
-// all overrides processed. This is the constructor for RepoPolicy.
+// all overrides (group, repo, branch levels) processed. This is the
+// constructor for RepoPolicy.
 func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
-	r, found := p.Repos[repo]
-	if !found {
-		return RepoPolicy{}, fmt.Errorf("repo %s unknown among %v", repo, p.Repos)
+	var group, r repoConfig
+	var found bool
+	for grpName, grp := range *p {
+		log.Trace().Msgf("looking in group %s", grpName)
+		r, found = grp.Repos[repo]
+		if found {
+			log.Debug().Msgf("found %s in group %s", repo, grpName)
+			group = grp
+			break
+		}
 	}
-
+	if !found {
+		return RepoPolicy{}, fmt.Errorf("repo %s unknown", repo)
+	}
 	var rp RepoPolicy
 	rp.Name = repo
 	// Copy policy level elements
@@ -167,8 +180,8 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 			return rp, err
 		}
 		// attributes that are unions
-		rbv.Features = newSetFromSlices(p.Features, r.Features, bbv.Features).Members()
-		rbv.DeletedFiles = newSetFromSlices(p.DeletedFiles, r.DeletedFiles, bbv.DeletedFiles).Members()
+		rbv.Features = newSetFromSlices(group.Features, r.Features, bbv.Features).Members()
+		rbv.DeletedFiles = newSetFromSlices(group.DeletedFiles, r.DeletedFiles, bbv.DeletedFiles).Members()
 
 		log.Trace().Interface("bv", rbv).Str("branch", b).Msg("computed")
 		allBranches[b] = rbv
@@ -198,10 +211,10 @@ func (rp *RepoPolicy) ProcessBranch(opDir, branch, msg string, repo *GitRepo) (s
 	if err != nil {
 		return "", fmt.Errorf("bundle gen %v: %v", rp.Branchvals.Features, err)
 	}
-	if ! strings.HasPrefix(opDir, "-") {
+	if !strings.HasPrefix(opDir, "-") {
 		for _, f := range rp.Branchvals.DeletedFiles {
 			err := os.RemoveAll(filepath.Join(opDir, f))
-			if err != nil && ! os.IsNotExist(err) {
+			if err != nil && !os.IsNotExist(err) {
 				log.Warn().Err(err).Msgf("deleting deprecated file: %s", f)
 			}
 		}
@@ -238,13 +251,15 @@ func (rp *RepoPolicy) ProcessBranch(opDir, branch, msg string, repo *GitRepo) (s
 // Stringer implementation for Policies
 func (p Policies) String() string {
 	w := new(bytes.Buffer)
-	for repo, crPol := range p.Repos {
-		fmt.Fprintf(w, "%s: package %s, image %s", repo, crPol.PackageName, crPol.DHRepo)
-		rp, err := p.GetRepoPolicy(repo)
-		if err != nil {
-			log.Fatal().Str("repo", repo).Err(err).Msg("failed to get policy, this should not happen")
+	for _, grp := range p {
+		for repo, crPol := range grp.Repos {
+			fmt.Fprintf(w, "%s: package %s, image %s", repo, crPol.PackageName, crPol.DHRepo)
+			rp, err := p.GetRepoPolicy(repo)
+			if err != nil {
+				log.Fatal().Str("repo", repo).Err(err).Msg("failed to get policy, this should not happen")
+			}
+			fmt.Fprintf(w, " %s\n", rp)
 		}
-		fmt.Fprintf(w, " %s\n", rp)
 	}
 	return w.String()
 }
