@@ -45,12 +45,13 @@
           echo "ECR=${ECR}
           $VERSIONS
           {{ if ne .Name "tyk-pump" }}tyk_pump_image={{`${{matrix.pump}}`}} {{ end }}
-          {{ if ne .Name "tyk-sink" }}tyk_sink_image={{`${{matrix.sink}}`}} {{ end }}
+          {{- if ne .Name "tyk-sink" }}tyk_sink_image={{`${{matrix.sink}}`}} {{ end }}
           # base dir for config files
           confs_dir=./pro-ha
           # pick database to use
           env_file=local-{{`${{ matrix.db }}`}}.env
           " > versions.env
+          printf '::group::versions\n%s\::endgroup::' "$(cat versions.env)"
           # Add Tyk component config variations to $env_file
           cat confs/{{`${{ matrix.conf }}`}}.env >> local-{{`${{ matrix.db }}`}}.env
           # bring up env, the project name is important
