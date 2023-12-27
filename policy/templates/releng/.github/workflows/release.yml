@@ -15,10 +15,13 @@ on:
   schedule:
     - cron: "0 0 * * 1"   
   pull_request:
+    branches:
+      - master
+      - 'release-*-lts'
   push:
     branches:
       - master
-      - release-**
+      - 'release-*-lts'
     tags:
       - 'v*'
 
