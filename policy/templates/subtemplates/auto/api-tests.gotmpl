@@ -51,7 +51,7 @@
           # pick database to use
           env_file=local-{{`${{ matrix.db }}`}}.env
           " > versions.env
-          printf '::group::versions\n%s\::endgroup::' "$(cat versions.env)"
+          printf '::group::versions\n%s\n::endgroup::' "$(cat versions.env)"
           # Add Tyk component config variations to $env_file
           cat confs/{{`${{ matrix.conf }}`}}.env >> local-{{`${{ matrix.db }}`}}.env
           # bring up env, the project name is important
