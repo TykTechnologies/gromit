@@ -12,13 +12,10 @@ name: Release
 
 on:
   pull_request:
-    branches:
-      - master
-      - 'release-*-lts'
   push:
     branches:
       - master
-      - 'release-*-lts'
+      - release-**
     tags:
       - 'v*'
 
