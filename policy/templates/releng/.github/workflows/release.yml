@@ -42,11 +42,9 @@ jobs:
         env:
           GW_OR_DASH: {{`${{ (endsWith(github.repository, 'tyk') || endsWith(github.repository, 'tyk-analytics')) && 'yes' }}`}}
           BASE_REF: {{`${{ startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref }}`}}
-          TAGS: {{`${{ needs.goreleaser.outputs.tags }}`}}
           # Cover pull_request_target too
           PR: {{`${{startsWith(github.event_name, 'pull_request') && 'yes' }}`}}
-          LTS_PR: {{`${{(startsWith(github.event_name, 'pull_request') && endsWith(github.base_ref, '-lts')) && 'yes' }}`}}
-          TAG: {{`${{startsWith(github.ref, 'refs/tags') && 'yes' }}`}}
+          TAGS: {{`${{ needs.goreleaser.outputs.tags }}`}}
         shell: bash
         run: |
           tags=($TAGS)
