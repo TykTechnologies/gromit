@@ -28,4 +28,7 @@ clean:
 sync: clean gromit
 	@$(foreach r,$(REPOS), GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit policy sync $(r);)
 
-.PHONY: clean update-test-cases test
+loc: clean
+	gocloc --skip-duplicated --not-match-d=\.terraform --output-type=json ~gromit ~ci | jq -r '.languages | map([.name, .code]) | transpose[] | @csv'
+
+.PHONY: clean update-test-cases test loc

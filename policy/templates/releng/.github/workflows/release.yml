@@ -45,9 +45,13 @@ jobs:
         shell: bash
         run: |
           tags=($TAGS)
+          short_bref=${BASE_REF##*/}
           gd_tag="master"
-          if [[ $GW_OR_DASH=='yes' && $PR=='yes' ]]; then
-            gd_tag=${BASE_REF##*/}
+          if [[ $GW_OR_DASH == 'yes' && $PR == 'yes' ]]; then
+              # The trailing 0 has to be added to when other minor versions are declared LTS
+              if [[ $short_bref =~ ^release\-([0-9]+)\.0 ]]; then
+                  gd_tag="release-${BASH_REMATCH[1]}-lts"
+              fi
           fi
           # Multi line output parameter
           echo "versions<<EOF
