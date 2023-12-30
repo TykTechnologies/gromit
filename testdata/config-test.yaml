@@ -36,6 +36,6 @@ policy:
       - a
     builenv: maybe
     repos:
-      repo1:
+      repo3:
         description: >-
-          Repo One again
+          Repo Three

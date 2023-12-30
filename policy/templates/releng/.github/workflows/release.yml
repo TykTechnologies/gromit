@@ -32,89 +32,25 @@ jobs:
     needs: goreleaser
     runs-on: ubuntu-latest
     outputs:
-      matrix: {{`${{ steps.scope.outputs.matrix }}`}}
-      gd_tag: {{`${{ steps.versions.outputs.gd_tag }}`}}
-      versions: {{`${{ steps.versions.outputs.versions }}`}}
+      conf: {{`${{ steps.params.outputs.conf }}`}}
+      db: {{`${{ steps.params.outputs.db }}`}}
+      pump: {{`${{ steps.params.outputs.pump }}`}}
+      sink: {{`${{ steps.params.outputs.sink }}`}}
+      gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
+      versions: {{`${{ steps.params.outputs.versions }}`}}
 
     steps:
-      - name: set version
-        id: versions
+      - name: set params
+        id: params
         env:
-          GW_OR_DASH: {{`${{ (endsWith(github.repository, 'tyk') || endsWith(github.repository, 'tyk-analytics')) && 'yes' }}`}}
-          BASE_REF: {{`${{ startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref }}`}}
+          REPO: {{`${{ github.repository }}`}}
           # Cover pull_request_target too
-          PR: {{`${{startsWith(github.event_name, 'pull_request') && 'yes' }}`}}
-          TAGS: {{`${{ needs.goreleaser.outputs.tags }}`}}
-        shell: bash
-        run: |
-          tags=($TAGS)
-          short_bref=${BASE_REF##*/}
-          gd_tag="master"
-          if [[ $GW_OR_DASH == 'yes' && $PR == 'yes' ]]; then
-              # The trailing 0 has to be added to when other minor versions are declared LTS
-              if [[ $short_bref =~ ^release\-([0-9]+)\.0 ]]; then
-                  gd_tag="release-${BASH_REMATCH[1]}-lts"
-              fi
-          fi
-          # Multi line output parameter
-          echo "versions<<EOF
-          tyk_image=\${ECR}/tyk:${gd_tag}
-          tyk_analytics_image=\${ECR}/tyk-analytics:${gd_tag}
-          tyk_pump_image=\${ECR}/tyk-pump:master
-          tyk_sink_image=\${ECR}/tyk-sink:master
-          # override default above with just built tag
-          {{ .Name | replace "-" "_" }}_image=${tags[0]}
-          # alfa and beta have to come after the override
-          tyk_alfa_image=\${tyk_image}
-          tyk_beta_image=\${tyk_image}
-          EOF" | tee -a "$GITHUB_OUTPUT"
-          echo "gd_tag=${gd_tag}" | tee -a "$GITHUB_OUTPUT"
-
-      - name: set scope
-        id: scope
-        env:
-          GW_OR_DASH: {{`(endsWith(github.repository, 'tyk') || endsWith(github.repository, 'tyk-analytics')) && 'yes'`}}
           BASE_REF: {{`startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref`}}
           TAGS: {{`${{ needs.goreleaser.outputs.tags }}`}}
-          # Cover pull_request_target too
-          PR: {{`${{startsWith(github.event_name, 'pull_request') && 'yes' }}`}}
-          LTS_PR: {{`${{(startsWith(github.event_name, 'pull_request') && endsWith(github.base_ref, '-lts')) && 'yes' }}`}}
-          TAG: {{`${{startsWith(github.ref, 'refs/tags') && 'yes' }}`}}
-        shell: bash
-        run: |
-          # FIXME: json_array() breaks when elements have spaces
-          json_array() {
-              for e in $@; do str+="\"$e\", "; done
-              echo ${str%, }
-          }
-          # Defaults for the matrix
-          conf=("sha256" "murmur64")
-          db=("mongo44" "postgres15")
-          {{/* FIXME: get dh repo names from config */ -}}
-          pump=("tykio/tyk-pump-docker-pub:v1.8" "\${ECR}/tyk-pump:master")
-          sink=("tykio/tyk-mdcb-docker:v2.4" "\${ECR}/tyk-sink:master")
-          if [[ $PR ]]; then
-              conf=("sha256")
-              pump=("\${ECR}/tyk-pump:master")
-              sink=("\${ECR}/tyk-sink:master")
-          fi
-          matrix='{
-            "conf": [ %s ],
-            "db": [ %s ],
-            {{ if ne .Name "tyk-pump" -}}
-            "pump": [ %s ],
-            {{ end -}} {{/* pump array not needed when the repo is pump */}}
-            {{- if ne .Name "tyk-sink" -}}
-            "sink": [ %s ],
-            {{- end -}} {{/* sink */}}
-            "include": [
-               {"db": "postgres15", "markers": "and not sql"}
-            ]
-          }'
-          printf "matrix<<EOF\n${matrix}\nEOF" \
-                   "$(json_array ${conf[@]})" \
-                   "$(json_array ${db[@]})" \
-                   {{ if ne .Name "tyk-pump" }} "$(json_array ${pump[@]})" {{ end }} {{ if ne .Name "tyk-sink" }} "$(json_array ${sink[@]})" {{ end }} | tee -a "$GITHUB_OUTPUT"
+          IS_PR: {{`${{startsWith(github.event_name, 'pull_request') && 'yes' }}`}}
+          IS_LTSPR: {{`${{(startsWith(github.event_name, 'pull_request') && endsWith(github.base_ref, '-lts')) && 'yes' }}`}}
+          IS_TAG: {{`${{startsWith(github.ref, 'refs/tags') && 'yes' }}`}}
+        run: gromit policy --debug | tee -a "$GITHUB_OUTPUT"
 
 
   api-tests:
@@ -125,7 +61,14 @@ jobs:
       contents: read    # This is required for actions/checkout
     strategy:
       fail-fast: false
-      matrix: {{`${{ fromJson(needs.test-controller.outputs.matrix) }}`}}
+      matrix:
+        conf: {{`${{ fromJson(needs.test-controller.outputs.conf) }}`}}
+        db: {{`${{ fromJson(needs.test-controller.outputs.db) }}`}}
+        {{ if ne .Name "tyk-pump" -}} "pump": {{`${{ fromJson(needs.test-controller.outputs.pump) }}`}}, {{ end -}} {{/* pump array not needed when the repo is pump */}}
+        {{ if ne .Name "tyk-sink" -}} "sink": {{`${{ fromJson(needs.test-controller.outputs.sink) }}`}}, {{ end -}}
+        include:
+          - db: postgres15
+            markers: "and not sql"
 {{- template "api-tests" . }}
 {{ end -}} {{/* if repo covered by api-tests */}}
 
