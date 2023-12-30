@@ -35,3 +35,4 @@ dist/
 errored.tfstate
 .terraform.lock*
 gpac/**
+__pycache__

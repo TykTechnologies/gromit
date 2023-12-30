@@ -25,7 +25,8 @@ import (
 )
 
 var (
-	features []string
+	features       []string
+	configPolicies policy.Policies
 )
 
 var bundleCmd = &cobra.Command{

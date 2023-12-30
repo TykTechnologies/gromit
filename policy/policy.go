@@ -44,6 +44,7 @@ type repoConfig struct {
 // Policies models the config file structure. There are three levels
 // at which a particular value can be set: group-level, repo, branch.
 // The group level is applicable for all the repos in that group.
+// Repeating the same repo in multiple groups is UB
 type Policies map[string]repoConfig
 
 // branchVals contains only the parameters that can be overriden at
