@@ -84,4 +84,6 @@ func init() {
 	bundleCmd.AddCommand(genSubCmd)
 
 	rootCmd.AddCommand(bundleCmd)
+	// JSON Schema validators
+	policy.LoadValidators()
 }

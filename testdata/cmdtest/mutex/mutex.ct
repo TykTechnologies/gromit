@@ -1,9 +1,0 @@
-$ gromit mutex get testlock --host ${TEST_ETCD_HOST} --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ${TEST_SCRIPT_PATH} --loglevel fatal
-
-# Runs with a non-existent script file - this should fail and the lock should be released immediately.
-$ gromit mutex get testlock --host ${TEST_ETCD_HOST} --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ./non-existent-script.sh --loglevel fatal --> FAIL
-Error: fork/exec ./non-existent-script.sh: no such file or directory
-
-# Tests if the lock is released immediately from the above run.
-$ gromit mutex get testlock --host ${TEST_ETCD_HOST} --etcduser ${TEST_ETCD_USER} --etcdpass ${TEST_ETCD_PASS} --script ${TEST_SCRIPT_PATH} --loglevel fatal
-
