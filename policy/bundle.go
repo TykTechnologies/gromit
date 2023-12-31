@@ -23,6 +23,7 @@ var templates embed.FS
 type bundleNode struct {
 	Name     string
 	path     string
+	vdr      validator
 	template *template.Template
 	Children []*bundleNode
 }
@@ -54,6 +55,7 @@ func (b *Bundle) Add(path string, template *template.Template) {
 	// Split the path into its components and drop leading template/<bundle>
 	components := strings.Split(path, string(os.PathSeparator))[2:]
 	path = filepath.Join(components...)
+	vdr := getValidator(components)
 
 	// Find the parent node
 	parent := b.tree
@@ -68,12 +70,13 @@ func (b *Bundle) Add(path string, template *template.Template) {
 			}
 		}
 		if !found {
-			newNode := &bundleNode{Name: c, path: path, template: template}
+			newNode := &bundleNode{Name: c, path: path, template: template, vdr: vdr}
 			parent.Children = append(parent.Children, newNode)
 			parent = newNode
 		}
 	}
-	parent.Children = append(parent.Children, &bundleNode{Name: components[len(components)-1], path: path, template: template})
+	newNode := &bundleNode{Name: components[len(components)-1], path: path, template: template, vdr: vdr}
+	parent.Children = append(parent.Children, newNode)
 }
 
 // Render will walk a tree given in n, depth first, rendering leaves
@@ -116,6 +119,10 @@ func (b *Bundle) Render(bv any, opDir string, n *bundleNode) ([]string, error) {
 		err := n.template.Execute(op, bv)
 		if err != nil {
 			return nil, fmt.Errorf("rendering to %s: %v", opFile, err)
+		}
+		err = validateFile(opFile, n.vdr)
+		if err != nil {
+			return nil, fmt.Errorf("%s failed validation: %v", opFile, err)
 		}
 		renderedFiles = append(renderedFiles, n.path)
 	}

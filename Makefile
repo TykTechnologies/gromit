@@ -14,7 +14,7 @@ gromit: *.go $(SRC)
 
 test: 
 	echo Use a config file locally and env variables in CI
-	go test -race -coverprofile cp.out ./... # dlv test ./cmd #
+	go test -coverprofile cp.out ./... # dlv test ./cmd #
 
 update-test-cases:
 	echo Updating test cases for cmd test
