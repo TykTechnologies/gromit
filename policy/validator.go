@@ -4,21 +4,18 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"os"
+	"regexp"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
-	"gopkg.in/yaml.v3"
 )
 
 type validator int64
 
 const (
-	GHA validator = iota
+	UNKNOWN_VALIDATOR validator = iota
 	GORELEASER
-	UNKNOWN_VALIDATOR
+	GHA
 )
-
-var schemaMap = make(map[validator]*jsonschema.Schema)
 
 //go:embed schemas/github-workflow.json
 var gha []byte
@@ -26,19 +23,24 @@ var gha []byte
 //go:embed schemas/goreleaser.json
 var gorel []byte
 
-// LoadValidator loads the machinery required for schema validation. Call this once in init.
-func LoadValidators() error {
+type validatorMap map[validator]*jsonschema.Schema
+
+// LoadValidator loads the machinery required for schema validation
+// and formatting.
+func loadValidators() (validatorMap, error) {
+	schemaMap := make(validatorMap)
+
 	c := jsonschema.NewCompiler()
 	if err := c.AddResource("gha.json", bytes.NewReader(gha)); err != nil {
-		return fmt.Errorf("could not load gha schema: %v", err)
+		return schemaMap, fmt.Errorf("could not load gha schema: %v", err)
 	}
 	schemaMap[GHA] = c.MustCompile("gha.json")
-	// if err := c.AddResource("gorel.json", bytes.NewReader(gorel)); err != nil {
-	// 	return fmt.Errorf("could not load gorel schema: %v", err)
-	// }
-	// schemaMap[GORELEASER] = c.MustCompile("gorel.json")
+	if err := c.AddResource("gorel.json", bytes.NewReader(gorel)); err != nil {
+		return schemaMap, fmt.Errorf("could not load gorel schema: %v", err)
+	}
+	schemaMap[GORELEASER] = c.MustCompile("gorel.json")
 
-	return nil
+	return schemaMap, nil
 }
 
 // validator returns a const representing validator that can be
@@ -48,29 +50,9 @@ func getValidator(path []string) validator {
 	if n > 3 && path[n-1] == "workflow" && path[n-2] == ".github" {
 		return GHA
 	}
-	// gr := regexp.MustCompile("goreleaser(-el7)?.yml")
-	// if n > 1 && gr.MatchString(path[n]) {
-	// 	return GORELEASER
-	// }
+	gr := regexp.MustCompile("goreleaser(-el7)?\\.yml")
+	if n > 1 && gr.MatchString(path[n]) {
+		return GORELEASER
+	}
 	return UNKNOWN_VALIDATOR
-}
-
-// validateFile runs the file through know JSON schema validators
-func validateFile(fname string, vdr validator) error {
-	if vdr == UNKNOWN_VALIDATOR {
-		return nil
-	}
-	data, err := os.ReadFile(fname)
-	if err != nil {
-		return err
-	}
-	var y any
-	if err := yaml.Unmarshal(data, &y); err != nil {
-		return err
-	}
-	err = schemaMap[vdr].Validate(y)
-	if err != nil {
-		return err
-	}
-	return nil
 }

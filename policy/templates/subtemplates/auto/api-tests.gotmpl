@@ -41,7 +41,6 @@
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
           VERSIONS: {{`${{ needs.test-controller.outputs.versions}}`}}
         run: |
-          # Start customising the env
           echo "ECR=${ECR}
           $VERSIONS
           {{ if ne .Name "tyk-pump" }}tyk_pump_image={{`${{matrix.pump}}`}} {{ end }}
