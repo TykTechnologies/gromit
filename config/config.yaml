@@ -20,6 +20,7 @@ policy:
     deletedfiles:
       - .github/workflows/del-env.yml
       - .github/workflows/sync-automation.yml
+      - .github/workflows/update-config-docs.yml
       - bin/dist_push.sh
       - bin/dist_build.sh
       - bin/integration_build.sh
