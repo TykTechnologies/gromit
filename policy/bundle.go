@@ -136,6 +136,8 @@ func (b *Bundle) write(buf *bytes.Buffer, opFile string) error {
 		if err != nil {
 			return fmt.Errorf("could not yamlfmt %s: %#v", opFile, err)
 		}
+	} else {
+		op = buf.Bytes()
 	}
 	dir, _ := filepath.Split(opFile)
 	err = os.MkdirAll(dir, 0755)
