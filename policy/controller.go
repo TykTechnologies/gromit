@@ -48,8 +48,8 @@ func (p runParameters) SetVariations(op io.Writer, tv TestVariations) error {
 	// Defaults are fine
 	case "is_lts":
 		tv["conf"] = []string{"sha256"}
-		tv["pump"] = []string{"$ECR/tyk-pump:v1.8"}
-		tv["sink"] = []string{"$ECR/tyk-sink:v2.1"}
+		tv["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8.3"}
+		tv["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4.2"}
 	}
 
 	for _, v := range sortedKeys(tv) {
