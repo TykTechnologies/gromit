@@ -47,7 +47,9 @@ func (p runParameters) SetVariations(op io.Writer, tv TestVariations) error {
 	case "is_tag":
 	// Defaults are fine
 	case "is_lts":
-		return fmt.Errorf("NotImplemented")
+		tv["conf"] = []string{"sha256"}
+		tv["pump"] = []string{"$ECR/tyk-pump:v1.8"}
+		tv["sink"] = []string{"$ECR/tyk-sink:v2.1"}
 	}
 
 	for _, v := range sortedKeys(tv) {
@@ -113,7 +115,7 @@ func NewParams(paramNames ...string) runParameters {
 	params["trigger"] = trigger
 
 	gdTag := "master"
-	ltsBranch := regexp.MustCompile(`^release-(\d+)\.0`).FindStringSubmatch(params["base_ref"])
+	ltsBranch := regexp.MustCompile(`^release-(\d+)-lts`).FindStringSubmatch(params["base_ref"])
 	if (params["repo"] == "tyk" || params["repo"] == "tyk-analytics") && len(ltsBranch) > 0 {
 		gdTag = fmt.Sprintf("release-%s-lts", ltsBranch[1])
 		log.Debug().Msgf("detected LTS branch, set gd_tag to %s", gdTag)
