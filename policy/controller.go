@@ -115,7 +115,7 @@ func NewParams(paramNames ...string) runParameters {
 	params["trigger"] = trigger
 
 	gdTag := "master"
-	ltsBranch := regexp.MustCompile(`^release-(\d+)-lts`).FindStringSubmatch(params["base_ref"])
+	ltsBranch := regexp.MustCompile(`^release-(\d+)(?:\.0(?:\.\d+)?)?(?:-(lts|\d+(?:\.0)?))?$`).FindStringSubmatch(params["base_ref"])
 	if (params["repo"] == "tyk" || params["repo"] == "tyk-analytics") && len(ltsBranch) > 0 {
 		gdTag = fmt.Sprintf("release-%s-lts", ltsBranch[1])
 		log.Debug().Msgf("detected LTS branch, set gd_tag to %s", gdTag)
