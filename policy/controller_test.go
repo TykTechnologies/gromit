@@ -35,6 +35,8 @@ func TestNewParams(t *testing.T) {
 		{"release-5.1.12", "TykTechnologies/tyk-analytics", "master"},
 		{"refs/heads/master", "tyk-analytics", "master"},
 		{"refs/heads/release-4.0.12", "tyk-pump", "master"},
+		{"refs/heads/release-4.0.13", "tyk-automated-tests", "release-4-lts"},
+		{"refs/heads/release-5.1.13", "tyk-automated-tests", "master"},
 	}
 	for _, tc := range gdTagTests {
 		t.Run(fmt.Sprintf("%s/%s", tc.repo, tc.want), func(t *testing.T) {
