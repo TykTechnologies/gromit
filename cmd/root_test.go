@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 )
@@ -30,11 +30,11 @@ func executeMockCmd(args ...string) (*cmdExecution, error) {
 	rootCmd.SetArgs(args)
 	rootCmd.Execute()
 
-	op, err := ioutil.ReadAll(o)
+	op, err := io.ReadAll(o)
 	if err != nil {
 		return &cmdExecution{}, err
 	}
-	eop, err := ioutil.ReadAll(e)
+	eop, err := io.ReadAll(e)
 	if err != nil {
 		return &cmdExecution{}, err
 	}

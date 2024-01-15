@@ -1,17 +1,20 @@
 package policy
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/google/yamlfmt/formatters/basic"
 	"github.com/rs/zerolog/log"
+	"gopkg.in/yaml.v3"
 )
 
 // Files common to all features
@@ -29,8 +32,11 @@ type bundleNode struct {
 
 // Bundle represents a directory tree, instantiated by NewBundle()
 type Bundle struct {
-	Name string
-	tree *bundleNode
+	Name    string
+	tree    *bundleNode
+	vdrMap  validatorMap
+	yamlfmt *basic.BasicFormatter
+	isYaml  *regexp.Regexp
 }
 
 // getSubTemplates returns a list of subtemplate definitions that are available to all templates
@@ -73,7 +79,8 @@ func (b *Bundle) Add(path string, template *template.Template) {
 			parent = newNode
 		}
 	}
-	parent.Children = append(parent.Children, &bundleNode{Name: components[len(components)-1], path: path, template: template})
+	newNode := &bundleNode{Name: components[len(components)-1], path: path, template: template}
+	parent.Children = append(parent.Children, newNode)
 }
 
 // Render will walk a tree given in n, depth first, rendering leaves
@@ -96,30 +103,54 @@ func (b *Bundle) Render(bv any, opDir string, n *bundleNode) ([]string, error) {
 	}
 	if len(n.Children) == 0 {
 		log.Debug().Str("template", n.Name).Msg("rendering")
-		var op io.Writer
-		opFile := filepath.Join(opDir, n.path)
-		if strings.HasPrefix(opFile, "-") {
-			op = io.Writer(os.Stdout)
-		} else {
-			dir, _ := filepath.Split(opFile)
-			err := os.MkdirAll(dir, 0755)
-			if err != nil && !os.IsExist(err) {
-				return nil, fmt.Errorf("mkdirall %s: %v", dir, err)
-			}
-			opf, err := os.Create(opFile)
-			if err != nil {
-				return nil, fmt.Errorf("create %s: %v", opFile, err)
-			}
-			defer opf.Close()
-			op = io.Writer(opf)
+		var buf bytes.Buffer
+		if err := n.template.Execute(&buf, bv); err != nil {
+			return nil, fmt.Errorf("rendering %s: %v", n.Name, err)
 		}
-		err := n.template.Execute(op, bv)
-		if err != nil {
-			return nil, fmt.Errorf("rendering to %s: %v", opFile, err)
+		var opFile = filepath.Join(opDir, n.path)
+		if err := b.write(&buf, opFile); err != nil {
+			return nil, err
 		}
 		renderedFiles = append(renderedFiles, n.path)
 	}
 	return renderedFiles, nil
+}
+
+// writes runs a validator (if it can) and yamlfmt the rendered output
+// before writing it out
+func (b *Bundle) write(buf *bytes.Buffer, opFile string) error {
+	vdr := getValidator(strings.Split(opFile, string(os.PathSeparator)))
+	if vdr != UNKNOWN_VALIDATOR {
+		var y any
+		if err := yaml.Unmarshal(buf.Bytes(), &y); err != nil {
+			return fmt.Errorf("could not unmarshal %s: %v", opFile, err)
+		}
+		if err := b.vdrMap[vdr].Validate(y); err != nil {
+			return fmt.Errorf("%s failed validation: %#v", opFile, err)
+		}
+	}
+	var op []byte
+	var err error
+	if b.isYaml.MatchString(opFile) {
+		op, err = b.yamlfmt.Format(buf.Bytes())
+		if err != nil {
+			return fmt.Errorf("could not yamlfmt %s: %#v", opFile, err)
+		}
+	} else {
+		op = buf.Bytes()
+	}
+	dir, _ := filepath.Split(opFile)
+	err = os.MkdirAll(dir, 0755)
+	if err != nil && !os.IsExist(err) {
+		return fmt.Errorf("mkdirall %s: %v", dir, err)
+	}
+	opf, err := os.Create(opFile)
+	if err != nil {
+		return fmt.Errorf("create %s: %v", opFile, err)
+	}
+	defer opf.Close()
+	_, err = opf.Write(op)
+	return err
 }
 
 // String will provide a human readable bundle listing
@@ -203,11 +234,23 @@ func fsTreeWalk(b *Bundle, tfs fs.FS, root string, subTemps []string) error {
 
 // Returns a bundle by walking templates/<features>
 func NewBundle(features []string) (*Bundle, error) {
-	b := &Bundle{
-		Name: strings.Join(features, "-"),
-		tree: &bundleNode{},
-	}
 	var err error
+	vdrMap, err := loadValidators()
+	if err != nil {
+		log.Warn().Err(err).Msg("loading validators")
+	}
+	config := basic.DefaultConfig()
+	config.ScanFoldedAsLiteral = true
+	b := &Bundle{
+		Name:   strings.Join(features, "-"),
+		tree:   &bundleNode{},
+		vdrMap: vdrMap,
+		yamlfmt: &basic.BasicFormatter{
+			Config:   config,
+			Features: basic.ConfigureFeaturesFromConfig(config),
+		},
+		isYaml: regexp.MustCompile("\\.y(a)?ml$"),
+	}
 	log.Logger = log.With().Strs("features", features).Logger()
 	stList, err := getSubTemplates(templates, filepath.Join("templates", "subtemplates"))
 	if err != nil {

@@ -34,33 +34,23 @@
         working-directory: auto
         id: env_up
         env:
-          t: {{`${{ needs.goreleaser.outputs.tags }}`}}
           pull_policy: 'if_not_present'
-          # default tag to use
-          default_image_tag: {{`${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}}
           GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
+          ECR: {{`${{ steps.ecr.outputs.registry }}`}}
+          VERSIONS: {{`${{ needs.test-controller.outputs.versions}}`}}
         run: |
-          echo CI tags: $t
-          tags=($t)
-          echo First tag: ${tags[0]}
-          # Start customising the env
-          echo "registry={{`${{ steps.ecr.outputs.registry }}`}}
-          tyk_image=\${registry}/tyk:${default_image_tag}
-          tyk_analytics_image=\${registry}/tyk-analytics:${default_image_tag}
-          tyk_sink_image=\${registry}/tyk-sink:${default_image_tag}
-          tyk_pump_image=\${registry}/tyk-pump:${default_image_tag}
-          # override default above with just built tag
-          {{ .Name | replace "-" "_" }}_image=${tags[0]}
-          # alfa and beta have to come after the override
-          tyk_alfa_image=\${tyk_image}
-          tyk_beta_image=\${tyk_image}
+          echo "ECR=${ECR}
+          $VERSIONS
+          {{ if ne .Name "tyk-pump" }}tyk_pump_image={{`${{matrix.pump}}`}} {{ end }}
+          {{- if ne .Name "tyk-sink" }}tyk_sink_image={{`${{matrix.sink}}`}} {{ end }}
           # base dir for config files
           confs_dir=./pro-ha
           # pick database to use
           env_file=local-{{`${{ matrix.db }}`}}.env
           " > versions.env
+          printf '::group::versions\n%s\n::endgroup::' "$(cat versions.env)"
           # Add Tyk component config variations to $env_file
           cat confs/{{`${{ matrix.conf }}`}}.env >> local-{{`${{ matrix.db }}`}}.env
           # bring up env, the project name is important
@@ -74,7 +64,7 @@
         run: |
           echo "### API tests {{`${{ matrix.db }} ${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
-             {{`${{ steps.ecr.outputs.registry }}/tyk-automated-tests:${{ startsWith(github.ref_name, 'release-') && github.ref_name || 'master' }}`}} \
+             {{`${{ steps.ecr.outputs.registry }}/tyk-automated-tests:${{ needs.test-controller.outputs.gd_tag }}`}} \
              pytest -c pytest_ci.ini --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
                echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else

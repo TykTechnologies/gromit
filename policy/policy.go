@@ -1,13 +1,12 @@
 package policy
 
 import (
-	"fmt"
-	"time"
-
-	"os"
 	"bytes"
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
@@ -44,7 +43,8 @@ type repoConfig struct {
 
 // Policies models the config file structure. There are three levels
 // at which a particular value can be set: group-level, repo, branch.
-// The group level is applicable for all the repos in that group. 
+// The group level is applicable for all the repos in that group.
+// Repeating the same repo in multiple groups is UB
 type Policies map[string]repoConfig
 
 // branchVals contains only the parameters that can be overriden at
@@ -135,7 +135,7 @@ func (rp *RepoPolicy) GetAllBranches() []string {
 // constructor for RepoPolicy.
 func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 	var group, r repoConfig
-	var found bool
+	found := false
 	for grpName, grp := range *p {
 		log.Trace().Msgf("looking in group %s", grpName)
 		r, found = grp.Repos[repo]
@@ -164,8 +164,8 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 	allBranches := make(map[string]branchVals)
 	for b, bbv := range r.Branches {
 		var rbv branchVals // repo level branchvals
-		// copy top-level options
-		err := copier.CopyWithOption(&rbv, &p, copier.Option{IgnoreEmpty: true})
+		// copy group-level options
+		err := copier.CopyWithOption(&rbv, &group, copier.Option{IgnoreEmpty: true})
 		if err != nil {
 			return rp, err
 		}

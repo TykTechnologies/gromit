@@ -28,17 +28,45 @@ env:
 jobs:
 {{- template "goreleaser" . }}
 {{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") (eq .Name "tyk-sink") (eq .Name "tyk-pump") }}
-  api-tests:
+  test-controller:
     needs: goreleaser
     runs-on: ubuntu-latest
+    container: tykio/gromit:v1.6
+    outputs:
+      conf: {{`${{ steps.params.outputs.conf }}`}}
+      db: {{`${{ steps.params.outputs.db }}`}}
+      pump: {{`${{ steps.params.outputs.pump }}`}}
+      sink: {{`${{ steps.params.outputs.sink }}`}}
+      gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
+      versions: {{`${{ steps.params.outputs.versions }}`}}
+
+    steps:
+      - name: set params
+        id: params
+        env:
+          REPO: {{`${{ github.repository }}`}}
+          # Cover pull_request_target too
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
+          TAGS: {{`${{ needs.goreleaser.outputs.tags }}`}}
+          IS_PR: {{`${{startsWith(github.event_name, 'pull_request') && 'yes' }}`}}
+          IS_LTSPR: {{`${{(startsWith(github.event_name, 'pull_request') && endsWith(github.base_ref, '-lts')) && 'yes' }}`}}
+          IS_TAG: {{`${{startsWith(github.ref, 'refs/tags') && 'yes' }}`}}
+        run: gromit policy controller --loglevel debug | tee -a "$GITHUB_OUTPUT"
+
+
+  api-tests:
+    needs: test-controller
+    runs-on: ubuntu-latest
     permissions:
-      id-token: write   # This is required for requesting the JWT
+      id-token: write   # This is required for requesting the Github JWT
       contents: read    # This is required for actions/checkout
     strategy:
       fail-fast: false
       matrix:
-        conf: [ "sha256", "murmur64" ]
-        db: [ "mongo44", "postgres15" ]
+        conf: {{`${{ fromJson(needs.test-controller.outputs.conf) }}`}}
+        db: {{`${{ fromJson(needs.test-controller.outputs.db) }}`}}
+        {{ if ne .Name "tyk-pump" -}} pump: {{`${{ fromJson(needs.test-controller.outputs.pump) }}`}} {{ end }} {{/* pump array not needed when the repo is pump */}}
+        {{ if ne .Name "tyk-sink" -}} sink: {{`${{ fromJson(needs.test-controller.outputs.sink) }}`}} {{ end }}
         include:
           - db: postgres15
             markers: "and not sql"

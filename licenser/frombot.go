@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"regexp"
 )
@@ -41,7 +40,7 @@ func (l *Licenser) Fetch(baseURL string, product string, token string) (string, 
 }
 
 func parseKey(r io.Reader) (string, error) {
-	b, err := ioutil.ReadAll(r)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		return "", err
 	}

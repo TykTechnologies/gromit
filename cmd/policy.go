@@ -1,21 +1,22 @@
 /*
-	Copyright © 2021 Tyk Technologies
+Copyright © 2021 Tyk Technologies
 
-	Licensed under the Apache License, Version 2.0 (the "License");
-	you may not use this file except in compliance with the License.
-	You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
 http://www.apache.org/licenses/LICENSE-2.0
 
-	Unless required by applicable law or agreed to in writing, software
-	distributed under the License is distributed on an "AS IS" BASIS,
-	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	See the License for the specific language governing permissions and
-	limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"time"
@@ -26,22 +27,46 @@ import (
 )
 
 var dryRun, autoMerge bool
-var configPolicies policy.Policies
 var owner string
 
 // policyCmd represents the policy command
 var policyCmd = &cobra.Command{
 	Use:   "policy",
 	Short: "Templatised policies that are driven by the config file",
-	Long:  `Policies are driven by a config file. The config file models the variables of all the repositories under management. See https://github.com/TykTechnologies/gromit/tree/master/policy/config.yaml.`,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		err := policy.LoadRepoPolicies(&configPolicies)
-		if err != nil {
-			log.Fatal().Err(err).Msg("could not parse repo policies")
-		}
-	},
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Println(configPolicies)
+		fmt.Println("You probably need to use a sub-command.")
+	},
+}
+
+// controllerSubCmd is used at runtime in release.yml:test-controller
+var controllerSubCmd = &cobra.Command{
+	Use:   "controller",
+	Short: "Decide the test environment",
+	Long:  `Based on the environment variables "REPO", "TAGS", "BASE_REF", "IS_PR", "IS_LTS", "IS_TAG" writes the github outputs required to run release.yml:api-tests`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Since IS_PR and IS_LTS can both be true, having IS_LTS last sets the trigger correctly
+		params := policy.NewParams("REPO", "TAGS", "BASE_REF", "IS_PR", "IS_LTS", "IS_TAG")
+		var op bytes.Buffer
+		if err := params.SetVersions(&op); err != nil {
+			return err
+		}
+		op.WriteString("\n")
+
+		// conf is the set of configuration variations
+		// db is the databases to use
+		// pump/sink are included only when needed
+		defaults := policy.TestVariations{
+			"conf": []string{"sha256", "murmur64"},
+			"db":   []string{"mongo44", "postgres15"},
+			"pump": []string{"tykio/tyk-pump-docker-pub:v1.8.3", "$ECR/tyk-pump:master"},
+			"sink": []string{"tykio/tyk-mdcb-docker:v2.4.2", "$ECR/tyk-sink:master"},
+		}
+		if err := params.SetVariations(&op, defaults); err != nil {
+			return err
+		}
+
+		_, err := op.WriteTo(os.Stdout)
+		return err
 	},
 }
 
@@ -50,10 +75,17 @@ var syncSubCmd = &cobra.Command{
 	Use:   "sync <repo>",
 	Args:  cobra.MinimumNArgs(1),
 	Short: "(re-)generate the templates for all known branches for <repo>",
-	Long: `Operates directly on github and creates PRs. Requires an OAuth2 token (for private repos) and a section in the config file describing the policy. Will render templates, overlaid onto a git repo. 
+	Long: `Policies are driven by a config file. The config file models the variables of all the repositories under management. See https://github.com/TykTechnologies/gromit/tree/master/policy/config.yaml.
+Operates directly on github and creates PRs. Requires an OAuth2 token (for private repos) and a section in the config file describing the policy. Will render templates, overlaid onto a git repo.
 A PR will be created with the changes and @devops will be asked for a review.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		var configPolicies policy.Policies
+		err := policy.LoadRepoPolicies(&configPolicies)
+		if err != nil {
+			log.Fatal().Err(err).Msg("could not parse repo policies")
+		}
+
 		pr, _ := cmd.Flags().GetBool("pr")
 		ghToken := os.Getenv("GITHUB_TOKEN")
 		if pr && ghToken == "" {
@@ -127,19 +159,6 @@ var diffSubCmd = &cobra.Command{
 	},
 }
 
-// docSubCmd represents the doctor subcommand
-var docSubCmd = &cobra.Command{
-	Use:     "doctor <repo>",
-	Aliases: []string{"doc", "fix"},
-	Args:    cobra.MinimumNArgs(1),
-	Short:   "Diagnose problems with the release engineering code",
-	Long: `For the supplied repo, for all branches known to gromit, generate and apply bundles that are appropriate.
-Then test each repo for non-trivial diffs.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		log.Fatal().Msg("not implemented")
-	},
-}
-
 func init() {
 	syncSubCmd.Flags().Bool("pr", false, "Create PR")
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
@@ -150,8 +169,8 @@ func init() {
 	diffSubCmd.Flags().Bool("colours", true, "Use colours in output")
 
 	policyCmd.AddCommand(syncSubCmd)
+	policyCmd.AddCommand(controllerSubCmd)
 	policyCmd.AddCommand(diffSubCmd)
-	policyCmd.AddCommand(docSubCmd)
 
 	policyCmd.PersistentFlags().StringSliceVar(&Repos, "repos", Repos, "Repos to operate upon, comma separated values accepted.")
 	// FIXME: Remove the default from Branch when we can process multiple branches in the same dir
