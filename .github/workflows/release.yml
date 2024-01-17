@@ -62,7 +62,6 @@ jobs:
       matrix:
         repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal]
         branch: [master]
-        feature: [releng]
         include:
           - repo: tyk
             branch: release-5-lts

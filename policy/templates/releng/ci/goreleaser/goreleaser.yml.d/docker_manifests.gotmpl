@@ -23,13 +23,5 @@ docker_manifests:
     image_templates:
       - {{ .CSRepo }}:{{`{{ .Tag }}`}}-amd64
       - {{ .CSRepo }}:{{`{{ .Tag }}`}}-arm64
-  - name_template: {{ .CSRepo }}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}
-    image_templates:
-      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-amd64
-      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-arm64
-  - name_template: {{ .DHRepo }}:v{{`{{ .Major }}{{.Prerelease}}`}}
-    image_templates:
-      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-amd64
-      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-arm64
   {{- end}}
 {{ end }}
