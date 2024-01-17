@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/jinzhu/copier"
@@ -211,15 +210,25 @@ func (rp *RepoPolicy) ProcessBranch(opDir, branch, msg string, repo *GitRepo) (s
 	if err != nil {
 		return "", fmt.Errorf("bundle gen %v: %v", rp.Branchvals.Features, err)
 	}
-	if !strings.HasPrefix(opDir, "-") {
-		for _, f := range rp.Branchvals.DeletedFiles {
-			err := os.RemoveAll(filepath.Join(opDir, f))
-			if err != nil && !os.IsNotExist(err) {
-				log.Warn().Err(err).Msgf("deleting deprecated file: %s", f)
-			}
+	for _, f := range rp.Branchvals.DeletedFiles {
+		fname := filepath.Join(opDir, f)
+		fi, err := os.Stat(fname)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			log.Warn().Err(err).Msgf("stat %s", fname)
+		}
+		glob := f
+		if fi.IsDir() {
+			log.Debug().Msgf("recursively deleting %s", fname)
+			glob += "/*"
+		}
+		if err := repo.RemoveAll(glob); err != nil {
+			log.Warn().Err(err).Msgf("removing %s from the index", f)
 		}
 	}
-	dfs, err := NonTrivialDiff(opDir, false)
+	dfs, err := NonTrivialDiff(opDir, false, false)
 	if err != nil {
 		return "", fmt.Errorf("computing diff in %s: %v", opDir, err)
 	}

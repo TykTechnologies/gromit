@@ -78,15 +78,17 @@ func parseDiff(ds string) ([]string, error) {
 	return dFiles, nil
 }
 
-func NonTrivialDiff(dir string, colours bool) ([]string, error) {
+func NonTrivialDiff(dir string, op, colours bool) ([]string, error) {
 	ds, err := gitDiff(dir)
 	if err != nil {
 		return nil, err
 	}
-	if colours {
-		colourPrint(ds)
-	} else {
-		fmt.Println(ds)
+	if op {
+		if colours {
+			colourPrint(ds)
+		} else {
+			fmt.Println(ds)
+		}
 	}
 	return parseDiff(ds)
 }

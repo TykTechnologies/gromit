@@ -151,7 +151,7 @@ var diffSubCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
 		colours, _ := cmd.Flags().GetBool("colours")
-		dfs, err := policy.NonTrivialDiff(dir, colours)
+		dfs, err := policy.NonTrivialDiff(dir, true, colours)
 		if len(dfs) > 0 {
 			return fmt.Errorf("non-trivial diffs in %s: %v", dir, dfs)
 		}
