@@ -113,7 +113,6 @@ func (b *Bundle) Render(bv any, opDir string, n *bundleNode) ([]string, error) {
 		}
 		// Make all *.sh files executable
 		if filepath.Ext(opFile) == ".sh" {
-			log.Info().Msgf(".sh file", opFile)
 			err := os.Chmod(opFile, 0775)
 			if err != nil {
 				return nil, err
