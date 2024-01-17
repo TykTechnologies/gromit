@@ -101,8 +101,8 @@
           {{ end -}}
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
           git config --global --add safe.directory /go/src/github.com/TykTechnologies/{{ .Name }}
-          goreleaser release --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot' || '' }}`}}' | tee build.sh
-          chmod +x build.sh
+          goreleaser release --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot' || '' }}`}}' | tee /tmp/build.sh
+          chmod +x /tmp/build.sh
           docker run --rm --privileged -e GITHUB_TOKEN={{`${{ github.token }}`}} \
           -e GOPRIVATE=github.com/TykTechnologies \
           -e GO111MODULE={{if and (eq .Name "tyk") (hasSuffix .Branch "-lts" ) }}off{{else}}on{{end}} \
@@ -117,7 +117,7 @@
           -v /var/run/docker.sock:/var/run/docker.sock \
           -v ~/.docker/config.json:/root/.docker/config.json \
           -v ~/go/pkg/mod:/go/pkg/mod \
-          -v ./build.sh:/tmp/build.sh \
+          -v /tmp/build.sh:/tmp/build.sh \
           -w /go/src/github.com/TykTechnologies/{{ .Name }} \
           tykio/golang-cross:{{`${{ matrix.golang_cross }}`}} /tmp/build.sh
 
