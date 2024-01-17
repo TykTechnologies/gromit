@@ -111,6 +111,14 @@ func (b *Bundle) Render(bv any, opDir string, n *bundleNode) ([]string, error) {
 		if err := b.write(&buf, opFile); err != nil {
 			return nil, err
 		}
+		// Make all *.sh files executable
+		if filepath.Ext(opFile) == ".sh" {
+			log.Info().Msgf(".sh file", opFile)
+			err := os.Chmod(opFile, 0775)
+			if err != nil {
+				return nil, err
+			}
+		}
 		renderedFiles = append(renderedFiles, n.path)
 	}
 	return renderedFiles, nil

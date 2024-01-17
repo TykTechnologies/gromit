@@ -6,5 +6,5 @@ publishers:
       - REPO=tyk/{{ .PCRepo }}-unstable
       - RPMVERS={{`{{ .Env.RPMVERS }}`}}
       - DEBVERS={{`{{ .Env.DEBVERS }}`}}
-    cmd: /pc.sh {{`{{ .ArtifactPath }}`}}
+    cmd: ./ci/bin/pc.sh {{`{{ .ArtifactPath }}`}}
 {{end}}
