@@ -48,8 +48,8 @@ func (p runParameters) SetVariations(op io.Writer, tv TestVariations) error {
 	// Defaults are fine
 	case "is_lts":
 		tv["conf"] = []string{"sha256"}
-		tv["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8.3"}
-		tv["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4.2"}
+		tv["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8"}
+		tv["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4"}
 	}
 
 	for _, v := range sortedKeys(tv) {
@@ -103,7 +103,7 @@ func NewParams(paramNames ...string) runParameters {
 			if tags := strings.Fields(p); len(tags) > 0 {
 				firstTag = tags[0]
 			}
-		case "IS_PR", "IS_TAG", "IS_LTS":
+		case "IS_PR", "IS_TAG":
 			if p == "yes" {
 				trigger = strings.ToLower(pn)
 			}
@@ -114,13 +114,14 @@ func NewParams(paramNames ...string) runParameters {
 	params["firstTag"] = firstTag
 	params["trigger"] = trigger
 
-	gdTag := "master"
+	params["gdTag"] = "master"
 	ltsBranch := regexp.MustCompile(`^release-(\d+)(?:\.0(?:\.\d+)?)?(?:-(lts|\d+(?:\.0)?))?$`).FindStringSubmatch(params["base_ref"])
-	if (params["repo"] == "tyk" || params["repo"] == "tyk-analytics" || params["repo"] == "tyk-automated-tests") && len(ltsBranch) > 0 {
-		gdTag = fmt.Sprintf("release-%s-lts", ltsBranch[1])
-		log.Debug().Msgf("detected LTS branch, set gd_tag to %s", gdTag)
+	repo := params["repo"]
+	if (repo == "tyk" || repo == "tyk-analytics" || repo == "tyk-automated-tests") && len(ltsBranch) > 0 {
+		log.Debug().Msgf("detected %s LTS branch", repo)
+		params["gdTag"] = fmt.Sprintf("release-%s-lts", ltsBranch[1])
+		params["trigger"] = "is_lts"
 	}
-	params["gdTag"] = gdTag
 
 	log.Debug().Interface("params", params).Msg("calculated from env")
 

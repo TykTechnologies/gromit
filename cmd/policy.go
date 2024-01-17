@@ -42,10 +42,10 @@ var policyCmd = &cobra.Command{
 var controllerSubCmd = &cobra.Command{
 	Use:   "controller",
 	Short: "Decide the test environment",
-	Long:  `Based on the environment variables "REPO", "TAGS", "BASE_REF", "IS_PR", "IS_LTS", "IS_TAG" writes the github outputs required to run release.yml:api-tests`,
+	Long:  `Based on the environment variables "REPO", "TAGS", "BASE_REF", "IS_PR", "IS_TAG" writes the github outputs required to run release.yml:api-tests`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Since IS_PR and IS_LTS can both be true, having IS_LTS last sets the trigger correctly
-		params := policy.NewParams("REPO", "TAGS", "BASE_REF", "IS_PR", "IS_LTS", "IS_TAG")
+		params := policy.NewParams("REPO", "TAGS", "BASE_REF", "IS_PR", "IS_TAG")
 		var op bytes.Buffer
 		if err := params.SetVersions(&op); err != nil {
 			return err
@@ -58,8 +58,8 @@ var controllerSubCmd = &cobra.Command{
 		defaults := policy.TestVariations{
 			"conf": []string{"sha256", "murmur64"},
 			"db":   []string{"mongo44", "postgres15"},
-			"pump": []string{"tykio/tyk-pump-docker-pub:v1.8.3", "$ECR/tyk-pump:master"},
-			"sink": []string{"tykio/tyk-mdcb-docker:v2.4.2", "$ECR/tyk-sink:master"},
+			"pump": []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
+			"sink": []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
 		}
 		if err := params.SetVariations(&op, defaults); err != nil {
 			return err

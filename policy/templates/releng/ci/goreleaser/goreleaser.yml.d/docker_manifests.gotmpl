@@ -8,6 +8,10 @@ docker_manifests:
     image_templates:
       - {{ .DHRepo }}:{{`{{ .Tag }}`}}-amd64
       - {{ .DHRepo }}:{{`{{ .Tag }}`}}-arm64
+  - name_template: {{ .DHRepo }}:v{{`{{ .Major }}{{.Prerelease}}`}}
+    image_templates:
+      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-amd64
+      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-arm64
   {{- if eq .Name "tyk" }}
   - name_template: tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}
     image_templates:
@@ -19,5 +23,13 @@ docker_manifests:
     image_templates:
       - {{ .CSRepo }}:{{`{{ .Tag }}`}}-amd64
       - {{ .CSRepo }}:{{`{{ .Tag }}`}}-arm64
+  - name_template: {{ .CSRepo }}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}
+    image_templates:
+      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-amd64
+      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-arm64
+  - name_template: {{ .DHRepo }}:v{{`{{ .Major }}{{.Prerelease}}`}}
+    image_templates:
+      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-amd64
+      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-arm64
   {{- end}}
 {{ end }}
