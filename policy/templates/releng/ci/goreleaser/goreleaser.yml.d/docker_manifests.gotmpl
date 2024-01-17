@@ -25,11 +25,11 @@ docker_manifests:
       - {{ .CSRepo }}:{{`{{ .Tag }}`}}-arm64
   - name_template: {{ .CSRepo }}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}
     image_templates:
-      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-amd64
-      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-arm64
+      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-amd64
+      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-arm64
   - name_template: {{ .DHRepo }}:v{{`{{ .Major }}{{.Prerelease}}`}}
     image_templates:
-      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-amd64
-      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-arm64
+      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-amd64
+      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-arm64
   {{- end}}
 {{ end }}

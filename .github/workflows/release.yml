@@ -63,6 +63,11 @@ jobs:
         repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal]
         branch: [master]
         feature: [releng]
+        include:
+          - repo: tyk
+            branch: release-5-lts
+          - repo: tyk-analytics
+            branch: release-5-lts
 
     steps:
       - name: checkout ${{matrix.repo}}/${{matrix.branch}}
@@ -83,7 +88,7 @@ jobs:
         run: |
           gromit="${{ steps.download.outputs.download-path }}/gromit"
           chmod +x $gromit
-          ${{ steps.download.outputs.download-path }}/gromit bundle gen --features ${{ matrix.feature }} --branch ${{matrix.branch}} --repo ${{ matrix.repo }} ${{ matrix.repo }}
+          ${{ steps.download.outputs.download-path }}/gromit bundle gen --branch ${{matrix.branch}} --repo ${{ matrix.repo }} ${{ matrix.repo }}
           echo "## :hospital: ℞ ${{ matrix.repo }} ${{ matrix.feature }} ${{matrix.branch}}" >> $GITHUB_STEP_SUMMARY
           if $gromit policy diff --colours=false ${{ matrix.repo }} 2>summary 1>diff; then
              echo No treatment required :sunglasses: :thumbsup: >> $GITHUB_STEP_SUMMARY
