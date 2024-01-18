@@ -91,6 +91,8 @@ policy:
             buildenv: 1.21-bullseye
             baseimage: debian:bookworm-slim
             reviewcount: 1
+            features:
+              - s390x
             # Workflows that need to pass to merge PRs
             tests:
               - "Go 1.21.x Redis 5"
@@ -149,6 +151,8 @@ policy:
             baseimage: debian:bookworm-slim
             reviewcount: 1
             buildenv: 1.21-bullseye
+            features:
+              - s390x
           release-5-lts:
             tests: ["1.16","1.16-el7","test (1.16.x, ubuntu-latest, amd64, 15.x)","sqlite","mongo-mgo","mongo-official"]
           release-4-lts:
@@ -204,6 +208,8 @@ policy:
         branches:
           master:
             reviewcount: 1
+            features:
+              - s390x
 
       portal:
         description: >-
@@ -261,3 +267,5 @@ policy:
         branches:
           master:
             reviewcount: 1         
+            features:
+              - s390x
