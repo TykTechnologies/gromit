@@ -145,7 +145,7 @@ policy:
       tyk-sink:
         description: >-
          Tyk RPC server backend (bridge)
-        pcrepo: tyk-mdcb
+        pcrepo: tyk-mdcb-stable
         dhrepo: tykio/tyk-mdcb-docker
         csrepo: docker.tyk.io/tyk-sink/tyk-sink
         exposeports: 80
@@ -153,7 +153,7 @@ policy:
         packagename: tyk-sink
         cgo: false
         upgradefromver: 1.8.2
-        pcprivate: true
+        pcprivate: false
         configfile: tyk_sink.conf
         versionpackage: github.com/TykTechnologies/tyk-sink/main
         sourcebranch: master        

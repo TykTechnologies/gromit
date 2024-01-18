@@ -104,7 +104,6 @@
       - name: generate dockerfile
         run: |
           echo 'FROM {{`${{ matrix.distro }}`}}
-          SHELL ["/bin/bash", "-c"]
           COPY {{ .PackageName }}*.x86_64.rpm /{{ .PackageName }}.rpm
           RUN command -v curl || yum install -y curl
           RUN command -v useradd || yum install -y shadow-utils
