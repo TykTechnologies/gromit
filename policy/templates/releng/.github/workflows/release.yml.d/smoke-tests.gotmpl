@@ -107,6 +107,7 @@
           SHELL ["/bin/bash", "-c"]
           COPY {{ .PackageName }}*.x86_64.rpm /{{ .PackageName }}.rpm
           RUN command -v curl || yum install curl
+          RUN command -v useradd || yum install shadow-utils
   {{- if .PCPrivate }}
           RUN curl -u {{`${{ secrets.PACKAGECLOUD_MASTER_TOKEN }}`}}: -s https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.rpm.sh | bash && yum install -y {{ .PackageName }}-{{ .Branchvals.UpgradeFromVer }}-1
 
