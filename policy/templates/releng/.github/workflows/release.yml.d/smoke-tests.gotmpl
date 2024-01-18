@@ -1,6 +1,5 @@
 {{ define "smoke-tests" }}
   upgrade-deb:
-    if: startsWith(github.ref, 'refs/tags')
     services:
       httpbin.org:
         image: kennethreitz/httpbin
@@ -74,7 +73,6 @@
   {{- end }}
 
   upgrade-rpm:
-    if: startsWith(github.ref, 'refs/tags')
     services:
       httpbin.org:
         image: kennethreitz/httpbin
@@ -108,7 +106,7 @@
           echo 'FROM {{`${{ matrix.distro }}`}}
           SHELL ["/bin/bash", "-c"]
           COPY {{ .PackageName }}*.x86_64.rpm /{{ .PackageName }}.rpm
-          RUN eval $(cat /etc/os-release) && [[ "$ID" == "rhel" || "$ID" == "amzn" ]] && [[ "$VERSION" =~ ^7.*$ || "$VERSION" == "2" ]] && yum install -y curl ||  yum install --allowerasing -y curl
+          RUN command -v curl || yum install curl
   {{- if .PCPrivate }}
           RUN curl -u {{`${{ secrets.PACKAGECLOUD_MASTER_TOKEN }}`}}: -s https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.rpm.sh | bash && yum install -y {{ .PackageName }}-{{ .Branchvals.UpgradeFromVer }}-1
 
