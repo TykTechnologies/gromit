@@ -60,15 +60,15 @@ var genSubCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
 		repoName, _ := cmd.Flags().GetString("repo")
-		b, err := policy.NewBundle(features)
-		if err != nil {
-			return fmt.Errorf("bundle %v: %v", features, err)
-		}
 		rp, err := configPolicies.GetRepoPolicy(repoName)
 		rp.SetTimestamp(time.Now().UTC())
 		rp.SetBranch(Branch)
 		if err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repoName, err)
+		}
+		b, err := policy.NewBundle(rp.Branchvals.Features)
+		if err != nil {
+			return fmt.Errorf("bundle: %v", err)
 		}
 		_, err = b.Render(rp, dir, nil)
 		return err
@@ -76,11 +76,13 @@ var genSubCmd = &cobra.Command{
 }
 
 func init() {
-	bundleCmd.PersistentFlags().StringSliceVar(&features, "features", []string{"releng"}, "Features to use")
+	bundleCmd.Flags().StringSliceVar(&features, "features", []string{"releng"}, "Features to use")
 	bundleCmd.PersistentFlags().String("repo", "", "Use parameters from policy.<repo>")
-	bundleCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Use branch values from policy.<repo>.branch")
-	bundleCmd.MarkPersistentFlagRequired("features")
 	bundleCmd.MarkPersistentFlagRequired("repo")
+	bundleCmd.MarkFlagRequired("features")
+
+	genSubCmd.Flags().StringVar(&Branch, "branch", "master", "Use branch values from policy.<repo>.branch")
+	genSubCmd.MarkFlagRequired("branch")
 	bundleCmd.AddCommand(genSubCmd)
 
 	rootCmd.AddCommand(bundleCmd)

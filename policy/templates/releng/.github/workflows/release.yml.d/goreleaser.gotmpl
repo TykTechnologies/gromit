@@ -2,7 +2,6 @@
   goreleaser:
     name: '{{`${{ matrix.golang_cross }}`}}'
     runs-on: ubuntu-latest
-    container: 'tykio/golang-cross:{{`${{ matrix.golang_cross }}`}}'
     permissions:
       id-token: write   # AWS OIDC JWT
       contents: read    # actions/checkout
@@ -42,12 +41,6 @@
       tags: {{`${{ steps.metadata.outputs.tags }}`}}
 
     steps:
-      - name: Fix private module deps
-        env:
-          TOKEN: '{{`${{ secrets.ORG_GH_TOKEN }}`}}'
-        run: >
-          git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
-
       - name: Checkout of {{ .Name }}
         uses: actions/checkout@v4
         with:
@@ -56,9 +49,6 @@
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           submodules: true
   {{- end }}
-
-      - name: "Add Git safe.directory"
-        run: git config --global --add safe.directory $GITHUB_WORKSPACE
 
       - uses: docker/setup-qemu-action@v3
 
@@ -81,27 +71,6 @@
           password: {{`${{ secrets.CLOUDSMITH_API_KEY }}`}}
   {{- end }}
 
-      - name: Unlock agent
-        env:
-          NFPM_STD_PASSPHRASE: {{`${{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
-          GPG_FINGERPRINT: 12B5D62C28F57592D1575BD51ED14C59E37DAC20
-          PKG_SIGNING_KEY: {{`${{ secrets.SIGNING_KEY }}`}}
-        run:
-          ci/bin/unlock-agent.sh
-
-  {{ if and (eq .Name "tyk") (has "plugin-compiler-fix-vendor" .Branchvals.Features) -}}
-      - name: Fix vendor
-        run: |
-          mkdir -p /go/src
-          go mod tidy
-          go mod vendor
-          cp -r -f vendor/* /go/src
-          mkdir -p /go/src/github.com/TykTechnologies/tyk
-          cp -r ./* /go/src/github.com/TykTechnologies/tyk
-          find /go/src -name vendor | xargs --no-run-if-empty -d'\n' rm -rf
-          rm -rf vendor
-  {{- end }}
-
       - uses: actions/cache@v3
         with:
           path: |
@@ -111,27 +80,46 @@
           restore-keys: |
             {{`${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}`}}
 
-      - uses: goreleaser/goreleaser-action@v5
-        with:
-          version: latest
-          args: release --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot' || '' }}`}}
+      - name: Build
         env:
-          GITHUB_TOKEN: {{`${{ secrets.GITHUB_TOKEN }}`}}
-          CGO_ENABLED: {{`${{ matrix.cgo }}`}} 
-  {{- if and (eq .Name "tyk") (or (eq .Branch "release-5-lts" ) (eq .Branch "release-4-lts" )) }}
-          GO111MODULE: off
-  {{- end }}
           NFPM_STD_PASSPHRASE: {{`${{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
-          NFPM_PAYG_PASSPHRASE: {{`${{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
-          GPG_FINGERPRINT: 12B5D62C28F57592D1575BD51ED14C59E37DAC20
           PKG_SIGNING_KEY: {{`${{ secrets.SIGNING_KEY }}`}}
-          GOLANG_CROSS: {{`${{ matrix.golang_cross }}`}}
-          DEBVERS: {{`${{ matrix.debvers }}`}}
-          RPMVERS: {{`${{ matrix.rpmvers }}`}}
           PACKAGECLOUD_TOKEN: {{`${{ secrets.PACKAGECLOUD_TOKEN }}`}}
-  {{- if eq .Name "tyk" }}
-          DOCKER_CLI_EXPERIMENTAL: "enabled"
-  {{- end }}
+        run: |
+          echo '#!/bin/sh
+          ci/bin/unlock-agent.sh
+          {{ if and (eq .Name "tyk") (has "plugin-compiler-fix-vendor" .Branchvals.Features) -}}
+          mkdir -p /go/src
+          go mod tidy
+          go mod vendor
+          cp -r -f vendor/* /go/src
+          mkdir -p /go/src/github.com/TykTechnologies/tyk
+          cp -r ./* /go/src/github.com/TykTechnologies/tyk
+          find /go/src -name vendor | xargs --no-run-if-empty -d'\n' rm -rf
+          rm -rf vendor
+          {{ end -}}
+          git config --global url."https://{{`${{ secrets.ORG_GH_TOKEN }}`}}@github.com".insteadOf "https://github.com"
+          git config --global --add safe.directory /go/src/github.com/TykTechnologies/{{ .Name }}
+          goreleaser release --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot' || '' }}`}}' | tee /tmp/build.sh
+          chmod +x /tmp/build.sh
+          docker run --rm --privileged -e GITHUB_TOKEN={{`${{ github.token }}`}} \
+          -e GOPRIVATE=github.com/TykTechnologies \
+          -e GO111MODULE={{if and (eq .Name "tyk") (hasSuffix .Branch "-lts" ) }}off{{else}}on{{end}} \
+          -e DEBVERS='{{`${{ matrix.debvers }}`}}' \
+          -e RPMVERS='{{`${{ matrix.rpmvers }}`}}' \
+          -e CGO_ENABLED={{`${{ matrix.cgo }}`}}  \
+          -e NFPM_STD_PASSPHRASE="$NFPM_STD_PASSPHRASE" \
+          -e GPG_FINGERPRINT=12B5D62C28F57592D1575BD51ED14C59E37DAC20 \
+          -e PKG_SIGNING_KEY="$PKG_SIGNING_KEY" \
+          -e PACKAGECLOUD_TOKEN=$PACKAGECLOUD_TOKEN \
+          -v {{`${{github.workspace}}`}}:/go/src/github.com/TykTechnologies/{{ .Name }} \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v ~/.docker/config.json:/root/.docker/config.json \
+          -v ~/go/pkg/mod:/go/pkg/mod \
+          -v /tmp/build.sh:/tmp/build.sh \
+          -w /go/src/github.com/TykTechnologies/{{ .Name }} \
+          tykio/golang-cross:{{`${{ matrix.golang_cross }}`}} /tmp/build.sh
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk

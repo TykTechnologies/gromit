@@ -23,9 +23,9 @@ update-test-cases:
 clean:
 	find . -name rice-box.go | xargs rm -fv
 	rm -rf $(REPOS)
-	rm -fv gromit
+	rm -fv gromit error.yaml
 
-sync: clean gromit
+sync: gromit
 	@$(foreach r,$(REPOS), GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit policy sync $(r);)
 
 loc: clean

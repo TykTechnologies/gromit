@@ -10,7 +10,6 @@
         uses: aws-actions/amazon-ecr-login@v2
         with:
           mask-password: 'true'
-          mask-aws-account-id: 'true'
 
         # Only {{`${{ github.actor }}`}} has access
         # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
@@ -44,7 +43,7 @@
           echo "ECR=${ECR}
           $VERSIONS
           {{ if ne .Name "tyk-pump" }}tyk_pump_image={{`${{matrix.pump}}`}} {{ end }}
-          {{- if ne .Name "tyk-sink" }}tyk_sink_image={{`${{matrix.sink}}`}} {{ end }}
+          {{ if ne .Name "tyk-sink" }}tyk_sink_image={{`${{matrix.sink}}`}} {{ end }}
           # base dir for config files
           confs_dir=./pro-ha
           # pick database to use

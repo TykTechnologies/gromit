@@ -111,6 +111,13 @@ func (b *Bundle) Render(bv any, opDir string, n *bundleNode) ([]string, error) {
 		if err := b.write(&buf, opFile); err != nil {
 			return nil, err
 		}
+		// Make all *.sh files executable
+		if filepath.Ext(opFile) == ".sh" {
+			err := os.Chmod(opFile, 0775)
+			if err != nil {
+				return nil, err
+			}
+		}
 		renderedFiles = append(renderedFiles, n.path)
 	}
 	return renderedFiles, nil
@@ -134,6 +141,7 @@ func (b *Bundle) write(buf *bytes.Buffer, opFile string) error {
 	if b.isYaml.MatchString(opFile) {
 		op, err = b.yamlfmt.Format(buf.Bytes())
 		if err != nil {
+			os.WriteFile("error.yaml", buf.Bytes(), 0644)
 			return fmt.Errorf("could not yamlfmt %s: %#v", opFile, err)
 		}
 	} else {
@@ -260,7 +268,12 @@ func NewBundle(features []string) (*Bundle, error) {
 		featPath := filepath.Join("templates", feat)
 		err = fsTreeWalk(b, templates, featPath, stList)
 		if err != nil {
-			log.Fatal().Err(err).Msgf("walking feature %s", feat)
+			if os.IsNotExist(err) {
+				log.Debug().Msgf("did not find bundle for feature %s, assuming it does not have any files.", feat)
+				err = nil
+			} else {
+				log.Fatal().Err(err).Msgf("walking feature %s", feat)
+			}
 		}
 	}
 	return b, err

@@ -120,6 +120,11 @@ func InitGit(repoName, owner, branch string, dir, ghToken string) (*GitRepo, err
 	}, err
 }
 
+// RemoveAll removes all files matching the supplied path from the  worktree.
+func (r *GitRepo) RemoveAll(path string) error {
+	return r.worktree.RemoveGlob(path)
+}
+
 // AddFile adds a file in the worktree to the index.
 // The file is assumed to have been updated prior to calling this function.
 func (r *GitRepo) AddFile(path string) (plumbing.Hash, error) {

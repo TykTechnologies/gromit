@@ -36,3 +36,4 @@ errored.tfstate
 .terraform.lock*
 gpac/**
 __pycache__
+/error.yaml

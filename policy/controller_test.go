@@ -110,7 +110,7 @@ func TestTriggerPriority(t *testing.T) {
 	os.Setenv("IS_LTS", "yes")
 
 	// IS_TAG appears after IS_LTS so the trigger should be is_tag
-	p := NewParams("REPO", "BASE_REF", "TAGS", "IS_PR", "IS_LTS", "IS_TAG")
+	p := NewParams("REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG")
 
 	assert.Equal(t, "is_tag", p["trigger"])
 }
@@ -119,14 +119,13 @@ func TestDefaults(t *testing.T) {
 	// Test case with no parameters set in the environment
 	os.Clearenv()
 
-	p := NewParams("REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG", "IS_LTS")
+	p := NewParams("REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG")
 
 	assert.Empty(t, p["repo"])
 	assert.Empty(t, p["base_ref"])
 	assert.Empty(t, p["tags"])
 	assert.Empty(t, p["is_pr"])
 	assert.Empty(t, p["is_tag"])
-	assert.Empty(t, p["is_lts"])
 	assert.Empty(t, p["firstTag"])
 	assert.Empty(t, p["trigger"])
 	assert.Equal(t, "master", p["gdTag"])

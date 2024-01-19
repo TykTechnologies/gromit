@@ -1,6 +1,5 @@
 {{ define "smoke-tests" }}
   upgrade-deb:
-    if: startsWith(github.ref, 'refs/tags')
     services:
       httpbin.org:
         image: kennethreitz/httpbin
@@ -74,7 +73,6 @@
   {{- end }}
 
   upgrade-rpm:
-    if: startsWith(github.ref, 'refs/tags')
     services:
       httpbin.org:
         image: kennethreitz/httpbin
@@ -107,8 +105,8 @@
         run: |
           echo 'FROM {{`${{ matrix.distro }}`}}
           COPY {{ .PackageName }}*.x86_64.rpm /{{ .PackageName }}.rpm
-          RUN yum install --allowerasing -y curl
-
+          RUN command -v curl || yum install -y curl
+          RUN command -v useradd || yum install -y shadow-utils
   {{- if .PCPrivate }}
           RUN curl -u {{`${{ secrets.PACKAGECLOUD_MASTER_TOKEN }}`}}: -s https://packagecloud.io/install/repositories/tyk/{{ .PCRepo }}/script.rpm.sh | bash && yum install -y {{ .PackageName }}-{{ .Branchvals.UpgradeFromVer }}-1
 
@@ -144,6 +142,7 @@
           docker run --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}`}}
   {{ end }}
 
+  {{- if and (eq .Name "tyk") (eq .Branch "master") }}
   release-tests:
     needs:
       - goreleaser
@@ -152,4 +151,5 @@
       contents: read    # This is required for actions/checkout
     uses: ./.github/workflows/release-tests.yml
     secrets: inherit
-{{ end }} /* smoke-tests */
+  {{ end }} {{/* release-tests */}}
+{{ end }} {{/* smoke-tests */}}

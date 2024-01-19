@@ -38,6 +38,7 @@ builds:
     goarch:
       - arm64
     binary: {{.Binary}}
+  {{ if has "s390x" .Branchvals.Features -}}
   - id: std-s390x
   {{- if eq .Name "tyk" }}
     flags:
@@ -58,6 +59,7 @@ builds:
     goarch:
       - s390x
     binary: {{.Binary}}
+  {{ end }} {{/* s390x */}}
   {{- if eq .Name "tyk-analytics"}}
   # With special license pubkey
   - id: payg
