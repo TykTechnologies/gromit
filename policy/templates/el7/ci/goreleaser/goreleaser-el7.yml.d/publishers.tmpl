@@ -3,8 +3,5 @@ publishers:
   - name: {{ .PCRepo }}-unstable
     env:
       - PACKAGECLOUD_TOKEN={{`{{ .Env.PACKAGECLOUD_TOKEN }}`}}
-      - REPO=tyk/{{ .PCRepo }}-unstable
-      - RPMVERS={{`{{ .Env.RPMVERS }}`}}
-      - DEBVERS={{`{{ .Env.DEBVERS }}`}}
-    cmd: ./ci/bin/pc.sh {{`{{ .ArtifactPath }}`}}
+    cmd:  {{`packagecloud publish --debvers "{{ .Env.DEBVERS }}" --rpmvers "{{ .Env.RPMVERS }}"`}} tyk/{{ .PCRepo }}-unstable {{`{{ .ArtifactPath }}`}}
 {{end}}
