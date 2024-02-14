@@ -23,7 +23,6 @@ type repoConfig struct {
 	PCRepo         string
 	DHRepo         string
 	CSRepo         string
-	PCPrivate      bool
 	PackageName    string
 	Reviewers      []string
 	ExposePorts    string
@@ -74,7 +73,6 @@ type RepoPolicy struct {
 	Name           string
 	Description    string
 	Default        string
-	PCPrivate      bool
 	PCRepo         string
 	DHRepo         string
 	CSRepo         string

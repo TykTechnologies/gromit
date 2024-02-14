@@ -67,9 +67,6 @@ policy:
         # recently generated packages. Make sure that this is a version
         # that has candidate packages for all our supported OSes and archs.
         upgradefromver: 3.0.8
-        # This signifies whether the packagecloud repo for this git repo
-        # is private or not.
-        pcprivate: false
         # The default config file used by the application.
         configfile: tyk.conf
         # The go package which contains the `VERSION` string for this REPO.
@@ -110,7 +107,6 @@ policy:
         packagename: tyk-dashboard
         cgo: true
         upgradefromver: 3.0.9
-        pcprivate: false
         configfile: tyk_analytics.conf
         versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard/internal/build
         sourcebranch: master          
@@ -139,7 +135,6 @@ policy:
         packagename: tyk-identity-broker
         cgo: false
         upgradefromver: 1.1.0
-        pcprivate: false
         configfile: tib.conf
         versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
         buildenv: 1.21-bullseye
@@ -149,7 +144,7 @@ policy:
       tyk-sink:
         description: >-
          Tyk RPC server backend (bridge)
-        pcrepo: tyk-mdcb-stable
+        pcrepo: tyk-mdcb
         dhrepo: tykio/tyk-mdcb-docker
         csrepo: docker.tyk.io/tyk-sink/tyk-sink
         exposeports: 80
@@ -157,7 +152,6 @@ policy:
         packagename: tyk-sink
         cgo: false
         upgradefromver: 1.8.2
-        pcprivate: false
         configfile: tyk_sink.conf
         versionpackage: github.com/TykTechnologies/tyk-sink/main
         sourcebranch: master        
@@ -177,7 +171,6 @@ policy:
         packagename: portal
         cgo: true
         upgradefromver: 1.0.0
-        pcprivate: false
         configfile: portal.conf
         versionpackage: github.com/TykTechnologies/portal/model/version
         baseimage: debian:trixie-slim
@@ -196,7 +189,6 @@ policy:
         packagename: tyk-pump
         cgo: false
         upgradefromver: 1.6.0
-        pcprivate: false
         configfile: pump.conf
         versionpackage: github.com/TykTechnologies/tyk-pump/pumps
         sourcebranch: master
@@ -204,4 +196,7 @@ policy:
         branches:
           master:
             features:
+              - s390x
+          release-1.9:
+            feature:
               - s390x
