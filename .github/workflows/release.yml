@@ -104,7 +104,7 @@ jobs:
           fi
 
       - name: update ${{ matrix.repo }}:releng/${{ matrix.branch }}
-        if: ${{ (github.event_name == 'push' && github.ref_name == 'master') || endsWith(github.ref_name, 'releng') }}
+        if: ${{ (github.event_name == 'push' && github.ref_name == 'master') || endsWith(github.head_ref, 'releng') }}
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
         run: |
