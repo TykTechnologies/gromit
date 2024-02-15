@@ -39,6 +39,7 @@
   {{- end }} {{/* el7 */}}
     outputs:
       tags: {{`${{ steps.metadata.outputs.tags }}`}}
+      commit_author: {{`${{ steps.fetch-author.outputs.commit_author}}`}}
 
     steps:
       - name: Checkout of {{ .Name }}
@@ -49,6 +50,10 @@
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           submodules: true
   {{- end }}
+
+      - name: Get commit author
+        id: fetch-author
+        run: echo "commit_author=$(git show -s --format='%ae' HEAD)" >> $GITHUB_OUTPUT
 
       - uses: docker/setup-qemu-action@v3
 

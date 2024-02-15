@@ -54,7 +54,7 @@ jobs:
 
 
   api-tests:
-    needs: test-controller
+    needs: [goreleaser, test-controller]
     runs-on: ubuntu-latest
     permissions:
       id-token: write   # This is required for requesting the Github JWT
