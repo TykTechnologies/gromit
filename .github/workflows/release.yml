@@ -83,7 +83,8 @@ jobs:
         with:
           name: binary-amd64
 
-      - id: gromit
+      - name: prepare gromit
+        id: gromit
         run: |
           gromit="${{ steps.download.outputs.download-path }}/gromit"
           chmod +x $gromit
@@ -103,7 +104,7 @@ jobs:
           fi
 
       - name: update ${{ matrix.repo }}:releng/${{ matrix.branch }}
-        if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+        if: ${{ (github.event_name == 'push' && github.ref_name == 'master') || endsWith(github.ref_name, 'releng') }}
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
         run: |
