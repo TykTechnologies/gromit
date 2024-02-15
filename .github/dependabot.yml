@@ -11,7 +11,7 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     groups:
       minor:
         update-types:
