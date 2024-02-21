@@ -2,6 +2,7 @@ $ setenv REPO tyk
 $ setenv TAGS v1.0
 $ setenv IS_PR yes
 $ setenv BASE_REF main
+$ setenv JOB api-test
 $ gromit policy controller --loglevel error
 versions<<EOF
 tyk_image=$ECR/tyk:master
@@ -15,10 +16,10 @@ tyk_alfa_image=$tyk_image
 tyk_beta_image=$tyk_image
 EOF
 gd_tag=master
-conf<<EOF
+api_conf<<EOF
 ["sha256"]
 EOF
-db<<EOF
+api_db<<EOF
 ["mongo44","postgres15"]
 EOF
 pump<<EOF
