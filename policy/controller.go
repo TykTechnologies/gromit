@@ -39,17 +39,43 @@ type runParameters map[string]string
 // SetVariations prints the test variations formatted as a multi-line
 // github output parameter. The contents are json formatted.
 func (p runParameters) SetVariations(op io.Writer, tv TestVariations) error {
-	switch p["trigger"] {
-	case "is_pr":
-		tv["conf"] = []string{"sha256"}
-		tv["pump"] = []string{"$ECR/tyk-pump:master"}
-		tv["sink"] = []string{"$ECR/tyk-sink:master"}
-	case "is_tag":
-	// Defaults are fine
-	case "is_lts":
-		tv["conf"] = []string{"sha256"}
-		tv["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8"}
-		tv["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4"}
+
+	if p["job"] == "api-test" {
+		switch p["trigger"] {
+		case "is_pr":
+			tv["api_conf"] = []string{"sha256"}
+			tv["api_db"] = []string{"mongo44", "postgres15"}
+			tv["pump"] = []string{"$ECR/tyk-pump:master"}
+			tv["sink"] = []string{"$ECR/tyk-sink:master"}
+		case "is_tag":
+			// Defaults are fine
+			tv["api_conf"] = []string{"sha256"}
+			tv["api_db"] = []string{"mongo44", "postgres15"}
+		case "is_lts":
+			tv["api_conf"] = []string{"sha256"}
+			tv["api_db"] = []string{"mongo44", "postgres15"}
+			tv["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8"}
+			tv["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4"}
+		}
+	}
+
+	if p["job"] == "ui-test" {
+		switch p["trigger"] {
+		case "is_pr":
+			tv["ui_conf"] = []string{"sha256"}
+			tv["ui_db"] = []string{"mongo44", "postgres15"}
+			tv["pump"] = []string{"$ECR/tyk-pump:master"}
+			tv["sink"] = []string{"$ECR/tyk-sink:master"}
+		case "is_tag":
+			// Defaults are fine
+			tv["ui_conf"] = []string{"sha256"}
+			tv["ui_db"] = []string{"mongo44", "postgres15"}
+		case "is_lts":
+			tv["ui_conf"] = []string{"sha256"}
+			tv["ui_db"] = []string{"mongo44", "postgres15"}
+			tv["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8"}
+			tv["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4"}
+		}
 	}
 
 	for _, v := range sortedKeys(tv) {

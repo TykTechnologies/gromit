@@ -17,8 +17,9 @@ func TestNewParams(t *testing.T) {
 	os.Setenv("IS_PR", "no")
 	os.Setenv("IS_TAG", "yes")
 	os.Setenv("IS_LTS", "no")
+	os.Setenv("JOB", "ui-test")
 
-	p := NewParams("REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG", "IS_LTS")
+	p := NewParams("JOB", "REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG", "IS_LTS")
 
 	assert.Equal(t, "repo", p["repo"])
 	assert.Equal(t, "main", p["base_ref"])
@@ -27,16 +28,17 @@ func TestNewParams(t *testing.T) {
 	assert.Equal(t, "master", p["gdTag"])
 
 	gdTagTests := []struct {
+		job     string
 		baseRef string
 		repo    string
 		want    string
 	}{
-		{"refs/heads/release-4.0.12", "tyk", "release-4-lts"},
-		{"release-5.1.12", "TykTechnologies/tyk-analytics", "master"},
-		{"refs/heads/master", "tyk-analytics", "master"},
-		{"refs/heads/release-4.0.12", "tyk-pump", "master"},
-		{"refs/heads/release-4.0.13", "tyk-automated-tests", "release-4-lts"},
-		{"refs/heads/release-5.1.13", "tyk-automated-tests", "master"},
+		{"api-test", "refs/heads/release-4.0.12", "tyk", "release-4-lts"},
+		{"ui-test", "release-5.1.12", "TykTechnologies/tyk-analytics", "master"},
+		{"api-test", "refs/heads/master", "tyk-analytics", "master"},
+		{"ui-test", "refs/heads/release-4.0.12", "tyk-pump", "master"},
+		{"api-test", "refs/heads/release-4.0.13", "tyk-automated-tests", "release-4-lts"},
+		{"ui-test", "refs/heads/release-5.1.13", "tyk-automated-tests", "master"},
 	}
 	for _, tc := range gdTagTests {
 		t.Run(fmt.Sprintf("%s/%s", tc.repo, tc.want), func(t *testing.T) {
@@ -48,16 +50,17 @@ func TestNewParams(t *testing.T) {
 	}
 }
 
-func TestOutput(t *testing.T) {
+func TestOutputUI(t *testing.T) {
 	os.Clearenv()
 	// Test case with all parameters set in the environment
 	os.Setenv("REPO", "github.com/username/tyk")
 	os.Setenv("BASE_REF", "refs/heads/main")
 	os.Setenv("TAGS", "v1.0 v1.1 v1.2")
 	os.Setenv("IS_PR", "yes")
+	os.Setenv("JOB", "ui-test")
 
 	var op bytes.Buffer
-	p := NewParams("REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG", "IS_LTS")
+	p := NewParams("JOB", "REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG")
 	if err := p.SetVersions(&op); err != nil {
 		t.Error(err)
 	}
@@ -66,11 +69,12 @@ func TestOutput(t *testing.T) {
 	// conf is the set of configuration variations
 	// db is the databases to use
 	// pump/sink are included only when needed
+
 	defaults := TestVariations{
-		"conf": []string{"sha256", "murmur64"},
-		"db":   []string{"mongo44", "postgres15"},
-		"pump": []string{"tykio/tyk-pump-docker-pub:v1.8.3", "$ECR/tyk-pump:master"},
-		"sink": []string{"tykio/tyk-mdcb-docker:v2.4.2", "$ECR/tyk-sink:master"},
+		"ui_conf": []string{"sha256", "murmur64"},
+		"ui_db":   []string{"mongo44", "postgres15"},
+		"pump":    []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
+		"sink":    []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
 	}
 	if err := p.SetVariations(&op, defaults); err != nil {
 		t.Error(err)
@@ -87,30 +91,94 @@ tyk_alfa_image=$tyk_image
 tyk_beta_image=$tyk_image
 EOF
 gd_tag=master
-conf<<EOF
-["sha256"]
-EOF
-db<<EOF
-["mongo44","postgres15"]
-EOF
 pump<<EOF
 ["$ECR/tyk-pump:master"]
 EOF
 sink<<EOF
 ["$ECR/tyk-sink:master"]
 EOF
+ui_conf<<EOF
+["sha256"]
+EOF
+ui_db<<EOF
+["mongo44","postgres15"]
+EOF
 `
 	assert.Equal(t, "is_pr", p["trigger"])
 	assert.Equal(t, want, op.String())
 }
 
+func TestOutputAPI(t *testing.T) {
+	os.Clearenv()
+	// Test case with all parameters set in the environment
+	os.Setenv("REPO", "github.com/username/tyk")
+	os.Setenv("BASE_REF", "release-5-lts")
+	os.Setenv("IS_PR", "no")
+	os.Setenv("IS_TAG", "no")
+	os.Setenv("TAGS", "v1.0 v1.1 v1.2")
+	os.Setenv("IS_LTS", "yes")
+	os.Setenv("JOB", "api-test")
+
+	var op bytes.Buffer
+	p := NewParams("JOB", "REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG")
+	if err := p.SetVersions(&op); err != nil {
+		t.Error(err)
+	}
+	op.WriteString("\n")
+
+	// conf is the set of configuration variations
+	// db is the databases to use
+	// pump/sink are included only when needed
+
+	defaults := TestVariations{
+		"api_conf": []string{"sha256", "murmur64"},
+		"api_db":   []string{"mongo44", "postgres15"},
+		"pump":     []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
+		"sink":     []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
+	}
+	if err := p.SetVariations(&op, defaults); err != nil {
+		t.Error(err)
+	}
+	const want = `versions<<EOF
+tyk_image=$ECR/tyk:release-5-lts
+tyk_analytics_image=$ECR/tyk-analytics:release-5-lts
+tyk_pump_image=$ECR/tyk-pump:master
+tyk_sink_image=$ECR/tyk-sink:master
+# override default above with just built tag
+tyk_image=v1.0
+# alfa and beta have to come after the override
+tyk_alfa_image=$tyk_image
+tyk_beta_image=$tyk_image
+EOF
+gd_tag=release-5-lts
+api_conf<<EOF
+["sha256"]
+EOF
+api_db<<EOF
+["mongo44","postgres15"]
+EOF
+pump<<EOF
+["tykio/tyk-pump-docker-pub:v1.8"]
+EOF
+sink<<EOF
+["tykio/tyk-mdcb-docker:v2.4"]
+EOF
+`
+	assert.Equal(t, "is_lts", p["trigger"])
+	assert.Equal(t, want, op.String())
+}
+
 func TestTriggerPriority(t *testing.T) {
+	// Test case with no parameters set in the environment
+	os.Clearenv()
+
+	os.Setenv("JOB", "api-test")
 	os.Setenv("IS_PR", "no")
 	os.Setenv("IS_TAG", "yes")
 	os.Setenv("IS_LTS", "yes")
 
 	// IS_TAG appears after IS_LTS so the trigger should be is_tag
-	p := NewParams("REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG")
+	p := NewParams("JOB", "REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG")
 
 	assert.Equal(t, "is_tag", p["trigger"])
 }
@@ -119,8 +187,9 @@ func TestDefaults(t *testing.T) {
 	// Test case with no parameters set in the environment
 	os.Clearenv()
 
-	p := NewParams("REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG")
+	p := NewParams("JOB", "REPO", "BASE_REF", "TAGS", "IS_PR", "IS_TAG")
 
+	assert.Empty(t, p["job"])
 	assert.Empty(t, p["repo"])
 	assert.Empty(t, p["base_ref"])
 	assert.Empty(t, p["tags"])
