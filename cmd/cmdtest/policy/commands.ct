@@ -2,7 +2,7 @@ $ setenv REPO tyk
 $ setenv TAGS v1.0
 $ setenv IS_PR yes
 $ setenv BASE_REF main
-$ setenv JOB api-test
+$ setenv JOB api
 $ gromit policy controller --loglevel error
 versions<<EOF
 tyk_image=$ECR/tyk:master
