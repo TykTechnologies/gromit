@@ -1,10 +1,7 @@
 package policy
 
 import (
-	"bytes"
-	"context"
 	"fmt"
-	"html/template"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,7 +11,6 @@ import (
 
 	_ "embed"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -22,34 +18,26 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
-	"github.com/google/go-github/v47/github"
 	"github.com/rs/zerolog/log"
-	"github.com/shurcooL/githubv4"
-	"golang.org/x/oauth2"
 )
 
 // GitRepo models a local git worktree with the authentication and
 // enough metadata to allow it to be pushed it to github
 type GitRepo struct {
-	Name       string
-	Owner      string
+	url        string
 	commitOpts *git.CommitOptions
 	repo       *git.Repository
 	worktree   *git.Worktree
 	dir        string
 	auth       transport.AuthMethod
-	gh         *github.Client
-	ghV4       *githubv4.Client
-	prs        []string
-	dryRun     bool
 }
 
 const defaultRemote = "origin"
 
 // InitGit is a constructor for the GitRepo type
 // private repos will need ghToken
-func InitGit(repoName, owner, branch string, dir, ghToken string) (*GitRepo, error) {
-	log.Logger = log.With().Str("repo", repoName).Str("owner", owner).Logger()
+func InitGit(url, branch, dir, ghToken string) (*GitRepo, error) {
+	log.Logger = log.With().Str("url", url).Logger()
 
 	fi, err := os.Stat(dir)
 	if os.IsNotExist(err) || !fi.IsDir() {
@@ -60,12 +48,8 @@ func InitGit(repoName, owner, branch string, dir, ghToken string) (*GitRepo, err
 		}
 	}
 
-	var gh *github.Client
-	var ghV4 *githubv4.Client
-
-	fqrn := fmt.Sprintf("https://github.com/%s/%s", owner, repoName)
 	cloneOpts := &git.CloneOptions{
-		URL:           fqrn,
+		URL:           url,
 		Tags:          git.NoTags,
 		Progress:      os.Stdout,
 		Depth:         1,
@@ -76,13 +60,6 @@ func InitGit(repoName, owner, branch string, dir, ghToken string) (*GitRepo, err
 			Username: "ignored", // anything except an empty string
 			Password: ghToken,
 		}
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: ghToken},
-		)
-		tc := oauth2.NewClient(context.Background(), ts)
-
-		gh = github.NewClient(tc)
-		ghV4 = githubv4.NewClient(tc)
 	}
 
 	var repo *git.Repository
@@ -101,14 +78,11 @@ func InitGit(repoName, owner, branch string, dir, ghToken string) (*GitRepo, err
 	}
 
 	return &GitRepo{
-		Name:     repoName,
-		Owner:    owner,
+		url:      url,
 		auth:     cloneOpts.Auth,
 		repo:     repo,
 		worktree: w,
 		dir:      dir,
-		gh:       gh,
-		ghV4:     ghV4,
 		commitOpts: &git.CommitOptions{
 			All: false,
 			Author: &object.Signature{
@@ -239,27 +213,23 @@ func (r *GitRepo) Push(remoteBranch string) error {
 	if err != nil {
 		return fmt.Errorf("refspec %s failed validation", rs)
 	}
-	if r.dryRun {
-		log.Warn().Msg("only dry-run, not really pushing")
-	} else {
-		err = r.repo.Push(&git.PushOptions{
-			RemoteName: "origin",
-			RefSpecs:   []config.RefSpec{refspec},
-			Auth:       r.auth,
-			Progress:   os.Stdout,
-			// Force:      false,
-			// ForceWithLease: &git.ForceWithLease{
-			// 	RefName: plumbing.NewBranchReferenceName(remoteBranch),
-			// },
-			InsecureSkipTLS: false,
-		})
-		if err == git.NoErrAlreadyUpToDate {
-			log.Debug().Err(err).Msg("push -already up to date remote")
-			err = nil
-		}
-		if err != nil {
-			return fmt.Errorf("pushing: %w", err)
-		}
+	err = r.repo.Push(&git.PushOptions{
+		RemoteName: "origin",
+		RefSpecs:   []config.RefSpec{refspec},
+		Auth:       r.auth,
+		Progress:   os.Stdout,
+		// Force:      false,
+		// ForceWithLease: &git.ForceWithLease{
+		// 	RefName: plumbing.NewBranchReferenceName(remoteBranch),
+		// },
+		InsecureSkipTLS: false,
+	})
+	if err == git.NoErrAlreadyUpToDate {
+		log.Debug().Err(err).Msg("push -already up to date remote")
+		err = nil
+	}
+	if err != nil {
+		return fmt.Errorf("pushing: %w", err)
 	}
 	return nil
 }
@@ -341,115 +311,4 @@ func (r *GitRepo) EnableSigning(key *openpgp.Entity) error {
 		return fmt.Errorf("signing key is nil")
 	}
 	return nil
-}
-
-// (r *GitRepo) PRs returns the URLs of any PRs created so far
-func (r *GitRepo) PRs() []string {
-	return r.prs
-}
-
-// EnableAutoMergePR uses the graphQL github v4 API with the PR ID
-// (not number) to mutate graphQL PR object to enable automerge
-func (r *GitRepo) EnableAutoMerge(prID string) error {
-	var mutation struct {
-		Automerge struct {
-			ClientMutationID githubv4.String
-			Actor            struct {
-				Login githubv4.String
-			}
-			PullRequest struct {
-				BaseRefName githubv4.String
-				CreatedAt   githubv4.DateTime
-				Number      githubv4.Int
-			}
-		} `graphql:"enablePullRequestAutoMerge(input: $input)"`
-	}
-
-	mergeMethod := githubv4.PullRequestMergeMethodSquash
-
-	amInput := githubv4.EnablePullRequestAutoMergeInput{
-		MergeMethod:   &mergeMethod,
-		PullRequestID: prID,
-	}
-
-	return r.ghV4.Mutate(context.Background(), &mutation, amInput, nil)
-}
-
-//go:embed prs/main.tmpl
-var prbody string
-
-// RenderPRTemplate will fill in the supplied template body with values from GitRepo
-func (r *GitRepo) RenderPRTemplate(body *string, bv any) (*bytes.Buffer, error) {
-	op := new(bytes.Buffer)
-	t := template.Must(
-		template.New("prbody").
-			Option("missingkey=error").
-			Funcs(sprig.FuncMap()).
-			Parse(*body))
-	err := t.Execute(op, bv)
-	return op, err
-}
-
-// CreatePR will create a PR using the user supplied title and the embedded PR body
-// If a PR already exists, it will return that PR
-func (r *GitRepo) CreatePR(bv any, prtitle, remoteBranch string, draft bool) (*github.PullRequest, error) {
-	body, err := r.RenderPRTemplate(&prbody, bv)
-	if err != nil {
-		return nil, err
-	}
-	title, err := r.RenderPRTemplate(&prtitle, bv)
-	if err != nil {
-		return nil, err
-	}
-
-	prOpts := &github.NewPullRequest{
-		Title: github.String(title.String()),
-		Head:  github.String(remoteBranch),
-		Base:  github.String(r.Branch()),
-		Body:  github.String(body.String()),
-		Draft: github.Bool(draft),
-	}
-	log.Trace().Interface("propts", prOpts).Str("owner", r.Owner).Str("repo", r.Name).Msg("creating PR")
-	if r.dryRun {
-		return nil, nil
-	}
-	pr, resp, err := r.gh.PullRequests.Create(context.Background(), r.Owner, r.Name, prOpts)
-	// Attempt to detect if a PR already existingPR, complexity due to
-	// https://github.com/google/go-github/issues/1441
-	existingPR := false
-	if e, ok := err.(*github.ErrorResponse); ok {
-		for _, ghErr := range e.Errors {
-			if strings.HasPrefix(ghErr.Message, "A pull request already exists") {
-				log.Debug().Interface("ghErr", ghErr).Interface("resp", resp).Msg("found existing PR")
-				existingPR = true
-				break
-			}
-		}
-	}
-	if !existingPR && err != nil {
-		return nil, fmt.Errorf("error creating PR for %s:%s: %v", r.Name, remoteBranch, err)
-	} else if existingPR {
-		prs, err := r.getPR(remoteBranch)
-		if err != nil {
-			return nil, fmt.Errorf("PR %s:%s exists but could not be fetched: %v", r.Name, remoteBranch, err)
-		}
-		// Only one PR for a given head
-		pr = prs[0]
-	}
-	return pr, nil
-}
-
-// getPR searches for PRs created for the head ref/branch
-func (r *GitRepo) getPR(head string) ([]*github.PullRequest, error) {
-	prlOpts := &github.PullRequestListOptions{
-		Head: head,
-	}
-	prs, resp, err := r.gh.PullRequests.List(context.Background(), r.Owner, r.Name, prlOpts)
-	log.Trace().Interface("resp", resp).Msg("getting existing PR")
-	return prs, err
-}
-
-// (r *GitRepo) SetDryRun(true) will make this repo not perform any destructive action
-func (r *GitRepo) SetDryRun(dryRun bool) {
-	r.dryRun = dryRun
 }

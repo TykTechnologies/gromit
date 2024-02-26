@@ -14,7 +14,7 @@ gromit: *.go $(SRC)
 
 test: 
 	echo Use a config file locally and env variables in CI
-	go test -coverprofile cp.out ./... # dlv test ./cmd #
+	GITHUB_TOKEN=$(GITHUB_TOKEN) go test -v -coverprofile cp.out ./... # dlv test ./cmd #
 
 update-test-cases:
 	echo Updating test cases for cmd test

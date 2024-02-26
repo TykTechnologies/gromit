@@ -93,8 +93,7 @@ A PR will be created with the changes and @devops will be asked for a review.
 		}
 		repoName := args[0]
 		// Checkout code into a dir named repo
-		repo, err := policy.InitGit(repoName,
-			owner,
+		repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", owner, repoName),
 			Branch,
 			repoName,
 			ghToken)
@@ -117,6 +116,11 @@ A PR will be created with the changes and @devops will be asked for a review.
 			branches = []string{Branch}
 		}
 
+		var gh *policy.GithubClient
+		if pr {
+			gh = policy.NewGithubClient(ghToken)
+		}
+
 		for _, branch := range branches {
 			remoteBranch, err := rp.ProcessBranch(repoName, branch, msg, repo)
 			if err != nil {
@@ -125,18 +129,83 @@ A PR will be created with the changes and @devops will be asked for a review.
 				break
 			}
 			if pr {
-				pr, err := repo.CreatePR(rp, title, remoteBranch, false)
+				prOpts := &policy.PullRequest{
+					Title:      title,
+					BaseBranch: repo.Branch(),
+					PrBranch:   remoteBranch,
+					Owner:      owner,
+					Repo:       repoName,
+				}
+				pr, err := gh.CreatePR(rp, prOpts)
 				if err != nil {
 					cmd.Printf("gh create pr --base %s --head %s: %v", repo.Branch(), remoteBranch, err)
 				}
 				prs = append(prs, *pr.HTMLURL)
 				if autoMerge {
-					err = repo.EnableAutoMerge(pr.GetNodeID())
+					err = gh.EnableAutoMerge(pr.GetNodeID())
 					if err != nil {
 						cmd.Printf("Failed to enable auto-merge for %s: %v", *pr.HTMLURL, err)
 					}
 				}
 			}
+		}
+		cmd.Printf("PRs created: %v\n", prs)
+		return err
+	},
+}
+
+var prSubCmd = &cobra.Command{
+	Use:   "pr repos...",
+	Args:  cobra.MinimumNArgs(1),
+	Short: "Create PRs for the named repos",
+	Long: `For each of the supplied repos, PRs will created for the releng/* branches. These branches are kept updated by Dr. Releng which updates these branches when gromit:master is updated.
+This command does not need a git repo. It does require GITHUB_TOKEN to be set.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var configPolicies policy.Policies
+		err := policy.LoadRepoPolicies(&configPolicies)
+		if err != nil {
+			return fmt.Errorf("Could not parse repo policies: %v", err)
+		}
+		ghToken := os.Getenv("GITHUB_TOKEN")
+		if ghToken == "" {
+			return fmt.Errorf("Creating PRs requires GITHUB_TOKEN to be set")
+		}
+		title, _ := cmd.Flags().GetString("title")
+		autoMerge, _ := cmd.Flags().GetBool("auto")
+		var prs []string
+		gh := policy.NewGithubClient(ghToken)
+		for _, repoName := range args {
+			rp, err := configPolicies.GetRepoPolicy(repoName)
+			if err != nil {
+				return fmt.Errorf("repopolicy %s: %v", repoName, err)
+			}
+			var branches []string
+			if Branch == "" {
+				branches = rp.GetAllBranches()
+			} else {
+				branches = []string{Branch}
+			}
+			for _, branch := range branches {
+				prOpts := &policy.PullRequest{
+					Title:      fmt.Sprintf("%s:%s %s", repoName, branch, title),
+					BaseBranch: branch,
+					PrBranch:   "releng/" + branch,
+					Owner:      owner,
+					Repo:       repoName,
+				}
+				pr, err := gh.CreatePR(rp, prOpts)
+				if err != nil {
+					cmd.Printf("Could not create PR for %s:%s: %v", repoName, branch, err)
+				}
+				prs = append(prs, *pr.HTMLURL)
+				if autoMerge {
+					err = gh.EnableAutoMerge(pr.GetNodeID())
+					if err != nil {
+						cmd.Printf("Failed to enable auto-merge for %s: %v", *pr.HTMLURL, err)
+					}
+				}
+			}
+
 		}
 		cmd.Printf("PRs created: %v\n", prs)
 		return nil
@@ -166,11 +235,14 @@ func init() {
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
 	syncSubCmd.PersistentFlags().StringVar(&owner, "owner", "TykTechnologies", "Github org")
 
+	prSubCmd.Flags().String("title", "", "Title of PR, template interpolation from RepoPolicy allowed")
+
 	diffSubCmd.Flags().Bool("colours", true, "Use colours in output")
 
 	policyCmd.AddCommand(syncSubCmd)
 	policyCmd.AddCommand(controllerSubCmd)
 	policyCmd.AddCommand(diffSubCmd)
+	policyCmd.AddCommand(prSubCmd)
 
 	policyCmd.PersistentFlags().StringSliceVar(&Repos, "repos", Repos, "Repos to operate upon, comma separated values accepted.")
 	// FIXME: Remove the default from Branch when we can process multiple branches in the same dir
