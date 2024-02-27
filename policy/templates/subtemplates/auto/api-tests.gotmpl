@@ -38,7 +38,7 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
-          VERSIONS: {{`${{ needs.test-controller.outputs.versions}}`}}
+          VERSIONS: {{`${{ needs.test-controller-api.outputs.versions}}`}}
         run: |
           echo "ECR=${ECR}
           $VERSIONS
@@ -64,7 +64,7 @@
           set -o pipefail
           echo "### API tests {{`${{ matrix.db }} ${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
-             {{`${{ steps.ecr.outputs.registry }}/tyk-automated-tests:${{ needs.test-controller.outputs.gd_tag }}`}} \
+             {{`${{ steps.ecr.outputs.registry }}/tyk-automated-tests:${{ needs.test-controller-api.outputs.gd_tag }}`}} \
              pytest -c pytest_ci.ini --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
                echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else
@@ -82,7 +82,7 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
-          VERSIONS: {{`${{ needs.test-controller.outputs.versions }}`}}
+          VERSIONS: {{`${{ needs.test-controller-api.outputs.versions }}`}}
         run: |
           echo "ECR=${ECR}
           $VERSIONS
