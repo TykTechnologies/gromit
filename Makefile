@@ -13,11 +13,14 @@ gromit: *.go $(SRC)
 	go mod tidy
 
 test: 
-	echo Use a config file locally and env variables in CI
-	GITHUB_TOKEN=$(GITHUB_TOKEN) go test -v -coverprofile cp.out ./... # dlv test ./cmd #
+	go test -coverprofile cp.out ./... # dlv test ./cmd #
+
+test-github: 
+	@echo Creates and closes a PR in tyklabs/git-tests
+	@GITHUB_TOKEN=$(GITHUB_TOKEN) go test ./policy -run TestGitFunctions
 
 update-test-cases:
-	echo Updating test cases for cmd test
+	@echo Updating test cases for cmd test
 	go test ./cmd/ -update
 
 clean:

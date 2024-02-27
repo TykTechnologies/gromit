@@ -3,9 +3,11 @@ package policy
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"text/template"
+	"time"
 
 	_ "embed"
 
@@ -25,7 +27,10 @@ type PullRequest struct {
 	Title                string
 	BaseBranch, PrBranch string
 	Owner, Repo          string
+	AutoMerge            bool
 }
+
+var NoPRs = errors.New("no matching PRs found")
 
 // NewGithubClient returns a client that uses the v3 (REST) API to talk to Github
 func NewGithubClient(ghToken string) *GithubClient {
@@ -93,26 +98,84 @@ func (gh *GithubClient) CreatePR(bv any, prOpts *PullRequest) (*github.PullReque
 	} else if existingPR {
 		pr, err = gh.getPR(prOpts)
 		if err != nil {
-			return nil, fmt.Errorf("PR %s:%s exists but could not be fetched: %v", prOpts.Repo, prOpts.BaseBranch, err)
+			switch {
+			case errors.Is(err, NoPRs):
+				return nil, fmt.Errorf("possible bug in GithubClient.getPR()")
+			default:
+				return nil, fmt.Errorf("PR %s:%s exists but could not be fetched: %v", prOpts.Repo, prOpts.BaseBranch, err)
+			}
 		}
 	}
 	log.Trace().Interface("pr", pr).Msgf("PR %s/%s<-%s", prOpts.Owner, prOpts.BaseBranch, prOpts.PrBranch)
-	return pr, nil
+	if prOpts.AutoMerge {
+		err = gh.EnableAutoMerge(pr.GetNodeID())
+	}
+	return pr, err
 }
 
 // getPR searches for PRs created for the head ref/branch
 func (gh *GithubClient) getPR(prOpts *PullRequest) (*github.PullRequest, error) {
 	prlOpts := &github.PullRequestListOptions{
-		Head: prOpts.BaseBranch,
+		Base: prOpts.BaseBranch,
+		Head: prOpts.Owner + ":" + prOpts.PrBranch,
 	}
 	prs, resp, err := gh.v3.PullRequests.List(context.Background(), prOpts.Owner, prOpts.Repo, prlOpts)
-	log.Trace().Interface("resp", resp).Msg("getting existing PR")
-	for _, pr := range prs {
-		if prOpts.BaseBranch == pr.Base.GetRef() {
-			return pr, err
+	if err != nil {
+		return nil, fmt.Errorf("listing PRs: %v", err)
+	}
+	log.Trace().Interface("resp", resp).Interface("prs", prs).Msg("getting existing PRs")
+	if len(prs) > 0 {
+		return prs[0], nil
+	} else {
+		return nil, NoPRs
+	}
+}
+
+// (gh *GithubClient) ClosePR will close matching PRs without merging
+func (gh *GithubClient) ClosePR(prOpts *PullRequest) error {
+	pr, err := gh.getPR(prOpts)
+	if err != nil {
+		switch {
+		case errors.Is(err, NoPRs):
+			log.Info().Msgf("No releng PRs found for %s:%s<-%s", prOpts.Repo, prOpts.BaseBranch, prOpts.PrBranch)
+			return nil
+		default:
+			return err
 		}
 	}
-	return nil, err
+	pr.State = github.String("closed")
+	pr, resp, err := gh.v3.PullRequests.Edit(context.Background(), prOpts.Owner, prOpts.Repo, *pr.Number, pr)
+	log.Trace().Interface("resp", resp).Interface("pr", pr).Msg("closing PR")
+	return err
+}
+
+// (gh *GithubClient) UpdatePR will update prOpts.PrBranch without needing a git checkout
+func (gh *GithubClient) UpdatePrBranch(prOpts *PullRequest) error {
+	pr, err := gh.getPR(prOpts)
+	if err != nil {
+		switch {
+		case errors.Is(err, NoPRs):
+			log.Info().Msgf("No releng PRs found for %s:%s<-%s", prOpts.Repo, prOpts.BaseBranch, prOpts.PrBranch)
+			return nil
+		default:
+			return err
+		}
+	}
+	attempts := 3
+	delay := time.Second * 2
+again:
+	// Default value of pruOpts should DTRT
+	var pruOpts github.PullRequestBranchUpdateOptions
+	pru, resp, err := gh.v3.PullRequests.UpdateBranch(context.Background(), prOpts.Owner, prOpts.Repo, *pr.Number, &pruOpts)
+	log.Trace().Interface("resp", resp).Interface("pr", pru).Msgf("updating branch for %s:%s<-%s", prOpts.Repo, prOpts.BaseBranch, prOpts.PrBranch)
+	_, isae := err.(*github.AcceptedError)
+	if attempts > 0 && isae {
+		attempts--
+		log.Debug().Msgf("Waiting %s to try again", delay)
+		time.Sleep(delay)
+		goto again
+	}
+	return err
 }
 
 // EnableAutoMergePR uses the graphQL github v4 API with the PR ID
