@@ -47,6 +47,7 @@
         with:
           fetch-depth: 1
   {{- if eq .Name "tyk-analytics" }}
+          ref: {{`${{ github.event.pull_request.head.sha }}`}}
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           submodules: true
   {{- end }}
