@@ -9,7 +9,7 @@
         uses: aws-actions/amazon-ecr-login@v2
         with:
           mask-password: 'true'
-          # Only ${{ github.actor }} has access
+          # Only {{`${{ github.actor }}`}} has access
           # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
       - name: Setup tmate session only in debug mode
         uses: mxschmitt/action-tmate@v3
