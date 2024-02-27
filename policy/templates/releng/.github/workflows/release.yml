@@ -53,7 +53,7 @@ jobs:
           JOB: api
         run: gromit policy controller --loglevel debug | tee -a "$GITHUB_OUTPUT"
 
-{{- if eq .Name "tyk-analytics" }}
+{{ if eq .Name "tyk-analytics" }}
   test-controller-ui:
     needs: goreleaser
     runs-on: ubuntu-latest
@@ -97,7 +97,7 @@ jobs:
           - db: postgres15
             markers: "and not sql"   
 {{- template "ui-tests" . }}                 
-{{  end -}}
+{{  end  }}
 
   api-tests:
     needs: [goreleaser, test-controller]
