@@ -193,7 +193,7 @@ func (rp *RepoPolicy) ProcessBranch(opDir, branch, msg string, repo *GitRepo) (s
 	log.Info().Msgf("processing branch %s", branch)
 	err := repo.FetchBranch(branch)
 	if err != nil {
-		return "", fmt.Errorf("git checkout %s/%s:%s: %v", repo.Owner, repo.Name, branch, err)
+		return "", fmt.Errorf("git checkout %s:%s: %v", repo.url, branch, err)
 	}
 	err = rp.SetBranch(branch)
 	if err != nil {
@@ -232,7 +232,7 @@ func (rp *RepoPolicy) ProcessBranch(opDir, branch, msg string, repo *GitRepo) (s
 	}
 	remoteBranch := fmt.Sprintf("releng/%s", branch)
 	if len(dfs) == 0 {
-		log.Info().Msgf("trivial changes for repo %s branch %s, stopping here", repo.Name, repo.Branch())
+		log.Info().Msgf("trivial changes for repo %s branch %s, stopping here", repo.url, repo.Branch())
 		return remoteBranch, nil
 	}
 	// Add rendered files to git staging.
@@ -244,11 +244,11 @@ func (rp *RepoPolicy) ProcessBranch(opDir, branch, msg string, repo *GitRepo) (s
 	}
 	err = repo.Commit(msg)
 	if err != nil {
-		return "", fmt.Errorf("git commit %s: %v", repo.Name, err)
+		return "", fmt.Errorf("git commit %s: %v", repo.url, err)
 	}
 	err = repo.Push(remoteBranch)
 	if err != nil {
-		return remoteBranch, fmt.Errorf("git push %s %s:%s: %v", repo.Name, repo.Branch(), remoteBranch, err)
+		return remoteBranch, fmt.Errorf("git push %s %s:%s: %v", repo.url, repo.Branch(), remoteBranch, err)
 	}
 	log.Info().Msgf("pushed %s to %s", remoteBranch, rp.Name)
 

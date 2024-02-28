@@ -16,8 +16,9 @@ import (
 )
 
 var testRepo = map[string]string{
-	"name":        "git-tests",
+	"url":         "https://github.com/tyklabs/git-tests",
 	"owner":       "tyklabs",
+	"name":        "git-tests",
 	"branch":      "main",
 	"newbranch":   "testbranch",
 	"filepath":    "testfile.txt",
@@ -30,11 +31,11 @@ var testRepo = map[string]string{
 // create file, commit and push
 // fetch new branch in tmpVDir
 // compare tmpDir and tmpVDir
-// mock create a PR
+// mock create a PR if GITHUB_TOKEN is set
 func TestGitFunctions(t *testing.T) {
-	token := os.Getenv("GH_TOKEN")
+	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
-		t.Skip("Requires GH_TOKEN be set to a valid gihub PAT to run this test.")
+		t.Skip("Requires GITHUB_TOKEN be set to a valid gihub PAT to run this test.")
 	}
 	// Init call needs the policy for that repo
 	config.LoadConfig("../testdata/config-test.yaml")
@@ -43,7 +44,7 @@ func TestGitFunctions(t *testing.T) {
 		t.Fatalf("Error creating temp dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
-	src, err := InitGit(testRepo["name"], testRepo["owner"], testRepo["branch"], tmpDir, token)
+	src, err := InitGit(testRepo["url"], testRepo["branch"], tmpDir, token)
 	if err != nil {
 		t.Fatalf("init %s/%s at %s: (%v)", testRepo["owner"], testRepo["name"], tmpDir, err)
 	}
@@ -119,7 +120,7 @@ func TestGitFunctions(t *testing.T) {
 		t.Fatalf("Error creating temp dir: %v", err)
 	}
 	defer os.RemoveAll(tmpVDir)
-	vSrc, err := InitGit(testRepo["name"], testRepo["owner"], "main", tmpVDir, token)
+	vSrc, err := InitGit(testRepo["url"], "main", tmpVDir, token)
 	if err != nil {
 		t.Fatalf("init %s/%s at %s: (%v)", testRepo["owner"], testRepo["name"], tmpVDir, err)
 	}
@@ -147,8 +148,25 @@ func TestGitFunctions(t *testing.T) {
 	t.Log("Csum post commit:  ", committedCsums)
 	t.Log("Csum after pulling the changes ", pulledCsums)
 
-	src.SetDryRun(true)
-	_, err = src.CreatePR(nil, "dry run title", testRepo["newbranch"], true)
+	var pol Policies
+	config.LoadConfig("../testdata/config-test.yaml")
+	err = LoadRepoPolicies(&pol)
+	if err != nil {
+		t.Fatalf("Could not load policy from testdata/config-test.yaml: %v", err)
+	}
+	r0, err := pol.GetRepoPolicy("repo0")
+	if err != nil {
+		t.Fatalf("Could not get repo0: %v", err)
+	}
+	gh := NewGithubClient(token)
+	prOpts := &PullRequest{
+		Title:      "Test PR",
+		BaseBranch: testRepo["branch"],
+		PrBranch:   testRepo["newbranch"],
+		Owner:      testRepo["owner"],
+		Repo:       testRepo["name"],
+	}
+	_, err = gh.CreatePR(r0, prOpts)
 	if err != nil {
 		t.Fatalf("mock PR: %v", err)
 	}
@@ -159,7 +177,6 @@ func TestGitFunctions(t *testing.T) {
 	}
 	assert.EqualValues(t, startCsums, committedCsums)
 	assert.EqualValues(t, startCsums, pulledCsums)
-
 }
 
 func GetDirChecksums(dir string) (map[string]string, error) {

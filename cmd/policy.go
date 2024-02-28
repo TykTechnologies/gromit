@@ -22,19 +22,17 @@ import (
 	"time"
 
 	"github.com/TykTechnologies/gromit/policy"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-var dryRun, autoMerge bool
-var owner string
+var Owner string
 
 // policyCmd represents the policy command
 var policyCmd = &cobra.Command{
 	Use:   "policy",
 	Short: "Templatised policies that are driven by the config file",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("You probably need to use a sub-command.")
+		fmt.Println("You need to use a sub-command.")
 	},
 }
 
@@ -77,15 +75,9 @@ var syncSubCmd = &cobra.Command{
 	Short: "(re-)generate the templates for all known branches for <repo>",
 	Long: `Policies are driven by a config file. The config file models the variables of all the repositories under management. See https://github.com/TykTechnologies/gromit/tree/master/policy/config.yaml.
 Operates directly on github and creates PRs. Requires an OAuth2 token (for private repos) and a section in the config file describing the policy. Will render templates, overlaid onto a git repo.
-A PR will be created with the changes and @devops will be asked for a review.
+If --pr is supplied, a PR will be created with the changes and @devops will be asked for a review.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var configPolicies policy.Policies
-		err := policy.LoadRepoPolicies(&configPolicies)
-		if err != nil {
-			log.Fatal().Err(err).Msg("could not parse repo policies")
-		}
-
 		pr, _ := cmd.Flags().GetBool("pr")
 		ghToken := os.Getenv("GITHUB_TOKEN")
 		if pr && ghToken == "" {
@@ -93,13 +85,16 @@ A PR will be created with the changes and @devops will be asked for a review.
 		}
 		repoName := args[0]
 		// Checkout code into a dir named repo
-		repo, err := policy.InitGit(repoName,
-			owner,
+		repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", Owner, repoName),
 			Branch,
 			repoName,
 			ghToken)
 		if err != nil {
 			return fmt.Errorf("git init %s: %v, is the repo private and GITHUB_TOKEN not set?", repoName, err)
+		}
+		err = policy.LoadRepoPolicies(&configPolicies)
+		if err != nil {
+			return fmt.Errorf("Could not load config file: %v", err)
 		}
 		rp, err := configPolicies.GetRepoPolicy(repoName)
 		if err != nil {
@@ -117,6 +112,10 @@ A PR will be created with the changes and @devops will be asked for a review.
 			branches = []string{Branch}
 		}
 
+		if pr {
+			gh = policy.NewGithubClient(ghToken)
+		}
+
 		for _, branch := range branches {
 			remoteBranch, err := rp.ProcessBranch(repoName, branch, msg, repo)
 			if err != nil {
@@ -125,21 +124,23 @@ A PR will be created with the changes and @devops will be asked for a review.
 				break
 			}
 			if pr {
-				pr, err := repo.CreatePR(rp, title, remoteBranch, false)
+				prOpts := &policy.PullRequest{
+					Title:      title,
+					BaseBranch: repo.Branch(),
+					PrBranch:   remoteBranch,
+					Owner:      Owner,
+					Repo:       repoName,
+					AutoMerge:  autoMerge,
+				}
+				pr, err := gh.CreatePR(rp, prOpts)
 				if err != nil {
 					cmd.Printf("gh create pr --base %s --head %s: %v", repo.Branch(), remoteBranch, err)
 				}
 				prs = append(prs, *pr.HTMLURL)
-				if autoMerge {
-					err = repo.EnableAutoMerge(pr.GetNodeID())
-					if err != nil {
-						cmd.Printf("Failed to enable auto-merge for %s: %v", *pr.HTMLURL, err)
-					}
-				}
 			}
 		}
 		cmd.Printf("PRs created: %v\n", prs)
-		return nil
+		return err
 	},
 }
 
@@ -164,7 +165,9 @@ func init() {
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
 	syncSubCmd.Flags().String("msg", "Auto generated from templates by gromit", "Commit message for the automated commit by gromit.")
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
-	syncSubCmd.PersistentFlags().StringVar(&owner, "owner", "TykTechnologies", "Github org")
+	syncSubCmd.PersistentFlags().StringVar(&Owner, "owner", "TykTechnologies", "Github org")
+
+	cprSubCmd.Flags().String("title", "", "Title of PR, template interpolation from RepoPolicy allowed")
 
 	diffSubCmd.Flags().Bool("colours", true, "Use colours in output")
 
@@ -172,9 +175,8 @@ func init() {
 	policyCmd.AddCommand(controllerSubCmd)
 	policyCmd.AddCommand(diffSubCmd)
 
-	policyCmd.PersistentFlags().StringSliceVar(&Repos, "repos", Repos, "Repos to operate upon, comma separated values accepted.")
 	// FIXME: Remove the default from Branch when we can process multiple branches in the same dir
 	policyCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
-	policyCmd.PersistentFlags().BoolVarP(&autoMerge, "auto", "a", true, "Will automerge if all requirements are meet")
+	policyCmd.PersistentFlags().Bool("auto", true, "Will automerge if all requirements are meet")
 	rootCmd.AddCommand(policyCmd)
 }

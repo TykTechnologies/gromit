@@ -23,7 +23,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: "1.22"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -83,13 +83,18 @@ jobs:
         with:
           name: binary-amd64
 
-      - name: Check for zero diffs
+      - name: prepare gromit
+        id: gromit
         run: |
           gromit="${{ steps.download.outputs.download-path }}/gromit"
           chmod +x $gromit
-          ${{ steps.download.outputs.download-path }}/gromit bundle gen --branch ${{matrix.branch}} --repo ${{ matrix.repo }} ${{ matrix.repo }}
+          echo "bin=${gromit}" >> "$GITHUB_OUTPUT"
+
+      - name: diffs
+        run: |
+          ${{ steps.gromit.outputs.bin }} bundle gen --branch ${{matrix.branch}} --repo ${{ matrix.repo }} ${{ matrix.repo }}
           echo "## :hospital: ℞ ${{ matrix.repo }} ${{ matrix.feature }} ${{matrix.branch}}" >> $GITHUB_STEP_SUMMARY
-          if $gromit policy diff --colours=false ${{ matrix.repo }} 2>summary 1>diff; then
+          if ${{ steps.gromit.outputs.bin }} policy diff --colours=false ${{ matrix.repo }} 2>summary 1>diff; then
              echo No treatment required :sunglasses: :thumbsup: >> $GITHUB_STEP_SUMMARY
           else
              echo "::error title=${{ matrix.repo }} ${{ matrix.feature }} ${{matrix.branch}}::$(cat summary)"
@@ -97,3 +102,10 @@ jobs:
              cat diff >> $GITHUB_STEP_SUMMARY
              echo '```' >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: update ${{ matrix.repo }}:releng/${{ matrix.branch }}
+        if: ${{ (github.event_name == 'push' && github.ref_name == 'master') || endsWith(github.head_ref, 'releng') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
+        run: |
+          ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }} --branch ${{ matrix.branch }}

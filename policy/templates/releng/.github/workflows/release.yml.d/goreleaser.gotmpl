@@ -76,7 +76,7 @@
           password: {{`${{ secrets.CLOUDSMITH_API_KEY }}`}}
   {{- end }}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cache/go-build
