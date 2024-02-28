@@ -81,6 +81,7 @@
           npm run test
         working-directory: tests/ui
         env:
+          GW_URL: 'https://localhost:8080/'
           NODE_TLS_REJECT_UNAUTHORIZED: 0
           SLACK_AUTH_TOKEN: {{`${{ secrets.UI_SLACK_AUTH_TOKEN }}`}}
           EVENT_TRIGGER: {{`${{ github.event_name }}`}} ({{`${{ github.actor }}`}})
