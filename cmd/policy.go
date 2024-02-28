@@ -56,8 +56,10 @@ var controllerSubCmd = &cobra.Command{
 		// db is the databases to use
 		// pump/sink are included only when needed
 		defaults := policy.TestVariations{
-			"pump": []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
-			"sink": []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
+			params["job"] + "_conf": []string{"sha256"},
+			params["job"] + "_db":   []string{"mongo44", "postgres15"},
+			"pump":                  []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
+			"sink":                  []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
 		}
 		if err := params.SetVariations(&op, defaults); err != nil {
 			return err

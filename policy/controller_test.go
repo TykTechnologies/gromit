@@ -94,6 +94,38 @@ EOF
 			baseRef: "refs/heads/main",
 		},
 		{
+			job: "ui",
+			want: `versions<<EOF
+tyk_image=$ECR/tyk:master
+tyk_analytics_image=$ECR/tyk-analytics:master
+tyk_pump_image=$ECR/tyk-pump:master
+tyk_sink_image=$ECR/tyk-sink:master
+# override default above with just built tag
+tyk_image=v1.0
+# alfa and beta have to come after the override
+tyk_alfa_image=$tyk_image
+tyk_beta_image=$tyk_image
+EOF
+gd_tag=master
+pump<<EOF
+["tykio/tyk-pump-docker-pub:v1.8","$ECR/tyk-pump:master"]
+EOF
+sink<<EOF
+["tykio/tyk-mdcb-docker:v2.4","$ECR/tyk-sink:master"]
+EOF
+ui_conf<<EOF
+["sha256"]
+EOF
+ui_db<<EOF
+["mongo44","postgres15"]
+EOF
+`,
+			trigger: "",
+			isPR:    "no",
+			isTag:   "no",
+			isLTS:   "no",
+			baseRef: "refs/heads/main",
+		}, {
 			job: "api",
 			want: `versions<<EOF
 tyk_image=$ECR/tyk:release-5-lts
@@ -148,8 +180,10 @@ EOF
 			op.WriteString("\n")
 
 			defaults := TestVariations{
-				"pump": []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
-				"sink": []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
+				p["job"] + "_conf": []string{"sha256"},
+				p["job"] + "_db":   []string{"mongo44", "postgres15"},
+				"pump":             []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
+				"sink":             []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
 			}
 
 			if err := p.SetVariations(&op, defaults); err != nil {
