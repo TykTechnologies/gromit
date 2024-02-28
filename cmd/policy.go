@@ -22,11 +22,10 @@ import (
 	"time"
 
 	"github.com/TykTechnologies/gromit/policy"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-var owner string
+var Owner string
 
 // policyCmd represents the policy command
 var policyCmd = &cobra.Command{
@@ -79,12 +78,6 @@ Operates directly on github and creates PRs. Requires an OAuth2 token (for priva
 If --pr is supplied, a PR will be created with the changes and @devops will be asked for a review.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var configPolicies policy.Policies
-		err := policy.LoadRepoPolicies(&configPolicies)
-		if err != nil {
-			log.Fatal().Err(err).Msg("could not parse repo policies")
-		}
-
 		pr, _ := cmd.Flags().GetBool("pr")
 		ghToken := os.Getenv("GITHUB_TOKEN")
 		if pr && ghToken == "" {
@@ -92,12 +85,16 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 		}
 		repoName := args[0]
 		// Checkout code into a dir named repo
-		repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", owner, repoName),
+		repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", Owner, repoName),
 			Branch,
 			repoName,
 			ghToken)
 		if err != nil {
 			return fmt.Errorf("git init %s: %v, is the repo private and GITHUB_TOKEN not set?", repoName, err)
+		}
+		err = policy.LoadRepoPolicies(&configPolicies)
+		if err != nil {
+			return fmt.Errorf("Could not load config file: %v", err)
 		}
 		rp, err := configPolicies.GetRepoPolicy(repoName)
 		if err != nil {
@@ -115,7 +112,6 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 			branches = []string{Branch}
 		}
 
-		var gh *policy.GithubClient
 		if pr {
 			gh = policy.NewGithubClient(ghToken)
 		}
@@ -132,7 +128,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 					Title:      title,
 					BaseBranch: repo.Branch(),
 					PrBranch:   remoteBranch,
-					Owner:      owner,
+					Owner:      Owner,
 					Repo:       repoName,
 					AutoMerge:  autoMerge,
 				}
@@ -145,151 +141,6 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 		}
 		cmd.Printf("PRs created: %v\n", prs)
 		return err
-	},
-}
-
-var cprSubCmd = &cobra.Command{
-	Use:     "createprs repos...",
-	Args:    cobra.MinimumNArgs(1),
-	Aliases: []string{"cpr"},
-	Short:   "Create PRs for the named repos",
-	Long: `For each of the supplied repos, PRs will created for the releng/* branches. These branches are kept updated by Dr. Releng which updates these branches when gromit:master is updated.
-This command does not need a git repo. It does require GITHUB_TOKEN to be set.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var configPolicies policy.Policies
-		err := policy.LoadRepoPolicies(&configPolicies)
-		if err != nil {
-			return fmt.Errorf("Could not parse repo policies: %v", err)
-		}
-		ghToken := os.Getenv("GITHUB_TOKEN")
-		if ghToken == "" {
-			return fmt.Errorf("Creating PRs requires GITHUB_TOKEN to be set")
-		}
-		title, _ := cmd.Flags().GetString("title")
-		autoMerge, _ := cmd.Flags().GetBool("auto")
-		var prs []string
-		gh := policy.NewGithubClient(ghToken)
-		for _, repoName := range args {
-			rp, err := configPolicies.GetRepoPolicy(repoName)
-			if err != nil {
-				return fmt.Errorf("repopolicy %s: %v", repoName, err)
-			}
-			var branches []string
-			if Branch == "" {
-				branches = rp.GetAllBranches()
-			} else {
-				branches = []string{Branch}
-			}
-			for _, branch := range branches {
-				prOpts := &policy.PullRequest{
-					Title:      fmt.Sprintf("%s:%s %s", repoName, branch, title),
-					BaseBranch: branch,
-					PrBranch:   "releng/" + branch,
-					Owner:      owner,
-					Repo:       repoName,
-					AutoMerge:  autoMerge,
-				}
-				pr, err := gh.CreatePR(rp, prOpts)
-				if err != nil {
-					cmd.Printf("Could not create PR for %s:%s: %v", repoName, branch, err)
-				}
-				prs = append(prs, *pr.HTMLURL)
-			}
-		}
-		cmd.Printf("PRs created: %v\n", prs)
-		return nil
-	},
-}
-
-var dprSubCmd = &cobra.Command{
-	Use:     "deleteprs repos...",
-	Args:    cobra.MinimumNArgs(1),
-	Aliases: []string{"dpr"},
-	Short:   "Close PRs for the named repos",
-	Long: `For each of the supplied repos, PRs will be closed without merging.
-This command does not need a git repo. It does require GITHUB_TOKEN to be set.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var configPolicies policy.Policies
-		err := policy.LoadRepoPolicies(&configPolicies)
-		if err != nil {
-			return fmt.Errorf("Could not parse repo policies: %v", err)
-		}
-		ghToken := os.Getenv("GITHUB_TOKEN")
-		if ghToken == "" {
-			return fmt.Errorf("Creating PRs requires GITHUB_TOKEN to be set")
-		}
-		gh := policy.NewGithubClient(ghToken)
-		for _, repoName := range args {
-			rp, err := configPolicies.GetRepoPolicy(repoName)
-			if err != nil {
-				return fmt.Errorf("repopolicy %s: %v", repoName, err)
-			}
-			var branches []string
-			if Branch == "" {
-				branches = rp.GetAllBranches()
-			} else {
-				branches = []string{Branch}
-			}
-			for _, branch := range branches {
-				prOpts := &policy.PullRequest{
-					BaseBranch: branch,
-					PrBranch:   "releng/" + branch,
-					Owner:      owner,
-					Repo:       repoName,
-				}
-				err := gh.ClosePR(prOpts)
-				if err != nil {
-					cmd.Printf("Could not close PR for %s:%s: %v", repoName, branch, err)
-				}
-			}
-		}
-		return nil
-	},
-}
-
-var uprSubCmd = &cobra.Command{
-	Use:     "updateprs repos...",
-	Args:    cobra.MinimumNArgs(1),
-	Aliases: []string{"upr"},
-	Short:   "Update the releng PR branch for the named repos",
-	Long: `For each of the supplied repos, trigger a Github managed update of the PR branch. This will fail if there are conflicts.
-This command does not need a git repo. It does require GITHUB_TOKEN to be set.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var configPolicies policy.Policies
-		err := policy.LoadRepoPolicies(&configPolicies)
-		if err != nil {
-			return fmt.Errorf("Could not parse repo policies: %v", err)
-		}
-		ghToken := os.Getenv("GITHUB_TOKEN")
-		if ghToken == "" {
-			return fmt.Errorf("Creating PRs requires GITHUB_TOKEN to be set")
-		}
-		gh := policy.NewGithubClient(ghToken)
-		for _, repoName := range args {
-			rp, err := configPolicies.GetRepoPolicy(repoName)
-			if err != nil {
-				return fmt.Errorf("repopolicy %s: %v", repoName, err)
-			}
-			var branches []string
-			if Branch == "" {
-				branches = rp.GetAllBranches()
-			} else {
-				branches = []string{Branch}
-			}
-			for _, branch := range branches {
-				prOpts := &policy.PullRequest{
-					BaseBranch: branch,
-					PrBranch:   "releng/" + branch,
-					Owner:      owner,
-					Repo:       repoName,
-				}
-				err := gh.UpdatePrBranch(prOpts)
-				if err != nil {
-					cmd.Printf("Could not close PR for %s:%s: %v", repoName, branch, err)
-				}
-			}
-		}
-		return nil
 	},
 }
 
@@ -314,7 +165,7 @@ func init() {
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
 	syncSubCmd.Flags().String("msg", "Auto generated from templates by gromit", "Commit message for the automated commit by gromit.")
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
-	syncSubCmd.PersistentFlags().StringVar(&owner, "owner", "TykTechnologies", "Github org")
+	syncSubCmd.PersistentFlags().StringVar(&Owner, "owner", "TykTechnologies", "Github org")
 
 	cprSubCmd.Flags().String("title", "", "Title of PR, template interpolation from RepoPolicy allowed")
 
@@ -323,9 +174,6 @@ func init() {
 	policyCmd.AddCommand(syncSubCmd)
 	policyCmd.AddCommand(controllerSubCmd)
 	policyCmd.AddCommand(diffSubCmd)
-	policyCmd.AddCommand(cprSubCmd)
-	policyCmd.AddCommand(dprSubCmd)
-	policyCmd.AddCommand(uprSubCmd)
 
 	// FIXME: Remove the default from Branch when we can process multiple branches in the same dir
 	policyCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")

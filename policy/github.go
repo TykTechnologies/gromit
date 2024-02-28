@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
+	"runtime"
 	"strings"
 	"text/template"
 	"time"
@@ -146,6 +148,7 @@ func (gh *GithubClient) ClosePR(prOpts *PullRequest) error {
 	pr.State = github.String("closed")
 	pr, resp, err := gh.v3.PullRequests.Edit(context.Background(), prOpts.Owner, prOpts.Repo, *pr.Number, pr)
 	log.Trace().Interface("resp", resp).Interface("pr", pr).Msg("closing PR")
+	log.Info().Msgf("closed %s#%d", prOpts.Repo, *pr.Number)
 	return err
 }
 
@@ -178,6 +181,15 @@ again:
 	return err
 }
 
+// (gh *GithubClient) Open will open the PR matching prOpts in the default browser
+func (gh *GithubClient) Open(prOpts *PullRequest) error {
+	pr, err := gh.getPR(prOpts)
+	if err == nil {
+		return openInBrowser(*pr.HTMLURL)
+	}
+	return err
+}
+
 // EnableAutoMergePR uses the graphQL github v4 API with the PR ID
 // (not number) to mutate graphQL PR object to enable automerge
 func (gh *GithubClient) EnableAutoMerge(prID string) error {
@@ -203,4 +215,23 @@ func (gh *GithubClient) EnableAutoMerge(prID string) error {
 	}
 
 	return gh.v4.Mutate(context.Background(), &mutation, amInput, nil)
+}
+
+// https://stackoverflow.com/questions/39320371/how-start-web-server-to-open-page-in-browser-in-golang
+// open opens the specified URL in the default browser of the user.
+func openInBrowser(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = "cmd"
+		args = []string{"/c", "start"}
+	case "darwin":
+		cmd = "open"
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		cmd = "xdg-open"
+	}
+	args = append(args, url)
+	return exec.Command(cmd, args...).Start()
 }
