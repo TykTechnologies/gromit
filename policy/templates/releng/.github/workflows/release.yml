@@ -59,8 +59,8 @@ jobs:
     runs-on: ubuntu-latest
     container: tykio/gromit:v1.7
     outputs:
-      conf: {{`${{ steps.params.outputs.api_conf }}`}}
-      db: {{`${{ steps.params.outputs.api_db }}`}}
+      conf: {{`${{ steps.params.outputs.ui_conf }}`}}
+      db: {{`${{ steps.params.outputs.ui_db }}`}}
       pump: {{`${{ steps.params.outputs.pump }}`}}
       sink: {{`${{ steps.params.outputs.sink }}`}}
       gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
@@ -80,7 +80,7 @@ jobs:
         run: gromit policy controller --loglevel debug | tee -a "$GITHUB_OUTPUT"
 
   ui-tests:
-    needs: test-controller-ui
+    needs: [goreleaser, test-controller-ui]
     runs-on: ubuntu-latest
     permissions:
       id-token: write # This is required for requesting the Github JWT
@@ -100,7 +100,7 @@ jobs:
 {{  end  }}
 
   api-tests:
-    needs: [goreleaser, test-controller]
+    needs: [goreleaser, test-controller-api]
     runs-on: ubuntu-latest
     permissions:
       id-token: write   # This is required for requesting the Github JWT

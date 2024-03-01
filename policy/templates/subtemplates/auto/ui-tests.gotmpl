@@ -99,11 +99,17 @@
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
           VERSIONS: {{`${{ needs.test-controller-ui.outputs.versions}}`}}
         run: |
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
+          docker compose -p auto -f pro.yml -f deps_pro.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose-ui.log
           echo "::group::DockerLogs"
-          cat {{`${{ github.workspace }}`}}/docker-compose.log
-          echo "::endgroup::"   
-  
+          cat {{`${{ github.workspace }}`}}/docker-compose-ui.log
+          echo "::endgroup::"
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        if: failure() && (steps.ui_test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
+        with:
+          name: docker-compose-logs-ui
+          path: {{`${{ github.workspace }}`}}/docker-compose-ui.log
+          retention-days: 3
       - name: Upload Playwright Test Report to S3
         if: failure() && steps.ui_test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
         run:
