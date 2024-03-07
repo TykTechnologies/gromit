@@ -95,11 +95,11 @@ var dprSubCmd = &cobra.Command{
 	Short:   "Close PRs for the named repos",
 	Long: `For each of the supplied repos, PRs will be closed without merging.
 This command does not need a git repo. It does require GITHUB_TOKEN to be set.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		for _, repoName := range args {
 			err := processRepo(repoName, gh.ClosePR)
 			if err != nil {
-				return err
+				cmd.Prinln("Could not delete PR for %s: %v", repoName, err)
 			}
 		}
 		return nil
@@ -113,11 +113,11 @@ var uprSubCmd = &cobra.Command{
 	Short:   "Update the releng PR branch for the named repos",
 	Long: `For each of the supplied repos, trigger a Github managed update of the PR branch. This will fail if there are conflicts.
 This command does not need a git repo. It does require GITHUB_TOKEN to be set.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		for _, repoName := range args {
 			err := processRepo(repoName, gh.UpdatePrBranch)
 			if err != nil {
-				return err
+				cmd.Prinln("Could not update PR branch for %s: %v", repoName, err)
 			}
 		}
 		return nil
@@ -131,11 +131,11 @@ var oprSubCmd = &cobra.Command{
 	Short:   "Open the releng PR in the default browser",
 	Long: `For each of the supplied repos, trigger a Github managed update of the PR branch. This will fail if there are conflicts.
 This command does not need a git repo. It does require GITHUB_TOKEN to be set.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		for _, repoName := range args {
 			err := processRepo(repoName, gh.Open)
 			if err != nil {
-				return err
+				cmd.Prinln("Could not open PR for %s: %v", repoName, err)
 			}
 		}
 		return nil
