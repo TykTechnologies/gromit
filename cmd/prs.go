@@ -99,10 +99,9 @@ This command does not need a git repo. It does require GITHUB_TOKEN to be set.`,
 		for _, repoName := range args {
 			err := processRepo(repoName, gh.ClosePR)
 			if err != nil {
-				cmd.Prinln("Could not delete PR for %s: %v", repoName, err)
+				cmd.Printf("Could not delete PR for %s: %v", repoName, err)
 			}
 		}
-		return nil
 	},
 }
 
@@ -117,10 +116,9 @@ This command does not need a git repo. It does require GITHUB_TOKEN to be set.`,
 		for _, repoName := range args {
 			err := processRepo(repoName, gh.UpdatePrBranch)
 			if err != nil {
-				cmd.Prinln("Could not update PR branch for %s: %v", repoName, err)
+				cmd.Printf("Could not update PR branch for %s: %v", repoName, err)
 			}
 		}
-		return nil
 	},
 }
 
@@ -135,10 +133,9 @@ This command does not need a git repo. It does require GITHUB_TOKEN to be set.`,
 		for _, repoName := range args {
 			err := processRepo(repoName, gh.Open)
 			if err != nil {
-				cmd.Prinln("Could not open PR for %s: %v", repoName, err)
+				cmd.Printf("Could not open PR for %s: %v", repoName, err)
 			}
 		}
-		return nil
 	},
 }
 
