@@ -23,6 +23,7 @@ policy:
       - .github/workflows/update-config-docs.yml
       - .github/workflows/api-tests.yml
       - .github/workflows/pac.yml
+      - .github/workflows/int-image.yml
       - .github/workflows/e2e_api_tests.yml
       - repo-policy
       - bin/dist_push.sh

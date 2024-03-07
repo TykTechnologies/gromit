@@ -171,7 +171,7 @@
              docker manifest create ${tag} ${tag}-amd64 ${tag}-arm64 && docker manifest push ${tag}
           done
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         with:
           name: deb
@@ -180,7 +180,7 @@
             dist/*.deb
             !dist/*PAYG*.deb
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         with:
           name: rpm
