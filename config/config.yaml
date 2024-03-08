@@ -109,7 +109,7 @@ policy:
         cgo: true
         upgradefromver: 3.0.9
         configfile: tyk_analytics.conf
-        versionpackage: github.com/TykTechnologies/tyk-analytics/dashboard/internal/build
+        versionpackage: github.com/TykTechnologies/tyk-analytics/internal/build
         sourcebranch: master          
         buildenv: 1.21-bullseye
         features:
