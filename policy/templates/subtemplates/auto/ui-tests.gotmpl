@@ -104,7 +104,7 @@
           cat {{`${{ github.workspace }}`}}/docker-compose-ui.log
           echo "::endgroup::"
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure() && (steps.ui_test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
         with:
           name: docker-compose-logs-ui
@@ -147,5 +147,5 @@
           STATUS: "{{`${{ steps.ui_test_execution.outcome }}`}}"
           CLIENT_ID: {{`${{secrets.XRAY_CLIENT_ID}}`}}
           CLIENT_SECRET: {{`${{secrets.XRAY_CLIENT_SECRET}}`}}
-          BRANCH: {{`${{ github.ref }}`}}					
+          BRANCH: {{`${{ github.ref }}`}}                                       
 {{ end }}
