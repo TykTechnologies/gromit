@@ -27,6 +27,7 @@ type GithubClient struct {
 
 type PullRequest struct {
 	Title                string
+	Body                 string
 	BaseBranch, PrBranch string
 	Owner, Repo          string
 	AutoMerge            bool
@@ -59,13 +60,10 @@ func (gh *GithubClient) RenderPRTemplate(body *string, bv any) (*bytes.Buffer, e
 	return op, err
 }
 
-//go:embed prs/main.tmpl
-var prbody string
-
 // CreatePR will create a PR using the user supplied title and the embedded PR body
 // If a PR already exists, it will return that PR
 func (gh *GithubClient) CreatePR(bv any, prOpts *PullRequest) (*github.PullRequest, error) {
-	body, err := gh.RenderPRTemplate(&prbody, bv)
+	body, err := gh.RenderPRTemplate(&prOpts.Body, bv)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +170,7 @@ again:
 	pru, resp, err := gh.v3.PullRequests.UpdateBranch(context.Background(), prOpts.Owner, prOpts.Repo, *pr.Number, &pruOpts)
 	log.Trace().Interface("resp", resp).Interface("pr", pru).Msgf("updating branch for %s:%s<-%s", prOpts.Repo, prOpts.BaseBranch, prOpts.PrBranch)
 	_, isae := err.(*github.AcceptedError)
-	if attempts > 0 && isae {
+	if attempts > 0 && !isae {
 		attempts--
 		log.Debug().Msgf("Waiting %s to try again", delay)
 		time.Sleep(delay)
