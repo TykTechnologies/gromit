@@ -107,9 +107,10 @@
         uses: actions/upload-artifact@v4
         if: failure() && (steps.ui_test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
         with:
-          name: docker-compose-logs-ui
+          name: docker-compose-logs-ui-{{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}-{{`${{ github.run_id }}`}}
           path: {{`${{ github.workspace }}`}}/docker-compose-ui.log
           retention-days: 3
+          override: true
       - name: Upload Playwright Test Report to S3
         if: failure() && steps.ui_test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
         run:
