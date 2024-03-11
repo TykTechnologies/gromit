@@ -27,6 +27,7 @@ type GithubClient struct {
 
 type PullRequest struct {
 	Title                string
+	Body                 string
 	BaseBranch, PrBranch string
 	Owner, Repo          string
 	AutoMerge            bool
@@ -59,13 +60,10 @@ func (gh *GithubClient) RenderPRTemplate(body *string, bv any) (*bytes.Buffer, e
 	return op, err
 }
 
-//go:embed prs/main.tmpl
-var prbody string
-
 // CreatePR will create a PR using the user supplied title and the embedded PR body
 // If a PR already exists, it will return that PR
 func (gh *GithubClient) CreatePR(bv any, prOpts *PullRequest) (*github.PullRequest, error) {
-	body, err := gh.RenderPRTemplate(&prbody, bv)
+	body, err := gh.RenderPRTemplate(&prOpts.Body, bv)
 	if err != nil {
 		return nil, err
 	}

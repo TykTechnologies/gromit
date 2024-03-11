@@ -55,6 +55,14 @@ var cprSubCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		title, _ := cmd.Flags().GetString("title")
 		autoMerge, _ := cmd.Flags().GetBool("auto")
+		prbFile, err := cmd.Flags().GetString("body")
+		if err != nil {
+			return fmt.Errorf("PR body missing")
+		}
+		body, err := os.ReadFile(prbFile)
+		if err != nil {
+			return fmt.Errorf("PR body from %s: %v", prbFile, err)
+		}
 		var prs []string
 		for _, repoName := range args {
 			rp, err := configPolicies.GetRepoPolicy(repoName)
@@ -70,6 +78,7 @@ var cprSubCmd = &cobra.Command{
 			for _, branch := range branches {
 				prOpts := &policy.PullRequest{
 					Title:      fmt.Sprintf("%s:%s %s", repoName, branch, title),
+					Body:       string(body),
 					BaseBranch: branch,
 					PrBranch:   Prefix + branch,
 					Owner:      Owner,
@@ -171,6 +180,8 @@ func init() {
 	prsCmd.PersistentFlags().StringVar(&Prefix, "prefix", "releng/", "Given the base branch from --branch, the head branch will be assumed to be <prefix><branch>")
 
 	cprSubCmd.Flags().Bool("auto", true, "Will automerge if all requirements are meet")
+	cprSubCmd.Flags().String("title", "", "Title of the PR, will be prepended with <repo>/<branch>")
+	cprSubCmd.Flags().String("body", "body.md", "File containing body of PR, can use template variables.")
 
 	prsCmd.AddCommand(cprSubCmd)
 	prsCmd.AddCommand(dprSubCmd)

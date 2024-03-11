@@ -167,8 +167,6 @@ func init() {
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
 	syncSubCmd.PersistentFlags().StringVar(&Owner, "owner", "TykTechnologies", "Github org")
 
-	cprSubCmd.Flags().String("title", "", "Title of PR, template interpolation from RepoPolicy allowed")
-
 	diffSubCmd.Flags().Bool("colours", true, "Use colours in output")
 
 	policyCmd.AddCommand(syncSubCmd)
