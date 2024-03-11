@@ -176,7 +176,7 @@ func processRepo(repoName string, f func(*policy.PullRequest) error) error {
 }
 
 func init() {
-	prsCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
+	prsCmd.PersistentFlags().StringVar(&Branch, "branch", "", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
 	prsCmd.PersistentFlags().StringVar(&Prefix, "prefix", "releng/", "Given the base branch from --branch, the head branch will be assumed to be <prefix><branch>")
 
 	cprSubCmd.Flags().Bool("auto", true, "Will automerge if all requirements are meet")
