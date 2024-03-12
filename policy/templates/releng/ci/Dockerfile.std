@@ -22,6 +22,9 @@ RUN rm -fv /usr/bin/passwd /usr/sbin/adduser || true
 RUN rm -rf /root/.cache \
     && apt-get -y autoremove \
     && apt-get clean \
+  {{- if and (eq .Name "tyk") (eq .Branch "release-5-lts") }}
+    && rm -rf /usr/include/* \
+  {{- end }}
     && find /usr/lib -type f -name '*.a' -o -name '*.o' -delete
 
 # Comment this to test in dev
