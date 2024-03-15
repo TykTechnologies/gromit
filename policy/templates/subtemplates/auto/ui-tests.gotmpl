@@ -59,7 +59,7 @@
           $VERSIONS
           tyk_pump_image={{`${{matrix.pump}}`}}
           tyk_sink_image={{`${{matrix.sink}}`}}
-          confs_dir=./pro
+          confs_dir=./pro-ha
           env_file=local-{{`${{ matrix.db }}`}}.env" > versions.env
           echo "::group::versions"
           cat versions.env
@@ -67,7 +67,9 @@
           # Add Tyk component config variations to $env_file
           cat confs/{{`${{ matrix.conf }}`}}.env >> local-{{`${{ matrix.db }}`}}.env
           # bring up env, the project name is important
-          docker compose -p auto -f pro.yml -f deps_pro.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
+          ./dash-bootstrap.sh http://localhost:3000
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
       - name: Install test dependecies
         run: |
           npm ci
@@ -99,7 +101,7 @@
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
           VERSIONS: {{`${{ needs.test-controller-ui.outputs.versions}}`}}
         run: |
-          docker compose -p auto -f pro.yml -f deps_pro.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose-ui.log
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose-ui.log
           echo "::group::DockerLogs"
           cat {{`${{ github.workspace }}`}}/docker-compose-ui.log
           echo "::endgroup::"
