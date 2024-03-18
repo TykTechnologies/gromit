@@ -146,10 +146,10 @@ api_db<<EOF
 ["mongo44","postgres15"]
 EOF
 pump<<EOF
-["tykio/tyk-pump-docker-pub:v1.8"]
+["tykio/tyk-pump-docker-pub:v1.8","$ECR/tyk-pump:master"]
 EOF
 sink<<EOF
-["tykio/tyk-mdcb-docker:v2.4"]
+["tykio/tyk-mdcb-docker:v2.4","$ECR/tyk-sink:master"]
 EOF
 `,
 			trigger: "is_lts",

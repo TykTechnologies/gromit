@@ -53,8 +53,8 @@ func (p runParameters) SetVariations(op io.Writer, tv TestVariations) error {
 	case "is_lts":
 		tv[p["job"]+"_conf"] = []string{"sha256"}
 		tv[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
-		tv["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8"}
-		tv["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4"}
+		tv["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"}
+		tv["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"}
 	}
 
 	for _, v := range sortedKeys(tv) {
