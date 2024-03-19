@@ -209,10 +209,10 @@ func (r *GitRepo) Push(remoteBranch string) error {
 		RefSpecs:   []config.RefSpec{refspec},
 		Auth:       r.auth,
 		Progress:   os.Stdout,
-		Force:      false,
-		ForceWithLease: &git.ForceWithLease{
-			RefName: plumbing.NewBranchReferenceName(remoteBranch),
-		},
+		// Force:      false,
+		// ForceWithLease: &git.ForceWithLease{
+		// 	RefName: plumbing.NewBranchReferenceName(remoteBranch),
+		// },
 		InsecureSkipTLS: false,
 	})
 	if err == git.NoErrAlreadyUpToDate {
