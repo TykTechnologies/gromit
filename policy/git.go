@@ -32,8 +32,6 @@ type GitRepo struct {
 	auth       transport.AuthMethod
 }
 
-const defaultRemote = "origin"
-
 // InitGit is a constructor for the GitRepo type
 // private repos will need ghToken
 func InitGit(url, branch, dir, ghToken string) (*GitRepo, error) {
@@ -69,7 +67,7 @@ func InitGit(url, branch, dir, ghToken string) (*GitRepo, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not clone %s: %v", branch, err)
 		}
-		log.Info().Msgf("creating fresh clone in %s", dir)
+		log.Info().Msgf("created fresh clone in %s", dir)
 	}
 	w, err := repo.Worktree()
 	if err != nil {
@@ -182,29 +180,22 @@ func (r *GitRepo) FetchBranch(branch string) error {
 	})
 }
 
-// (r *GitRepo) FetchBranch fetches the given ref and then checks it out to the worktree
-// Any local changes are lost. If the branch does not exist in the `origin` remote, an
-// error is returned
+// (r *GitRepo) PullBranch will incorporate changes from origin.
+// Only ff changes can be merged.
 func (r *GitRepo) PullBranch(branch string) error {
-	rbRef := plumbing.NewRemoteReferenceName("origin", branch)
-	err := r.worktree.Pull(&git.PullOptions{
-		RemoteName:    "origin",
+	rbRef := plumbing.NewBranchReferenceName(branch)
+	return r.worktree.Pull(&git.PullOptions{
+		SingleBranch:  true,
 		ReferenceName: rbRef,
-		Depth:         1,
 		Auth:          r.auth,
 		Progress:      os.Stdout,
-		Force:         true,
 	})
-	if err != nil && err != git.NoErrAlreadyUpToDate {
-		return fmt.Errorf("could not pull %s: %v", branch, err)
-	}
-	return nil
 }
 
 // Push will push the current worktree to origin
 func (r *GitRepo) Push(remoteBranch string) error {
 	if remoteBranch == r.Branch() {
-		log.Warn().Msg("pushing to same branch as checkout")
+		log.Warn().Msgf("pushing to %s which was checked out as %s", remoteBranch, r.Branch())
 	}
 	rs := fmt.Sprintf("+refs/heads/%s:refs/heads/%s", r.Branch(), remoteBranch)
 	log.Trace().Str("refspec", rs).Msg("for push")
@@ -218,10 +209,10 @@ func (r *GitRepo) Push(remoteBranch string) error {
 		RefSpecs:   []config.RefSpec{refspec},
 		Auth:       r.auth,
 		Progress:   os.Stdout,
-		// Force:      false,
-		// ForceWithLease: &git.ForceWithLease{
-		// 	RefName: plumbing.NewBranchReferenceName(remoteBranch),
-		// },
+		Force:      false,
+		ForceWithLease: &git.ForceWithLease{
+			RefName: plumbing.NewBranchReferenceName(remoteBranch),
+		},
 		InsecureSkipTLS: false,
 	})
 	if err == git.NoErrAlreadyUpToDate {
@@ -266,7 +257,7 @@ func (r *GitRepo) DeleteRemoteBranch(remoteBranch string) error {
 
 // (r *GitRepo) Branches will return a list of branches matching the supplied regexp for the repo
 func (r *GitRepo) Branches(re string) ([]string, error) {
-	remote, err := r.repo.Remote(defaultRemote)
+	remote, err := r.repo.Remote("origin")
 	if err != nil {
 		panic(err)
 	}

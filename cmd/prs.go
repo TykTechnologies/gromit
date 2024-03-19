@@ -24,8 +24,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var Prefix string
 var gh *policy.GithubClient
+
+// PrBranch so that it does not conflict with PolBranch
+var PrBranch string
 
 // prsCmd represents the prs command
 var prsCmd = &cobra.Command{
@@ -53,16 +55,21 @@ var cprSubCmd = &cobra.Command{
 	Long: `PRs will be created for the branches with <prefix>. Existing PRs will be not cause duplicates.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		title, _ := cmd.Flags().GetString("title")
+		jToken := os.Getenv("JIRA_TOKEN")
+		jUser := os.Getenv("JIRA_USER")
+		if jToken == "" || jUser == "" {
+			log.Fatal().Msg("Working with PRs requires GITHUB_TOKEN")
+		}
+		j := policy.NewJiraClient(jUser, jToken)
+		issue, err := cmd.Flags().GetString("jira")
+		if err != nil {
+			log.Fatal().Err(err).Msgf("could not get Jira issue %s", issue)
+		}
+		jIssue, err := j.GetIssue(issue)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("could not get Jira issue %s", issue)
+		}
 		autoMerge, _ := cmd.Flags().GetBool("auto")
-		prbFile, err := cmd.Flags().GetString("body")
-		if err != nil {
-			return fmt.Errorf("PR body missing")
-		}
-		body, err := os.ReadFile(prbFile)
-		if err != nil {
-			return fmt.Errorf("PR body from %s: %v", prbFile, err)
-		}
 		var prs []string
 		for _, repoName := range args {
 			rp, err := configPolicies.GetRepoPolicy(repoName)
@@ -70,15 +77,14 @@ var cprSubCmd = &cobra.Command{
 				return fmt.Errorf("repopolicy %s: %v", repoName, err)
 			}
 			var branches []string
-			if Branch == "" {
+			if PrBranch == "" {
 				branches = rp.GetAllBranches()
 			} else {
-				branches = []string{Branch}
+				branches = []string{PrBranch}
 			}
 			for _, branch := range branches {
 				prOpts := &policy.PullRequest{
-					Title:      fmt.Sprintf("%s:%s %s", repoName, branch, title),
-					Body:       string(body),
+					Jira:       jIssue,
 					BaseBranch: branch,
 					PrBranch:   Prefix + branch,
 					Owner:      Owner,
@@ -155,10 +161,10 @@ func processRepo(repoName string, f func(*policy.PullRequest) error) error {
 		return fmt.Errorf("repopolicy %s: %v", repoName, err)
 	}
 	var branches []string
-	if Branch == "" {
+	if PrBranch == "" {
 		branches = rp.GetAllBranches()
 	} else {
-		branches = []string{Branch}
+		branches = []string{PrBranch}
 	}
 	for _, branch := range branches {
 		prOpts := &policy.PullRequest{
@@ -176,12 +182,12 @@ func processRepo(repoName string, f func(*policy.PullRequest) error) error {
 }
 
 func init() {
-	prsCmd.PersistentFlags().StringVar(&Branch, "branch", "", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
+	prsCmd.PersistentFlags().StringVar(&PrBranch, "branch", "", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
 	prsCmd.PersistentFlags().StringVar(&Prefix, "prefix", "releng/", "Given the base branch from --branch, the head branch will be assumed to be <prefix><branch>")
 
 	cprSubCmd.Flags().Bool("auto", true, "Will automerge if all requirements are meet")
-	cprSubCmd.Flags().String("title", "", "Title of the PR, will be prepended with <repo>/<branch>")
-	cprSubCmd.Flags().String("body", "body.md", "File containing body of PR, can use template variables.")
+	cprSubCmd.Flags().String("jira", "", "Title and body will be filled in from Jira issue")
+	cprSubCmd.MarkFlagRequired("jira")
 
 	prsCmd.AddCommand(cprSubCmd)
 	prsCmd.AddCommand(dprSubCmd)
