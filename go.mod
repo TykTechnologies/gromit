@@ -4,7 +4,7 @@ go 1.22.0
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/ProtonMail/go-crypto v1.1.0-alpha.1
+	github.com/ProtonMail/go-crypto v1.1.0-alpha.2
 	github.com/aws/aws-sdk-go-v2 v1.25.2
 	github.com/aws/aws-sdk-go-v2/config v1.27.5
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.28.1
