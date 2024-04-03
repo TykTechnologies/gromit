@@ -37,8 +37,6 @@ func TestGitFunctions(t *testing.T) {
 	if token == "" {
 		t.Skip("Requires GITHUB_TOKEN be set to a valid gihub PAT to run this test.")
 	}
-	// Init call needs the policy for that repo
-	config.LoadConfig("../testdata/config-test.yaml")
 	tmpDir, err := os.MkdirTemp("", testRepo["name"])
 	if err != nil {
 		t.Fatalf("Error creating temp dir: %v", err)
@@ -148,6 +146,13 @@ func TestGitFunctions(t *testing.T) {
 	t.Log("Csum post commit:  ", committedCsums)
 	t.Log("Csum after pulling the changes ", pulledCsums)
 
+	juser := os.Getenv("JIRA_USER")
+	jtoken := os.Getenv("JIRA_TOKEN")
+	if jtoken == "" || juser == "" {
+		t.Skip("Requires JIRA_USER and JIRA_TOKEN be set to run this test.")
+	}
+	j := NewJiraClient(juser, jtoken)
+	i, err := j.GetIssue("SYSE-1")
 	var pol Policies
 	config.LoadConfig("../testdata/config-test.yaml")
 	err = LoadRepoPolicies(&pol)
@@ -160,7 +165,7 @@ func TestGitFunctions(t *testing.T) {
 	}
 	gh := NewGithubClient(token)
 	prOpts := &PullRequest{
-		Title:      "Test PR",
+		Jira:       i,
 		BaseBranch: testRepo["branch"],
 		PrBranch:   testRepo["newbranch"],
 		Owner:      testRepo["owner"],

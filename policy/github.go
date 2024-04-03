@@ -26,8 +26,7 @@ type GithubClient struct {
 }
 
 type PullRequest struct {
-	Title                string
-	Body                 string
+	Jira                 *JiraIssue
 	BaseBranch, PrBranch string
 	Owner, Repo          string
 	AutoMerge            bool
@@ -63,17 +62,17 @@ func (gh *GithubClient) RenderPRTemplate(body *string, bv any) (*bytes.Buffer, e
 // CreatePR will create a PR using the user supplied title and the embedded PR body
 // If a PR already exists, it will return that PR
 func (gh *GithubClient) CreatePR(bv any, prOpts *PullRequest) (*github.PullRequest, error) {
-	body, err := gh.RenderPRTemplate(&prOpts.Body, bv)
+	body, err := gh.RenderPRTemplate(&prOpts.Jira.Body, bv)
 	if err != nil {
 		return nil, err
 	}
-	title, err := gh.RenderPRTemplate(&prOpts.Title, bv)
+	title, err := gh.RenderPRTemplate(&prOpts.Jira.Title, bv)
 	if err != nil {
 		return nil, err
 	}
 
 	clientPROpts := &github.NewPullRequest{
-		Title: github.String(title.String()),
+		Title: github.String(fmt.Sprintf("[%s %s] %s", prOpts.Jira.Id, prOpts.BaseBranch, title.String())),
 		Head:  github.String(prOpts.PrBranch),
 		Base:  github.String(prOpts.BaseBranch),
 		Body:  github.String(body.String()),
@@ -105,6 +104,15 @@ func (gh *GithubClient) CreatePR(bv any, prOpts *PullRequest) (*github.PullReque
 				return nil, fmt.Errorf("PR %s:%s exists but could not be fetched: %v", prOpts.Repo, prOpts.BaseBranch, err)
 			}
 		}
+		pr.Title = clientPROpts.Title
+		pr.Body = clientPROpts.Body
+		prNum := pr.GetNumber()
+		pr, resp, err := gh.v3.PullRequests.Edit(context.Background(), prOpts.Owner, prOpts.Repo, prNum, pr)
+		log.Trace().Interface("resp", resp).Str("owner", prOpts.Owner).Str("repo", prOpts.Repo).Msgf("updating PR#%d", prNum)
+		if err != nil {
+			return pr, fmt.Errorf("Updating PR#%d failed: %w", prNum, err)
+		}
+		log.Info().Msgf("Updated existing PR#%d", prNum)
 	}
 	log.Trace().Interface("pr", pr).Msgf("PR %s/%s<-%s", prOpts.Owner, prOpts.BaseBranch, prOpts.PrBranch)
 	if prOpts.AutoMerge {

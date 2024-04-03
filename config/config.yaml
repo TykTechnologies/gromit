@@ -198,6 +198,3 @@ policy:
           master:
             features:
               - s390x
-          release-1.9:
-            feature:
-              - s390x

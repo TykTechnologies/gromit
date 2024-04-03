@@ -19,6 +19,7 @@ http://www.apache.org/licenses/LICENSE-2.0
 import (
 	"os"
 
+	"github.com/TykTechnologies/gromit/policy"
 	"github.com/TykTechnologies/gromit/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/spf13/cobra"
@@ -33,11 +34,17 @@ var cfgFile string
 // AWScfg is used in cluster, sow, reap and the server
 var AWScfg aws.Config
 
-// Repos is used in git, bundle and policy
-var Repos = []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink", "tyk-identity-broker", "portal"}
+// Owner of the github repos
+// used in policy and prs
+var Owner string
 
-// Branch used in bundle and policy
-var Branch string
+// Configuration under the policy key
+// used in policy and prs
+var configPolicies policy.Policies
+
+// Prefix for the remote branches
+// used in policy and prs
+var Prefix string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{

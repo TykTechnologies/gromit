@@ -92,6 +92,16 @@ type RepoPolicy struct {
 	Visibility     string
 }
 
+// PushOptions collects the input required to update templates for a
+// branch in git and push changes upstream
+type PushOptions struct {
+	OpDir        string
+	Branch       string
+	RemoteBranch string
+	CommitMsg    string
+	Repo         *GitRepo
+}
+
 // SetTimestamp Sets the given time as the repopolicy timestamp. If called with zero time
 // sets the current time in UTC
 func (rp *RepoPolicy) SetTimestamp(ts time.Time) {
@@ -189,27 +199,27 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 
 // ProcessBranch will render the templates into a git worktree for the supplied branch, commit and push the changes upstream
 // The upstream branch name is the supplied branch name prefixed with releng/ and is returned
-func (rp *RepoPolicy) ProcessBranch(opDir, branch, msg string, repo *GitRepo) (string, error) {
-	log.Info().Msgf("processing branch %s", branch)
-	err := repo.FetchBranch(branch)
+func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
+	log.Info().Msgf("processing branch %s", pushOpts.Branch)
+	err := pushOpts.Repo.FetchBranch(pushOpts.Branch)
 	if err != nil {
-		return "", fmt.Errorf("git checkout %s:%s: %v", repo.url, branch, err)
+		return fmt.Errorf("git checkout %s:%s: %v", pushOpts.Repo.url, pushOpts.Branch, err)
 	}
-	err = rp.SetBranch(branch)
+	err = rp.SetBranch(pushOpts.Branch)
 	if err != nil {
-		return "", err
+		return err
 	}
 	b, err := NewBundle(rp.Branchvals.Features)
 	if err != nil {
-		return "", fmt.Errorf("bundle %v: %v", rp.Branchvals.Features, err)
+		return fmt.Errorf("bundle %v: %v", rp.Branchvals.Features, err)
 	}
-	files, err := b.Render(&rp, opDir, nil)
+	files, err := b.Render(&rp, pushOpts.OpDir, nil)
 	log.Info().Strs("files", files).Msg("Rendered files")
 	if err != nil {
-		return "", fmt.Errorf("bundle gen %v: %v", rp.Branchvals.Features, err)
+		return fmt.Errorf("bundle gen %v: %v", rp.Branchvals.Features, err)
 	}
 	for _, f := range rp.Branchvals.DeletedFiles {
-		fname := filepath.Join(opDir, f)
+		fname := filepath.Join(pushOpts.OpDir, f)
 		fi, err := os.Stat(fname)
 		if os.IsNotExist(err) {
 			continue
@@ -222,37 +232,43 @@ func (rp *RepoPolicy) ProcessBranch(opDir, branch, msg string, repo *GitRepo) (s
 			log.Debug().Msgf("recursively deleting %s", fname)
 			glob += "/*"
 		}
-		if err := repo.RemoveAll(glob); err != nil {
+		if err := pushOpts.Repo.RemoveAll(glob); err != nil {
 			log.Warn().Err(err).Msgf("removing %s from the index", f)
 		}
 	}
-	dfs, err := NonTrivialDiff(opDir, false, false)
+	dfs, err := NonTrivialDiff(pushOpts.OpDir, false, false)
 	if err != nil {
-		return "", fmt.Errorf("computing diff in %s: %v", opDir, err)
+		return fmt.Errorf("computing diff in %s: %v", pushOpts.OpDir, err)
 	}
-	remoteBranch := fmt.Sprintf("releng/%s", branch)
 	if len(dfs) == 0 {
-		log.Info().Msgf("trivial changes for repo %s branch %s, stopping here", repo.url, repo.Branch())
-		return remoteBranch, nil
+		log.Info().Msgf("trivial changes for repo %s branch %s, stopping here", pushOpts.Repo.url, pushOpts.Repo.Branch())
+		return nil
 	}
 	// Add rendered files to git staging.
 	for _, f := range files {
-		_, err := repo.AddFile(f)
+		_, err := pushOpts.Repo.AddFile(f)
 		if err != nil {
-			return "", fmt.Errorf("staging file to git worktree: %v", err)
+			return fmt.Errorf("staging file to git worktree: %v", err)
 		}
 	}
-	err = repo.Commit(msg)
+	err = pushOpts.Repo.Commit(pushOpts.CommitMsg)
 	if err != nil {
-		return "", fmt.Errorf("git commit %s: %v", repo.url, err)
+		return fmt.Errorf("git commit %s: %v", pushOpts.Repo.url, err)
 	}
-	err = repo.Push(remoteBranch)
-	if err != nil {
-		return remoteBranch, fmt.Errorf("git push %s %s:%s: %v", repo.url, repo.Branch(), remoteBranch, err)
-	}
-	log.Info().Msgf("pushed %s to %s", remoteBranch, rp.Name)
 
-	return remoteBranch, nil
+	// Incorporate changes that were pushed outside the templates
+	// err = pushOpts.Repo.PullBranch(pushOpts.RemoteBranch)
+	// if err != nil && err != git.NoErrAlreadyUpToDate && err != git.ErrBranchNotFound {
+	// 	return fmt.Errorf("pulling changes into %s: %v", pushOpts.RemoteBranch, err)
+	// }
+
+	err = pushOpts.Repo.Push(pushOpts.RemoteBranch)
+	if err != nil {
+		return fmt.Errorf("git push %s %s:%s: %v", pushOpts.Repo.url, pushOpts.Repo.Branch(), pushOpts.RemoteBranch, err)
+	}
+	log.Info().Msgf("pushed %s to %s", pushOpts.RemoteBranch, rp.Name)
+
+	return nil
 }
 
 // Stringer implementation for Policies

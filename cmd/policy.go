@@ -22,17 +22,53 @@ import (
 	"time"
 
 	"github.com/TykTechnologies/gromit/policy"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-var Owner string
+// PolBranch so that it does not conflict with PrBranch
+var PolBranch string
 
 // policyCmd represents the policy command
 var policyCmd = &cobra.Command{
 	Use:   "policy",
 	Short: "Templatised policies that are driven by the config file",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		err := policy.LoadRepoPolicies(&configPolicies)
+		if err != nil {
+			log.Fatal().Err(err).Msg("could not parse repo policies")
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("You need to use a sub-command.")
+	},
+}
+
+// genSubCmd is meant for debugging
+var genSubCmd = &cobra.Command{
+	Use:     "gen <dir>",
+	Aliases: []string{"generate", "render"},
+	Args:    cobra.ExactArgs(1),
+	Short:   "Render <bundle> into <dir> using parameters from policy.<repo>. If <dir> is -, render to stdout.",
+	Long: `A bundle is a collection of templates. A template is a top-level file which will be rendered with the same path as it is embedded as.
+A template can have sub-templates which are in directories of the form, <template>.d. The contents of these directories will not be traversed looking for further templates but are collected into the list of files that used to instantiate <template>.
+Templates can be organised into features, which is just a directory tree of templates. Rendering the same file from different templates is _not_ supported.
+This command does not overlay the rendered output into a git tree. You will have to checkout the repo yourself if you want to check the rendered templates into a git repository.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dir := args[0]
+		repoName, _ := cmd.Flags().GetString("repo")
+		rp, err := configPolicies.GetRepoPolicy(repoName)
+		rp.SetTimestamp(time.Now().UTC())
+		rp.SetBranch(PolBranch)
+		if err != nil {
+			return fmt.Errorf("repopolicy %s: %v", repoName, err)
+		}
+		b, err := policy.NewBundle(rp.Branchvals.Features)
+		if err != nil {
+			return fmt.Errorf("bundle: %v", err)
+		}
+		_, err = b.Render(rp, dir, nil)
+		return err
 	},
 }
 
@@ -86,7 +122,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 		repoName := args[0]
 		// Checkout code into a dir named repo
 		repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", Owner, repoName),
-			Branch,
+			PolBranch,
 			repoName,
 			ghToken)
 		if err != nil {
@@ -101,15 +137,14 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 			return fmt.Errorf("repopolicy %s: %v", repoName, err)
 		}
 		rp.SetTimestamp(time.Now().UTC())
-		title, _ := cmd.Flags().GetString("title")
 		msg, _ := cmd.Flags().GetString("msg")
 		autoMerge, _ := cmd.Flags().GetBool("auto")
 
 		var prs, branches []string
-		if Branch == "" {
+		if PolBranch == "" {
 			branches = rp.GetAllBranches()
 		} else {
-			branches = []string{Branch}
+			branches = []string{PolBranch}
 		}
 
 		if pr {
@@ -117,7 +152,14 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 		}
 
 		for _, branch := range branches {
-			remoteBranch, err := rp.ProcessBranch(repoName, branch, msg, repo)
+			pushOpts := &policy.PushOptions{
+				OpDir:        repoName,
+				Branch:       branch,
+				RemoteBranch: Prefix + branch,
+				CommitMsg:    msg,
+				Repo:         repo,
+			}
+			err := rp.ProcessBranch(pushOpts)
 			if err != nil {
 				cmd.Printf("Could not process %s/%s: %v\n", repoName, branch, err)
 				cmd.Println("Will not process remaining branches")
@@ -125,16 +167,15 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 			}
 			if pr {
 				prOpts := &policy.PullRequest{
-					Title:      title,
 					BaseBranch: repo.Branch(),
-					PrBranch:   remoteBranch,
+					PrBranch:   pushOpts.RemoteBranch,
 					Owner:      Owner,
 					Repo:       repoName,
 					AutoMerge:  autoMerge,
 				}
 				pr, err := gh.CreatePR(rp, prOpts)
 				if err != nil {
-					cmd.Printf("gh create pr --base %s --head %s: %v", repo.Branch(), remoteBranch, err)
+					cmd.Printf("gh create pr --base %s --head %s: %v", repo.Branch(), pushOpts.RemoteBranch, err)
 				}
 				prs = append(prs, *pr.HTMLURL)
 			}
@@ -165,16 +206,20 @@ func init() {
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
 	syncSubCmd.Flags().String("msg", "Auto generated from templates by gromit", "Commit message for the automated commit by gromit.")
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
-	syncSubCmd.PersistentFlags().StringVar(&Owner, "owner", "TykTechnologies", "Github org")
+	syncSubCmd.Flags().StringVar(&Owner, "owner", "TykTechnologies", "Github org")
+	syncSubCmd.Flags().StringVar(&Prefix, "prefix", "releng/", "Prefix for the branch with the changes. The default is releng/<branch>")
 
 	diffSubCmd.Flags().Bool("colours", true, "Use colours in output")
+
+	genSubCmd.Flags().String("repo", "", "Repository name to use from config file")
 
 	policyCmd.AddCommand(syncSubCmd)
 	policyCmd.AddCommand(controllerSubCmd)
 	policyCmd.AddCommand(diffSubCmd)
+	policyCmd.AddCommand(genSubCmd)
 
 	// FIXME: Remove the default from Branch when we can process multiple branches in the same dir
-	policyCmd.PersistentFlags().StringVar(&Branch, "branch", "master", "Restrict operations to this branch, all PRs generated will be using this as the base branch")
+	policyCmd.PersistentFlags().StringVar(&PolBranch, "branch", "master", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
 	policyCmd.PersistentFlags().Bool("auto", true, "Will automerge if all requirements are meet")
 	rootCmd.AddCommand(policyCmd)
 }
