@@ -9,7 +9,6 @@ Usage:
   gromit [command]
 
 Available Commands:
-  bundle      Operate on bundles
   completion  Generate completion script
   help        Help about any command
   licenser    Get a trial license and writes it to path, overwriting it
