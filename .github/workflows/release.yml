@@ -92,7 +92,7 @@ jobs:
 
       - name: diffs
         run: |
-          ${{ steps.gromit.outputs.bin }} bundle gen --branch ${{matrix.branch}} --repo ${{ matrix.repo }} ${{ matrix.repo }}
+          ${{ steps.gromit.outputs.bin }} policy gen --branch ${{matrix.branch}} --repo ${{ matrix.repo }} ${{ matrix.repo }}
           echo "## :hospital: ℞ ${{ matrix.repo }} ${{ matrix.feature }} ${{matrix.branch}}" >> $GITHUB_STEP_SUMMARY
           if ${{ steps.gromit.outputs.bin }} policy diff --colours=false ${{ matrix.repo }} 2>summary 1>diff; then
              echo No treatment required :sunglasses: :thumbsup: >> $GITHUB_STEP_SUMMARY

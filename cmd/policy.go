@@ -211,6 +211,8 @@ func init() {
 
 	diffSubCmd.Flags().Bool("colours", true, "Use colours in output")
 
+	genSubCmd.Flags().String("repo", "", "Repository name to use from config file")
+
 	policyCmd.AddCommand(syncSubCmd)
 	policyCmd.AddCommand(controllerSubCmd)
 	policyCmd.AddCommand(diffSubCmd)
