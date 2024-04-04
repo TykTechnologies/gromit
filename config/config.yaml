@@ -174,7 +174,7 @@ policy:
         upgradefromver: 1.0.0
         configfile: portal.conf
         versionpackage: github.com/TykTechnologies/portal/model/version
-        baseimage: debian:trixie-slim
+        baseimage: debian:bookworm-slim
         buildenv: 1.19-bullseye
         branches:
           master:
