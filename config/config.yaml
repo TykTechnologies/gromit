@@ -175,9 +175,13 @@ policy:
         configfile: portal.conf
         versionpackage: github.com/TykTechnologies/portal/model/version
         baseimage: debian:bookworm-slim
-        buildenv: 1.19-bullseye
+        buildenv: 1.21-bullseye
         branches:
           master:
+            baseimage: debian:bookworm-slim
+            buildenv: 1.21-bullseye
+          release-1.8.0:
+            buildenv: 1.19-bullseye
 
       tyk-pump:
         description: >-
