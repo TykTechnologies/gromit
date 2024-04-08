@@ -180,7 +180,10 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 				prs = append(prs, *pr.HTMLURL)
 			}
 		}
-		cmd.Printf("PRs created: %v\n", prs)
+		cmd.Println("PRs created:")
+		for _, pr := range prs {
+			cmd.Printf("- %s\n", pr)
+		}
 		return err
 	},
 }

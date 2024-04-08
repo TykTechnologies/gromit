@@ -4,9 +4,10 @@ COMMIT 	:= $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
 SRC 	:= $(shell find cmd confgen config orgs policy -name '*.go' -o -regex '.*\.(go)?tmpl' -o -regex '.*\.ya?ml')
 
-REPOS ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal
+REPOS        ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal
 GITHUB_TOKEN ?= $(shell pass me/github)
-
+JIRA_USER    ?= alok@tyk.io
+JIRA_TOKEN   ?= $(pass Tyk/atlassian)
 
 gromit: go.mod go.sum *.go $(SRC)
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
@@ -32,7 +33,7 @@ sync: gromit
 	@$(foreach r,$(REPOS), GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit policy sync $(r);)
 
 %pr: gromit
-	@GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit prs $@ $(REPOS)
+	@GITHUB_TOKEN=$(GITHUB_TOKEN) JIRA_USER=$(JIRA_USER) JIRA_TOKEN=$(JIRA_TOKEN) ./gromit prs $@ $(REPOS)
 
 loc: clean
 	gocloc --skip-duplicated --not-match-d=\.terraform --output-type=json ~gromit ~ci | jq -r '.languages | map([.name, .code]) | transpose[] | @csv'
