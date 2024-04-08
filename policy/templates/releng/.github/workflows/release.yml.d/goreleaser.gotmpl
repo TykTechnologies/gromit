@@ -110,7 +110,7 @@
           chmod +x /tmp/build.sh
           docker run --rm --privileged -e GITHUB_TOKEN={{`${{ github.token }}`}} \
           -e GOPRIVATE=github.com/TykTechnologies                                \
-          -e GO111MODULE={{if and (eq .Name "tyk") (hasSuffix .Branch "-lts" ) }}off{{else}}on{{end}} \
+          -e GO111MODULE={{if and (eq .Name "tyk") (hasSuffix "-lts" .Branch ) }}off{{else}}on{{end}} \
           -e DEBVERS='{{`${{ matrix.debvers }}`}}'                               \
           -e RPMVERS='{{`${{ matrix.rpmvers }}`}}'                               \
           -e CGO_ENABLED={{`${{ matrix.cgo }}`}}                                 \
