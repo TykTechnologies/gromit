@@ -236,14 +236,6 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 			log.Warn().Err(err).Msgf("removing %s from the index", f)
 		}
 	}
-	dfs, err := NonTrivialDiff(pushOpts.OpDir, false, false)
-	if err != nil {
-		return fmt.Errorf("computing diff in %s: %v", pushOpts.OpDir, err)
-	}
-	if len(dfs) == 0 {
-		log.Info().Msgf("trivial changes for repo %s branch %s, stopping here", pushOpts.Repo.url, pushOpts.Repo.Branch())
-		return nil
-	}
 	// Add rendered files to git staging.
 	for _, f := range files {
 		_, err := pushOpts.Repo.AddFile(f)
