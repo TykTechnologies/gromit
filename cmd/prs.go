@@ -98,7 +98,10 @@ var cprSubCmd = &cobra.Command{
 				prs = append(prs, *pr.HTMLURL)
 			}
 		}
-		cmd.Printf("PRs created: %v\n", prs)
+		cmd.Println("PRs created:")
+		for _, pr := range prs {
+			cmd.Printf("- %s\n", pr)
+		}
 		return nil
 	},
 }
