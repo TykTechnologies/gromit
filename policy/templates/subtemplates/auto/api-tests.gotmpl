@@ -60,60 +60,48 @@
       - name: Run tests
         working-directory: auto
         id: test_execution
-        env:
-          PYTEST_JUNIT_OUTPUT_NAME: ./reports/results.xml
         run: |
-          echo "report_path=$PYTEST_JUNIT_OUTPUT_NAME" >> $GITHUB_OUTPUT
           set -o pipefail
           echo "### API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
              {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{`${{ needs.test-controller-api.outputs.gd_tag }}`}} \
-             pytest -c pytest_ci.ini --junitxml=$PYTEST_JUNIT_OUTPUT_NAME --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
+             pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH#"{{`${{ github.workspace }}`}}"} --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
                echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else
                echo "::error title=API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}::Test execution failed"
                cat tests.out >> $GITHUB_STEP_SUMMARY
                exit 1
           fi
-      - name: Convert XML report into Json
-        id: convert_api_report
-        env:
-          REPORT_PATH: /tmp/parsed-report.json 
+      - name: Generate metadata
+        if: always() && steps.test_execution.outcome != 'skipped'
+        id: metadata_report
         run: |
-          npx junit2json -p {{`${{ steps.test_execution.outputs.report_path }}`}} > $REPORT_PATH
-          echo "report_path=$REPORT_PATH" >> $GITHUB_OUTPUT
-          echo "::group::parsed report"
-          cat $REPORT_PATH
-          echo "::endgroup::"
-      - name: Add metadata to report
-        id: metadata_api_report
-        env:
-          REPORT_PATH: /tmp/report.json 
-        run: |
-          echo "report_path=$REPORT_PATH" >> $GITHUB_OUTPUT
-          jq --arg repo "{{`${{ github.event.client_payload.meta.repo }}`}}" \
-          --arg branch "{{`${{ github.event.client_payload.meta.branch }}`}}" \
-          --arg commit "{{`${{ github.event.client_payload.meta.commit }}`}}" \
-          --arg test_suite_version "{{`${{ github.event.client_payload.meta.test_suite_version }}`}}" \
-          --arg test_suite_name "{{`${{ github.event.client_payload.meta.test_suite_name }}`}}" \
-          --arg test_suite_run "{{`${{ github.event.client_payload.meta.test_suite_run }}`}}" \
-          --arg db "{{`${{ github.event.client_payload.meta.db }}`}}" \
-          --arg conf "{{`${{ github.event.client_payload.meta.conf }}`}}" \
-          --arg pump_compatibility "{{`${{ github.event.client_payload.meta.pump_compatibility }}`}}" \
-          --arg sink_compatibility "{{`${{ github.event.client_payload.meta.sink_compatibility }}`}}" \
-          '. + {repo: $repo, branch: $branch, commit: $commit, test_suite_version: $test_suite_version, test_suite_name: $test_suite_name, test_suite_run: $test_suite_run, db: $db, conf: $conf, pump_compatibility: $pump_compatibility, sink_compatibility: $sink_compatibility}' {{`${{ steps.convert_api_report.outputs.report_path }}`}} > $REPORT_PATH
-          echo "::group::Final report"
-          cat $REPORT_PATH
+          echo "[metadata]
+          repo = {{`${{ github.repository }}`}}
+          branch {{`${{ github.ref }}`}}
+          commit {{`${{ github.sha }}`}}
+          test_suite_version = {{`${{ needs.test-controller-api.outputs.gd_tag }}`}}
+          test_suite_name = {{`${{ github.job }}`}}
+          test_suite_run = {{`${{ github.run_id }}`}}-{{`${{ github.run_attempt }}`}}
+          db = {{`${{ matrix.db }}`}}
+          conf = {{`${{ matrix.conf }}`}}
+          pump_compatibility = {{`${{ matrix.pump }}`}}
+          sink_compatibility = {{`${{ matrix.sink }}`}}
+          " > ${METADATA_REPORT_PATH}
+          echo "::group::metadata report"
+          cat ${METADATA_REPORT_PATH}
           echo "::endgroup::"
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
       - name: Upload report to S3 bucket
         id: upload_report
         if: always() && steps.test_execution.outcome != 'skipped'
         env:
-          REPORT_NAME: {{`${{ github.repository }}`}}_api_{{`${{ matrix.db }}`}}_{{`${{ matrix.conf }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.metadata_api_report.outputs.id}}`}}.json
+          REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.metadata_report.outputs.id}}`}}
         run: |
-          aws s3 cp {{`${{ steps.metadata_api_report.outputs.report_path }}`}} s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}   
-
+          #Upload xunit report
+          aws s3 cp ${XUNIT_REPORT_PATH}  s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.xml
+          #Upload metadata report
+          aws s3 cp ${METADATA_REPORT_PATH} s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.metadata.toml    
       - name: Docker logs for all components
         if: failure() && (steps.test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
         working-directory: auto

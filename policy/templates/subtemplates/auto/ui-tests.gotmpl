@@ -89,45 +89,36 @@
           JOB_RUN_ID: {{`${{ github.run_id }}`}}
           JOB_NAME: tyk-analytics - {{`${{ github.ref }}`}} {{`${{ github.event.head_commit.message }}`}}
           RUN_ID: 'tyk-analytics/{{`${{ github.run_id }}`}}'
-      - name: Convert XML report into Json
-        id: convert_ui_report
-        env:
-          RESULTS_PATH: {{`${{ github.workspace }}`}}/tests/ui/playwright-report/results.xml
-          REPORT_PATH: /tmp/parsed-report.json
+      - name: Generate metadata
+        if: always() && steps.test_execution.outcome != 'skipped'
+        id: metadata_report
         run: |
-          npx junit2json -p $RESULTS_PATH > $REPORT_PATH
-          echo "report_path=$REPORT_PATH" >> $GITHUB_OUTPUT
-          echo "::group::parsed report"
-          cat $REPORT_PATH
-          echo "::endgroup::"
-      - name: Add metadata to report
-        id: metadata_ui_report
-        env:
-          REPORT_PATH: /tmp/report.json
-        run: |
-          echo "report_path=$REPORT_PATH" >> $GITHUB_OUTPUT
-          jq --arg repo "{{`${{ github.event.client_payload.meta.repo }}`}}" \
-          --arg branch "{{`${{ github.event.client_payload.meta.branch }}`}}" \
-          --arg commit "{{`${{ github.event.client_payload.meta.commit }}`}}" \
-          --arg test_suite_version "{{`${{ github.event.client_payload.meta.test_suite_version }}`}}" \
-          --arg test_suite_name "{{`${{ github.event.client_payload.meta.test_suite_name }}`}}" \
-          --arg test_suite_run "{{`${{ github.event.client_payload.meta.test_suite_run }}`}}" \
-          --arg db "{{`${{ github.event.client_payload.meta.db }}`}}" \
-          --arg conf "{{`${{ github.event.client_payload.meta.conf }}`}}" \
-          --arg pump_compatibility "{{`${{ github.event.client_payload.meta.pump_compatibility }}`}}" \
-          --arg sink_compatibility "{{`${{ github.event.client_payload.meta.sink_compatibility }}`}}" \
-          '. + {repo: $repo, branch: $branch, commit: $commit, test_suite_version: $test_suite_version, test_suite_name: $test_suite_name, test_suite_run: $test_suite_run, db: $db, conf: $conf, pump_compatibility: $pump_compatibility, sink_compatibility: $sink_compatibility}' {{`${{ steps.convert_ui_report.outputs.report_path }}`}} > $REPORT_PATH
-          echo "::group::final report"
-          cat $REPORT_PATH
+          echo "[metadata]
+          repo = {{`${{ github.repository }}`}}
+          branch {{`${{ github.ref }}`}}
+          commit {{`${{ github.sha }}`}}
+          test_suite_version = {{`${{ needs.test-controller-ui.outputs.gd_tag }}`}}
+          test_suite_name = {{`${{ github.job }}`}}
+          test_suite_run = {{`${{ github.run_id }}`}}-{{`${{ github.run_attempt }}`}}
+          db = {{`${{ matrix.db }}`}}
+          conf = {{`${{ matrix.conf }}`}}
+          pump_compatibility = {{`${{ matrix.pump }}`}}
+          sink_compatibility = {{`${{ matrix.sink }}`}}
+          " > ${METADATA_REPORT_PATH}
+          echo "::group::metadata report"
+          cat ${METADATA_REPORT_PATH}
           echo "::endgroup::"
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
       - name: Upload report to S3 bucket
         id: upload_report
-        if: always() && steps.ui_test_execution.outcome != 'skipped'
+        if: always() && steps.test_execution.outcome != 'skipped'
         env:
-          REPORT_NAME: {{`${{ github.repository }}`}}_ui_{{`${{ matrix.db }}`}}_{{`${{ matrix.conf }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.metadata_ui_report.outputs.id}}`}}.json
+          REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.metadata_report.outputs.id}}`}}
         run: |
-          aws s3 cp {{`${{ steps.metadata_ui_report.outputs.report_path }}`}} s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}
+          #Upload xunit report
+          aws s3 cp ${XUNIT_REPORT_PATH}  s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.xml
+          #Upload metadata report
+          aws s3 cp ${METADATA_REPORT_PATH} s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.metadata.toml          
       - name: Docker logs for all components
         if: failure() && (steps.ui_test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
         working-directory: auto

@@ -16,6 +16,9 @@ jobs:
     permissions:
       id-token: write   # This is required for requesting the JWT
       contents: read    # This is required for actions/checkout
+    env:
+      METADATA_REPORT_PATH: /tmp/metadata.toml
+      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml      
     strategy:
       fail-fast: false
       matrix:
