@@ -21,7 +21,6 @@ policy:
       - .github/workflows/del-env.yml
       - .github/workflows/sync-automation.yml
       - .github/workflows/update-config-docs.yml
-      - .github/workflows/api-tests.yml
       - .github/workflows/pac.yml
       - .github/workflows/int-image.yml
       - .github/workflows/e2e_api_tests.yml
@@ -84,6 +83,8 @@ policy:
             # used for building the binary, packages and docker images.
             buildenv: 1.21-bullseye
             baseimage: debian:bookworm-slim
+            deletedfiles:
+              - .github/workflows/api-tests.yml
             features:
               - s390x
               - api-tests-suit
@@ -94,6 +95,8 @@ policy:
             buildenv: 1.15
           release-5-lts:
             buildenv: 1.16
+            deletedfiles:
+              - .github/workflows/api-tests.yml
             features:
               - el7
               - plugin-compiler-fix-vendor
@@ -120,11 +123,15 @@ policy:
           master:
             baseimage: debian:bookworm-slim
             buildenv: 1.21-bullseye
+            deletedfiles:
+              - .github/workflows/api-tests.yml
             features:
               - s390x
               - api-tests-suit
           release-5-lts:
             buildenv: 1.16
+            deletedfiles:
+              - .github/workflows/api-tests.yml
             features:
               - api-tests-suit
           release-4-lts:
