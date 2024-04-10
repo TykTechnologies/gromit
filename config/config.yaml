@@ -86,6 +86,7 @@ policy:
             baseimage: debian:bookworm-slim
             features:
               - s390x
+              - api-tests-suit
           release-4-lts:
             features:
               - el7
@@ -96,6 +97,7 @@ policy:
             features:
               - el7
               - plugin-compiler-fix-vendor
+              - api-tests-suit
 
       tyk-analytics:
         description: >-
@@ -120,8 +122,11 @@ policy:
             buildenv: 1.21-bullseye
             features:
               - s390x
+              - api-tests-suit
           release-5-lts:
             buildenv: 1.16
+            features:
+              - api-tests-suit
           release-4-lts:
             buildenv: 1.16
 
@@ -161,6 +166,7 @@ policy:
           master:
             features:
               - s390x
+              - api-tests-suit
 
       portal:
         description: >-
@@ -198,3 +204,4 @@ policy:
           master:
             features:
               - s390x
+              - api-tests-suit
