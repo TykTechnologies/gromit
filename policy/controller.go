@@ -30,7 +30,7 @@ func sortedKeys[K constraints.Ordered, V any](m map[K]V) []K {
 
 // TestVariations models the variations of the test matrix in
 // release.yml:api-tests. Each key is a row in the matrix.
-type TestVariations map[string][]string
+type TestVariations map[string]interface{}
 
 // runParameters is a private type that models the runtime parameters
 // required to test a repo
@@ -46,6 +46,7 @@ func (p runParameters) SetVariations(op io.Writer, tv TestVariations) error {
 		tv[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
 		tv["pump"] = []string{"$ECR/tyk-pump:master"}
 		tv["sink"] = []string{"$ECR/tyk-sink:master"}
+		tv["exclude"] = nil
 	case "is_tag":
 		// Defaults are fine
 		tv[p["job"]+"_conf"] = []string{"sha256"}
@@ -55,6 +56,10 @@ func (p runParameters) SetVariations(op io.Writer, tv TestVariations) error {
 		tv[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
 		tv["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"}
 		tv["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"}
+		tv["exclude"] = []map[string]string{
+			{"pump": "tykio/tyk-pump-docker-pub:v1.8", "sink": "$ECR/tyk-sink:master"},
+			{"pump": "$ECR/tyk-pump:master", "sink": "tykio/tyk-mdcb-docker:v2.4"},
+		}
 	}
 
 	for _, v := range sortedKeys(tv) {

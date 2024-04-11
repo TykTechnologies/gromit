@@ -94,6 +94,10 @@ var controllerSubCmd = &cobra.Command{
 			params["job"] + "_db":   []string{"mongo44", "postgres15"},
 			"pump":                  []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
 			"sink":                  []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
+			"exclude": []map[string]string{
+				{"pump": "tykio/tyk-pump-docker-pub:v1.8", "sink": "$ECR/tyk-sink:master"},
+				{"pump": "$ECR/tyk-pump:master", "sink": "tykio/tyk-mdcb-docker:v2.4"},
+			},
 		}
 		if err := params.SetVariations(&op, defaults); err != nil {
 			return err

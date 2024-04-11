@@ -94,7 +94,12 @@ jobs:
         node-version: [18.16]
         include:
           - db: postgres15
-            markers: "and not sql"   
+            markers: "and not sql"
+        exclude:
+          - pump: tykio/tyk-pump-docker-pub:v1.8
+            sink: $ECR/tyk-sink:master
+          - pump: $ECR/tyk-pump:master
+            sink: tykio/tyk-mdcb-docker:v2.4  
 {{- template "ui-tests" . }}                 
 {{  end  }}
 

@@ -74,6 +74,9 @@ tyk_alfa_image=$tyk_image
 tyk_beta_image=$tyk_image
 EOF
 gd_tag=master
+exclude<<EOF
+null
+EOF
 pump<<EOF
 ["$ECR/tyk-pump:master"]
 EOF
@@ -107,6 +110,9 @@ tyk_alfa_image=$tyk_image
 tyk_beta_image=$tyk_image
 EOF
 gd_tag=master
+exclude<<EOF
+[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"}]
+EOF
 pump<<EOF
 ["tykio/tyk-pump-docker-pub:v1.8","$ECR/tyk-pump:master"]
 EOF
@@ -144,6 +150,9 @@ api_conf<<EOF
 EOF
 api_db<<EOF
 ["mongo44","postgres15"]
+EOF
+exclude<<EOF
+[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"}]
 EOF
 pump<<EOF
 ["tykio/tyk-pump-docker-pub:v1.8","$ECR/tyk-pump:master"]
@@ -184,6 +193,10 @@ EOF
 				p["job"] + "_db":   []string{"mongo44", "postgres15"},
 				"pump":             []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
 				"sink":             []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
+				"exclude": []map[string]string{
+					{"pump": "tykio/tyk-pump-docker-pub:v1.8", "sink": "$ECR/tyk-sink:master"},
+					{"pump": "$ECR/tyk-pump:master", "sink": "tykio/tyk-mdcb-docker:v2.4"},
+				},
 			}
 
 			if err := p.SetVariations(&op, defaults); err != nil {
