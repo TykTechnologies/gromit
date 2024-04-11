@@ -38,6 +38,7 @@ jobs:
       sink: {{`${{ steps.params.outputs.sink }}`}}
       gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
       versions: {{`${{ steps.params.outputs.versions }}`}}
+      exclude: {{`${{ steps.params.outputs.exclude }}`}}
 
     steps:
       - name: set params
@@ -64,6 +65,7 @@ jobs:
       sink: {{`${{ steps.params.outputs.sink }}`}}
       gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
       versions: {{`${{ steps.params.outputs.versions }}`}}
+      exclude: {{`${{ steps.params.outputs.exclude }}`}}
 
     steps:
       - name: set params
@@ -95,11 +97,8 @@ jobs:
         include:
           - db: postgres15
             markers: "and not sql"
-        exclude:
-          - pump: tykio/tyk-pump-docker-pub:v1.8
-            sink: $ECR/tyk-sink:master
-          - pump: $ECR/tyk-pump:master
-            sink: tykio/tyk-mdcb-docker:v2.4  
+        exclude: {{`${{ fromJson(needs.test-controller-ui.outputs.exclude) }}`}}
+        {{ if eq .Name "tyk-analytics" -}}
 {{- template "ui-tests" . }}                 
 {{  end  }}
 
@@ -119,6 +118,7 @@ jobs:
         include:
           - db: postgres15
             markers: "and not sql"
+        exclude: {{`${{ fromJson(needs.test-controller-api.outputs.exclude) }}`}}    
 {{- template "api-tests" . }}
 {{ end -}} {{/* if repo covered by api-tests */}}
 
