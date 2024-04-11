@@ -98,7 +98,6 @@ jobs:
           - db: postgres15
             markers: "and not sql"
         exclude: {{`${{ fromJson(needs.test-controller-ui.outputs.exclude) }}`}}
-        {{ if eq .Name "tyk-analytics" -}}
 {{- template "ui-tests" . }}                 
 {{  end  }}
 
@@ -118,7 +117,7 @@ jobs:
         include:
           - db: postgres15
             markers: "and not sql"
-        exclude: {{`${{ fromJson(needs.test-controller-api.outputs.exclude) }}`}}    
+        exclude: {{`${{ fromJson(needs.test-controller-api.outputs.exclude) }}`}}
 {{- template "api-tests" . }}
 {{ end -}} {{/* if repo covered by api-tests */}}
 
