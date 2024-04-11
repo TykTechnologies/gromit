@@ -94,10 +94,10 @@
         run: |
           echo '#!/bin/sh
           ci/bin/unlock-agent.sh
-          {{ if and (eq .Name "tyk") (has "plugin-compiler-fix-vendor" .Branchvals.Features) -}}
+          {{ if has "plugin-compiler-fix-vendor" .Branchvals.Features -}}
           mkdir -p /go/src
-          go mod tidy
-          go mod vendor
+          GO111MODULE=on go mod tidy
+          GO111MODULE=on go mod vendor
           cp -r -f vendor/* /go/src
           mkdir -p /go/src/github.com/TykTechnologies/tyk
           cp -r ./* /go/src/github.com/TykTechnologies/tyk
@@ -110,7 +110,9 @@
           chmod +x /tmp/build.sh
           docker run --rm --privileged -e GITHUB_TOKEN={{`${{ github.token }}`}} \
           -e GOPRIVATE=github.com/TykTechnologies                                \
-          -e GO111MODULE={{if and (eq .Name "tyk") (hasSuffix .Branch "-lts" ) }}off{{else}}on{{end}} \
+          {{ if has "plugin-compiler-fix-vendor" .Branchvals.Features -}}
+          -e GO111MODULE=off                                                     \
+          {{ end -}}
           -e DEBVERS='{{`${{ matrix.debvers }}`}}'                               \
           -e RPMVERS='{{`${{ matrix.rpmvers }}`}}'                               \
           -e CGO_ENABLED={{`${{ matrix.cgo }}`}}                                 \

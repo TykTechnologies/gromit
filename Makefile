@@ -2,7 +2,12 @@ SHELL 	:= bash
 VERSION := $(shell git describe --tags)
 COMMIT 	:= $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
-SRC 	:= $(shell find cmd confgen config orgs policy -name '*.go' -o -regex '.*\.(go)?tmpl' -o -regex '.*\.ya?ml')
+ifeq ($(shell uname),Linux)
+SRC 	:= $(shell find cmd confgen config orgs policy -regextype egrep -name '*.go' -o -regex '.*\.(go)?tmpl' -o -regex '.*\.ya?ml')
+endif
+ifeq ($(shell uname),Darwin)
+SRC 	:= $(shell find -E cmd confgen config orgs policy -name '*.go' -o -regex '.*\.(go)?tmpl' -o -regex '.*\.ya?ml')
+endif
 
 REPOS        ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal
 GITHUB_TOKEN ?= $(shell pass me/github)
