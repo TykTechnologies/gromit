@@ -110,7 +110,7 @@
           chmod +x /tmp/build.sh
           docker run --rm --privileged -e GITHUB_TOKEN={{`${{ github.token }}`}} \
           -e GOPRIVATE=github.com/TykTechnologies                                \
-          {{ if and (eq .Name "tyk") (has "plugin-compiler-fix-vendor" .Branchvals.Features) -}}
+          {{ if has "plugin-compiler-fix-vendor" .Branchvals.Features -}}
           -e GO111MODULE=off                                                     \
           {{ end -}}
           -e DEBVERS='{{`${{ matrix.debvers }}`}}'                               \
