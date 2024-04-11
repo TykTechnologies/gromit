@@ -46,7 +46,7 @@ func (p runParameters) SetVariations(op io.Writer, tv TestVariations) error {
 		tv[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
 		tv["pump"] = []string{"$ECR/tyk-pump:master"}
 		tv["sink"] = []string{"$ECR/tyk-sink:master"}
-		tv["exclude"] = nil
+		tv["exclude"] = []string{}
 	case "is_tag":
 		// Defaults are fine
 		tv[p["job"]+"_conf"] = []string{"sha256"}

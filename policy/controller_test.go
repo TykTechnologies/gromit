@@ -75,7 +75,7 @@ tyk_beta_image=$tyk_image
 EOF
 gd_tag=master
 exclude<<EOF
-null
+[]
 EOF
 pump<<EOF
 ["$ECR/tyk-pump:master"]
