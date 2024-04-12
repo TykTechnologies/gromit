@@ -1,5 +1,4 @@
 {{ define "auto-test" }}
-  {{- if has "auto-test" .Branchvals.Features }}
   test-controller-api:
     needs: goreleaser
     runs-on: ubuntu-latest
@@ -86,6 +85,5 @@
         include:
           - db: postgres15
             markers: "and not sql"
-  {{ end }}
   {{- template "api-tests" . }}
 {{ end }}
