@@ -64,9 +64,13 @@ jobs:
         branch: [master]
         include:
           - repo: tyk
-            branch: [ release-5-lts, release-4-lts ]
+            branch: release-5-lts
           - repo: tyk-analytics
-            branch: [ release-5-lts, release-4-lts ]
+            branch: release-5-lts
+          - repo: tyk
+            branch: release-4-lts
+          - repo: tyk-analytics
+            branch: release-4-lts
 
     steps:
       - name: checkout ${{matrix.repo}}/${{matrix.branch}}

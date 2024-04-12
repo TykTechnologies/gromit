@@ -68,7 +68,6 @@
         include:
           - db: postgres15
             markers: "and not sql"   
-  {{- template "ui-tests" . }}                 
 {{ end }} {{/* End of ui-tests specific block */}}
 
   api-tests:
@@ -88,4 +87,5 @@
           - db: postgres15
             markers: "and not sql"
   {{ end }}
+  {{- template "api-tests" . }}
 {{ end }}
