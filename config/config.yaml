@@ -87,7 +87,7 @@ policy:
               - .github/workflows/api-tests.yml
             features:
               - s390x
-              - api-tests-suit
+              - auto-test
           release-4-lts:
             features:
               - el7
@@ -100,7 +100,7 @@ policy:
             features:
               - el7
               - plugin-compiler-fix-vendor
-              - api-tests-suit
+              - auto-test
 
       tyk-analytics:
         description: >-
@@ -127,13 +127,13 @@ policy:
               - .github/workflows/api-tests.yml
             features:
               - s390x
-              - api-tests-suit
+              - auto-test
           release-5-lts:
             buildenv: 1.16
             deletedfiles:
               - .github/workflows/api-tests.yml
             features:
-              - api-tests-suit
+              - auto-test
           release-4-lts:
             buildenv: 1.16
 
@@ -173,7 +173,7 @@ policy:
           master:
             features:
               - s390x
-              - api-tests-suit
+              - auto-test
 
       portal:
         description: >-
@@ -211,4 +211,4 @@ policy:
           master:
             features:
               - s390x
-              - api-tests-suit
+              - auto-test

@@ -69,4 +69,21 @@
             markers: "and not sql"   
   {{- template "ui-tests" . }}                 
 {{ end }} {{/* End of ui-tests specific block */}}
+
+  api-tests:
+    needs: [goreleaser, test-controller-api]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # This is required for requesting the Github JWT
+      contents: read    # This is required for actions/checkout
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: {{`${{ fromJson(needs.test-controller-api.outputs.conf) }}`}}
+        db: {{`${{ fromJson(needs.test-controller-api.outputs.db) }}`}}
+        {{ if ne .Name "tyk-pump" -}} pump: {{`${{ fromJson(needs.test-controller-api.outputs.pump) }}`}} {{ end }} {{/* pump array not needed when the repo is pump */}}
+        {{ if ne .Name "tyk-sink" -}} sink: {{`${{ fromJson(needs.test-controller-api.outputs.sink) }}`}} {{ end }}
+        include:
+          - db: postgres15
+            markers: "and not sql"
 {{ end }}
