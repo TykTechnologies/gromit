@@ -27,10 +27,7 @@ env:
 jobs:
 {{- template "goreleaser" . }}
 
-{{- if has "auto-test" .Branchvals.Features }}
-  {{- template "test-controller" . }}
-  {{- template "api-tests" . }}
-{{ end -}} {{/* if repo covered by api-tests */}}
+{{- template "auto-test" }}
 
 {{- template "smoke-tests" . }}
 
