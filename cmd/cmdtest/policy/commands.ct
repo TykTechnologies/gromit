@@ -22,12 +22,12 @@ EOF
 api_db<<EOF
 ["mongo44","postgres15"]
 EOF
-exclude<<EOF
-[]
-EOF
 pump<<EOF
 ["$ECR/tyk-pump:master"]
 EOF
 sink<<EOF
 ["$ECR/tyk-sink:master"]
+EOF
+exclude<<EOF
+[]
 EOF

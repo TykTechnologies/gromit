@@ -89,17 +89,20 @@ var controllerSubCmd = &cobra.Command{
 		// conf is the set of configuration variations
 		// db is the databases to use
 		// pump/sink are included only when needed
-		defaults := policy.TestVariations{
-			params["job"] + "_conf": []string{"sha256"},
-			params["job"] + "_db":   []string{"mongo44", "postgres15"},
-			"pump":                  []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
-			"sink":                  []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
-			"exclude": []map[string]string{
+		defaults := policy.GHoutput{
+			TestVariations: map[string][]string{
+				params["job"] + "_conf": {"sha256"},
+				params["job"] + "_conf": {"sha256"},
+				params["job"] + "_db":   {"mongo44", "postgres15"},
+				"pump":                  {"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
+				"sink":                  {"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
+			},
+			Exclusions: []map[string]string{
 				{"pump": "tykio/tyk-pump-docker-pub:v1.8", "sink": "$ECR/tyk-sink:master"},
 				{"pump": "$ECR/tyk-pump:master", "sink": "tykio/tyk-mdcb-docker:v2.4"},
 			},
 		}
-		if err := params.SetVariations(&op, defaults); err != nil {
+		if err := params.SetOutputs(&op, defaults); err != nil {
 			return err
 		}
 
