@@ -1,7 +1,7 @@
 {{ define "auto-test" }}
   test-controller-api:
     needs: goreleaser
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m-2
     container: tykio/gromit:v1.7
     outputs:
       conf: {{`${{ steps.params.outputs.api_conf }}`}}
@@ -28,7 +28,7 @@
   {{ if eq .Name "tyk-analytics" }}
   test-controller-ui:
     needs: goreleaser
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m-2
     container: tykio/gromit:v1.7
     outputs:
       conf: {{`${{ steps.params.outputs.ui_conf }}`}}
@@ -54,7 +54,7 @@
 
   ui-tests:
     needs: [goreleaser, test-controller-ui]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m-2
     permissions:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
@@ -74,7 +74,7 @@
 
   api-tests:
     needs: [goreleaser, test-controller-api]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m-2
     permissions:
       id-token: write   # This is required for requesting the Github JWT
       contents: read    # This is required for actions/checkout

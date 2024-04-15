@@ -1,7 +1,7 @@
 {{ define "goreleaser" }}
   goreleaser:
     name: '{{`${{ matrix.golang_cross }}`}}'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m-2
     permissions:
       id-token: write   # AWS OIDC JWT
       contents: read    # actions/checkout
