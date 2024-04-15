@@ -11,21 +11,23 @@
         golang_cross:
           - {{ .Branchvals.Buildenv }}
   {{- if has "el7" .Branchvals.Features }}
-          {{ if eq .Branch "release-5-lts" -}}
+          {{ if or (eq .Branch "release-5-lts") (eq .Branch "release-4-lts") -}}
           - 1.16-el7
-          {{ else if eq .Branch "release-4-lts" -}}
-          - 1.15-el7
-          {{ else if eq .Branch "master" -}}
+          {{ else  -}}
           - {{ .Branchvals.Buildenv }}-pgo
           {{- end -}}
   {{- end }} {{/* el7 */}}
         include:
   {{- if has "el7" .Branchvals.Features }}
-          - golang_cross: {{ if eq .Branch "release-5-lts"}}1.16-el7{{ else if eq .Branch "release-4-lts" }}1.15-el7{{ else if eq .Branch "master" }}{{ .Branchvals.Buildenv }}-pgo{{ end }}
+          - golang_cross: {{ if or (eq .Branch "release-5-lts") ( eq .Branch "release-4-lts" ) }}1.16-el7{{ else }}{{ .Branchvals.Buildenv }}-pgo{{ end }}
             goreleaser: 'ci/goreleaser/goreleaser-el7.yml'
             rpmvers: 'el/7 amazon/2'
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie'
+            {{- if or (eq .Branch "release-5-lts") (eq .Branch "release-4-lts") }}
+            cgo: 1
+            {{- else }}
             cgo: 0
+            {{- end }}
   {{- end }} {{/* el7 */}}
           - golang_cross: {{ .Branchvals.Buildenv }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'

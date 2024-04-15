@@ -90,17 +90,17 @@ policy:
               - auto-test
           release-4-lts:
             features:
-              - el7
               - plugin-compiler-fix-vendor
+              - python-support
             buildenv: 1.15
           release-5-lts:
             buildenv: 1.16
             deletedfiles:
               - .github/workflows/api-tests.yml
             features:
-              - el7
               - plugin-compiler-fix-vendor
               - auto-test
+              - python-support
 
       tyk-analytics:
         description: >-
@@ -115,7 +115,7 @@ policy:
         upgradefromver: 3.0.9
         configfile: tyk_analytics.conf
         versionpackage: github.com/TykTechnologies/tyk-analytics/internal/build
-        sourcebranch: master          
+        sourcebranch: master
         buildenv: 1.21-bullseye
         features:
           - el7
