@@ -10,6 +10,7 @@
       sink: {{`${{ steps.params.outputs.sink }}`}}
       gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
       versions: {{`${{ steps.params.outputs.versions }}`}}
+      exclude: {{`${{ steps.params.outputs.exclude }}`}}
 
     steps:
       - name: set params
@@ -36,6 +37,7 @@
       sink: {{`${{ steps.params.outputs.sink }}`}}
       gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
       versions: {{`${{ steps.params.outputs.versions }}`}}
+      exclude: {{`${{ steps.params.outputs.exclude }}`}}
 
     steps:
       - name: set params
@@ -67,6 +69,7 @@
         include:
           - db: postgres15
             markers: "and not sql"   
+        exclude: {{`${{ fromJson(needs.test-controller-ui.outputs.exclude) }}`}}
 {{ end }} {{/* End of ui-tests specific block */}}
 
   api-tests:
@@ -85,5 +88,6 @@
         include:
           - db: postgres15
             markers: "and not sql"
+        exclude: {{`${{ fromJson(needs.test-controller-api.outputs.exclude) }}`}}            
   {{- template "api-tests" . }}
 {{ end }}
