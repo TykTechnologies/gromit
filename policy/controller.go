@@ -15,7 +15,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// policy.SetVariations needs to print the variations in a
+// policy.SetOutputs needs to print the variations in a
 // well-defined order for TestOutput
 func sortedKeys[K constraints.Ordered, V any](m map[K]V) []K {
 	keys := make([]K, len(m))
@@ -30,35 +30,49 @@ func sortedKeys[K constraints.Ordered, V any](m map[K]V) []K {
 
 // TestVariations models the variations of the test matrix in
 // release.yml:api-tests. Each key is a row in the matrix.
-type TestVariations map[string][]string
+//type TestVariations map[string]string
+
+// Exclusions represents a collection of exclusion rules for GitHub matrix.
+// Each exclusion rule is a map with string keys and string values.
+//type Exclusions []map[string]string
+
+type GHoutput struct {
+	TestVariations map[string][]string
+	Exclusions     []map[string]string
+}
 
 // runParameters is a private type that models the runtime parameters
 // required to test a repo
 type runParameters map[string]string
 
-// SetVariations prints the test variations formatted as a multi-line
+// SetOutputs prints the test variations formatted as a multi-line
 // github output parameter. The contents are json formatted.
-func (p runParameters) SetVariations(op io.Writer, tv TestVariations) error {
+func (p runParameters) SetOutputs(op io.Writer, gh GHoutput) error {
 
 	switch p["trigger"] {
 	case "is_pr":
-		tv[p["job"]+"_conf"] = []string{"sha256"}
-		tv[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
-		tv["pump"] = []string{"$ECR/tyk-pump:master"}
-		tv["sink"] = []string{"$ECR/tyk-sink:master"}
+		gh.TestVariations[p["job"]+"_conf"] = []string{"sha256"}
+		gh.TestVariations[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
+		gh.TestVariations["pump"] = []string{"$ECR/tyk-pump:master"}
+		gh.TestVariations["sink"] = []string{"$ECR/tyk-sink:master"}
+		gh.Exclusions = []map[string]string{}
 	case "is_tag":
 		// Defaults are fine
-		tv[p["job"]+"_conf"] = []string{"sha256"}
-		tv[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
+		gh.TestVariations[p["job"]+"_conf"] = []string{"sha256"}
+		gh.TestVariations[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
 	case "is_lts":
-		tv[p["job"]+"_conf"] = []string{"sha256"}
-		tv[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
-		tv["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"}
-		tv["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"}
+		gh.TestVariations[p["job"]+"_conf"] = []string{"sha256"}
+		gh.TestVariations[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
+		gh.TestVariations["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"}
+		gh.TestVariations["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"}
+		gh.Exclusions = []map[string]string{
+			{"pump": "tykio/tyk-pump-docker-pub:v1.8", "sink": "$ECR/tyk-sink:master"},
+			{"pump": "$ECR/tyk-pump:master", "sink": "tykio/tyk-mdcb-docker:v2.4"},
+		}
 	}
 
-	for _, v := range sortedKeys(tv) {
-		json, err := json.Marshal(tv[v])
+	for _, v := range sortedKeys(gh.TestVariations) {
+		json, err := json.Marshal(gh.TestVariations[v])
 		if err != nil {
 			return err
 		}
@@ -66,6 +80,15 @@ func (p runParameters) SetVariations(op io.Writer, tv TestVariations) error {
 		if _, err := op.Write([]byte(ghop)); err != nil {
 			return err
 		}
+	}
+
+	json, err := json.Marshal(gh.Exclusions)
+	if err != nil {
+		return err
+	}
+	ghop := fmt.Sprintf("%s<<EOF\n%s\nEOF\n", "exclude", json)
+	if _, err := op.Write([]byte(ghop)); err != nil {
+		return err
 	}
 	return nil
 }

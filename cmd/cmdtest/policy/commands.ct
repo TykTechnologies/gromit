@@ -28,3 +28,6 @@ EOF
 sink<<EOF
 ["$ECR/tyk-sink:master"]
 EOF
+exclude<<EOF
+[]
+EOF
