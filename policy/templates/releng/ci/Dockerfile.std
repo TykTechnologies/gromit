@@ -8,7 +8,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get dist-upgrade -y ca-certificates
 
-{{- if and (eq .Name "tyk") (eq .Branch "release-5-lts") }}
+{{- if has "python-support" .Branchvals.Features }}
 # For Python plugins
 RUN apt-get install -y python3-setuptools libpython3-dev python3-dev python3-grpcio
 {{- end }}
@@ -21,9 +21,7 @@ RUN rm -fv /usr/bin/passwd /usr/sbin/adduser || true
 RUN rm -rf /root/.cache \
     && apt-get -y autoremove \
     && apt-get clean \
-{{- if and (eq .Name "tyk") (eq .Branch "release-5-lts") }}
-    && rm -rf /usr/include/* \
-{{- end }}
+    && rm -rf /usr/include/* /var/cache/apt/archives /var/lib/{apt,dpkg,cache,log} \
     && find /usr/lib -type f -name '*.a' -o -name '*.o' -delete
 
 # Comment this to test in dev
