@@ -21,11 +21,18 @@
   {{- end }} {{/* el7 */}}
         include:
   {{- if has "el7" .Branchvals.Features }}
+            {{/* tyk-analytics(master branch) is supported on el7 by making a pure go build, all others inherit the same cgo value as set in the config. */}}
           - golang_cross: {{ if eq .Branch "release-5-lts"}}1.16-el7{{ else if eq .Branch "release-4-lts" }}1.15-el7{{ else if eq .Branch "master" }}{{ .Branchvals.Buildenv }}-pgo{{ end }}
             goreleaser: 'ci/goreleaser/goreleaser-el7.yml'
             rpmvers: 'el/7 amazon/2'
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie'
+            {{- if and ( eq .Name "tyk-analytics" ) ( eq .Branch "master" ) }}
             cgo: 0
+            {{- else if .Branchvals.Cgo }}
+            cgo: 1
+            {{- else }}
+            cgo: 0
+            {{- end }}
   {{- end }} {{/* el7 */}}
           - golang_cross: {{ .Branchvals.Buildenv }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'

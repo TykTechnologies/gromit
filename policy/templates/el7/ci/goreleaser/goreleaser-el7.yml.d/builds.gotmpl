@@ -11,7 +11,9 @@ builds:
     goarch:
       - amd64
       - arm64
+{{ if has "s390x" .Branchvals.Features }}
       - s390x
+{{ end }}
     binary: {{.Binary}}
 {{end}}
 
