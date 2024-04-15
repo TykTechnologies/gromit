@@ -17,7 +17,7 @@ import (
 
 // policy.SetOutputs needs to print the variations in a
 // well-defined order for TestOutput
-func sortedVariations[K constraints.Ordered, V any](m map[K]V) []K {
+func sortedKeys[K constraints.Ordered, V any](m map[K]V) []K {
 	keys := make([]K, len(m))
 	i := 0
 	for k := range m {
@@ -71,7 +71,7 @@ func (p runParameters) SetOutputs(op io.Writer, gh GHoutput) error {
 		}
 	}
 
-	for _, v := range sortedVariations(gh.TestVariations) {
+	for _, v := range sortedKeys(gh.TestVariations) {
 		json, err := json.Marshal(gh.TestVariations[v])
 		if err != nil {
 			return err
