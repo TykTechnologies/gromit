@@ -70,7 +70,8 @@
           - db: postgres15
             markers: "and not sql"   
         exclude: {{`${{ fromJson(needs.test-controller-ui.outputs.exclude) }}`}}
-{{ end }} {{/* End of ui-tests specific block */}}
+  {{- template "ui-tests" . }}
+  {{ end }} {{/* End of ui-tests specific block */}}
 
   api-tests:
     needs: [goreleaser, test-controller-api]
