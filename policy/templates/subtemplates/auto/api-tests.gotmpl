@@ -61,6 +61,9 @@
         working-directory: auto
         id: test_execution
         run: |
+          # Generate report id
+          echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
+          # Run tests        
           set -o pipefail
           echo "### API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
@@ -75,7 +78,10 @@
       - name: Generate metadata
         if: always() && steps.test_execution.outcome != 'skipped'
         id: metadata_report
+        env:
+          REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.test_execution.outputs.id}}`}}
         run: |
+          # Generate metadata report
           echo "[metadata]
           repo = {{`${{ github.repository }}`}}
           branch {{`${{ github.ref }}`}}
@@ -88,20 +94,16 @@
           pump_compatibility = {{`${{ matrix.pump }}`}}
           sink_compatibility = {{`${{ matrix.sink }}`}}
           " > ${METADATA_REPORT_PATH}
-          echo "::group::metadata report"
-          cat ${METADATA_REPORT_PATH}
-          echo "::endgroup::"
-          echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
-      - name: Upload report to S3 bucket
-        id: upload_report
-        if: always() && steps.test_execution.outcome != 'skipped'
-        env:
-          REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.metadata_report.outputs.id}}`}}
-        run: |
+          # Print metadata report
+          if [[ "{{`${{ runner.debug }}`}}" == "1" ]]; then
+            echo "::group::metadata report"
+            cat ${METADATA_REPORT_PATH}
+            echo "::endgroup::"
+          fi
           #Upload xunit report
           aws s3 cp ${XUNIT_REPORT_PATH}  s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.xml
           #Upload metadata report
-          aws s3 cp ${METADATA_REPORT_PATH} s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.metadata.toml    
+          aws s3 cp ${METADATA_REPORT_PATH} s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.metadata.toml  
       - name: Docker logs for all components
         if: failure() && (steps.test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
         working-directory: auto

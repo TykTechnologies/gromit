@@ -55,6 +55,9 @@
   ui-tests:
     needs: [goreleaser, test-controller-ui]
     runs-on: ubuntu-latest-m-2
+    env:
+      METADATA_REPORT_PATH: /tmp/metadata.toml
+      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tests/ui/playwright-report/results.xml
     permissions:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
@@ -76,6 +79,9 @@
   api-tests:
     needs: [goreleaser, test-controller-api]
     runs-on: ubuntu-latest-m-2
+    env:
+      METADATA_REPORT_PATH: /tmp/metadata.toml
+      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml    
     permissions:
       id-token: write   # This is required for requesting the Github JWT
       contents: read    # This is required for actions/checkout
