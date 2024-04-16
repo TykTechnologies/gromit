@@ -84,8 +84,8 @@
           # Generate metadata report
           echo "[metadata]
           repo = {{`${{ github.repository }}`}}
-          branch {{`${{ github.ref }}`}}
-          commit {{`${{ github.sha }}`}}
+          branch = {{`${{ github.ref }}`}}
+          commit = {{`${{ github.sha }}`}}
           test_suite_version = {{`${{ needs.test-controller-api.outputs.gd_tag }}`}}
           test_suite_name = {{`${{ github.job }}`}}
           test_suite_run = {{`${{ github.run_id }}`}}-{{`${{ github.run_attempt }}`}}
