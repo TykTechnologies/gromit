@@ -88,6 +88,14 @@ policy:
             features:
               - s390x
               - auto-test
+          release-5.3:
+            buildenv: 1.21-bullseye
+            baseimage: debian:bookworm-slim
+            deletedfiles:
+              - .github/workflows/api-tests.yml
+            features:
+              - s390x
+              - auto-test
           release-4-lts:
             features:
               - plugin-compiler-fix-vendor
@@ -117,12 +125,22 @@ policy:
         versionpackage: github.com/TykTechnologies/tyk-analytics/internal/build
         sourcebranch: master
         buildenv: 1.21-bullseye
+        deletedfiles:
+          - .github/workflows/api-tests.yml
         features:
           - el7
         branches:
           master:
             baseimage: debian:bookworm-slim
             buildenv: 1.21-bullseye
+            deletedfiles:
+              - .github/workflows/api-tests.yml
+            features:
+              - s390x
+              - auto-test
+          release-5.3:
+            buildenv: 1.21-bullseye
+            baseimage: debian:bookworm-slim
             deletedfiles:
               - .github/workflows/api-tests.yml
             features:
