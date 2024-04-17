@@ -137,7 +137,7 @@
           docker run --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}`}}
   {{ end }}
 
-  {{- if and (eq .Name "tyk") (eq .Branch "master") }}
+  {{- if has "release-test" .Branchvals.Features }}
   release-tests:
     needs:
       - goreleaser
@@ -146,5 +146,5 @@
       contents: read    # This is required for actions/checkout
     uses: ./.github/workflows/release-tests.yml
     secrets: inherit
-  {{ end }} {{/* release-tests */}}
+  {{ end }} {{/* release-test */}}
 {{ end }} {{/* smoke-tests */}}
