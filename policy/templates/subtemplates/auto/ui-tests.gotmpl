@@ -1,22 +1,6 @@
 {{ define "ui-tests" }}
-    steps:
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
-          role-session-name: cipush
-          aws-region: eu-central-1
-      - id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          mask-password: 'true'
-          # Only {{`${{ github.actor }}`}} has access
-          # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
-      - name: Setup tmate session only in debug mode
-        uses: mxschmitt/action-tmate@v3
-        if: {{`${{ runner.debug == '1' }}`}}
-        with:
-          detached: true
-          limit-access-to-actor: true
+{{ $testsuite := "ui" }}
+{{ template "init-e2e-tests" . $testsuite }}
       - name: Install Node.js {{`${{ matrix.node-version }}`}}
         uses: actions/setup-node@v2.4.1
         with:
@@ -35,40 +19,7 @@
           sparse-checkout: |
             tests/ui
             bin
-          submodules: false    
-      - name: fetch env from tyk-ci
-        env:
-          GH_TOKEN: {{`${{ github.token }}`}}
-        run: |
-          gh release download --repo github.com/TykTechnologies/tyk-ci -p 'ci-env.tgz' -O env.tgz
-          tar xzvf env.tgz
-      - name: env up
-        shell: bash
-        working-directory: auto
-        id: env_up
-        env:
-          pull_policy: 'if_not_present'
-          GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
-          TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
-          ECR: {{`${{ steps.ecr.outputs.registry }}`}}
-          VERSIONS: {{`${{ needs.test-controller-ui.outputs.versions}}`}}
-        run: |
-          echo "ECR=${ECR}
-          $VERSIONS
-          tyk_pump_image={{`${{matrix.pump}}`}}
-          tyk_sink_image={{`${{matrix.sink}}`}}
-          confs_dir=./pro-ha
-          env_file=local-{{`${{ matrix.db }}`}}.env" > versions.env
-          echo "::group::versions"
-          cat versions.env
-          echo "::endgroup::"
-          # Add Tyk component config variations to $env_file
-          cat confs/{{`${{ matrix.conf }}`}}.env >> local-{{`${{ matrix.db }}`}}.env
-          # bring up env, the project name is important
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
-          ./dash-bootstrap.sh http://localhost:3000
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
+          submodules: false
       - name: Install test dependecies
         run: |
           npm ci
@@ -92,58 +43,7 @@
           JOB_RUN_ID: {{`${{ github.run_id }}`}}
           JOB_NAME: tyk-analytics - {{`${{ github.ref }}`}} {{`${{ github.event.head_commit.message }}`}}
           RUN_ID: 'tyk-analytics/{{`${{ github.run_id }}`}}'
-      - name: Generate metadata
-        if: always() && steps.test_execution.outcome != 'skipped'
-        id: metadata_report
-        env:
-          REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.test_execution.outputs.id}}`}}
-        run: |
-          # Generate metadata report
-          echo "[metadata]
-          repo = {{`${{ github.repository }}`}}
-          branch = {{`${{ github.ref }}`}}
-          commit = {{`${{ github.sha }}`}}
-          test_suite_version = {{`${{ needs.test-controller-ui.outputs.gd_tag }}`}}
-          test_suite_name = {{`${{ github.job }}`}}
-          test_suite_run = {{`${{ github.run_id }}`}}-{{`${{ github.run_attempt }}`}}
-          db = {{`${{ matrix.db }}`}}
-          conf = {{`${{ matrix.conf }}`}}
-          pump_compatibility = {{`${{ matrix.pump }}`}}
-          sink_compatibility = {{`${{ matrix.sink }}`}}
-          " > ${METADATA_REPORT_PATH}
-          # Print metadata report
-          if [[ "{{`${{ runner.debug }}`}}" == "1" ]]; then
-            echo "::group::metadata report"
-            cat ${METADATA_REPORT_PATH}
-            echo "::endgroup::"
-          fi
-          #Upload xunit report
-          aws s3 cp ${XUNIT_REPORT_PATH}  s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.xml
-          #Upload metadata report
-          aws s3 cp ${METADATA_REPORT_PATH} s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.metadata.toml          
-      - name: Docker logs for all components
-        if: failure() && (steps.test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
-        working-directory: auto
-        env:
-          pull_policy: 'if_not_present'
-          GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
-          TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
-          ECR: {{`${{ steps.ecr.outputs.registry }}`}}
-          VERSIONS: {{`${{ needs.test-controller-ui.outputs.versions}}`}}
-        run: |
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose-ui.log
-          echo "::group::DockerLogs"
-          cat {{`${{ github.workspace }}`}}/docker-compose-ui.log
-          echo "::endgroup::"
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        if: failure() && (steps.test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
-        with:
-          name: docker-compose-logs-ui-{{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}-{{`${{ github.run_id }}`}}
-          path: {{`${{ github.workspace }}`}}/docker-compose-ui.log
-          retention-days: 3
-          overwrite: true
+
       - name: Upload Playwright Test Report to S3
         if: failure() && steps.test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
         run:
