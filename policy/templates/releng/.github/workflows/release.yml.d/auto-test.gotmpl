@@ -95,6 +95,6 @@
         include:
           - db: postgres15
             markers: "and not sql"
-        exclude: {{`${{ fromJson(needs.test-controller-api.outputs.exclude) }}`}}            
+        exclude: {{`${{ fromJson(needs.test-controller-api.outputs.exclude) }}`}}          
   {{- template "api-tests" . }}
 {{ end }}
