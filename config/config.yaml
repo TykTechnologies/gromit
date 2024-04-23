@@ -141,7 +141,7 @@ policy:
             features:
               - s390x
               - auto-test
-            tests: [api,ui]
+            tests: [ui,api]
           release-5.3:
             buildenv: 1.21-bullseye
             baseimage: debian:bookworm-slim
@@ -150,14 +150,14 @@ policy:
             features:
               - s390x
               - auto-test
-            tests: [api,ui]
+            tests: [ui,api]
           release-5-lts:
             buildenv: 1.16
             deletedfiles:
               - .github/workflows/api-tests.yml
             features:
               - auto-test
-            tests: [api,ui]            
+            tests: [ui,api]           
           release-4-lts:
             buildenv: 1.16
 
@@ -199,7 +199,6 @@ policy:
             features:
               - s390x
               - auto-test
-              - api-test              
 
       portal:
         description: >-
@@ -238,5 +237,4 @@ policy:
             tests: [api]
             features:
               - s390x
-              - auto-test
-              - api-test              
+              - auto-test    
