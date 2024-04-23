@@ -89,7 +89,7 @@ policy:
               - s390x
               - auto-test
               - release-test
-              - api-test
+            tests: [api]
           release-5.3:
             buildenv: 1.21-bullseye
             baseimage: debian:bookworm-slim
@@ -99,7 +99,7 @@ policy:
               - s390x
               - auto-test
               - release-test
-              - api-test
+            tests: [api]
           release-4-lts:
             features:
               - plugin-compiler-fix-vendor
@@ -113,7 +113,7 @@ policy:
               - plugin-compiler-fix-vendor
               - auto-test
               - python-support
-              - api-test
+            tests: [api]
 
       tyk-analytics:
         description: >-
@@ -141,8 +141,7 @@ policy:
             features:
               - s390x
               - auto-test
-              - api-test
-              - ui-test
+            tests: [api,ui]
           release-5.3:
             buildenv: 1.21-bullseye
             baseimage: debian:bookworm-slim
@@ -151,16 +150,14 @@ policy:
             features:
               - s390x
               - auto-test
-              - api-test
-              - ui-test
+            tests: [api,ui]
           release-5-lts:
             buildenv: 1.16
             deletedfiles:
               - .github/workflows/api-tests.yml
             features:
               - auto-test
-              - api-test
-              - ui-test              
+            tests: [api,ui]            
           release-4-lts:
             buildenv: 1.16
 
@@ -198,6 +195,7 @@ policy:
         buildenv: 1.21-bullseye
         branches:
           master:
+            tests: [api]
             features:
               - s390x
               - auto-test
@@ -237,6 +235,7 @@ policy:
         buildenv: 1.21-bullseye
         branches:
           master:
+            tests: [api]
             features:
               - s390x
               - auto-test
