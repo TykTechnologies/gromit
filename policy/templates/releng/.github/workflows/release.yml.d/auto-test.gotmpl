@@ -1,4 +1,5 @@
 {{ define "auto-test" }}
+{{ if has "api-test" .Branchvals.Features }}
   test-controller-api:
     needs: goreleaser
     runs-on: ubuntu-latest-m-2
@@ -24,8 +25,8 @@
           IS_TAG: {{`${{startsWith(github.ref, 'refs/tags') && 'yes' }}`}}
           JOB: api
         run: gromit policy controller --loglevel debug | tee -a "$GITHUB_OUTPUT"
-
-  {{ if eq .Name "tyk-analytics" }}
+{{ end }}
+{{ if has "ui-test" .Branchvals.Features }}
   test-controller-ui:
     needs: goreleaser
     runs-on: ubuntu-latest-m-2
@@ -51,10 +52,17 @@
           IS_TAG: {{`${{startsWith(github.ref, 'refs/tags') && 'yes' }}`}}
           JOB: ui
         run: gromit policy controller --loglevel debug | tee -a "$GITHUB_OUTPUT"
-  {{ end }}
-{{ range $test := list "api" "ui" }}
-  {{ $test }}-tests:
-    needs: [goreleaser, test-controller-{{ $test }}]
+{{ end }}
+
+  auto-tests:   
+    needs: 
+      - goreleaser
+{{ if has "api-test" .Branchvals.Features }}  
+      - test-controller-api
+{{ end }}
+{{ if has "ui-test" .Branchvals.Features }}    
+      - test-controller-ui
+{{ end }}
     runs-on: ubuntu-latest-m-2
     permissions:
       id-token: write # This is required for requesting the Github JWT
@@ -62,15 +70,22 @@
     strategy:
       fail-fast: false
       matrix:
-        conf: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.conf) }}`}}
-        db: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.db) }}`}}
-        pump: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.pump) }}`}}
-        sink: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.sink) }}`}}
+        testsuite:
+        {{ if has "api-test" .Branchvals.Features }}
+            - api
+        {{ end }}
+        {{ if has "ui-test" .Branchvals.Features }}
+            - ui
+        {{ end }}
+        conf: {{`${{ fromJson(format('needs.test-controller-{0}.outputs.conf', matrix.testsuite)) }}`}}
+        db: {{`${{ fromJson(format('needs.test-controller-{0}.outputs.db', matrix.testsuite)) }}`}}
+        pump: {{`${{ fromJson(format('needs.test-controller-{0}.outputs.pump', matrix.testsuite)) }}`}}
+        sink: {{`${{ fromJson(format('needs.test-controller-{0}.outputs.sink', matrix.testsuite)) }}`}}
         node-version: [18.16]
         include:
           - db: postgres15
-            markers: "and not sql"   
-        exclude: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.exclude) }}`}}
+            markers: "and not sql"
+        exclude: {{`${{ fromJson(format('needs.test-controller-{0}.outputs.exclude', matrix.testsuite)) }}`}}
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -105,7 +120,7 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
-          VERSIONS: {{`${{ needs.test-controller-`}}{{ $test }}{{`.outputs.versions}}`}}
+          VERSIONS: {{`${{ format('needs.test-controller-{0}.outputs.versions', matrix.testsuite) }}`}}
         run: |
           echo "ECR=${ECR}
           $VERSIONS
@@ -126,7 +141,7 @@
       {{ if has "api-test" .Branchvals.Features }}
       - name: Run tests
         working-directory: auto
-        id: {{ $test }}_test_execution
+        id: REPLACE_THIS_test_execution
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
@@ -134,7 +149,7 @@
           set -o pipefail
           echo "### API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
-             {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{`${{ needs.test-controller-`}}{{ $test }}{{`.outputs.gd_tag }}`}} \
+             {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{`${{ needs.test-controller-`}}REPLACE_THIS{{`.outputs.gd_tag }}`}} \
              pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH#"{{`${{ github.workspace }}`}}"} --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
                echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else
@@ -170,7 +185,7 @@
         run: npx playwright install --with-deps
         working-directory: tests/ui
       - name: Execute UI tests
-        id: {{ $test }}_test_execution
+        id: REPLACE_THIS_test_execution
         run: |
           npm run test
         working-directory: tests/ui
@@ -184,7 +199,7 @@
           RUN_ID: 'tyk-analytics/{{`${{ github.run_id }}`}}'
 
       - name: Upload Playwright Test Report to S3
-        if: failure() && steps.{{ $test }}_test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
+        if: failure() && steps.REPLACE_THIS_test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
         run:
           npm run upload_report_to_s3
         env:
@@ -194,7 +209,7 @@
         working-directory: tests/ui
 
       - name: Post message to automation team
-        if: failure() && steps.{{ $test }}_test_execution.outcome != 'success' && !github.event.pull_request.draft 
+        if: failure() && steps.REPLACE_THIS_test_execution.outcome != 'success' && !github.event.pull_request.draft 
         id: slack
         uses: slackapi/slack-github-action@v1.24.0
         with:
@@ -206,8 +221,8 @@
       - name: Share S3 report link into summary
         if: always() && !github.event.pull_request.draft
         run: |
-          echo "# :clipboard: S3 {{ $test }} Test REPORT: {{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: {{`${{ steps.{{ $test }}_test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}" >> $GITHUB_STEP_SUMMARY
+          echo "# :clipboard: S3 REPLACE_THIS Test REPORT: {{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: {{`${{ steps.REPLACE_THIS_test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}" >> $GITHUB_STEP_SUMMARY
           echo "- [Link to report](https://tyk-qa-reports.s3.eu-central-1.amazonaws.com/tyk-analytics/{{`${{ github.run_id }}`}}/index.html)" >> $GITHUB_STEP_SUMMARY
   
       - name: Xray update
@@ -217,13 +232,13 @@
         working-directory: bin
         env:
           TEST: "QA-890"
-          STATUS: "{{`${{ steps.`}}{{ $test }}{{`_test_execution.outcome }}`}}"
+          STATUS: "{{`${{ steps.`}}REPLACE_THIS{{`_test_execution.outcome }}`}}"
           CLIENT_ID: {{`${{secrets.XRAY_CLIENT_ID}}`}}
           CLIENT_SECRET: {{`${{secrets.XRAY_CLIENT_SECRET}}`}}
           BRANCH: {{`${{ github.ref }}`}}
       {{ end }} {{/* end of test variation */}}
       - name: Docker logs for all components
-        if: failure() && (steps.{{ $test }}_test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
+        if: failure() && (steps.REPLACE_THIS_test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
         working-directory: auto
         env:
           pull_policy: 'if_not_present'
@@ -231,25 +246,25 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
-          VERSIONS: {{`${{ needs.test-controller-`}}{{ $test }}{{`.outputs.versions}}`}}
+          VERSIONS: {{`${{ needs.test-controller-`}}REPLACE_THIS{{`.outputs.versions}}`}}
         run: |
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose-{{ $test }}.log
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose-REPLACE_THIS.log
           echo "::group::DockerLogs"
-          cat {{`${{ github.workspace }}`}}/docker-compose-{{ $test }}.log
+          cat {{`${{ github.workspace }}`}}/docker-compose-REPLACE_THIS.log
           echo "::endgroup::"
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
-        if: failure() && (steps.{{ $test }}_test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
+        if: failure() && (steps.REPLACE_THIS_test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
         with:
-          name: docker-compose-logs-{{ $test }}-{{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}-{{`${{ github.run_id }}`}}
-          path: {{`${{ github.workspace }}`}}/docker-compose-{{ $test }}.log
+          name: docker-compose-logs-REPLACE_THIS-{{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}-{{`${{ github.run_id }}`}}
+          path: {{`${{ github.workspace }}`}}/docker-compose-REPLACE_THIS.log
           retention-days: 3
           overwrite: true
       - name: Archive Integration tests report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: {{ $test }}-test-report-{{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}-{{`${{ github.run_id }}`}}
+          name: REPLACE_THIS-test-report-{{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}-{{`${{ github.run_id }}`}}
           retention-days: 3
           path: {{`${{ github.workspace }}`}}/reports
           overwrite: true
@@ -274,6 +289,4 @@
           SLACK_USERNAME: API INTEGRATION TESTS
           SLACK_MESSAGE: "*Test*: {{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}, *Author*: {{`${{ steps.fetch_slack_user.outputs.slack-user-name }}`}}"
           SLACK_FOOTER: "<https://github.com/{{`${{ github.repository }}`}}/actions/runs/{{`${{ github.run_id }}`}}|SEE EXECUTION DETAILS HERE>"                                       
-
-  {{ end }} {{/* end of range */}}
 {{ end }} {{/* end of define */}}
