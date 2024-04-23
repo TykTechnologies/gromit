@@ -27,4 +27,3 @@ jobs:
         include:
           - db: postgres15
             markers: "and not sql"
-{{- template "api-tests" . }}
