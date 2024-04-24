@@ -26,7 +26,7 @@ env:
   
 jobs:
 {{- template "goreleaser" . }}
-{{- if has "auto-test" .Branchvals.Features }}
+{{- if not (empty .Branchvals.Tests) }}
 {{- template "auto-test" . }}
 {{ end }}
 {{- template "smoke-tests" . }}
