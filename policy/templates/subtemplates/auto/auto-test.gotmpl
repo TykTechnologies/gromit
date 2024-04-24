@@ -129,7 +129,7 @@
               echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else
             echo "::error title=API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}::Test execution failed"
-            cat tests.out >> $GITHUB_STEP_SUMMAR
+            cat tests.out >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
       {{- end }}
@@ -165,7 +165,7 @@
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
-          npm run test
+          npm run test -- --workers=3
         working-directory: tests/ui
         env:
           GW_URL: 'https://localhost:8080/'
