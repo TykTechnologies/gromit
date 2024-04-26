@@ -8,10 +8,10 @@
 
   {{- template "before_hooks" . }}
 
-{{- if eq .Branch "master" }}
-  {{- template "builds" . }}
-{{- else }}
+{{- if or (eq .Branch "release-5-lts") (eq .Branch "release-4-lts") }}
   {{- template "cgo_builds" . }}
+{{- else }}
+  {{- template "builds" . }}
 {{- end }}
   {{- template "nfpm" . }}
 
