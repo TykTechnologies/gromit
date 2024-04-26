@@ -17,9 +17,7 @@
           - amd64
           - arm64
         distro:
-        {{- if (has "el7" .Branchvals.Features) }}
           - ubuntu:xenial
-        {{- end }}
           - ubuntu:bionic
           - ubuntu:focal
           - ubuntu:jammy
@@ -86,10 +84,8 @@
           - amazonlinux:2023
           - registry.access.redhat.com/ubi8/ubi
           - registry.access.redhat.com/ubi9/ubi
-        {{- if (has "el7" .Branchvals.Features) }}
           - amazonlinux:2
           - registry.access.redhat.com/ubi7/ubi
-        {{- end }}
 
     steps:
       - uses: actions/checkout@v4

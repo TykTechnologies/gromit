@@ -10,15 +10,15 @@
       matrix:
         golang_cross:
           - {{ .Branchvals.Buildenv }}
-  {{- if has "el7" .Branchvals.Features }}
+  {{- if has "el7-pgo-build" .Branchvals.Features }}
           {{ if or (eq .Branch "release-5-lts") (eq .Branch "release-4-lts") -}}
           - 1.16-el7
           {{ else  -}}
           - {{ .Branchvals.Buildenv }}-pgo
           {{- end -}}
-  {{- end }} {{/* el7 */}}
+  {{- end }} {{/* el7-pgo-build */}}
         include:
-  {{- if has "el7" .Branchvals.Features }}
+  {{- if has "el7-pgo-build" .Branchvals.Features }}
           - golang_cross: {{ if or (eq .Branch "release-5-lts") ( eq .Branch "release-4-lts" ) }}1.16-el7{{ else }}{{ .Branchvals.Buildenv }}-pgo{{ end }}
             goreleaser: 'ci/goreleaser/goreleaser-el7.yml'
             rpmvers: 'el/7 amazon/2'
@@ -28,17 +28,17 @@
             {{- else }}
             cgo: 0
             {{- end }}
-  {{- end }} {{/* el7 */}}
+  {{- end }} {{/* el7-pgo-build */}}
           - golang_cross: {{ .Branchvals.Buildenv }}
             goreleaser: 'ci/goreleaser/goreleaser.yml'
             cgo: {{ if .Branchvals.Cgo }} 1 {{ else }} 0 {{end}}
-  {{- if has "el7" .Branchvals.Features }}
+  {{- if has "el7-pgo-build" .Branchvals.Features }}
             rpmvers: 'el/8 el/9 amazon/2023'
             debvers: 'ubuntu/bionic ubuntu/focal ubuntu/jammy debian/buster debian/bullseye debian/bookworm'
-  {{- else }} {{/* debvers and rpmvers for repos that do not need special el7 support */}}
+  {{- else }} {{/* debvers and rpmvers for repos that do not need special el7-pgo-build support */}}
             rpmvers: 'el/7 el/8 el/9 amazon/2 amazon/2023'
             debvers: 'ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/jammy debian/jessie debian/buster debian/bullseye debian/bookworm'
-  {{- end }} {{/* el7 */}}
+  {{- end }} {{/* el7-pgo-build */}}
     outputs:
       tags: {{`${{ steps.metadata.outputs.tags }}`}}
       commit_author: {{`${{ steps.fetch-author.outputs.commit_author}}`}}
