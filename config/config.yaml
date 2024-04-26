@@ -9,9 +9,9 @@ policy:
     # features act as flags whose presence/absence can be used to render
     # a common set of features across branch(es) For eg: there are some
     # branches that support el/7, and some that doesn't - to render el/7
-    # support on these branches, add `el7` as a feature of these
+    # support on these branches, add `el7-pgo-build` as a feature of these
     # branches and write the template conditions accordingly to render
-    # the templates with el7 support based on the presence of this flag
+    # the templates with el7-pgo-build support based on the presence of this flag
     features:
       - releng
     # deletedfiles are files that should not exist, usually the
@@ -128,7 +128,7 @@ policy:
         sourcebranch: master
         buildenv: 1.21-bullseye
         features:
-          - el7
+          - el7-pgo-build
         branches:
           master:
             baseimage: debian:bookworm-slim

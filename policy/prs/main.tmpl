@@ -4,7 +4,7 @@ The complete list of features for _{{.Name}}:{{.Branch}}_: {{ $bv.Features | joi
 {{ if mustHas "gpac" $bv.Features -}}
 This PR updates templated Github Policy-as-Code code in the {{ .Branch}} branch of {{ .Name }}. The potential terraform plan will be posted as a comment. Someone with sufficient access to Github will be required to apply the changes. Please merge this PR _after_ the changes have been applied.
 {{ end -}}
-{{ if mustHas "el7" $bv.Features -}}
+{{ if mustHas "el7-pgo-build" $bv.Features -}}
 {{ .Name }}:{{ .Branch}} needs to support RHEL7. RHEL7 support was dropped in 5.1 and then brought back in 5.2.1. This PR may not directly affect RHEL7 support but it may need testing on RHEL7 to make sure it still works. Release/upgrade-tests will perform some basic tests on supported OSes but this is no guarantee of everything being alright.
 {{ end -}}
 {{ if mustHas "plugin-compiler-fix-vendor" $bv.Features -}}
