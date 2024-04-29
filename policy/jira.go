@@ -89,11 +89,9 @@ func (j *JiraClient) GetIssue(id string) (*JiraIssue, error) {
 func getChildLines(parent []*models.IssueScheme) string {
 	var b string
 	for _, child := range parent {
-		var status string
+		status := " "
 		if child.Fields.Status.StatusCategory.Name == "Done" {
 			status = "x"
-		} else {
-			status = " "
 		}
 		b += fmt.Sprintf("- [%s] %s\n", status, child.Fields.Summary)
 	}
