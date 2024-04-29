@@ -8,7 +8,7 @@
 
   {{- template "before_hooks" . }}
 
-{{- if or (eq .Branch "release-5-lts") (eq .Branch "release-4-lts") }}
+{{- if has "el7-pgo-build" .Branchvals.Features }}
   {{- template "cgo_builds" . }}
 {{- else }}
   {{- template "builds" . }}

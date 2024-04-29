@@ -127,8 +127,6 @@ policy:
         versionpackage: github.com/TykTechnologies/tyk-analytics/internal/build
         sourcebranch: master
         buildenv: 1.21-bullseye
-        features:
-          - el7-pgo-build
         branches:
           master:
             baseimage: debian:bookworm-slim
@@ -151,9 +149,12 @@ policy:
             deletedfiles:
               - .github/workflows/api-tests.yml
             features:
+              - el7-pgo-build
             tests: [ui,api]           
           release-4-lts:
             buildenv: 1.16
+            features:
+              - el7-pgo-build            
 
       tyk-identity-broker:
         description: >-
