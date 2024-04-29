@@ -7,11 +7,11 @@ policy:
   # contains the metadata required to manage repos that are services
   services:
     # features act as flags whose presence/absence can be used to render
-    # a common set of features across branch(es) For eg: there are some
-    # branches that support el/7, and some that doesn't - to render el/7
-    # support on these branches, add `el7-pgo-build` as a feature of these
-    # branches and write the template conditions accordingly to render
-    # the templates with el7-pgo-build support based on the presence of this flag
+    # a common set of features across branch(es) 
+    # For eg: all regular builds now support el/7 by default, 
+    # but in order to build the pure go version of dashboard which can run on el7
+    # we make use of the `el7-pgo-build` feature flag to write the template conditions 
+    # accordingly to it
     features:
       - releng
     # deletedfiles are files that should not exist, usually the
