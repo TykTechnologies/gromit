@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	v3 "github.com/ctreminiom/go-atlassian/jira/v3"
+	"github.com/ctreminiom/go-atlassian/pkg/infra/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -63,9 +64,7 @@ func (j *JiraClient) GetIssue(id string) (*JiraIssue, error) {
 		default:
 		}
 	}
-	for _, st := range i.Fields.Subtasks {
-		b += fmt.Sprintf("- [x] %s\n", st.Fields.Summary)
-	}
+	b += getChildLines(i.Fields.Subtasks)
 	if i.Fields.IssueType.Name == "Epic" {
 		jql := fmt.Sprintf("parent = %s", id)
 		cis, resp, err := j.c.Issue.Search.Get(j.ctx, jql, nil, nil, 0, 20, "stories")
@@ -74,9 +73,7 @@ func (j *JiraClient) GetIssue(id string) (*JiraIssue, error) {
 			log.Error().Err(err).Msgf("error fetching children of %s", id)
 		} else {
 			log.Debug().Msgf("found %d children", cis.Total)
-			for _, ci := range cis.Issues {
-				b += fmt.Sprintf("- [x] %s\n", ci.Fields.Summary)
-			}
+			b += getChildLines(cis.Issues)
 		}
 	}
 	return &JiraIssue{
@@ -84,4 +81,21 @@ func (j *JiraClient) GetIssue(id string) (*JiraIssue, error) {
 		Title: i.Fields.Summary,
 		Body:  b,
 	}, err
+}
+
+// getChildLines(parent) returns lines of the form
+// - [ ] summary text
+// with the checkbox filled in if the task/story is done
+func getChildLines(parent []*models.IssueScheme) string {
+	var b string
+	for _, child := range parent {
+		var status string
+		if child.Fields.Status.StatusCategory.Name == "Done" {
+			status = "x"
+		} else {
+			status = " "
+		}
+		b += fmt.Sprintf("- [%s] %s\n", status, child.Fields.Summary)
+	}
+	return b
 }
