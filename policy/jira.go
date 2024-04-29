@@ -64,7 +64,6 @@ func (j *JiraClient) GetIssue(id string) (*JiraIssue, error) {
 		default:
 		}
 	}
-	b += getChildLines(i.Fields.Subtasks)
 	if i.Fields.IssueType.Name == "Epic" {
 		jql := fmt.Sprintf("parent = %s", id)
 		cis, resp, err := j.c.Issue.Search.Get(j.ctx, jql, nil, nil, 0, 20, "stories")
@@ -76,6 +75,7 @@ func (j *JiraClient) GetIssue(id string) (*JiraIssue, error) {
 			b += getChildLines(cis.Issues)
 		}
 	}
+	b += getChildLines(i.Fields.Subtasks)
 	return &JiraIssue{
 		Id:    i.Key,
 		Title: i.Fields.Summary,
