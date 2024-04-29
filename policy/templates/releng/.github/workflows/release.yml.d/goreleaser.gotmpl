@@ -97,9 +97,15 @@
           echo '#!/bin/sh
           ci/bin/unlock-agent.sh
           {{ if has "plugin-compiler-fix-vendor" .Branchvals.Features -}}
-          mkdir -p /go/src
+          # This step fetches all the gateway vendor dependencies so that
+          # they could be moved to the correct directories in the GOPATH
+          # for a GOPATH build.
+          # Since the container itself is run with GO111MODULE=off and both
+          # these are go mod specific commands, these must be run with
+          # GO111MODULE=on explicitly set.
           GO111MODULE=on go mod tidy
           GO111MODULE=on go mod vendor
+          mkdir -p /go/src
           cp -r -f vendor/* /go/src
           mkdir -p /go/src/github.com/TykTechnologies/tyk
           cp -r ./* /go/src/github.com/TykTechnologies/tyk
