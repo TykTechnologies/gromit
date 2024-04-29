@@ -81,13 +81,13 @@ sink<<EOF
 ["$ECR/tyk-sink:master"]
 EOF
 ui_conf<<EOF
-["sha256"]
+["sha256","murmur128"]
 EOF
 ui_db<<EOF
 ["mongo44","postgres15"]
 EOF
 exclude<<EOF
-[]
+[{"db":"mongo44","ui_conf":"murmur128"},{"db":"postgres15","ui_conf":"sha256"}]
 EOF
 `,
 			trigger: "is_pr",
@@ -117,13 +117,13 @@ sink<<EOF
 ["tykio/tyk-mdcb-docker:v2.4","$ECR/tyk-sink:master"]
 EOF
 ui_conf<<EOF
-["sha256"]
+["sha256","murmur128"]
 EOF
 ui_db<<EOF
 ["mongo44","postgres15"]
 EOF
 exclude<<EOF
-[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"}]
+[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"db":"mongo44","ui_conf":"murmur128"},{"db":"postgres15","ui_conf":"sha256"}]
 EOF
 `,
 			trigger: "",
@@ -146,7 +146,7 @@ tyk_beta_image=$tyk_image
 EOF
 gd_tag=release-5-lts
 api_conf<<EOF
-["sha256"]
+["sha256","murmur128"]
 EOF
 api_db<<EOF
 ["mongo44","postgres15"]
@@ -158,7 +158,7 @@ sink<<EOF
 ["tykio/tyk-mdcb-docker:v2.4","$ECR/tyk-sink:master"]
 EOF
 exclude<<EOF
-[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"}]
+[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"api_conf":"murmur128","db":"mongo44"},{"api_conf":"sha256","db":"postgres15"}]
 EOF
 `,
 			trigger: "is_lts",
@@ -190,8 +190,7 @@ EOF
 
 			defaults := GHoutput{
 				TestVariations: map[string][]string{
-					p["job"] + "_conf": {"sha256"},
-					p["job"] + "_conf": {"sha256"},
+					p["job"] + "_conf": {"sha256", "murmur128"},
 					p["job"] + "_db":   {"mongo44", "postgres15"},
 					"pump":             {"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
 					"sink":             {"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
@@ -199,6 +198,8 @@ EOF
 				Exclusions: []map[string]string{
 					{"pump": "tykio/tyk-pump-docker-pub:v1.8", "sink": "$ECR/tyk-sink:master"},
 					{"pump": "$ECR/tyk-pump:master", "sink": "tykio/tyk-mdcb-docker:v2.4"},
+					{"db": "mongo44", p["job"] + "_conf": "murmur128"},
+					{"db": "postgres15", p["job"] + "_conf": "sha256"},
 				},
 			}
 
