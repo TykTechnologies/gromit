@@ -17,7 +17,7 @@ tyk_beta_image=$tyk_image
 EOF
 gd_tag=master
 api_conf<<EOF
-["sha256"]
+["sha256","murmur128"]
 EOF
 api_db<<EOF
 ["mongo44","postgres15"]
@@ -29,5 +29,5 @@ sink<<EOF
 ["$ECR/tyk-sink:master"]
 EOF
 exclude<<EOF
-[]
+[{"api_conf":"murmur128","db":"mongo44"},{"api_conf":"sha256","db":"postgres15"}]
 EOF
