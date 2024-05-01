@@ -8,10 +8,10 @@
 
   {{- template "before_hooks" . }}
 
-{{- if eq .Branch "master" }}
-  {{- template "builds" . }}
-{{- else }}
+{{- if has "el7-pgo-build" .Branchvals.Features }}
   {{- template "cgo_builds" . }}
+{{- else }}
+  {{- template "builds" . }}
 {{- end }}
   {{- template "nfpm" . }}
 

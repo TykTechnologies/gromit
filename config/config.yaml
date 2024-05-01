@@ -7,11 +7,11 @@ policy:
   # contains the metadata required to manage repos that are services
   services:
     # features act as flags whose presence/absence can be used to render
-    # a common set of features across branch(es) For eg: there are some
-    # branches that support el/7, and some that doesn't - to render el/7
-    # support on these branches, add `el7` as a feature of these
-    # branches and write the template conditions accordingly to render
-    # the templates with el7 support based on the presence of this flag
+    # a common set of features across branch(es) 
+    # For eg: all regular builds now support el/7 by default, 
+    # but in order to build the pure go version of dashboard which can run on el7
+    # we make use of the `el7-pgo-build` feature flag to write the template conditions 
+    # accordingly to it
     features:
       - releng
     # deletedfiles are files that should not exist, usually the
@@ -127,8 +127,6 @@ policy:
         versionpackage: github.com/TykTechnologies/tyk-analytics/internal/build
         sourcebranch: master
         buildenv: 1.21-bullseye
-        features:
-          - el7
         branches:
           master:
             baseimage: debian:bookworm-slim
@@ -151,9 +149,12 @@ policy:
             deletedfiles:
               - .github/workflows/api-tests.yml
             features:
+              - el7-pgo-build
             tests: [ui,api]           
           release-4-lts:
             buildenv: 1.16
+            features:
+              - el7-pgo-build            
 
       tyk-identity-broker:
         description: >-
