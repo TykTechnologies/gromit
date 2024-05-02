@@ -93,7 +93,7 @@ var controllerSubCmd = &cobra.Command{
 			TestVariations: map[string][]string{
 				params["job"] + "_conf": {"sha256"},
 				params["job"] + "_conf": {"sha256"},
-				params["job"] + "_db":   {"mongo44", "postgres15"},
+				params["job"] + "_db":   {"mongo7", "postgres15"},
 				"pump":                  {"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
 				"sink":                  {"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
 			},

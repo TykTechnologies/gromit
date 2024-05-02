@@ -52,17 +52,20 @@ func (p runParameters) SetOutputs(op io.Writer, gh GHoutput) error {
 	switch p["trigger"] {
 	case "is_pr":
 		gh.TestVariations[p["job"]+"_conf"] = []string{"sha256"}
-		gh.TestVariations[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
+		gh.TestVariations[p["job"]+"_db"] = []string{"mongo7", "postgres15"}
+		gh.TestVariations[p["job"]+"_cache_db"] = []string{"redis7"}
 		gh.TestVariations["pump"] = []string{"$ECR/tyk-pump:master"}
 		gh.TestVariations["sink"] = []string{"$ECR/tyk-sink:master"}
 		gh.Exclusions = []map[string]string{}
 	case "is_tag":
 		// Defaults are fine
 		gh.TestVariations[p["job"]+"_conf"] = []string{"sha256"}
-		gh.TestVariations[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
+		gh.TestVariations[p["job"]+"_db"] = []string{"mongo7", "postgres15"}
+		gh.TestVariations[p["job"]+"_cache_db"] = []string{"redis7"}
 	case "is_lts":
 		gh.TestVariations[p["job"]+"_conf"] = []string{"sha256"}
-		gh.TestVariations[p["job"]+"_db"] = []string{"mongo44", "postgres15"}
+		gh.TestVariations[p["job"]+"_db"] = []string{"mongo7", "postgres15"}
+		gh.TestVariations[p["job"]+"_cache_db"] = []string{"redis7"}
 		gh.TestVariations["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"}
 		gh.TestVariations["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"}
 		gh.Exclusions = []map[string]string{
