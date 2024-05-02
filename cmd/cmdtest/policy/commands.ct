@@ -20,7 +20,7 @@ api_cache_db<<EOF
 ["redis7"]
 EOF
 api_conf<<EOF
-["sha256"]
+["sha256","murmur128"]
 EOF
 api_db<<EOF
 ["mongo7","postgres15"]
@@ -32,5 +32,5 @@ sink<<EOF
 ["$ECR/tyk-sink:master"]
 EOF
 exclude<<EOF
-[]
+[{"api_conf":"murmur128","db":"mongo44"},{"api_conf":"sha256","db":"postgres15"}]
 EOF
