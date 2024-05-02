@@ -90,7 +90,7 @@ ui_db<<EOF
 ["mongo7","postgres15"]
 EOF
 exclude<<EOF
-[{"db":"mongo44","ui_conf":"murmur128"},{"db":"postgres15","ui_conf":"sha256"}]
+[{"db":"mongo7","ui_conf":"murmur128"},{"db":"postgres15","ui_conf":"sha256"}]
 EOF
 `,
 			trigger: "is_pr",
@@ -129,7 +129,7 @@ ui_db<<EOF
 ["mongo7","postgres15"]
 EOF
 exclude<<EOF
-[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"db":"mongo44","ui_conf":"murmur128"},{"db":"postgres15","ui_conf":"sha256"}]
+[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"db":"mongo7","ui_conf":"murmur128"},{"db":"postgres15","ui_conf":"sha256"}]
 EOF
 `,
 			trigger: "",
@@ -167,7 +167,7 @@ sink<<EOF
 ["tykio/tyk-mdcb-docker:v2.4","$ECR/tyk-sink:master"]
 EOF
 exclude<<EOF
-[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"api_conf":"murmur128","db":"mongo44"},{"api_conf":"sha256","db":"postgres15"}]
+[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"api_conf":"murmur128","db":"mongo7"},{"api_conf":"sha256","db":"postgres15"}]
 EOF
 `,
 			trigger: "is_lts",
@@ -199,7 +199,7 @@ EOF
 
 			defaults := GHoutput{
 				TestVariations: map[string][]string{
-					p["job"] + "_conf": {"sha256", "murmur128"},
+					p["job"] + "_conf":     {"sha256", "murmur128"},
 					p["job"] + "_db":       {"mongo7", "postgres15"},
 					p["job"] + "_cache_db": {"redis7"},
 					"pump":                 {"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
@@ -208,7 +208,7 @@ EOF
 				Exclusions: []map[string]string{
 					{"pump": "tykio/tyk-pump-docker-pub:v1.8", "sink": "$ECR/tyk-sink:master"},
 					{"pump": "$ECR/tyk-pump:master", "sink": "tykio/tyk-mdcb-docker:v2.4"},
-					{"db": "mongo44", p["job"] + "_conf": "murmur128"},
+					{"db": "mongo7", p["job"] + "_conf": "murmur128"},
 					{"db": "postgres15", p["job"] + "_conf": "sha256"},
 				},
 			}
