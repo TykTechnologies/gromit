@@ -90,7 +90,7 @@ ui_db<<EOF
 ["mongo7","postgres15"]
 EOF
 exclude<<EOF
-[{"db":"mongo7","ui_conf":"murmur128"},{"db":"postgres15","ui_conf":"sha256"}]
+[{"conf":"murmur128","db":"mongo7"},{"conf":"sha256","db":"postgres15"}]
 EOF
 `,
 			trigger: "is_pr",
@@ -129,7 +129,7 @@ ui_db<<EOF
 ["mongo7","postgres15"]
 EOF
 exclude<<EOF
-[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"db":"mongo7","ui_conf":"murmur128"},{"db":"postgres15","ui_conf":"sha256"}]
+[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"conf":"murmur128","db":"mongo7"},{"conf":"sha256","db":"postgres15"}]
 EOF
 `,
 			trigger: "",
@@ -167,7 +167,7 @@ sink<<EOF
 ["tykio/tyk-mdcb-docker:v2.4","$ECR/tyk-sink:master"]
 EOF
 exclude<<EOF
-[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"api_conf":"murmur128","db":"mongo7"},{"api_conf":"sha256","db":"postgres15"}]
+[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"conf":"murmur128","db":"mongo7"},{"conf":"sha256","db":"postgres15"}]
 EOF
 `,
 			trigger: "is_lts",
@@ -208,8 +208,8 @@ EOF
 				Exclusions: []map[string]string{
 					{"pump": "tykio/tyk-pump-docker-pub:v1.8", "sink": "$ECR/tyk-sink:master"},
 					{"pump": "$ECR/tyk-pump:master", "sink": "tykio/tyk-mdcb-docker:v2.4"},
-					{"db": "mongo7", p["job"] + "_conf": "murmur128"},
-					{"db": "postgres15", p["job"] + "_conf": "sha256"},
+					{"db": "mongo7", "conf": "murmur128"},
+					{"db": "postgres15", "conf": "sha256"},
 				},
 			}
 

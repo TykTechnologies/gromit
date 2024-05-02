@@ -57,8 +57,8 @@ func (p runParameters) SetOutputs(op io.Writer, gh GHoutput) error {
 		gh.TestVariations["pump"] = []string{"$ECR/tyk-pump:master"}
 		gh.TestVariations["sink"] = []string{"$ECR/tyk-sink:master"}
 		gh.Exclusions = []map[string]string{
-			{"db": "mongo7", p["job"] + "_conf": "murmur128"},
-			{"db": "postgres15", p["job"] + "_conf": "sha256"},
+			{"db": "mongo7", "conf": "murmur128"},
+			{"db": "postgres15", "conf": "sha256"},
 		}
 	case "is_tag":
 		// Defaults are fine
@@ -74,8 +74,8 @@ func (p runParameters) SetOutputs(op io.Writer, gh GHoutput) error {
 		gh.Exclusions = []map[string]string{
 			{"pump": "tykio/tyk-pump-docker-pub:v1.8", "sink": "$ECR/tyk-sink:master"},
 			{"pump": "$ECR/tyk-pump:master", "sink": "tykio/tyk-mdcb-docker:v2.4"},
-			{"db": "mongo7", p["job"] + "_conf": "murmur128"},
-			{"db": "postgres15", p["job"] + "_conf": "sha256"},
+			{"db": "mongo7", "conf": "murmur128"},
+			{"db": "postgres15", "conf": "sha256"},
 		}
 	}
 
