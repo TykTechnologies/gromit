@@ -1,0 +1,34 @@
+[
+  {
+    "ParameterKey": "Name",
+    "ParameterValue": "master"
+  },
+  {
+    "ParameterKey": "EnvFiles",
+    "ParameterValue": "redis60,mongo44"
+  },
+  {
+    "ParameterKey": "PublicSubnet",
+    "ParameterValue": "subnet-07643253abbee6a4b"
+  },
+  {
+    "ParameterKey": "PrivateSubnet",
+    "ParameterValue": "subnet-089f63252bc92ca48"
+  },
+  {
+    "ParameterKey": "dashTag",
+    "ParameterValue": "master"
+  },
+  {
+    "ParameterKey": "pumpTag",
+    "ParameterValue": "master"
+  },
+  {
+    "ParameterKey": "gwTag",
+    "ParameterValue": "master"
+  },
+  {
+    "ParameterKey": "mdcbTag",
+    "ParameterValue": "master"
+  }
+]

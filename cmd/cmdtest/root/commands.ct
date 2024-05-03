@@ -10,6 +10,7 @@ Usage:
 
 Available Commands:
   completion  Generate completion script
+  env         Manage cluster of tyk components
   help        Help about any command
   licenser    Get a trial license and writes it to path, overwriting it
   orgs        Dump/restore org keys and mongodb
