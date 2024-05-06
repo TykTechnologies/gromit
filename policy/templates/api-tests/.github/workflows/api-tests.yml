@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         conf: [ "sha256", "murmur64" ]
-        db: [ "mongo44", "postgres15" ]
+        db: [ "mongo7", "postgres15" ]
         include:
           - db: postgres15
             markers: "and not sql"

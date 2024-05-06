@@ -16,11 +16,14 @@ tyk_alfa_image=$tyk_image
 tyk_beta_image=$tyk_image
 EOF
 gd_tag=master
+api_cache_db<<EOF
+["redis7"]
+EOF
 api_conf<<EOF
 ["sha256","murmur128"]
 EOF
 api_db<<EOF
-["mongo44","postgres15"]
+["mongo7","postgres15"]
 EOF
 pump<<EOF
 ["$ECR/tyk-pump:master"]
@@ -29,5 +32,5 @@ sink<<EOF
 ["$ECR/tyk-sink:master"]
 EOF
 exclude<<EOF
-[{"api_conf":"murmur128","db":"mongo44"},{"api_conf":"sha256","db":"postgres15"}]
+[{"conf":"murmur128","db":"mongo7"},{"conf":"sha256","db":"postgres15"}]
 EOF
