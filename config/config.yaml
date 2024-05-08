@@ -98,11 +98,6 @@ policy:
               - s390x
               - release-test
             tests: [api]
-          release-4-lts:
-            features:
-              - plugin-compiler-fix-vendor
-              - python-support
-            buildenv: 1.15
           release-5-lts:
             buildenv: 1.16
             deletedfiles:
@@ -151,10 +146,6 @@ policy:
             features:
               - el7-pgo-build
             tests: [ui,api]           
-          release-4-lts:
-            buildenv: 1.16
-            features:
-              - el7-pgo-build            
 
       tyk-identity-broker:
         description: >-
