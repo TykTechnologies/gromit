@@ -1,0 +1,250 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Tyk Pro
+
+Parameters:
+  Name:
+    Description: Cluster name
+    Type: String
+
+  gwTag:
+    Description: Gateway Tag
+    Type: String
+    Default: master
+
+  dashTag:
+    Description: Dashboard Tag
+    Type: String
+    Default: master
+
+  pumpTag:
+    Description: Pump Tag
+    Type: String
+    Default: master
+
+  mdcbTag:
+    Description: MDCB Sink Tag
+    Type: String
+    Default: master
+
+  PublicSubnet:
+    Description: 'For public components (gw, dash)'
+    Type: AWS::EC2::Subnet::Id
+
+  PrivateSubnet:
+    Description: 'For private components (pump)'
+    Type: AWS::EC2::Subnet::Id
+
+  EnvFiles:
+    Description: List of envfiles from S3 that should be used for all tasks
+    Type: CommaDelimitedList
+    AllowedValues:
+      - redis60
+      - mongo44
+
+Resources:
+  ProCluster:
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      ClusterName: !Ref Name
+      CapacityProviders:
+        - FARGATE
+      Configuration:
+       ExecuteCommandConfiguration:
+          Logging: DEFAULT
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+
+  logGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      RetentionInDays: 1
+      LogGroupName: !Ref Name
+ 
+  gwTD:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties: 
+      Family: gw
+      Cpu: 256    # 0.25 vCPU
+      Memory: 512 # 0.5GB RAM
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: '{{resolve:ssm:/cd/ter}}' # "arn:aws:iam::754489498669:role/cd/ter"
+      ContainerDefinitions: 
+        - Name: gw
+          Cpu: 256
+          Memory: 512
+          Essential: true
+          Command: ["--conf", "/conf/tyk.conf"]
+          MountPoints:
+            - ContainerPath: /conf
+              SourceVolume: config-efs
+          Image: !Sub '754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk:${gwTag}'
+          PortMappings: 
+            - ContainerPort: 8080
+              HostPort: 8080
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref Name
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: gw
+          Environment:
+            - Name: TYK_GW_POLICIES_POLICYCONNECTIONSTRING
+              Value: !Sub "http://dash-${Name}.dev.internal:3000"
+            - Name: TYK_GW_DBAPPCONFOPTIONS_CONNECTIONSTRING
+              Value: !Sub "http://dash-${Name}.dev.internal:3000"
+          EnvironmentFiles:
+            - Type: s3
+              Value: "arn:aws:s3:::assets.dev.tyk.technology/envfiles/redis60.env"
+            - Type: s3
+              Value: "arn:aws:s3:::assets.dev.tyk.technology/envfiles/mongo44.env"
+      Volumes:
+        - Name: config-efs
+          EFSVolumeConfiguration:
+            FilesystemId: '{{resolve:ssm:/cd/efs}}' # "fs-079e901738855c44f"
+            RootDirectory: !Sub "/conf/${Name}"
+
+  gwService: 
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: gw
+      Cluster: !Ref ProCluster
+      TaskDefinition: !Ref gwTD
+      ServiceName: !Sub "gw-${Name}"
+      ServiceRegistries:
+        - RegistryArn: '{{resolve:ssm:/cd/sd}}'
+          Port: 80
+      LaunchType: FARGATE
+      DesiredCount: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnet
+          SecurityGroups:
+            - '{{resolve:ssm:/cd/sg}}' # "sg-09e6780ca34ffe8d2"
+
+  dashTD:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties: 
+      Family: dash
+      Cpu: 256    # 0.25 vCPU
+      Memory: 512 # 0.5GB RAM
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: '{{resolve:ssm:/cd/ter}}' # "arn:aws:iam::754489498669:role/cd/ter"
+      ContainerDefinitions: 
+        - Name: dash
+          Cpu: 256
+          Memory: 512
+          Essential: true
+          Command: ["--conf", "/conf/tyk-analytics.conf"]
+          MountPoints:
+            - ContainerPath: /conf
+              SourceVolume: config-efs
+          Image: !Sub '754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-analytics:${dashTag}'
+          PortMappings: 
+            - ContainerPort: 3000
+              HostPort: 3000
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref Name
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: dash
+          Secrets:
+            - Name: TYK_DB_LICENSE
+              ValueFrom: '/cd/dashboard_license'
+          Environment:
+            - Name: TYK_DB_TYKAPI_HOST
+              Value: !Sub "http://gw-${Name}.dev.internal:8080"
+            - Name: TYK_DB_HOSTCONFIG_HOSTNAME
+              Value: !Sub "dash-${Name}.dev.internal"
+          EnvironmentFiles:
+            - Type: s3
+              Value: !Sub "arn:aws:s3:::assets.dev.tyk.technology/envfiles/redis60.env"
+            - Type: s3
+              Value: !Sub "arn:aws:s3:::assets.dev.tyk.technology/envfiles/mongo44.env"
+      Volumes:
+        - Name: config-efs
+          EFSVolumeConfiguration:
+            FilesystemId: '{{resolve:ssm:/cd/efs}}' # "fs-079e901738855c44f"
+            RootDirectory: !Join ["/", ["/conf", !Ref Name]]
+
+  dashService: 
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: dash
+      Cluster: !Ref ProCluster
+      TaskDefinition: !Ref dashTD
+      ServiceName: !Sub "dash-${Name}"
+      ServiceRegistries:
+        - RegistryArn: '{{resolve:ssm:/cd/sd}}'
+          Port: 80
+      LaunchType: FARGATE
+      DesiredCount: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnet
+          SecurityGroups:
+            - '{{resolve:ssm:/cd/sg}}' # "sg-09e6780ca34ffe8d2"
+
+  pumpTD:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties: 
+      Family: pump
+      Cpu: 256    # 0.25 vCPU
+      Memory: 512 # 0.5GB RAM
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: '{{resolve:ssm:/cd/ter}}' # "arn:aws:iam::754489498669:role/cd/ter"
+      ContainerDefinitions: 
+        - Name: pump
+          Cpu: 256
+          Memory: 512
+          Essential: true
+          Command: ["--conf", "/conf/tyk-pump.conf"]
+          MountPoints:
+            - ContainerPath: /conf
+              SourceVolume: config-efs
+          Image: !Sub '754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-pump:${pumpTag}'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref Name
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: pump
+          EnvironmentFiles:
+            - Type: s3
+              Value: "arn:aws:s3:::assets.dev.tyk.technology/envfiles/redis60.env"
+            - Type: s3
+              Value: "arn:aws:s3:::assets.dev.tyk.technology/envfiles/mongo44.env"
+      Volumes:
+        - Name: config-efs
+          EFSVolumeConfiguration:
+            FilesystemId: '{{resolve:ssm:/cd/efs}}' # "fs-079e901738855c44f"
+            RootDirectory: !Join ["/", ["/conf", !Ref Name]]
+
+  pumpService: 
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: pump
+      Cluster: !Ref ProCluster
+      TaskDefinition: !Ref pumpTD
+      LaunchType: FARGATE
+      DesiredCount: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PrivateSubnet
+          SecurityGroups:
+            - '{{resolve:ssm:/cd/sg}}' # "sg-09e6780ca34ffe8d2"
