@@ -68,7 +68,7 @@ func (p runParameters) SetOutputs(op io.Writer, gh GHoutput) error {
 	case "is_lts":
 		gh.TestVariations[p["job"]+"_conf"] = []string{"sha256", "murmur128"}
 		gh.TestVariations[p["job"]+"_db"] = []string{"mongo7", "postgres15"}
-		gh.TestVariations[p["job"]+"_cache_db"] = []string{"redis7"}
+		gh.TestVariations[p["job"]+"_cache_db"] = []string{"redis6"}
 		gh.TestVariations["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"}
 		gh.TestVariations["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"}
 		gh.Exclusions = []map[string]string{

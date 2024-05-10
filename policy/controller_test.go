@@ -152,7 +152,7 @@ tyk_beta_image=$tyk_image
 EOF
 gd_tag=release-5-lts
 api_cache_db<<EOF
-["redis7"]
+["redis6"]
 EOF
 api_conf<<EOF
 ["sha256","murmur128"]
