@@ -4,10 +4,11 @@
   test-controller-{{ $test }}:
     needs: goreleaser
     runs-on: ubuntu-latest-m-2
-    container: tykio/gromit:v1.7
+    container: tykio/gromit:v1.8
     outputs:
       conf: {{`${{ steps.params.outputs.`}}{{ $test }}{{`_conf }}`}}
       db: {{`${{ steps.params.outputs.`}}{{ $test }}{{`_db }}`}}
+      cache_db: {{`${{ steps.params.outputs.`}}{{ $test }}{{`_cache_db }}`}}
       pump: {{`${{ steps.params.outputs.pump }}`}}
       sink: {{`${{ steps.params.outputs.sink }}`}}
       gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
@@ -46,6 +47,7 @@
       matrix:
         conf: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.conf) }}`}}
         db: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.db) }}`}}
+        cache_db: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.cache_db) }}`}}
         {{- if ne $REPO "tyk-pump" }}
         pump: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.pump) }}`}}
         {{ end }}
@@ -109,9 +111,9 @@
           # Add Tyk component config variations to $env_file
           cat confs/{{`${{ matrix.conf }}`}}.env >> local-{{`${{ matrix.db }}`}}.env
           # bring up env, the project name is important
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml -f {{`${{ matrix.cache_db }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
           ./dash-bootstrap.sh http://localhost:3000
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml -f {{`${{ matrix.cache_db }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
 
       {{ if eq $test "api" }}
       - name: Run tests
@@ -256,7 +258,7 @@
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
           VERSIONS: {{`${{ needs.test-controller-`}}{{ $test }}{{`.outputs.versions }}`}}
         run: |
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml -f {{`${{ matrix.cache_db }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
           echo "::group::DockerLogs"
           cat {{`${{ github.workspace }}`}}/docker-compose.log
           echo "::endgroup::"
