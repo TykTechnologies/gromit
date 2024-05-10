@@ -4,6 +4,10 @@
     needs: goreleaser
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - uses: actions/download-artifact@v4
         with:
           name: deb
@@ -12,33 +16,50 @@
 
       - uses: docker/setup-buildx-action@v3
 
+      - name: Login to DockerHub
+        if: startsWith(github.ref, 'refs/tags')
+        uses: docker/login-action@v3
+        with:
+          username: {{`${{ secrets.DOCKER_USERNAME }}`}}
+          password: {{`${{ secrets.DOCKER_PASSWORD }}`}}
+
+  {{- if .CSRepo }}
+      - name: Login to Cloudsmith
+        if: startsWith(github.ref, 'refs/tags')
+        uses: docker/login-action@v3
+        with:
+          registry: docker.tyk.io
+          username: {{`${{ secrets.CLOUDSMITH_USERNAME }}`}}
+          password: {{`${{ secrets.CLOUDSMITH_API_KEY }}`}}
+  {{- end }}
+
       - name: Docker metadata for distroless
         id: distroless_metadata
         uses: docker/metadata-action@v5
         with:
-          images: {{`${{ steps.ecr.outputs.registry }}`}}/{{ .Name }}
+          images: |
+            {{ .DHRepo }}
+            {{ .CSRepo }}
           flavor: |
             latest=false
+            prefix=s
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,format=long
-            type=semver,pattern=s{{`{{major}}`}}.{{`{{minor}}`}},prefix=v
-            type=semver,pattern=s{{`{{version}}`}},prefix=v
-
-      - name: install on {{`${{ matrix.distro }}`}}
+            type=semver,pattern={{`{{major}}`}}
+            type=semver,pattern={{`{{major}}.{{minor}}`}}
+            type=semver,pattern={{`{{version}}`}}
+          labels: |
+            org.opencontainers.image.title={{ .PackageName }} (distroless)
+            org.opencontainers.image.description={{ .Description }}
+            org.opencontainers.image.vendor=tyk.io
+            org.opencontainers.image.version=$GITHUB_REF_NAME
+ 
+      - name: build distroless image
         uses: docker/build-push-action@v5
         with:
           context: "."
-          platforms: linux/{{`${{ matrix.arch }}`}}
+          platforms: linux/amd64,linux/arm64
           file: ci/Dockerfile.distroless
-          push: false
-  {{- if eq .Name "tyk" }}
-          tags: test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
-          load: true
-
-      - name: Test the built container image with api functionality test.
-        run: |
-          docker run --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
-  {{- end }}
+          push: {{`${{ startsWith(github.ref, 'refs/tags') }}`}}
+          tags: {{`${{ steps.distroless_metadata.outputs.tags }}`}}
+          labels: {{`${{ steps.distroless_metadata.outputs.labels }}`}}
 {{ end }} {{/* distroless */}}

@@ -12,7 +12,7 @@ endif
 REPOS        ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal
 GITHUB_TOKEN ?= $(shell pass me/github)
 JIRA_USER    ?= alok@tyk.io
-JIRA_TOKEN   ?= $(pass Tyk/atlassian)
+JIRA_TOKEN   ?= $(shell pass Tyk/atlassian)
 
 gromit: go.mod go.sum *.go $(SRC)
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
@@ -37,7 +37,11 @@ clean:
 sync: gromit
 	@$(foreach r,$(REPOS), GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit policy sync $(r);)
 
-%pr: gromit
+cpr: gromit
+	test -n "$(TICKET)"
+	@GITHUB_TOKEN=$(GITHUB_TOKEN) JIRA_USER=$(JIRA_USER) JIRA_TOKEN=$(JIRA_TOKEN) ./gromit prs $@ --jira $(TICKET) $(REPOS)
+
+upr: gromit
 	@GITHUB_TOKEN=$(GITHUB_TOKEN) JIRA_USER=$(JIRA_USER) JIRA_TOKEN=$(JIRA_TOKEN) ./gromit prs $@ $(REPOS)
 
 loc: clean
