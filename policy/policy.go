@@ -64,9 +64,6 @@ type branchVals struct {
 	UpgradeFromVer      string
 	Tests               []string
 	Features            []string
-	Convos              bool   // TODO: remove gpac
-	ReviewCount         int    // TODO: remove gpac
-	SourceBranch        string // TODO: remove gpac
 	DeletedFiles        []string
 }
 
