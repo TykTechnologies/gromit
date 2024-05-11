@@ -51,7 +51,7 @@
             org.opencontainers.image.title={{ .PackageName }} (distroless)
             org.opencontainers.image.description={{ .Description }}
             org.opencontainers.image.vendor=tyk.io
-            org.opencontainers.image.version=$GITHUB_REF_NAME
+            org.opencontainers.image.version={{`${{ github.ref_name }}`}}
  
       - name: build distroless image
         uses: docker/build-push-action@v5
