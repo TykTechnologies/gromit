@@ -86,7 +86,7 @@ func (gh *GithubClient) CreatePR(bv any, prOpts *PullRequest) (*github.PullReque
 	if e, ok := err.(*github.ErrorResponse); ok {
 		for _, ghErr := range e.Errors {
 			if strings.HasPrefix(ghErr.Message, "A pull request already exists") {
-				log.Debug().Interface("ghErr", ghErr).Interface("resp", resp).Msg("found existing PR")
+				log.Debug().Interface("ghErr", ghErr).Fields(resp).Msg("found existing PR")
 				existingPR = true
 				break
 			}
@@ -108,7 +108,7 @@ func (gh *GithubClient) CreatePR(bv any, prOpts *PullRequest) (*github.PullReque
 		pr.Body = clientPROpts.Body
 		prNum := pr.GetNumber()
 		pr, resp, err := gh.v3.PullRequests.Edit(context.Background(), prOpts.Owner, prOpts.Repo, prNum, pr)
-		log.Trace().Interface("resp", resp).Str("owner", prOpts.Owner).Str("repo", prOpts.Repo).Msgf("updating PR#%d", prNum)
+		log.Trace().Fields(resp).Str("owner", prOpts.Owner).Str("repo", prOpts.Repo).Msgf("updating PR#%d", prNum)
 		if err != nil {
 			return pr, fmt.Errorf("Updating PR#%d failed: %w", prNum, err)
 		}
