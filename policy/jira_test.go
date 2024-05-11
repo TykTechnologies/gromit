@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetIssue(t *testing.T) {
+func TestJiraGetIssue(t *testing.T) {
 	user := os.Getenv("JIRA_USER")
 	token := os.Getenv("JIRA_TOKEN")
 	if token == "" || user == "" {
@@ -23,7 +23,7 @@ func TestGetIssue(t *testing.T) {
 	}
 }
 
-func TestGetEpic(t *testing.T) {
+func TestJiraGetEpic(t *testing.T) {
 	user := os.Getenv("JIRA_USER")
 	token := os.Getenv("JIRA_TOKEN")
 	if token == "" || user == "" {

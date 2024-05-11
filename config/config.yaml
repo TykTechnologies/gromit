@@ -44,7 +44,7 @@ policy:
       # distrolessbaseimage is used for container images when the
       # distroless feature is set. base is appropriate for cgo
       # builds, static for pure go.
-      distrolessbaseimage: base-debian12
+      distrolessbaseimage: base-debian12:nonroot
       # Repo specific policies start here->
       repos:
         # Repo specific policy for `tyk` starts here->
@@ -150,7 +150,6 @@ policy:
           upgradefromver: 1.8.2
           configfile: tyk_sink.conf
           versionpackage: github.com/TykTechnologies/tyk-sink/main
-          distrolessbaseimage: static-debian12
           tests: [api]
           features:
             - s390x
@@ -181,7 +180,7 @@ policy:
         - distroless
       buildenv: 1.21-bookworm
       baseimage: debian:bookworm-slim
-      distrolessbaseimage: static-debian12
+      distrolessbaseimage: static-debian12:nonroot
       repos:
         tyk-pump:
           description: >-
@@ -215,6 +214,5 @@ policy:
           upgradefromver: 1.1.0
           configfile: tib.conf
           versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
-          distrolessbaseimage: static-debian12
           branches:
             master:

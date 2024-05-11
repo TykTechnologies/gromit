@@ -25,6 +25,9 @@ test-github: test
 	@echo Creates and closes a PR in tyklabs/git-tests
 	@GITHUB_TOKEN=$(GITHUB_TOKEN) go test ./policy -run TestGitFunctions
 
+test-jira: test 
+	@JIRA_USER=$(JIRA_USER) JIRA_TOKEN=$(JIRA_TOKEN) go test ./policy -run TestJira
+
 update-test-cases:
 	@echo Updating test cases for cmd test
 	go test ./cmd/ -update
