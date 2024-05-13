@@ -91,15 +91,17 @@ var controllerSubCmd = &cobra.Command{
 		// pump/sink are included only when needed
 		defaults := policy.GHoutput{
 			TestVariations: map[string][]string{
-				params["job"] + "_conf": {"sha256"},
-				params["job"] + "_conf": {"sha256"},
-				params["job"] + "_db":   {"mongo44", "postgres15"},
-				"pump":                  {"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
-				"sink":                  {"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
+				params["job"] + "_conf":     {"sha256", "murmur128"},
+				params["job"] + "_db":       {"mongo7", "postgres15"},
+				params["job"] + "_cache_db": {"redis7"},
+				"pump":                      {"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"},
+				"sink":                      {"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"},
 			},
 			Exclusions: []map[string]string{
 				{"pump": "tykio/tyk-pump-docker-pub:v1.8", "sink": "$ECR/tyk-sink:master"},
 				{"pump": "$ECR/tyk-pump:master", "sink": "tykio/tyk-mdcb-docker:v2.4"},
+				{"db": "mongo7", "conf": "murmur128"},
+				{"db": "postgres15", "conf": "sha256"},
 			},
 		}
 		if err := params.SetOutputs(&op, defaults); err != nil {
