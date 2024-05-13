@@ -65,11 +65,7 @@
 
       - name: Test the built container image with api functionality test.
         run: |
-<<<<<<< HEAD
           docker run -d -p8080:8080 --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
-=======
-          docker run --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}} -d
->>>>>>> 5503a89 (Run smoke tests outside the test container)
           sleep 2
           ./ci/tests/api-functionality/api_test.sh
   {{- end }}
