@@ -46,12 +46,9 @@
           RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $pcrepo }}/script.deb.sh | bash && apt-get install -y {{ .PackageName }}={{ .Branchvals.UpgradeFromVer }}
           RUN dpkg -i {{ .PackageName }}.deb
   {{- if eq .Name "tyk" }}
-          RUN apt-get install -y jq
           RUN /opt/tyk-gateway/install/setup.sh --listenport=8080 --redishost=localhost --redisport=6379 --domain=""
-          COPY ci/tests/api-functionality/api_test.sh /
-          COPY ci/tests/api-functionality/pkg_test.sh /
           COPY ci/tests/api-functionality/data/api.json /opt/tyk-gateway/apps/
-          CMD [ "/pkg_test.sh" ]
+          CMD ["/opt/tyk-gateway/tyk", "--conf", "/opt/tyk-gateway/tyk.conf"]
   {{- end }}
           ' > Dockerfile
 
@@ -68,7 +65,9 @@
 
       - name: Test the built container image with api functionality test.
         run: |
-          docker run --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
+          docker run -d -p8080:8080 --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
+          sleep 2
+          ./ci/tests/api-functionality/api_test.sh
   {{- end }}
 
   upgrade-rpm:
@@ -109,12 +108,9 @@
           RUN rpm --checksig {{ .PackageName }}.rpm
           RUN rpm -Uvh --force {{ .PackageName }}.rpm
   {{- if eq .Name "tyk" }}
-          RUN curl -fSL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 --output /usr/local/bin/jq && chmod a+x /usr/local/bin/jq
           RUN /opt/tyk-gateway/install/setup.sh --listenport=8080 --redishost=localhost --redisport=6379 --domain=""
           COPY ci/tests/api-functionality/data/api.json /opt/tyk-gateway/apps/
-          COPY ci/tests/api-functionality/api_test.sh /
-          COPY ci/tests/api-functionality/pkg_test.sh /
-          CMD [ "/pkg_test.sh" ]
+          CMD ["/opt/tyk-gateway/tyk", "--conf", "/opt/tyk-gateway/tyk.conf"]
   {{- end }}
           ' > Dockerfile
 
@@ -125,12 +121,14 @@
           file: Dockerfile
           push: false
   {{- if eq .Name "tyk" }}
-          tags: test-{{`${{ matrix.distro }}`}}
+          tags: test   # matrix.distro for ubi has invalid chars for a tag
           load: true
 
       - name: Test the built container image with api functionality test.
         run: |
-          docker run --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}`}}
+          docker run -d -p8080:8080 --network {{`${{ job.container.network }}`}} --rm test
+          sleep 2
+          ./ci/tests/api-functionality/api_test.sh
   {{ end }}
 
   {{- if has "release-test" .Branchvals.Features }}
