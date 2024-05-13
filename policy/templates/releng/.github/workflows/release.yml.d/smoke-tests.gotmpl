@@ -65,7 +65,7 @@
 
       - name: Test the built container image with api functionality test.
         run: |
-          docker run --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}} -d
+          docker run -d -p8080:8080 --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
           sleep 2
           ./ci/tests/api-functionality/api_test.sh
   {{- end }}
@@ -121,12 +121,12 @@
           file: Dockerfile
           push: false
   {{- if eq .Name "tyk" }}
-          tags: test-{{`${{ matrix.distro }}`}}
+          tags: test   # matrix.distro for ubi has invalid chars for a tag
           load: true
 
       - name: Test the built container image with api functionality test.
         run: |
-          docker run --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}`}} -d
+          docker run -d -p8080:8080 --network {{`${{ job.container.network }}`}} --rm test
           sleep 2
           ./ci/tests/api-functionality/api_test.sh
   {{ end }}
