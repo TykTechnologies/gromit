@@ -58,7 +58,7 @@ var cprSubCmd = &cobra.Command{
 		jToken := os.Getenv("JIRA_TOKEN")
 		jUser := os.Getenv("JIRA_USER")
 		if jToken == "" || jUser == "" {
-			log.Fatal().Msg("Working with PRs requires GITHUB_TOKEN")
+			log.Fatal().Msg("Creating PRs requires JIRA_USER and JIRA_TOKEN")
 		}
 		j := policy.NewJiraClient(jUser, jToken)
 		issue, err := cmd.Flags().GetString("jira")

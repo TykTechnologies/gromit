@@ -225,7 +225,7 @@ func fsTreeWalk(b *Bundle, tfs fs.FS, root string, subTemps []string) error {
 			}
 			// Normalize the path to use '/' as the separator
 			path = strings.ReplaceAll(path, string(os.PathSeparator), "/")
-			log.Trace().Strs("subtemplates", subTemps).Str("template", d.Name()).Msg("adding to bundle")
+			log.Trace().Strs("files", subTemps).Str("template", d.Name()).Msg("adding to bundle")
 
 			t := template.Must(
 				template.New(d.Name()).
@@ -264,6 +264,7 @@ func NewBundle(features []string) (*Bundle, error) {
 	if err != nil {
 		log.Fatal().Err(err).Msg("walking subtemplates")
 	}
+	log.Trace().Strs("subtemplates", stList).Msg("found")
 	for _, feat := range features {
 		featPath := filepath.Join("templates", feat)
 		err = fsTreeWalk(b, templates, featPath, stList)

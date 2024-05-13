@@ -19,49 +19,52 @@ import (
 // itself, allowing each repo to override any of the values at upper
 // levels
 type repoConfig struct {
-	Description    string
-	PCRepo         string
-	DHRepo         string
-	CSRepo         string
-	PackageName    string
-	Reviewers      []string
-	ExposePorts    string
-	Binary         string
-	Buildenv       string
-	BaseImage      string
-	Cgo            bool
-	ConfigFile     string
-	VersionPackage string
-	UpgradeFromVer string
-	Features       []string
-	DeletedFiles   []string
-	Branches       map[string]branchVals `copier:"-"`
-	Repos          map[string]repoConfig `copier:"-"`
+	Description         string
+	PCRepo              string
+	DHRepo              string
+	CSRepo              string
+	PackageName         string
+	Reviewers           []string
+	ExposePorts         string
+	Binary              string
+	Buildenv            string
+	BaseImage           string
+	DistrolessBaseImage string
+	Cgo                 bool
+	ConfigFile          string
+	VersionPackage      string
+	UpgradeFromVer      string
+	Tests               []string
+	Features            []string
+	DeletedFiles        []string
+	Branches            map[string]branchVals `copier:"-"`
+	Repos               map[string]repoConfig `copier:"-"`
 }
 
 // Policies models the config file structure. There are three levels
 // at which a particular value can be set: group-level, repo, branch.
 // The group level is applicable for all the repos in that group.
 // Repeating the same repo in multiple groups is UB
-type Policies map[string]repoConfig
+type Policies struct {
+	DeletedFiles []string
+	Groups       map[string]repoConfig
+}
 
 // branchVals contains only the parameters that can be overriden at
 // the branch level. Some elements are overriden, some elements are
 // concatenated. See policy.GetRepo to see how definitions are
 // processed at each level
 type branchVals struct {
-	Buildenv       string
-	BaseImage      string
-	Cgo            bool
-	ConfigFile     string
-	VersionPackage string
-	UpgradeFromVer string
-	Convos         bool
-	ReviewCount    int
-	Tests          []string
-	SourceBranch   string
-	Features       []string
-	DeletedFiles   []string
+	Buildenv            string
+	BaseImage           string
+	DistrolessBaseImage string
+	Cgo                 bool
+	ConfigFile          string
+	VersionPackage      string
+	UpgradeFromVer      string
+	Tests               []string
+	Features            []string
+	DeletedFiles        []string
 }
 
 // RepoPolicy is used to render templates. It provides an abstraction
@@ -143,7 +146,7 @@ func (rp *RepoPolicy) GetAllBranches() []string {
 func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 	var group, r repoConfig
 	found := false
-	for grpName, grp := range *p {
+	for grpName, grp := range p.Groups {
 		log.Trace().Msgf("looking in group %s", grpName)
 		r, found = grp.Repos[repo]
 		if found {
@@ -188,7 +191,7 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 		}
 		// attributes that are unions
 		rbv.Features = newSetFromSlices(group.Features, r.Features, bbv.Features).Members()
-		rbv.DeletedFiles = newSetFromSlices(group.DeletedFiles, r.DeletedFiles, bbv.DeletedFiles).Members()
+		rbv.DeletedFiles = newSetFromSlices(p.DeletedFiles, group.DeletedFiles, r.DeletedFiles, bbv.DeletedFiles).Members()
 
 		log.Trace().Interface("bv", rbv).Str("branch", b).Msg("computed")
 		allBranches[b] = rbv
@@ -266,7 +269,7 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 // Stringer implementation for Policies
 func (p Policies) String() string {
 	w := new(bytes.Buffer)
-	for _, grp := range p {
+	for _, grp := range p.Groups {
 		for repo, crPol := range grp.Repos {
 			fmt.Fprintf(w, "%s: package %s, image %s", repo, crPol.PackageName, crPol.DHRepo)
 			rp, err := p.GetRepoPolicy(repo)

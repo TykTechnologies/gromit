@@ -38,6 +38,7 @@ func NewJiraClient(email, token string) *JiraClient {
 // understands a few types. Unknown content types are ignored.
 func (j *JiraClient) GetIssue(id string) (*JiraIssue, error) {
 	j.ctx = context.Background()
+	log.Logger = log.With().Str("jira", id).Logger()
 	i, resp, err := j.c.Issue.Get(j.ctx, id, []string{"summary", "description", "subtasks", "issuetype"}, nil)
 	log.Trace().Fields(resp).Interface("issue", i).Msg("getissue response")
 	if err != nil {
@@ -48,8 +49,13 @@ func (j *JiraClient) GetIssue(id string) (*JiraIssue, error) {
 		switch c.Type {
 		case "paragraph":
 			for _, p := range c.Content {
-				if p.Type == "text" {
+				switch p.Type {
+				case "text":
 					b += p.Text
+				case "inlineCard":
+					b += p.Attrs["url"].(string)
+				default:
+					log.Info().Interface("content", p).Msgf("unknown paragraph type %s", p.Type)
 				}
 			}
 			b += "\n"
@@ -62,6 +68,7 @@ func (j *JiraClient) GetIssue(id string) (*JiraIssue, error) {
 			}
 			b += "\n"
 		default:
+			log.Info().Interface("content", c).Msgf("encountered unknown content type %s", c.Type)
 		}
 	}
 	if i.Fields.IssueType.Name == "Epic" {
@@ -89,11 +96,11 @@ func (j *JiraClient) GetIssue(id string) (*JiraIssue, error) {
 func getChildLines(parent []*models.IssueScheme) string {
 	var b string
 	for _, child := range parent {
-		status := " "
+		status := "[ ]"
 		if child.Fields.Status.StatusCategory.Name == "Done" {
-			status = "x"
+			status = "[x]"
 		}
-		b += fmt.Sprintf("- [%s] %s\n", status, child.Fields.Summary)
+		b += fmt.Sprintf("- %s %s\n", status, child.Fields.Summary)
 	}
 	return b
 }

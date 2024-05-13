@@ -54,7 +54,6 @@
         {{- if ne $REPO "tyk-sink" }}
         sink: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.sink) }}`}}
         {{ end }}
-        {{ if eq $test "ui" }}node-version: [18.16]{{ end }}
         include:
           - db: postgres15
             markers: "and not sql"
@@ -134,12 +133,11 @@
             cat tests.out >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
-      {{- end }}
-      {{ if eq $test "ui" }}
-      - name: Install Node.js {{`${{ matrix.node-version }}`}}
+      {{ else if eq $test "ui" }}
+      - name: Install Node.js 18.16
         uses: actions/setup-node@v2.4.1
         with:
-          node-version: {{`${{ matrix.node-version }}`}}  
+          node-version: "18.16"
       - name: Fix private module deps
         env:
           TOKEN: '{{`${{ secrets.ORG_GH_TOKEN }}`}}'
@@ -160,7 +158,7 @@
           npm ci
         working-directory: tests/ui
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium
         working-directory: tests/ui
       - name: Execute UI tests
         id: test_execution

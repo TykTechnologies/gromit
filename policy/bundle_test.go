@@ -33,7 +33,7 @@ func TestBundleRender(t *testing.T) {
 	if err != nil {
 		t.Logf("Unable to create bundle obj: %v", err)
 	}
-	for grpName, grp := range pol {
+	for grpName, grp := range pol.Groups {
 		for r := range grp.Repos {
 			t.Logf("testing repo %s from group %s with features %v", r, grpName, features)
 			rp, err := pol.GetRepoPolicy(r)
