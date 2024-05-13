@@ -40,7 +40,7 @@ policy:
       buildenv: 1.21-bullseye
       # baseimage what the container images are based on. It needs to be a
       # debian compatible distro as the Dockerfile assumes apt-get
-      baseimage: debian:bullseye-slim
+      baseimage: debian:bookworm-slim
       # distrolessbaseimage is used for container images when the
       # distroless feature is set. base is appropriate for cgo
       # builds, static for pure go.
@@ -137,26 +137,6 @@ policy:
               features:
                 - el7-pgo-build
 
-        tyk-sink:
-          description: >-
-           Tyk RPC server backend (bridge)
-          pcrepo: tyk-mdcb
-          dhrepo: tykio/tyk-mdcb-docker
-          csrepo: docker.tyk.io/tyk-sink/tyk-sink
-          exposeports: 80
-          binary: tyk-sink
-          packagename: tyk-sink
-          cgo: false
-          upgradefromver: 1.8.2
-          configfile: tyk_sink.conf
-          versionpackage: github.com/TykTechnologies/tyk-sink/main
-          tests: [api]
-          features:
-            - s390x
-            - distroless
-          branches:
-            master:
-
         portal:
           description: >-
             Developer portal for the Tyk API Gateway
@@ -214,5 +194,25 @@ policy:
           upgradefromver: 1.1.0
           configfile: tib.conf
           versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
+          branches:
+            master:
+
+        tyk-sink:
+          description: >-
+           Tyk RPC server backend (bridge)
+          pcrepo: tyk-mdcb
+          dhrepo: tykio/tyk-mdcb-docker
+          csrepo: docker.tyk.io/tyk-sink/tyk-sink
+          exposeports: 80
+          binary: tyk-sink
+          packagename: tyk-sink
+          cgo: false
+          upgradefromver: 1.8.2
+          configfile: tyk_sink.conf
+          versionpackage: github.com/TykTechnologies/tyk-sink/main
+          tests: [api]
+          features:
+            - s390x
+            - distroless
           branches:
             master:
