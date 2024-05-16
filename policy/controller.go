@@ -57,9 +57,10 @@ func (p runParameters) SetOutputs(op io.Writer, gh GHoutput) error {
 		if p["repo"] == "TykTechnologies/tyk-ci" {
 			gh.TestVariations["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"}
 			gh.TestVariations["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"}
+		} else {
+			gh.TestVariations["pump"] = []string{"$ECR/tyk-pump:master"}
+			gh.TestVariations["sink"] = []string{"$ECR/tyk-sink:master"}
 		}
-		gh.TestVariations["pump"] = []string{"$ECR/tyk-pump:master"}
-		gh.TestVariations["sink"] = []string{"$ECR/tyk-sink:master"}
 		gh.Exclusions = []map[string]string{
 			{"db": "mongo7", "conf": "murmur128"},
 			{"db": "postgres15", "conf": "sha256"},
