@@ -54,16 +54,22 @@ func (p runParameters) SetOutputs(op io.Writer, gh GHoutput) error {
 		gh.TestVariations[p["job"]+"_conf"] = []string{"sha256", "murmur128"}
 		gh.TestVariations[p["job"]+"_db"] = []string{"mongo7", "postgres15"}
 		gh.TestVariations[p["job"]+"_cache_db"] = []string{"redis7"}
-		if p["repo"] == "TykTechnologies/tyk-ci" {
+		if p["repo"] == "tyk-ci" {
 			gh.TestVariations["pump"] = []string{"tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"}
 			gh.TestVariations["sink"] = []string{"tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"}
+			gh.Exclusions = []map[string]string{
+				{"pump": "tykio/tyk-pump-docker-pub:v1.8", "sink": "$ECR/tyk-sink:master"},
+				{"pump": "$ECR/tyk-pump:master", "sink": "tykio/tyk-mdcb-docker:v2.4"},
+				{"db": "mongo7", "conf": "murmur128"},
+				{"db": "postgres15", "conf": "sha256"},
+			}
 		} else {
 			gh.TestVariations["pump"] = []string{"$ECR/tyk-pump:master"}
 			gh.TestVariations["sink"] = []string{"$ECR/tyk-sink:master"}
-		}
-		gh.Exclusions = []map[string]string{
-			{"db": "mongo7", "conf": "murmur128"},
-			{"db": "postgres15", "conf": "sha256"},
+			gh.Exclusions = []map[string]string{
+				{"db": "mongo7", "conf": "murmur128"},
+				{"db": "postgres15", "conf": "sha256"},
+			}
 		}
 	case "is_tag":
 		// Defaults are fine

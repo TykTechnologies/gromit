@@ -214,8 +214,8 @@ exclude<<EOF
 [{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"conf":"murmur128","db":"mongo7"},{"conf":"sha256","db":"postgres15"}]
 EOF
 `,
-			trigger: "",
-			isPR:    "no",
+			trigger: "is_pr",
+			isPR:    "yes",
 			isTag:   "no",
 			isLTS:   "no",
 			baseRef: "refs/heads/main",
