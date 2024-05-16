@@ -53,6 +53,7 @@ func TestNewParams(t *testing.T) {
 func TestOutput(t *testing.T) {
 	testCases := []struct {
 		job     string
+		repo    string
 		want    string
 		trigger string
 		isPR    string
@@ -61,14 +62,15 @@ func TestOutput(t *testing.T) {
 		baseRef string
 	}{
 		{
-			job: "ui",
+			job:  "ui",
+			repo: "TykTechnologies/tyk-analytics",
 			want: `versions<<EOF
 tyk_image=$ECR/tyk:master
 tyk_analytics_image=$ECR/tyk-analytics:master
 tyk_pump_image=$ECR/tyk-pump:master
 tyk_sink_image=$ECR/tyk-sink:master
 # override default above with just built tag
-tyk_image=v1.0
+tyk_analytics_image=v1.0
 # alfa and beta have to come after the override
 tyk_alfa_image=$tyk_image
 tyk_beta_image=$tyk_image
@@ -100,14 +102,15 @@ EOF
 			baseRef: "refs/heads/main",
 		},
 		{
-			job: "ui",
+			job:  "ui",
+			repo: "TykTechnologies/tyk-analytics",
 			want: `versions<<EOF
 tyk_image=$ECR/tyk:master
 tyk_analytics_image=$ECR/tyk-analytics:master
 tyk_pump_image=$ECR/tyk-pump:master
 tyk_sink_image=$ECR/tyk-sink:master
 # override default above with just built tag
-tyk_image=v1.0
+tyk_analytics_image=v1.0
 # alfa and beta have to come after the override
 tyk_alfa_image=$tyk_image
 tyk_beta_image=$tyk_image
@@ -138,7 +141,8 @@ EOF
 			isLTS:   "no",
 			baseRef: "refs/heads/main",
 		}, {
-			job: "api",
+			job:  "api",
+			repo: "TykTechnologies/tyk",
 			want: `versions<<EOF
 tyk_image=$ECR/tyk:release-5-lts
 tyk_analytics_image=$ECR/tyk-analytics:release-5-lts
@@ -176,13 +180,53 @@ EOF
 			isLTS:   "yes",
 			baseRef: "release-5-lts",
 		},
+		{
+			job:  "api",
+			repo: "TykTechnologies/tyk-ci",
+			want: `versions<<EOF
+tyk_image=$ECR/tyk:master
+tyk_analytics_image=$ECR/tyk-analytics:master
+tyk_pump_image=$ECR/tyk-pump:master
+tyk_sink_image=$ECR/tyk-sink:master
+# override default above with just built tag
+tyk_ci_image=v1.0
+# alfa and beta have to come after the override
+tyk_alfa_image=$tyk_image
+tyk_beta_image=$tyk_image
+EOF
+gd_tag=master
+api_cache_db<<EOF
+["redis7"]
+EOF
+api_conf<<EOF
+["sha256","murmur128"]
+EOF
+api_db<<EOF
+["mongo7","postgres15"]
+EOF
+pump<<EOF
+["tykio/tyk-pump-docker-pub:v1.8","$ECR/tyk-pump:master"]
+EOF
+sink<<EOF
+["tykio/tyk-mdcb-docker:v2.4","$ECR/tyk-sink:master"]
+EOF
+exclude<<EOF
+[{"pump":"tykio/tyk-pump-docker-pub:v1.8","sink":"$ECR/tyk-sink:master"},{"pump":"$ECR/tyk-pump:master","sink":"tykio/tyk-mdcb-docker:v2.4"},{"conf":"murmur128","db":"mongo7"},{"conf":"sha256","db":"postgres15"}]
+EOF
+`,
+			trigger: "",
+			isPR:    "no",
+			isTag:   "no",
+			isLTS:   "no",
+			baseRef: "refs/heads/main",
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.job, func(t *testing.T) {
 			os.Clearenv()
 			// Set up environment variables based on test case
-			os.Setenv("REPO", "github.com/username/tyk")
+			os.Setenv("REPO", tc.repo)
 			os.Setenv("TAGS", "v1.0 v1.1 v1.2")
 			os.Setenv("JOB", tc.job)
 			os.Setenv("IS_PR", tc.isPR)
