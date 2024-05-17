@@ -213,6 +213,21 @@ var diffSubCmd = &cobra.Command{
 	},
 }
 
+var serveSubCmd = &cobra.Command{
+	Use:   "serve",
+	Short: "Start the test controller backend",
+	Long: `The test controller backend stores the test that are to be run for a specific combination of,
+- trigger
+- repo
+- branch.
+This an laternate implementation to the controller which does not embed a server.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tvFile, _ := cmd.Flags().GetString("save")
+		port, _ := cmd.Flags().GetString("port")
+		return policy.Serve(port, tvFile)
+	},
+}
+
 func init() {
 	syncSubCmd.Flags().Bool("pr", false, "Create PR")
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
@@ -225,10 +240,14 @@ func init() {
 
 	genSubCmd.Flags().String("repo", "", "Repository name to use from config file")
 
+	serveSubCmd.Flags().String("port", ":3000", "Port that the backend will bind to")
+	serveSubCmd.Flags().String("save", "test-variations.yaml", "File to persist the test variations to")
+
 	policyCmd.AddCommand(syncSubCmd)
 	policyCmd.AddCommand(controllerSubCmd)
 	policyCmd.AddCommand(diffSubCmd)
 	policyCmd.AddCommand(genSubCmd)
+	policyCmd.AddCommand(serveSubCmd)
 
 	// FIXME: Remove the default from Branch when we can process multiple branches in the same dir
 	policyCmd.PersistentFlags().StringVar(&PolBranch, "branch", "master", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
