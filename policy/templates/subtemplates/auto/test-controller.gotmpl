@@ -1,5 +1,4 @@
 {{ define "test-controller" }}
-    runs-on: ubuntu-latest-m-2
     container: tykio/gromit:v1.8
     outputs:
       conf: {{`${{ steps.params.outputs.`}}{{ .test }}{{`_conf }}`}}

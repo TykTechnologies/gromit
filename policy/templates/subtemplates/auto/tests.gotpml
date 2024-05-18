@@ -1,5 +1,4 @@
 {{ define "tests" }}
-    runs-on: ubuntu-latest-m-2
     env:
       METADATA_REPORT_PATH: /tmp/metadata.toml
       {{ if eq .test "ui" }}
