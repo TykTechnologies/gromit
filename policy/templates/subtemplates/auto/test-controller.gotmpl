@@ -1,6 +1,4 @@
 {{ define "test-controller" }}
-  test-controller-{{ .test }}:
-    needs: goreleaser
     runs-on: ubuntu-latest-m-2
     container: tykio/gromit:v1.8
     outputs:

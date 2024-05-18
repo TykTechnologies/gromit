@@ -1,6 +1,8 @@
 {{ define "auto-test" }}
 {{ $REPO := .Name }}
 {{ range $test := .Branchvals.Tests }}
+  test-controller-{{ $test }}:
+    needs: goreleaser
 {{ template "test-controller" (dict "test" $test) }}
   {{ $test }}-tests:   
     needs: [ goreleaser, test-controller-{{ $test }}]
