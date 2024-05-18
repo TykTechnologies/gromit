@@ -214,3 +214,20 @@ policy:
             - distroless
           branches:
             master:
+
+    stand-alone-services:
+        tyk-ci:
+          description: >-
+           Tyk automation repo environment for regression testing
+          features:
+            - api-tests            
+          branches:
+            master:            
+        tyk-analytics-ui:
+          description: >-
+           Tyk analitycs ui repo
+          features:
+            - ui-tests            
+          branches:
+            master:
+            release-5-lts:

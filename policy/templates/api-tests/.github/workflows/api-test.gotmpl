@@ -1,0 +1,10 @@
+name: Api Tests
+
+on:
+  workflow_call:
+
+jobs:
+{{ $test := "api" }}
+{{ template "test-controller" (dict "test" $test) }}
+  api-tests:   
+    {{ template "tests" (dict "test" $test "repo" .Name) }}
