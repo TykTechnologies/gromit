@@ -214,20 +214,28 @@ policy:
             - distroless
           branches:
             master:
-
     stand-alone-services:
+      buildenv: na
+      baseimage: na
+      distrolessbaseimage: na
+      repos:
         tyk-ci:
+          binary: na
+          packagename: na
+          upgradefromver: 1.0.0
           description: >-
-           Tyk automation repo environment for regression testing
+            Tyk automation repo environment for regression testing
           features:
             - api-tests            
           branches:
-            master:            
+            master:      
         tyk-analytics-ui:
+          binary: na
+          packagename: na
+          upgradefromver: 1.0.0
           description: >-
-           Tyk analitycs ui repo
+            Tyk analitycs ui repo
           features:
             - ui-tests            
           branches:
-            master:
-            release-5-lts:
+            master:       
