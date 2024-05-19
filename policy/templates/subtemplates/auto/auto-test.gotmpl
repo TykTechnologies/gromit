@@ -4,7 +4,7 @@
   test-controller-{{ $test }}:
     needs: goreleaser
     runs-on: ubuntu-latest-m-2
-{{ template "test-controller" (dict "test" $test) }}
+{{ template "test-controller" (dict "test" $test "repo" $REPO) }}
   {{ $test }}-tests:   
     needs: [ goreleaser, test-controller-{{ $test }}]
     runs-on: ubuntu-latest-m-2

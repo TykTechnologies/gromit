@@ -246,28 +246,4 @@
             retention-days: 3
             path: {{`${{ github.workspace }}`}}/reports
             overwrite: true
-
-      - name: Fetch commit author
-        if: failure() && steps.test_execution.outcome != 'success' && github.event_name == 'push'
-        env:
-          USER_EMAIL: {{`${{ needs.goreleaser.outputs.commit_author }}`}}
-        run: echo "GIT_USER_EMAIL=$USER_EMAIL" >> $GITHUB_ENV
-
-      - name: Fetch slack user
-        if: failure() && steps.test_execution.outcome != 'success' && github.event_name == 'push'
-        id: fetch_slack_user
-        uses: TykTechnologies/github-actions/.github/actions/github-to-slack@main
-        with:
-          github_email: {{`${{ env.GIT_USER_EMAIL }}`}}
-
-      - name: Notify slack
-        if: failure() && steps.test_execution.outcome != 'success' && github.event_name == 'push'
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: {{`${{ secrets.API_TEST_ALERT_SLACK_WEBHOOK }}`}}
-          SLACK_COLOR: {{`${{ job.status }}`}}
-          SLACK_TITLE: "Result: {{`${{ steps.test_execution.outcome }}`}}"
-          SLACK_USERNAME: API INTEGRATION TESTS
-          SLACK_MESSAGE: "*Test*: {{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}, *Author*: {{`${{ steps.fetch_slack_user.outputs.slack-user-name }}`}}"
-          SLACK_FOOTER: "<https://github.com/{{`${{ github.repository }}`}}/actions/runs/{{`${{ github.run_id }}`}}|SEE EXECUTION DETAILS HERE>"
 {{ end }}
