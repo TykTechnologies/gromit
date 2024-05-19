@@ -6,6 +6,6 @@ on:
 jobs:
 {{ $test := "ui" }}
   test-controller-{{ $test }}:
-{{ template "test-controller" (dict "test" $test) }}
+{{ template "test-controller" (dict "test" $test "repo" .Name) }}
   api-tests:   
     {{ template "tests" (dict "test" $test "repo" .Name) }}
