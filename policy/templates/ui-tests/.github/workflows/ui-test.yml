@@ -7,5 +7,6 @@ jobs:
 {{ $test := "ui" }}
   test-controller-{{ $test }}:
 {{ template "test-controller" (dict "test" $test "repo" .Name) }}
-  api-tests:   
+  {{ $test }}-tests: 
+    needs: test-controller-{{ $test }} 
     {{ template "tests" (dict "test" $test "repo" .Name) }}
