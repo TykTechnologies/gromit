@@ -180,7 +180,6 @@
         if: {{`${{ always() }}`}} && github.event_name != 'pull_request'
         run: |
           ./update_xray.sh
-        working-directory: bin
         env:
           TEST: "QA-890"
           STATUS: "{{`${{ steps.test_execution.outcome }}`}}"
