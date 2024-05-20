@@ -2,7 +2,7 @@
     env:
       METADATA_REPORT_PATH: /tmp/metadata.toml
       {{ if eq .test "ui" }}
-      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tests/ui/playwright-report/results.xml
+      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/playwright-report/results.xml
       {{- end }}
       {{ if eq .test "api" }}
       XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml
@@ -115,6 +115,7 @@
         uses: actions/checkout@v4
         with:
           repository: TykTechnologies/tyk-analytics
+          path: tyk-analytics
           {{ if eq .repo "tyk-analytics" -}}
           ref: {{`${{ github.event.pull_request.head.sha }}`}}
           {{- end }}
@@ -127,17 +128,17 @@
       - name: Install test dependecies
         run: |
           npm ci
-        working-directory: tests/ui
+        working-directory: tyk-analytics/tests/ui
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
-        working-directory: tests/ui
+        working-directory: tyk-analytics/tests/ui
       - name: Execute UI tests
         id: test_execution
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
           npm run test -- --workers=3
-        working-directory: tests/ui
+        working-directory: tyk-analytics/tests/ui
         env:
           GW_URL: 'https://localhost:8080/'
           NODE_TLS_REJECT_UNAUTHORIZED: 0
@@ -155,7 +156,7 @@
           AWS_ACCESS_KEY_ID: {{`${{ secrets.UI_AWS_ACCESS_KEY_ID }}`}}
           AWS_SECRET_ACCESS_KEY: {{`${{ secrets.UI_AWS_SECRET_ACCESS_KEY }}`}}
           RUN_ID: 'tyk-analytics/{{`${{ github.run_id }}`}}'
-        working-directory: tests/ui
+        working-directory: tyk-analytics/tests/ui
 
       - name: Post message to automation team
         if: failure() && steps.test_execution.outcome != 'success' && !github.event.pull_request.draft 
@@ -181,7 +182,7 @@
         working-directory: bin
         env:
           TEST: "QA-890"
-          STATUS: "{{`${{ steps.`}}{{ .test }}{{`_test_execution.outcome }}`}}"
+          STATUS: "{{`${{ steps.test_execution.outcome }}`}}"
           CLIENT_ID: {{`${{secrets.XRAY_CLIENT_ID}}`}}
           CLIENT_SECRET: {{`${{secrets.XRAY_CLIENT_SECRET}}`}}
           BRANCH: {{`${{ github.ref }}`}}
