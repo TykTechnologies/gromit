@@ -218,7 +218,7 @@
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: {{`${{ startsWith(github.ref, 'refs/tags') }}`}}
-          tags: {{`${{ steps.ci_metadata.outputs.tags }}`}}
+          tags: {{`${{ steps.tag_metadata.outputs.tags }}`}}
           labels: {{`${{ steps.tag_metadata.outputs.labels }}`}}
 {{- end }} {{/* distroless */}}
 
