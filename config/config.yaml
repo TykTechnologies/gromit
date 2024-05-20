@@ -226,7 +226,8 @@ policy:
           description: >-
             Tyk automation repo environment for regression testing
           features:
-            - api-tests            
+            - api-tests
+            - ui-tests            
           branches:
             master:      
         tyk-analytics-ui:
