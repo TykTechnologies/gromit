@@ -13,9 +13,10 @@
 {{- template "builds" . }}
 {{- end }}
 
+{{- if not (has "distroless" .Branchvals.Features) }}
 {{- template "dockers" . }}
-
 {{- template "docker_manifests" . }}
+{{- end }} {{/* distroless */}}
 
 {{- template "nfpm" . }}
 
