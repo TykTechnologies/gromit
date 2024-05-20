@@ -101,7 +101,6 @@ policy:
               features:
                 - s390x
                 - release-test
-                - distroless
             release-5-lts:
               buildenv: 1.16
               features:
@@ -131,7 +130,6 @@ policy:
             release-5.3:
               features:
                 - s390x
-                - distroless
             release-5-lts:
               buildenv: 1.16
               features:
