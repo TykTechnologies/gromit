@@ -176,6 +176,7 @@
           echo "- [Link to report](https://tyk-qa-reports.s3.eu-central-1.amazonaws.com/tyk-analytics/{{`${{ github.run_id }}`}}/index.html)" >> $GITHUB_STEP_SUMMARY
   
       - name: Xray update
+        working-directory: tyk-analytics/bin
         if: {{`${{ always() }}`}} && github.event_name != 'pull_request'
         run: |
           ./update_xray.sh
