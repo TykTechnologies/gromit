@@ -27,7 +27,65 @@ env:
 jobs:
 {{- template "goreleaser" . }}
 {{- if not (empty .Branchvals.Tests) }}
-{{- template "auto-test" . }}
+{{ $repo := .Name }}
+{{ range $test := .Branchvals.Tests }}
+  test-controller-{{ $test }}:
+    needs: goreleaser
+    runs-on: ubuntu-latest-m-2
+    container: tykio/gromit:v1.8
+    outputs:
+      conf: {{`${{ steps.params.outputs.`}}{{ $test }}{{`_conf }}`}}
+      db: {{`${{ steps.params.outputs.`}}{{ $test }}{{`_db }}`}}
+      cache_db: {{`${{ steps.params.outputs.`}}{{ $test }}{{`_cache_db }}`}}
+      pump: {{`${{ steps.params.outputs.pump }}`}}
+      sink: {{`${{ steps.params.outputs.sink }}`}}
+      gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
+      versions: {{`${{ steps.params.outputs.versions }}`}}
+      exclude: {{`${{ steps.params.outputs.exclude }}`}}
+    steps:
+      - name: set params
+        id: params
+        env:
+          REPO: {{`${{ github.repository }}`}}
+          # Cover pull_request_target too
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
+          TAGS: {{`${{ needs.goreleaser.outputs.tags }}`}}
+          IS_PR: {{`${{startsWith(github.event_name, 'pull_request') && 'yes' }}`}}
+          IS_TAG: {{`${{startsWith(github.ref, 'refs/tags') && 'yes' }}`}}
+          JOB: {{ $test }}
+        run: gromit policy controller --loglevel debug | tee -a "$GITHUB_OUTPUT"
+  {{ $test }}-tests:
+    needs: [ goreleaser, test-controller-{{ $test }}]
+    runs-on: ubuntu-latest-m-2
+    env:
+      METADATA_REPORT_PATH: /tmp/metadata.toml
+      {{ if eq $test "ui" }}
+      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/playwright-report/results.xml
+      {{- end }}
+      {{ if eq $test "api" }}
+      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml
+      {{- end }}      
+    permissions:
+      id-token: write # This is required for requesting the Github JWT
+      contents: read # This is required for actions/checkout
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.conf) }}`}}
+        db: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.db) }}`}}
+        cache_db: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.cache_db) }}`}}
+        {{- if ne $repo "tyk-pump" }}
+        pump: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.pump) }}`}}
+        {{ end }}
+        {{- if ne $repo "tyk-sink" }}
+        sink: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.sink) }}`}}
+        {{ end }}
+        include:
+          - db: postgres15
+            markers: "and not sql"
+        exclude: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.exclude) }}`}}
+        {{- template "auto-test" (dict "test" $test "repo" $repo) }}        
+{{ end }}        
 {{ end }}
 {{- template "smoke-tests" . }}
 
