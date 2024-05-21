@@ -29,9 +29,6 @@ jobs:
 {{- if not (empty .Branchvals.Tests) }}
 {{- template "auto-test" . }}
 {{ end }}
-{{- if has "distroless" .Branchvals.Features }}
-{{- template "distroless" . }}
-{{ end }}
 {{- template "smoke-tests" . }}
 
   sbom:

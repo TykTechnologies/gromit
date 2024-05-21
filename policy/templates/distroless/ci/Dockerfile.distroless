@@ -17,9 +17,12 @@ EXPOSE $PORTS
 
 WORKDIR /opt/{{ .PackageName }}/
 
+ENTRYPOINT ["/opt/{{ .PackageName }}/{{ .Binary }}" ]
 {{- if eq .Name "portal" }}
-ENTRYPOINT ["/opt/{{ .PackageName }}/entrypoint.sh" ]
+ENV PROVIDER_NAME="Tyk Dashboard (Edit me)"
+ENV PROVIDER_DATA="{}"
+
+CMD ["--bootstrap", "--user=$ADMIN_EMAIL", "--pass=$ADMIN_PASSWORD", "--provider-name=$PROVIDER_NAME", "--provider-data=$PROVIDER_DATA"]
 {{- else }}
-ENTRYPOINT ["/opt/{{ .PackageName }}/{{ .Name }}" ]
 CMD [ "--conf=/opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}" ]
 {{- end }}
