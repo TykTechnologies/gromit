@@ -36,9 +36,6 @@ type repoVariations struct {
 	Paths  []variationPath
 }
 
-// TestsuiteVariations maps savedVariations to a form suitable for runtime use
-type TestsuiteVariations map[string]repoVariations
-
 type variationPath struct {
 	Branch, Trigger, Testsuite string
 }
@@ -96,6 +93,9 @@ func parseVariations(sv ghMatrix, depth int, rv *repoVariations, path variationP
 	}
 	return
 }
+
+// TestsuiteVariations maps savedVariations to a form suitable for runtime use
+type TestsuiteVariations map[string]repoVariations
 
 // loadVariations returns the persisted test variations from disk
 func loadVariations(fname string) (TestsuiteVariations, error) {

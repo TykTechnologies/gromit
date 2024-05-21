@@ -241,7 +241,7 @@ func init() {
 	genSubCmd.Flags().String("repo", "", "Repository name to use from config file")
 
 	serveSubCmd.Flags().String("port", ":3000", "Port that the backend will bind to")
-	serveSubCmd.Flags().String("save", "test-variations.yaml", "File to persist the test variations to")
+	serveSubCmd.Flags().String("save", "./test-variations.yml", "File to persist the test variations to")
 
 	policyCmd.AddCommand(syncSubCmd)
 	policyCmd.AddCommand(controllerSubCmd)

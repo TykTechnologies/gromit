@@ -12,7 +12,6 @@ func TestVariations(t *testing.T) {
 		t.Logf("Failed to load saved test variation state from %s: %v", testConfig, err)
 		t.Fail()
 	}
-	t.Log(tv["repo0"].Paths)
 	assert.ElementsMatch(t, []string{"br0", "br1"}, tv["repo0"].Branches(), "branches for repo0")
 	assert.ElementsMatch(t, []string{"tr0"}, tv["repo0"].Triggers("br0"), "triggers for repo0-br0")
 	assert.ElementsMatch(t, []string{"ts0", "ts1"}, tv["repo0"].Testsuites("br0", "tr0"), "testsuites for repo0-br0-tr0")

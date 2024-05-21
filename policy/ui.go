@@ -1,12 +1,14 @@
 package policy
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httprate"
+	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 )
 
@@ -53,5 +55,34 @@ func (s *Server) MountHandlers() {
 	s.Router.Use(httprate.LimitAll(100, 1*time.Minute))
 
 	s.Router.Mount("/pprof", middleware.Profiler())
-	s.Router.Get("/", HelloWorld)
+
+	s.Router.Route("/variations", func(r chi.Router) {
+		r.Get("/", s.TestVariations.DumpJson)
+		r.Get("/{repo}/{branch}/{trigger}/{ts}", s.TestVariations.Lookup)
+	})
+}
+
+// API handlers
+func (tv TestsuiteVariations) Lookup(w http.ResponseWriter, r *http.Request) {
+	repo := chi.URLParam(r, "repo")
+	branch := chi.URLParam(r, "branch")
+	trigger := chi.URLParam(r, "trigger")
+	testsuite := chi.URLParam(r, "ts")
+
+	var m ghMatrix
+	repoVariations, found := tv[repo]
+	if !found {
+		http.Error(w, fmt.Sprintf("%s not known", repo), http.StatusNotFound)
+	}
+	m, found = repoVariations.Leaves[fmt.Sprintf("%s-%s-%s", branch, trigger, testsuite)]
+	if !found {
+		http.Error(w, fmt.Sprintf("%s-%s-%s not known for %s", branch, trigger, testsuite, repo), http.StatusNotFound)
+	}
+	render.JSON(w, r, m)
+	return
+}
+
+func (tv TestsuiteVariations) DumpJson(w http.ResponseWriter, r *http.Request) {
+	render.JSON(w, r, tv)
+	return
 }
