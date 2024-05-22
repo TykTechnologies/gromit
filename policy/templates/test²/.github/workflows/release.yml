@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  pull_request:
+  push:
+    tags:
+      - 'v*'
+    
+jobs:
+{{ $repo := .Name }}
+{{ range $test := .Branchvals.Tests }}  
+  {{ $test }}-tests:
+    runs-on: ubuntu-latest
+    env:
+      METADATA_REPORT_PATH: /tmp/metadata.toml
+      XUNIT_REPORT_PATH: ${{ github.workspace }}/reports/pytest-report.xml    
+    permissions:
+      id-token: write # This is required for requesting the Github JWT
+      contents: read # This is required for actions/checkout
+    strategy:
+      fail-fast: false
+      matrix:		
+        conf: ["sha256", "murmur128"]
+        db: ["mongo7", "postgres15"]
+        cache_db: ["redis7"]
+        pump: ["tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"]
+        sink: ["tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"]
+        exclude: 
+          - pump: tykio/tyk-pump-docker-pub:v1.8
+            sink: $ECR/tyk-sink:master
+          - pump: $ECR/tyk-pump:master
+            sink: tykio/tyk-mdcb-docker:v2.4
+          - db: mongo7
+            conf: murmur128
+          - db: postgres15
+            conf: sha256
+        include:
+          - db: postgres15
+            markers: "and not sql"
+  {{ template "auto-test" (dict "test" $test "repo" $repo) }}
+{{ end }} {{/* end of the range */}} 
+  release:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    needs: [api-tests,ui-tests]
+    permissions:
+      contents: write  
+    steps:
+      - uses: actions/checkout@v3
+          
+      - name: CI env
+        run:
+          tar czf ci-env.tgz auto/
+
+      - uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.ORG_GH_TOKEN }}
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body_path: auto/release.md
+          files: ci-env.tgz

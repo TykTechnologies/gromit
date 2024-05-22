@@ -226,17 +226,6 @@ policy:
           description: >-
             Tyk automation repo environment for regression testing
           features:
-            - api-tests
-            - ui-tests            
+            - test²
           branches:
-            master:      
-        tyk-analytics-ui:
-          binary: na
-          packagename: na
-          upgradefromver: 1.0.0
-          description: >-
-            Tyk analitycs ui repo
-          features:
-            - ui-tests            
-          branches:
-            master:       
+            master:
