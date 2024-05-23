@@ -28,6 +28,7 @@ jobs:
 {{- template "goreleaser" . }}
 {{- if not (empty .Branchvals.Tests) }}
 {{ $repo := .Name }}
+{{ $features := .Branchvals.Features }}
 {{ range $test := .Branchvals.Tests }}
   test-controller-{{ $test }}:
     needs: goreleaser

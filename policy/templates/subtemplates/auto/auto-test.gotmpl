@@ -16,13 +16,19 @@
         if: runner.debug == '1'
         with:
           detached: true
-          limit-access-to-actor: true
+          limit-access-to-actor: true          
       - name: fetch env from tyk-ci
         env:
           GH_TOKEN: {{`${{ github.token }}`}}
+{{ if eq "tyk-ci" .repo }}
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: auto
+{{ else }}
         run: |
-          gh release download v1.3.0 --repo github.com/TykTechnologies/tyk-ci -p 'ci-env.tgz' -O env.tgz
+          gh release download --repo github.com/TykTechnologies/tyk-ci -p 'ci-env.tgz' -O env.tgz
           tar xzvf env.tgz
+{{ end }}
       - name: env up
         shell: bash
         working-directory: auto
@@ -33,10 +39,20 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
+{{- if eq "tyk-ci" .repo }}          
+        run: |
+          echo "ECR=${ECR}
+          tyk_image=$ECR/tyk:master
+          tyk_analytics_image=$ECR/tyk-analytics:master
+          # alfa and beta have to come after the override
+          tyk_alfa_image=$tyk_image
+          tyk_beta_image=$tyk_image
+{{- else }}
           VERSIONS: {{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.versions }}`}}
         run: |
           echo "ECR=${ECR}
           $VERSIONS
+{{- end }}         
           {{- if ne .repo "tyk-pump" }}
           tyk_pump_image={{`${{matrix.pump}}`}}
           {{- end }}
@@ -66,7 +82,7 @@
           set -o pipefail
           echo "### API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
-            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}} \
+            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{ if eq "tyk-ci" .repo -}}master{{ else }}{{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}}{{- end }} \
             pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH#"{{`${{ github.workspace }}`}}"} --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
               echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else
@@ -199,7 +215,6 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
-          VERSIONS: {{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.versions }}`}}
         run: |
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml -f {{`${{ matrix.cache_db }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
           echo "::group::DockerLogs"

@@ -225,7 +225,8 @@ policy:
           upgradefromver: 1.0.0
           description: >-
             Tyk automation repo environment for regression testing
+          tests: [api,ui]
           features:
-            - test²
+            - test-square
           branches:
             master:

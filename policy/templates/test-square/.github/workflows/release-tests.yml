@@ -8,12 +8,12 @@ on:
     
 jobs:
 {{ $repo := .Name }}
-{{ range $test := .Branchvals.Tests }}  
+{{ range $test := .Branchvals.Tests }}
   {{ $test }}-tests:
     runs-on: ubuntu-latest
     env:
       METADATA_REPORT_PATH: /tmp/metadata.toml
-      XUNIT_REPORT_PATH: ${{ github.workspace }}/reports/pytest-report.xml    
+      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml    
     permissions:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
@@ -37,7 +37,7 @@ jobs:
         include:
           - db: postgres15
             markers: "and not sql"
-  {{ template "auto-test" (dict "test" $test "repo" $repo) }}
+            {{- template "auto-test" (dict "test" $test "repo" $repo) }}            
 {{ end }} {{/* end of the range */}} 
   release:
     if: github.event_name != 'pull_request'
@@ -54,8 +54,8 @@ jobs:
 
       - uses: softprops/action-gh-release@v1
         with:
-          token: ${{ secrets.ORG_GH_TOKEN }}
-          name: ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
+          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+          name: {{`${{ github.ref_name }}`}}
+          tag_name: {{`${{ github.ref_name }}`}}
           body_path: auto/release.md
           files: ci-env.tgz
