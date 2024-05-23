@@ -23,7 +23,9 @@
 {{ if has "test-square" .features }}
         uses: actions/checkout@v4
         with:
-          sparse-checkout: auto
+          sparse-checkout: |
+            auto
+            reports
 {{ else }}
         run: |
           gh release download --repo github.com/TykTechnologies/tyk-ci -p 'ci-env.tgz' -O env.tgz
