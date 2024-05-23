@@ -42,11 +42,11 @@
 {{- if eq "tyk-ci" .repo }}          
         run: |
           echo "ECR=${ECR}
-          tyk_image=$ECR/tyk:master
-          tyk_analytics_image=$ECR/tyk-analytics:master
+          tyk_image=\$ECR/tyk:master
+          tyk_analytics_image=\$ECR/tyk-analytics:master
           # alfa and beta have to come after the override
-          tyk_alfa_image=$tyk_image
-          tyk_beta_image=$tyk_image
+          tyk_alfa_image=\$tyk_image
+          tyk_beta_image=\$tyk_image
 {{- else }}
           VERSIONS: {{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.versions }}`}}
         run: |
