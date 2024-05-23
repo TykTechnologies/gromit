@@ -187,7 +187,7 @@
           repo = {{`${{ github.repository }}`}}
           branch = {{`${{ github.ref }}`}}
           commit = {{`${{ github.sha }}`}}
-          test_suite_version = {{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}}
+          test_suite_version = {{ if eq "tyk-ci" .repo }}master{{ else }}{{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}}{{ end }}
           test_suite_name = {{`${{ github.job }}`}}
           test_suite_run = {{`${{ github.run_id }}`}}-{{`${{ github.run_attempt }}`}}
           db = {{`${{ matrix.db }}`}}
