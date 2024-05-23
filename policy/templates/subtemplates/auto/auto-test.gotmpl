@@ -20,7 +20,7 @@
       - name: fetch env from tyk-ci
         env:
           GH_TOKEN: {{`${{ github.token }}`}}
-{{ if eq "tyk-ci" .repo }}
+{{ if has "test-square" .features }}
         uses: actions/checkout@v4
         with:
           sparse-checkout: auto
@@ -39,7 +39,7 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
-{{- if eq "tyk-ci" .repo }}          
+{{- if has "test-square" .features }}        
         run: |
           echo "ECR=${ECR}
           tyk_image=\$ECR/tyk:master
@@ -82,7 +82,7 @@
           set -o pipefail
           echo "### API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
-            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{ if eq "tyk-ci" .repo -}}master{{ else }}{{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}}{{- end }} \
+            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{ if has "test-square" .features -}}master{{ else }}{{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}}{{- end }} \
             pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH#"{{`${{ github.workspace }}`}}"} --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
               echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else
@@ -187,7 +187,7 @@
           repo = {{`${{ github.repository }}`}}
           branch = {{`${{ github.ref }}`}}
           commit = {{`${{ github.sha }}`}}
-          test_suite_version = {{ if eq "tyk-ci" .repo }}master{{ else }}{{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}}{{ end }}
+          test_suite_version = {{ if has "test-square" .features }}master{{ else }}{{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}}{{ end }}
           test_suite_name = {{`${{ github.job }}`}}
           test_suite_run = {{`${{ github.run_id }}`}}-{{`${{ github.run_attempt }}`}}
           db = {{`${{ matrix.db }}`}}

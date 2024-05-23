@@ -85,7 +85,7 @@ jobs:
           - db: postgres15
             markers: "and not sql"
         exclude: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.exclude) }}`}}
-        {{- template "auto-test" (dict "test" $test "repo" $repo) }}        
+        {{- template "auto-test" (dict "test" $test "repo" $repo "features" $features) }}        
 {{ end }}        
 {{ end }}
 {{- template "smoke-tests" . }}

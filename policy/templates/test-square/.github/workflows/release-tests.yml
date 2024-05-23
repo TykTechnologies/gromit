@@ -8,6 +8,7 @@ on:
     
 jobs:
 {{ $repo := .Name }}
+{{ $features := .Branchvals.Features }}
 {{ range $test := .Branchvals.Tests }}
   {{ $test }}-tests:
     runs-on: ubuntu-latest
@@ -37,7 +38,7 @@ jobs:
         include:
           - db: postgres15
             markers: "and not sql"
-            {{- template "auto-test" (dict "test" $test "repo" $repo) }}            
+            {{- template "auto-test" (dict "test" $test "repo" $repo "features" $features) }}            
 {{ end }} {{/* end of the range */}} 
   release:
     if: github.event_name != 'pull_request'
