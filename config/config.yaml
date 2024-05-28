@@ -230,3 +230,14 @@ policy:
             - test-square
           branches:
             master:
+        tyk-automated-tests:
+          binary: na
+          packagename: na
+          upgradefromver: 1.0.0
+          description: >-
+            Tyk automation API tests repo for regression testing
+          tests: [api]
+          features:
+            - test-square-tat
+          branches:
+            master:            
