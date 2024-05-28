@@ -1,89 +1,25 @@
-name: Release
+name: UI Regresion Tests
 
 on:
   workflow_dispatch:
   workflow_call:
   pull_request:
+    paths:
+      - 'tests/ui/**'
   push:
     branches:
       - master
       - release-*
+    paths:
+      - 'tests/ui/**'
 
 permissions:
   id-token: write   # This is required for requesting the JWT
   contents: read    # This is required for actions/checkout
 
 jobs:
-  linting:
-    runs-on: ubuntu-latest
-    steps:
-
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Install flake for linting
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8
-
-      - name: Lint with flake8
-        run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-  docker:
-    needs: linting
-    runs-on: ubuntu-latest
-    outputs:
-      tags: {{`${{ steps.metadata.outputs.tags }}`}}
-    steps:      
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
-          role-session-name: cipush
-          aws-region: eu-central-1
-
-      - uses: aws-actions/amazon-ecr-login@v2
-        id: ecr
-        with:
-          mask-password: 'true'
-          mask-aws-account-id: 'true'   
-
-      - name: Docker metadata
-        id: metadata
-        uses: docker/metadata-action@v5
-        with:
-          images: {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests
-          flavor: |
-            latest=false
-          tags: |
-              type=ref,event=branch
-              type=sha,format=long,prefix=
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Build and push
-        uses: docker/build-push-action@v4
-
-        with:
-          context: .
-          platforms: linux/amd64
-          push: true
-          # push: {{`${{ github.event_name != 'pull_request' }}`}}
-          tags: {{`${{ steps.metadata.outputs.tags }}`}}
-          labels: {{`${{ steps.metadata.outputs.labels }}`}}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-    
-{{ $repo := .Name }}
-{{ $features := .Branchvals.Features }}
-{{ range $test := .Branchvals.Tests }}
+{{ $test := "ui" }}
   test-controller-{{ $test }}:
-    needs: docker
     runs-on: ubuntu-latest
     container: tykio/gromit:v1.8
     outputs:
@@ -96,15 +32,14 @@ jobs:
           REPO: {{`${{ github.repository }}`}}
           # Cover pull_request_target too
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
-          TAGS: "master"
+          TAGS: {{`${{ github.sha }}`}}
           IS_PR: {{`${{startsWith(github.event_name, 'pull_request') && 'yes' }}`}}
           IS_TAG: {{`${{startsWith(github.ref, 'refs/tags') && 'yes' }}`}}
           JOB: {{ $test }}
         run: gromit policy controller --loglevel debug | tee -a "$GITHUB_OUTPUT"
   {{ $test }}-tests:
-    needs: [docker, test-controller-api]
     runs-on: ubuntu-latest
-    needs: test-controller-api
+    needs: test-controller-{{ $test }}
     env:
       METADATA_REPORT_PATH: /tmp/metadata.toml
       {{ if eq $test "ui" }}
@@ -136,5 +71,4 @@ jobs:
         include:
           - db: postgres15
             markers: "and not sql"
-            {{- template "auto-test" (dict "test" $test "repo" $repo "features" $features) }}            
-{{ end }} {{/* end of the range */}} 
+            {{- template "auto-test" (dict "test" $test "repo" .Name "features" .Branchvals.Features) }}

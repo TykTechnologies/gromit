@@ -49,12 +49,15 @@
           # alfa and beta have to come after the override
           tyk_alfa_image=\$tyk_image
           tyk_beta_image=\$tyk_image
-{{- else }}
+{{- else }} 
           VERSIONS: {{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.versions }}`}}
         run: |
           echo "ECR=${ECR}
           $VERSIONS
-{{- end }}         
+{{- if has "test-square-tyk-ui" .features }}
+          tyk_analytics_image=\$ECR/tyk-analytics:sha-{{`${{ github.sha }}`}}"          
+{{- end }}
+{{- end }} 
           {{- if ne .repo "tyk-pump" }}
           tyk_pump_image={{`${{matrix.pump}}`}}
           {{- end }}
@@ -84,7 +87,7 @@
           set -o pipefail
           echo "### API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
-            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{ if has "test-square" .features -}}master{{ else if has "test-square-tat" .features -}}{{`${{ github.sha }}`}}{{ else }}{{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}}{{- end }} \
+            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{ if has "test-square" .features -}}master{{ else if has "test-square-tyk-api" .features -}}{{`${{ github.sha }}`}}{{ else }}{{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}}{{- end }} \
             pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH#"{{`${{ github.workspace }}`}}"} --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
               echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else

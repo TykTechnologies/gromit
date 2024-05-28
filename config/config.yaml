@@ -127,13 +127,16 @@ policy:
               features:
                 - s390x
                 - distroless
+                - test-square-tyk-ui
             release-5.3:
               features:
                 - s390x
+                - test-square-tyk-ui
             release-5-lts:
               buildenv: 1.16
               features:
                 - el7-pgo-build
+                - test-square-tyk-ui
 
         portal:
           description: >-
@@ -238,6 +241,6 @@ policy:
             Tyk automation API tests repo for regression testing
           tests: [api]
           features:
-            - test-square-tat
+            - test-square-tyk-api
           branches:
             master:            
