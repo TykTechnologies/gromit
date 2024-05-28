@@ -55,7 +55,7 @@
           echo "ECR=${ECR}
           $VERSIONS
 {{- if has "test-square-tyk-ui" .features }}
-          tyk_analytics_image=\$ECR/tyk-analytics:sha-{{`${{ github.sha }}`}}"          
+          tyk_analytics_image=\$ECR/tyk-analytics:sha-{{`${{ github.sha }}`}}    
 {{- end }}
 {{- end }} 
           {{- if ne .repo "tyk-pump" }}
