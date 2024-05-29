@@ -1,4 +1,4 @@
-package licenser
+package env
 
 import (
 	"bytes"
@@ -10,10 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"os"
 	"errors"
 	"fmt"
+	"os"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 const pk = `-----BEGIN PUBLIC KEY-----

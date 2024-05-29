@@ -16,6 +16,7 @@ import (
 func Serve(port, tvFile string) error {
 	s := CreateNewServer(tvFile)
 	s.MountHandlers()
+	log.Info().Msg("Starting server")
 	return http.ListenAndServe(":3000", s.Router)
 }
 
