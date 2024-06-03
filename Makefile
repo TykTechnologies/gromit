@@ -14,7 +14,7 @@ GITHUB_TOKEN ?= $(shell pass me/github)
 JIRA_USER    ?= alok@tyk.io
 JIRA_TOKEN   ?= $(shell pass Tyk/atlassian)
 
-gromit: go.mod go.sum *.go $(SRC)
+gromit: go.mod go.sum *.go $(SRC) policy/app/*
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
 
@@ -31,6 +31,13 @@ test-jira: test
 update-test-cases:
 	@echo Updating test cases for cmd test
 	go test ./cmd/ -update
+
+deploy: dist/gromit_linux_amd64_v1/gromit test
+	goreleaser --clean --snapshot
+	docker push tykio/gromit:latest
+	aws --no-cli-pager ecs update-service --service tui --cluster internal --force-new-deployment
+	aws ecs wait services-stable --service tui --cluster internal
+	./gromit env expose --env=internal
 
 clean:
 	find . -name rice-box.go | xargs rm -fv

@@ -2,23 +2,20 @@ package policy
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/yaml.v3"
 )
 
 // ghMatrix models the github action matrix structure
 // recursion allows it to compactly represent the save state
 type ghMatrix struct {
 	EnvFiles []struct {
-		Cache  string
-		DB     string
-		Config string
+		Cache  string `json:"cache"`
+		DB     string `json:"db"`
+		Config string `json:"config"`
 	}
-	Pump  []string
-	Sink  []string
+	Pump  []string            `json:"pump"`
+	Sink  []string            `json:"sink"`
 	Level map[string]ghMatrix `copier:"-"` // assumption: copies are _never_ recursive
 }
 
@@ -68,6 +65,18 @@ func (rv repoVariations) Testsuites(branch, trigger string) []string {
 	return newSetFromSlices(rvals).Members()
 }
 
+func (rv repoVariations) Lookup(branch, trigger, testsuite string) *ghMatrix {
+	m, found := rv.Leaves[createVariationKey(branch, trigger, testsuite)]
+	if !found {
+		return nil
+	}
+	return &m
+}
+
+func createVariationKey(branch, trigger, testsuite string) string {
+	return fmt.Sprintf("%s-%s-%s", branch, trigger, testsuite)
+}
+
 func parseVariations(sv ghMatrix, depth int, rv *repoVariations, path variationPath) {
 	for level, levelMatrix := range sv.Level {
 		levelMatrix.EnvFiles = append(levelMatrix.EnvFiles, sv.EnvFiles...)
@@ -80,52 +89,17 @@ func parseVariations(sv ghMatrix, depth int, rv *repoVariations, path variationP
 			path.Trigger = level
 		case TestSuite:
 			path.Testsuite = level
-			key := fmt.Sprintf("%s-%s-%s", path.Branch, path.Trigger, path.Testsuite)
+			key := createVariationKey(path.Branch, path.Trigger, path.Testsuite)
 			var tsPath = path // make a copy
 			rv.Leaves[key] = levelMatrix
 			rv.Paths = append(rv.Paths, tsPath)
 		}
 		if depth > TestSuite {
-			log.Fatal().Fields(sv).Msgf("cannot parse test variation levels > %d", TestSuite)
+			log.Warn().Fields(sv).Msgf("cannot parse test variation levels > %d", TestSuite)
+			return
 		} else {
 			parseVariations(levelMatrix, depth+1, rv, path)
 		}
 	}
 	return
-}
-
-// TestsuiteVariations maps savedVariations to a form suitable for runtime use
-type TestsuiteVariations map[string]repoVariations
-
-// loadVariations returns the persisted test variations from disk
-func loadVariations(fname string) (TestsuiteVariations, error) {
-	data, err := os.ReadFile(fname)
-	if err != nil {
-		log.Fatal().Err(err).Msgf("could not read %s", fname)
-	}
-	var saved ghMatrix
-	err = yaml.Unmarshal(data, &saved)
-	if err != nil {
-		return nil, err
-	}
-	// top level variations
-	var global ghMatrix
-	err = copier.CopyWithOption(&global, &saved, copier.Option{IgnoreEmpty: true})
-	if err != nil {
-		log.Warn().Err(err).Msgf("could not copy global variations from %s", fname)
-	}
-	tv := make(TestsuiteVariations)
-	for repo, matrix := range saved.Level {
-		var rv repoVariations
-		var vp variationPath
-		rv.Leaves = make(map[string]ghMatrix)
-		// apply defaults to every repo
-		matrix.EnvFiles = append(matrix.EnvFiles, global.EnvFiles...)
-		matrix.Pump = append(matrix.Pump, global.Pump...)
-		matrix.Sink = append(matrix.Sink, global.Sink...)
-
-		parseVariations(matrix, 0, &rv, vp)
-		tv[repo] = rv
-	}
-	return tv, err
 }

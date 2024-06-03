@@ -3,12 +3,9 @@
 {{ range $test := .Branchvals.Tests }}
   test-controller-{{ $test }}:
     needs: goreleaser
-    runs-on: ubuntu-latest-m-2
-    container: tykio/gromit:v1.8
+    runs-on: ubuntu-latest
     outputs:
-      conf: {{`${{ steps.params.outputs.`}}{{ $test }}{{`_conf }}`}}
-      db: {{`${{ steps.params.outputs.`}}{{ $test }}{{`_db }}`}}
-      cache_db: {{`${{ steps.params.outputs.`}}{{ $test }}{{`_cache_db }}`}}
+      envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
       pump: {{`${{ steps.params.outputs.pump }}`}}
       sink: {{`${{ steps.params.outputs.sink }}`}}
       gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
@@ -18,17 +15,37 @@
     steps:
       - name: set params
         id: params
+        shell: bash
         env:
-          REPO: {{`${{ github.repository }}`}}
           # Cover pull_request_target too
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
-          TAGS: {{`${{ needs.goreleaser.outputs.tags }}`}}
-          IS_PR: {{`${{startsWith(github.event_name, 'pull_request') && 'yes' }}`}}
-          IS_TAG: {{`${{startsWith(github.ref, 'refs/tags') && 'yes' }}`}}
-          JOB: {{ $test }}
-        run: gromit policy controller --loglevel debug | tee -a "$GITHUB_OUTPUT"
+        run: |
+          set -eo pipefail
+          tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
+          endpoint="http://tui.internal.dev.tyk.technology/api/{{ $REPO }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ $test }}"
+          echo "versions<<EOF
+          tyk_image=\$ECR/tyk:master
+          tyk_analytics_image=\$ECR/tyk-analytics:master
+          tyk_pump_image=\$ECR/tyk-pump:master
+          tyk_sink_image=\$ECR/tyk-sink:master
+          # override default above with just built tag
+          {{ $REPO | replace "-" "_" }}_image=${tags[0]}
+          # alfa and beta have to come after the override
+          tyk_alfa_image=\$tyk_image
+          tyk_beta_image=\$tyk_image
+          EOF
+          gd_tag=master
+          pump<<EOF
+          $(curl -s ${endpoint}/Pump)
+          EOF
+          sink<<EOF
+          $(curl -s ${endpoint}/Sink)
+          EOF
+          envfiles<<EOF
+          $(curl -s ${endpoint}/EnvFiles)
+          EOF" | tee -a "$GITHUB_OUTPUT"
 
-  {{ $test }}-tests:   
+  {{ $test }}-tests:
     needs: [ goreleaser, test-controller-{{ $test }}]
     runs-on: ubuntu-latest-m-2
     env:
@@ -45,9 +62,7 @@
     strategy:
       fail-fast: false
       matrix:
-        conf: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.conf) }}`}}
-        db: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.db) }}`}}
-        cache_db: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.cache_db) }}`}}
+        envfiles: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.envfiles) }}`}}
         {{- if ne $REPO "tyk-pump" }}
         pump: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.pump) }}`}}
         {{ end }}
@@ -57,7 +72,6 @@
         include:
           - db: postgres15
             markers: "and not sql"
-        exclude: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.exclude) }}`}}
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -103,16 +117,16 @@
           tyk_sink_image={{`${{matrix.sink}}`}}
           {{- end }}
           confs_dir=./pro-ha
-          env_file=local-{{`${{ matrix.db }}`}}.env" > versions.env
+          env_file=local-{{`${{ matrix.envfiles.db }}`}}.env" > versions.env
           echo "::group::versions"
           cat versions.env
           echo "::endgroup::"
           # Add Tyk component config variations to $env_file
-          cat confs/{{`${{ matrix.conf }}`}}.env >> local-{{`${{ matrix.db }}`}}.env
+          cat confs/{{`${{ matrix.envfiles.config }}`}}.env >> local-{{`${{ matrix.envfiles.db }}`}}.env
           # bring up env, the project name is important
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml -f {{`${{ matrix.cache_db }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
           ./dash-bootstrap.sh http://localhost:3000
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml -f {{`${{ matrix.cache_db }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}} --env-file versions.env --profile slave-datacenter up --quiet-pull -d
 
       {{ if eq $test "api" }}
       - name: Run tests
@@ -129,7 +143,7 @@
             pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH#"{{`${{ github.workspace }}`}}"} --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
               echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else
-            echo "::error title=API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}::Test execution failed"
+            echo "::error title=API tests {{`${{ matrix.envfiles.db }}`}} {{`${{ matrix.envfiles.conf }}`}}::Test execution failed"
             cat tests.out >> $GITHUB_STEP_SUMMARY
             exit 1
           fi

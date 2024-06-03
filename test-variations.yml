@@ -7,6 +7,30 @@ level: # repos
     envfiles:
       - cache: redis60
         config: sha256
+        db: mongo7
+    level: # branches
+      master:
+        level: # trigger
+          pr:
+            level: # testsuite
+              api:
+      release-5-lts:
+        pump: ["v1.8"]
+        sink: ["v2.4"]
+        level: # trigger
+          pr:
+            envfiles:
+              - cache: redis50
+            level: # testsuite
+              api:
+  tyk-analytics:
+    envfiles:
+      - cache: redis60
+        config: sha256
+        db: postgres15
+      - cache: redis60
+        config: sha256
+        db: mongo7
     level: # branches
       master:
         level: # trigger
@@ -24,7 +48,7 @@ level: # repos
             level: # testsuite
               ui:
               api:
-  tyk-analytics:
+  tyk-pump:
     envfiles:
       - cache: redis60
         config: sha256
@@ -34,15 +58,15 @@ level: # repos
         level: # trigger
           pr:
             level: # testsuite
-              ui:
               api:
-      release-5-lts:
-        pump: ["v1.8"]
-        sink: ["v2.4"]
+  tyk-sink:
+    envfiles:
+      - cache: redis60
+        config: sha256
+        db: postgres15
+    level: # branches
+      master:
         level: # trigger
           pr:
-            envfiles:
-              - cache: redis50
             level: # testsuite
-              ui:
               api:

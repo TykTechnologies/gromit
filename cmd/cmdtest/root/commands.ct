@@ -12,7 +12,6 @@ Available Commands:
   completion  Generate completion script
   env         Manage cluster of tyk components
   help        Help about any command
-  licenser    Get a trial license and writes it to path, overwriting it
   orgs        Dump/restore org keys and mongodb
   passwd      Returns the password hash of the given plaintext
   policy      Templatised policies that are driven by the config file
