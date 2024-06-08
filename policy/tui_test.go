@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,13 +30,15 @@ func checkResponseCode(t *testing.T, expected, actual int) {
 	}
 }
 
-func TestPing(t *testing.T) {
-	s := CreateNewServer(testConfig)
-	req, _ := http.NewRequest("GET", "/ping", nil)
-
+func TestSPA(t *testing.T) {
+	creds := getCredentials(`{"user": "pass"}`)
+	s := CreateNewServer(testConfig, creds)
+	req, _ := http.NewRequest("GET", "/", strings.NewReader(""))
 	response := executeMockRequest(req, s)
-	checkResponseCode(t, http.StatusOK, response.Code)
-	assert.Equal(t, "Pong!", response.Body.String())
+	if response.Body.Len() < 5000 {
+		t.Logf("index.html <5k: %s", response.Body.String())
+		t.Fail()
+	}
 }
 
 // APITestCases are for testcases that exercise the rest API
@@ -80,14 +81,13 @@ func TestVariations(t *testing.T) {
 }
 
 func runSubTests(t *testing.T, cases []APITestCase) {
-	s := CreateNewServer(testConfig)
+	creds := getCredentials(`{"user": "pass"}`)
+	s := CreateNewServer(testConfig, creds)
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			req, _ := http.NewRequest(tc.HTTPMethod, tc.Endpoint, strings.NewReader(tc.Payload))
 			response := executeMockRequest(req, s)
-
 			checkResponseCode(t, tc.HTTPStatus, response.Code)
-
 			if tc.ResponseJSON != "" {
 				require.JSONEq(t, tc.ResponseJSON, response.Body.String())
 			}

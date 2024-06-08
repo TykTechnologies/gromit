@@ -32,9 +32,11 @@ update-test-cases:
 	@echo Updating test cases for cmd test
 	go test ./cmd/ -update
 
-deploy: dist/gromit_linux_amd64_v1/gromit test
+push: dist/gromit_linux_amd64_v1/gromit test
 	goreleaser --clean --snapshot
 	docker push tykio/gromit:latest
+
+deploy: push
 	aws --no-cli-pager ecs update-service --service tui --cluster internal --force-new-deployment
 	aws ecs wait services-stable --service tui --cluster internal
 	./gromit env expose --env=internal
@@ -60,4 +62,4 @@ opr: gromit
 loc: clean
 	gocloc --skip-duplicated --not-match-d=\.terraform --output-type=json ~gromit ~ci | jq -r '.languages | map([.name, .code]) | transpose[] | @csv'
 
-.PHONY: clean update-test-cases test loc cpr upr opr
+.PHONY: clean update-test-cases test loc cpr upr opr push deploy

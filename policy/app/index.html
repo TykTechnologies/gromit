@@ -10,7 +10,7 @@
   <body>
     <h2>Current variations</h2>
     <div id="repos" class="repo-carousel">
-      {{ range $repoName, $repo := .Repos }}
+      {{ range $repoName, $repo := .Variations }}
       <div class="repo-carousel-item">
 	<h3>{{ $repoName }}</h3>
 	{{ range $b := $repo.Branches }}

@@ -213,6 +213,37 @@ var diffSubCmd = &cobra.Command{
 	},
 }
 
+var matchSubCmd = &cobra.Command{
+	Use:   "match <tags...>",
+	Args:  cobra.MinimumNArgs(1),
+	Short: "Given a set of fully qualified tags, return matching tags from other repos",
+	Long:  `Find matching tags from gw, dash, pump and sink. The tag which has the most matches is used. If nothing matches, master is used. This is not capable to figuring out the test suite version at this point.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dcFile, _ := cmd.Flags().GetString("config")
+		config, err := policy.NewDockerAuths(dcFile)
+		if err != nil {
+			return err
+		}
+		var maxMatches policy.Matches
+		repos := []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink"}
+		for _, tag := range args {
+			p := policy.ParseImageName(tag)
+			matches, err := config.GetMatches(p.Registry, p.Tag, repos)
+			if err != nil {
+				log.Warn().Err(err).Msg("looking for matches")
+				continue
+			}
+			if matches.Len() > maxMatches.Len() {
+				maxMatches = matches
+			}
+		}
+		for _, repo := range repos {
+			cmd.Println(maxMatches.Match(repo))
+		}
+		return nil
+	},
+}
+
 var serveSubCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the test controller backend",
@@ -243,6 +274,9 @@ func init() {
 	serveSubCmd.Flags().String("port", ":3000", "Port that the backend will bind to")
 	serveSubCmd.Flags().String("save", "testdata/prod-variations.yml", "Test variations are loaded from this file, the directory component is used to save new files")
 
+	matchSubCmd.Flags().String("config", "$HOME/.docker/config.json", "Config file to read authentication token from")
+
+	policyCmd.AddCommand(matchSubCmd)
 	policyCmd.AddCommand(syncSubCmd)
 	policyCmd.AddCommand(controllerSubCmd)
 	policyCmd.AddCommand(diffSubCmd)

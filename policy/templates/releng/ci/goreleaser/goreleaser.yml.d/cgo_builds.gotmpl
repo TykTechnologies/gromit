@@ -1,63 +1,71 @@
 {{define "cgo_builds"}}
+{{ $r := . }}
 builds:
-  - id: std-linux
-  {{- if eq .Name "tyk"}}
+  {{ range $b := list "std" "fips"}}
+  - id: {{ $b }}-linux
+  {{- if eq $r.Name "tyk"}}
     flags:
-  {{- if not (has "plugin-compiler-fix-vendor" .Branchvals.Features) }}
+  {{- if not (has "plugin-compiler-fix-vendor" $r.Branchvals.Features) }}
       - -trimpath
   {{- end }}
       - -tags=goplugin
   {{- end}} {{/* tyk */}}
+  {{ if eq $b "fips" }}
+      - -tags=goplugin,fips,boringcrypto
+    env:
+      - GOEXPERIMENT=boringcrypto
+  {{- end }} {{/* fips */}}
     ldflags:
-      - -X {{.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
-      - -X {{ .Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
-      - -X {{.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
-      - -X {{.Branchvals.VersionPackage}}.BuiltBy=goreleaser
+      - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
+      - -X {{$r.Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
+      - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
+      - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
     goos:
       - linux
     goarch:
       - amd64
-    binary: {{.Binary}}
+    binary: {{$r.Binary}}
+  {{ end }} {{/* std, fips */}}
   - id: std-arm64
-  {{- if eq .Name "tyk" }}
+  {{- if eq $r.Name "tyk" }}
     flags:
-  {{- if not (has "plugin-compiler-fix-vendor" .Branchvals.Features) }}
+  {{- if not (has "plugin-compiler-fix-vendor" $r.Branchvals.Features) }}
       - -trimpath
   {{- end }}
       - -tags=goplugin
   {{- end}} {{/* tyk */}}
     ldflags:
-      - -X {{.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
-      - -X {{ .Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
-      - -X {{.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
-      - -X {{.Branchvals.VersionPackage}}.BuiltBy=goreleaser
+      - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
+      - -X {{$r.Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
+      - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
+      - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
     env:
       - CC=aarch64-linux-gnu-gcc
     goos:
       - linux
     goarch:
       - arm64
-    binary: {{.Binary}}
-  {{ if has "s390x" .Branchvals.Features -}}
+    binary: {{$r.Binary}}
+  {{ if has "s390x" $r.Branchvals.Features -}}
   - id: std-s390x
-  {{- if eq .Name "tyk" }}
+  {{- if eq $r.Name "tyk" }}
     flags:
-  {{- if not (has "plugin-compiler-fix-vendor" .Branchvals.Features) }}
+  {{- if not (has "plugin-compiler-fix-vendor" $r.Branchvals.Features) }}
       - -trimpath
   {{- end }}
       - -tags=goplugin
   {{- end}} {{/* tyk */}}
     ldflags:
-      - -X {{.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
-      - -X {{.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
-      - -X {{.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
-      - -X {{.Branchvals.VersionPackage}}.BuiltBy=goreleaser
+      - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
+      - -X {{$r.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
+      - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
+      - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
     env:
       - CC=s390x-linux-gnu-gcc
     goos:
       - linux
     goarch:
       - s390x
-    binary: {{.Binary}}
+    binary: {{$r.Binary}}
   {{ end }} {{/* s390x */}}
 {{end}}
