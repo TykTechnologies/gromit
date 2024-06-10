@@ -1,107 +1,111 @@
 {{define "nfpm" }}
+{{ $r := . }}
 nfpms:
-  - id: std
+  {{ range $b := list "std" "fips"}}
+  - id: {{ $b }}
     vendor: "Tyk Technologies Ltd"
     homepage: "https://tyk.io"
     maintainer: "Tyk <info@tyk.io>"
-    description: {{ .Description }}
-    package_name: {{ .PackageName }}
+    description: {{ $r.Description }}
+    package_name: {{ if eq $b "fips" }} {{ $r.PackageName }}-fips {{ else }} {{ $r.PackageName }} {{ end }}
     file_name_template: "{{`{{ .ConventionalFileName }}`}}"
     builds:
-  {{- if .Branchvals.Cgo }}
-      - std-linux
-      - std-arm64
-      - std-s390x
+  {{- if and $r.Branchvals.Cgo (eq $b "std")}}
+      - {{ $b }}-linux
+      - {{ $b }}-arm64
+  {{ if has "s390x" $r.Branchvals.Features }}
+      - {{ $b }}-s390x
+  {{- end }}
   {{- else }}
-      - std
+      - {{ $b }}
   {{- end }}
     formats:
       - deb
       - rpm
     contents:
       - src: "README.md"
-        dst: "/opt/share/docs/{{ .PackageName }}/README.md"
+        dst: "/opt/share/docs/{{ $r.PackageName }}/README.md"
       - src: "ci/install/*"
-        dst: "/opt/{{ .PackageName }}/install"
-      - src: ci/install/inits/systemd/system/{{ .PackageName }}.service
-        dst: /lib/systemd/system/{{ .PackageName }}.service
-      - src: ci/install/inits/sysv/init.d/{{ .PackageName }}
-        dst: /etc/init.d/{{ .PackageName }}
-  {{- if eq .Name "tyk-analytics" }}
-      - src: /opt/{{ .PackageName }}
-        dst: /opt/{{ .Name }}
+        dst: "/opt/{{ $r.PackageName }}/install"
+      - src: ci/install/inits/systemd/system/{{ $r.PackageName }}.service
+        dst: /lib/systemd/system/{{ $r.PackageName }}.service
+      - src: ci/install/inits/sysv/init.d/{{ $r.PackageName }}
+        dst: /etc/init.d/{{ $r.PackageName }}
+  {{- if eq $r.Name "tyk-analytics" }}
+      - src: /opt/{{ $r.PackageName }}
+        dst: /opt/{{ $r.Name }}
         type: "symlink"
       - src: "EULA.md"
-        dst: "/opt/share/docs/{{ .PackageName }}/EULA.md"
+        dst: "/opt/share/docs/{{ $r.PackageName }}/EULA.md"
       - src: "portal/*"
-        dst: "/opt/{{ .PackageName }}/portal"
+        dst: "/opt/{{ $r.PackageName }}/portal"
       - src: "utils/scripts/*"
-        dst: "/opt/{{ .PackageName }}/utils/scripts"
+        dst: "/opt/{{ $r.PackageName }}/utils/scripts"
       - src: "schemas/*"
-        dst: "/opt/{{ .PackageName }}/schemas"
+        dst: "/opt/{{ $r.PackageName }}/schemas"
       - src: "webclient/lang/*"
-        dst: "/opt/{{ .PackageName }}/lang"
+        dst: "/opt/{{ $r.PackageName }}/lang"
       - src: tyk_config_sample.config
-        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        dst: /opt/{{ $r.PackageName }}/{{ $r.Branchvals.ConfigFile }}
         type: "config|noreplace"
   {{- end}}
-  {{- if eq .Name "tyk" }}
-      - src: /opt/{{ .PackageName }}
-        dst: /opt/{{ .Name }}
+  {{- if eq $r.Name "tyk" }}
+      - src: /opt/{{ $r.PackageName }}
+        dst: /opt/{{ $r.Name }}
         type: "symlink"
       - src: "LICENSE.md"
-        dst: "/opt/share/docs/{{ .PackageName }}/LICENSE.md"
+        dst: "/opt/share/docs/{{ $r.PackageName }}/LICENSE.md"
       - src: "apps/app_sample.*"
-        dst: "/opt/{{ .PackageName }}/apps"
+        dst: "/opt/{{ $r.PackageName }}/apps"
       - src: "templates/*.json"
-        dst: "/opt/{{ .PackageName }}/templates"
+        dst: "/opt/{{ $r.PackageName }}/templates"
       - src: "templates/playground/*"
-        dst: "/opt/{{ .PackageName }}/templates/playground"
+        dst: "/opt/{{ $r.PackageName }}/templates/playground"
       - src: "middleware/*.js"
-        dst: "/opt/{{ .PackageName }}/middleware"
+        dst: "/opt/{{ $r.PackageName }}/middleware"
       - src: "event_handlers/sample/*.js"
-        dst: "/opt/{{ .PackageName }}/event_handlers/sample"
+        dst: "/opt/{{ $r.PackageName }}/event_handlers/sample"
       - src: "policies/*.json"
-        dst: "/opt/{{ .PackageName }}/policies"
+        dst: "/opt/{{ $r.PackageName }}/policies"
       - src: "coprocess/*"
-        dst: "/opt/{{ .PackageName }}/coprocess"
+        dst: "/opt/{{ $r.PackageName }}/coprocess"
       - src: tyk.conf.example
-        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        dst: /opt/{{ $r.PackageName }}/{{ $r.Branchvals.ConfigFile }}
         type: "config|noreplace"
   {{- end }}
-  {{- if eq .Name "tyk-identity-broker" }}
+  {{- if eq $r.Name "tyk-identity-broker" }}
       - src: "LICENSE.md"
-        dst: "/opt/share/docs/{{ .PackageName }}/LICENSE.md"
+        dst: "/opt/share/docs/{{ $r.PackageName }}/LICENSE.md"
       - src: tib_sample.conf
-        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        dst: /opt/{{ $r.PackageName }}/{{ $r.Branchvals.ConfigFile }}
         type: "config|noreplace"
   {{- end }}
-  {{- if eq .Name "tyk-pump" }}
+  {{- if eq $r.Name "tyk-pump" }}
       - src: "LICENSE.md"
-        dst: "/opt/share/docs/{{ .PackageName }}/LICENSE.md"
+        dst: "/opt/share/docs/{{ $r.PackageName }}/LICENSE.md"
       - src: pump.example.conf
-        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        dst: /opt/{{ $r.PackageName }}/{{ $r.Branchvals.ConfigFile }}
         type: "config|noreplace"
   {{- end }}
-  {{- if eq .Name "tyk-sink" }}
+  {{- if eq $r.Name "tyk-sink" }}
       - src: tyk_sink_sample.conf
-        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        dst: /opt/{{ $r.PackageName }}/{{ $r.Branchvals.ConfigFile }}
         type: "config|noreplace"
   {{- end }}
-  {{- if eq .Name "portal" }}
+  {{- if eq $r.Name "portal" }}
       - src: portal.conf
-        dst: /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
+        dst: /opt/{{ $r.PackageName }}/{{ $r.Branchvals.ConfigFile }}
         type: "config|noreplace"
       - src: app/views
-        dst: /opt/{{ .PackageName }}/app/views
+        dst: /opt/{{ $r.PackageName }}/app/views
       - src: bootstrap/views
-        dst: /opt/{{ .PackageName }}/bootstrap/views
+        dst: /opt/{{ $r.PackageName }}/bootstrap/views
       - src: default.zip
-        dst: /opt/{{ .PackageName }}/default.zip
+        dst: /opt/{{ $r.PackageName }}/default.zip
       - src: public/system
-        dst: /opt/{{ .PackageName }}/public/system
+        dst: /opt/{{ $r.PackageName }}/public/system
       - src: ci/entrypoint.sh
-        dst: /opt/{{ .PackageName }}/entrypoint.sh
+        dst: /opt/{{ $r.PackageName }}/entrypoint.sh
         file_info:
           mode: 0775
   {{- end }}
@@ -109,7 +113,7 @@ nfpms:
       preinstall: "ci/install/before_install.sh"
       postinstall: "ci/install/post_install.sh"
       postremove: "ci/install/post_remove.sh"
-    bindir: "/opt/{{ .PackageName }}"
+    bindir: "/opt/{{ $r.PackageName }}"
     rpm:
       scripts:
         posttrans: ci/install/post_trans.sh
@@ -119,4 +123,5 @@ nfpms:
       signature:
         key_file: tyk.io.signing.key
         type: origin
+  {{- end }} {{/* std, fips */}}
 {{- end }}

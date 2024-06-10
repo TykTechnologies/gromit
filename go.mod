@@ -5,14 +5,18 @@ go 1.22.0
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/ProtonMail/go-crypto v1.1.0-alpha.2
-	github.com/aws/aws-sdk-go-v2 v1.27.0
+	github.com/aws/aws-sdk-go-v2 v1.27.2
 	github.com/aws/aws-sdk-go-v2/config v1.27.16
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.162.0
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.41.11
 	github.com/aws/aws-sdk-go-v2/service/route53 v1.40.8
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.29.1
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.50.6
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.10
 	github.com/ctreminiom/go-atlassian v1.6.0
+	github.com/go-chi/chi/v5 v5.0.12
+	github.com/go-chi/httprate v0.9.0
+	github.com/go-chi/render v1.0.3
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v5 v5.2.1
@@ -38,10 +42,11 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/ajg/form v1.5.1 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.16 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.3 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.7 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.7 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.9 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.9 // indirect
@@ -50,7 +55,7 @@ require (
 	github.com/aws/smithy-go v1.20.2 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.0 // indirect
 	github.com/braydonk/yaml v0.7.0 // indirect
-	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

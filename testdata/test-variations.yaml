@@ -1,0 +1,47 @@
+pump:
+  - master
+sink:
+  - master
+level: # repos
+  repo0:
+    envfiles:
+      - cache: repo0-redis0
+        config: repo0-conf0
+    level: # branches
+      br0:
+        pump: [pump-br0]
+        sink: [sink-br0]
+        level: # trigger
+          tr0:
+            level: # testsuite
+              ts0:
+              ts1:
+      br1:
+        pump: [pump-br1]
+        sink: [sink-br1]
+        level: # trigger
+          tr1:
+            envfiles:
+              - cache: repo0-redis-tr1
+                config: repo0-conf-tr1
+            level: # testsuite
+              ts0:
+              ts1:
+  repo1:
+    envfiles:
+      - cache: repo1-redis0
+        db: repo1-db0
+        config: repo1-conf0
+    level: # branches
+      br0:
+        pump: [pump-br0]
+        sink: [sink-br0]
+        level: # trigger
+          tr0:
+            level: # testsuite
+              ts0:
+              ts1:
+          tr1:
+            level: # testsuite
+              ts0:
+              ts1:

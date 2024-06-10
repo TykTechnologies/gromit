@@ -6,7 +6,7 @@ ARG TARGETARCH
 ENV DEBIAN_FRONTEND=noninteractive
 
 COPY *${TARGETARCH}.deb /
-RUN dpkg -i /{{ .PackageName }}*${TARGETARCH}.deb && rm /*.deb
+RUN rm -f /*fips*.deb && dpkg -i /{{ .PackageName }}*${TARGETARCH}.deb && rm /*.deb
 
 FROM gcr.io/distroless/{{ .Branchvals.DistrolessBaseImage }}
 

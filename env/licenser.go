@@ -1,4 +1,4 @@
-package licenser
+package env
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strings"
 )
 
 // wireStruct models what is returned on the wire
@@ -21,7 +22,7 @@ type Licenser struct {
 	Client *http.Client
 }
 
-func (l *Licenser) Fetch(baseURL string, product string, token string) (string, error) {
+func (l *Licenser) Fetch(baseURL, product, token string) (string, error) {
 	req, err := http.NewRequest("GET", baseURL, nil)
 	if err != nil {
 		return "", err
@@ -54,5 +55,5 @@ func parseKey(r io.Reader) (string, error) {
 	if len(matches) < 2 {
 		return "", fmt.Errorf("did not find license key in: %s", t.Key)
 	}
-	return matches[1], nil
+	return strings.TrimSuffix(matches[1], "\n"), nil
 }

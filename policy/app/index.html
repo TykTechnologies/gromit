@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Automated Test Variations</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/carousel.css" type="text/css" media="screen" />
+    <script type="text/javascript" src="/static/carousel.js"></script>
+  </head>
+  <body>
+    <h2>Current variations</h2>
+    <div id="repos" class="repo-carousel">
+      {{ range $repoName, $repo := .Variations }}
+      <div class="repo-carousel-item">
+	<h3>{{ $repoName }}</h3>
+	{{ range $b := $repo.Branches }}
+        {{ range $tr := $repo.Triggers $b }}
+        {{ range $ts := $repo.Testsuites $b $tr }}
+	{{ $matrix := $repo.Lookup $b $tr $ts }}
+        <p>
+	  On {{ $tr }} to {{ $b }}, {{ $ts }} testsuite will run with
+	  <ul>
+	    <li>Environment files</li>
+	    <ul>
+	    {{range $ef := $matrix.EnvFiles}}
+	      <li> {{ $ef }}</li>
+	    {{ end }}
+	    </ul>
+	    {{ if ne $repoName "tyk-pump" }}
+	    <li>Pump versions</li>
+	    <ul>
+	    {{range $ef := $matrix.Pump}}
+	      <li> {{ $ef }}</li>
+	    {{ end }}
+	    </ul>
+	    {{ end }} {{/* if not pump */}}
+	    {{ if ne $repoName "tyk-sink" }}
+	    <li>Sink versions</li>
+	    <ul>
+	    {{range $ef := $matrix.Sink}}
+	      <li> {{ $ef }}</li>
+	    {{ end }}
+	    </ul>
+	    {{ end }} {{/* if not sink */}}
+	  </ul>
+	</p>
+        {{ end }} {{/* testsuites */}}
+        {{ end }} {{/* triggers */}}
+	{{ end }} {{/* branches */}}
+      </div>
+      {{ end }} {{/* repos */}}
+    </div>
+    <h2>Saved variations</h2>
+    <ul class="saved-grid">
+      {{ range $file := .SavedVariations }}
+      <li><a href="/show/{{ $file }}" target="_blank" rel="noopener noreferrer">{{ $file }}</a></li>
+      {{ end }} {{/* variations */}}
+    </ul>
+  </body>
+</html>

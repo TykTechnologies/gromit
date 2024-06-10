@@ -41,7 +41,7 @@
   {{- end }} {{/* el7-pgo-build */}}
     outputs:
       tags: {{`${{ steps.ci_metadata.outputs.tags }}`}}
-      commit_author: {{`${{ steps.fetch-author.outputs.commit_author}}`}}
+      commit_author: {{`${{ steps.set_outputs.outputs.commit_author}}`}}
 
     steps:
       - name: Checkout of {{ .Name }}
@@ -54,9 +54,14 @@
           submodules: true
   {{- end }}
 
-      - name: Get commit author
-        id: fetch-author
-        run: echo "commit_author=$(git show -s --format='%ae' HEAD)" >> $GITHUB_OUTPUT
+      - name: Set some outputs for later
+        id: set_outputs
+        shell: bash
+        env:
+          HEAD_REF: {{`${{github.head_ref}}`}}
+        run: |
+          echo "commit_author=$(git show -s --format='%ae' HEAD)" >> $GITHUB_OUTPUT
+          echo "branch=${HEAD_REF##*/}" >> $GITHUB_OUTPUT
 
       - uses: docker/setup-qemu-action@v3
 
@@ -90,7 +95,7 @@
 
       - name: Build
         env:
-          NFPM_STD_PASSPHRASE: {{`${{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
+          NFPM_PASSPHRASE: {{`${{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
           PKG_SIGNING_KEY: {{`${{ secrets.SIGNING_KEY }}`}}
           PACKAGECLOUD_TOKEN: {{`${{ secrets.PACKAGECLOUD_TOKEN }}`}}
         run: |
@@ -124,7 +129,7 @@
           -e DEBVERS='{{`${{ matrix.debvers }}`}}'                               \
           -e RPMVERS='{{`${{ matrix.rpmvers }}`}}'                               \
           -e CGO_ENABLED={{`${{ matrix.cgo }}`}}                                 \
-          -e NFPM_STD_PASSPHRASE="$NFPM_STD_PASSPHRASE"                          \
+          -e NFPM_PASSPHRASE="$NFPM_PASSPHRASE"                          \
           -e GPG_FINGERPRINT=12B5D62C28F57592D1575BD51ED14C59E37DAC20            \
           -e PKG_SIGNING_KEY="$PKG_SIGNING_KEY"                                  \
           -e PACKAGECLOUD_TOKEN=$PACKAGECLOUD_TOKEN                              \
@@ -161,14 +166,14 @@
           images: {{`${{ steps.ecr.outputs.registry }}`}}/{{ .Name }}
           flavor: |
             latest=false
-            prefix=v
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=sha,format=long
-            type=semver,pattern={{`{{major}}`}}
-            type=semver,pattern={{`{{major}}.{{minor}}`}}
-            type=semver,pattern={{`{{version}}`}}
+            type=semver,pattern={{`{{major}}`}},prefix=v
+            type=raw,priority=700,value={{`${{ steps.set_outputs.outputs.branch}}`}},enable={{`${{ github.event_name == 'pull_request' }}`}},prefix=
+            type=semver,pattern={{`{{major}}.{{minor}}`}},prefix=v
+            type=semver,pattern={{`{{version}}`}},prefix=v
 
       - name: push image to CI
         if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
