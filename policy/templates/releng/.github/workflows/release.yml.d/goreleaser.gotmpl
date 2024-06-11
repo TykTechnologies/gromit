@@ -181,7 +181,11 @@
         with:
           context: "dist"
           platforms: linux/amd64,linux/arm64
+          {{- if has "distroless" .Branchvals.Features }}
           file: ci/Dockerfile.distroless
+          {{- else }}
+          file: ci/Dockerfile.std
+          {{ end }}
           provenance: mode=max
           sbom: true
           push: true

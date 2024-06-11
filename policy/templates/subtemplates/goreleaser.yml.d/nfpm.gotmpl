@@ -11,7 +11,7 @@ nfpms:
     file_name_template: "{{`{{ .ConventionalFileName }}`}}"
     builds:
   {{- if and $r.Branchvals.Cgo (eq $b "std")}}
-      - {{ $b }}-linux
+      - {{ $b }}
       - {{ $b }}-arm64
   {{ if has "s390x" $r.Branchvals.Features }}
       - {{ $b }}-s390x

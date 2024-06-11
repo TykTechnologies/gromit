@@ -15,7 +15,6 @@ builds:
       - s390x
 {{ end }}
     binary: {{.Binary}}
-
   - id: fips
     ldflags:
       - -X {{.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}

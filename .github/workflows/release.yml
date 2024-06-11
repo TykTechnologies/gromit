@@ -71,6 +71,10 @@ jobs:
             branch: release-5.3
           - repo: tyk-analytics
             branch: release-5.3
+          - repo: tyk
+            branch: release-5.4
+          - repo: tyk-analytics
+            branch: release-5.4
 
     steps:
       - name: checkout ${{matrix.repo}}/${{matrix.branch}}

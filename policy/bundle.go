@@ -130,9 +130,11 @@ func (b *Bundle) write(buf *bytes.Buffer, opFile string) error {
 	if vdr != UNKNOWN_VALIDATOR {
 		var y any
 		if err := yaml.Unmarshal(buf.Bytes(), &y); err != nil {
+			os.WriteFile("error.yaml", buf.Bytes(), 0644)
 			return fmt.Errorf("could not unmarshal %s: %v", opFile, err)
 		}
 		if err := b.vdrMap[vdr].Validate(y); err != nil {
+			os.WriteFile("error.yaml", buf.Bytes(), 0644)
 			return fmt.Errorf("%s failed validation: %#v", opFile, err)
 		}
 	}
