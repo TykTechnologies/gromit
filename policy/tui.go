@@ -198,8 +198,12 @@ func (s *Server) lookup(w http.ResponseWriter, r *http.Request) {
 	}
 	m = rv.Lookup(branch, trigger, testsuite)
 	if m == nil {
-		http.Error(w, fmt.Sprintf("(%s, %s, %s) not known for %s", branch, trigger, testsuite, repo), http.StatusNotFound)
-		return
+		// if branch not known, send down master's config
+		m = rv.Lookup("master", trigger, testsuite)
+		if m == nil {
+			http.Error(w, fmt.Sprintf("(master, %s, %s) not known for %s", trigger, testsuite, repo), http.StatusNotFound)
+			return
+		}
 	}
 	v := reflect.ValueOf(m)
 	if v.Kind() == reflect.Ptr {

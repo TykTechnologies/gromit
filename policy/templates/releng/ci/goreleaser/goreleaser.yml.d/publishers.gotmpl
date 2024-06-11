@@ -1,7 +1,0 @@
-{{define "publishers"}}
-publishers:
-  - name: {{ .PCRepo }}-unstable
-    env:
-      - PACKAGECLOUD_TOKEN={{`{{ .Env.PACKAGECLOUD_TOKEN }}`}}
-    cmd:  {{`packagecloud publish --debvers "{{ .Env.DEBVERS }}" --rpmvers "{{ .Env.RPMVERS }}"`}} tyk/{{ .PCRepo }}-unstable {{`{{ .ArtifactPath }}`}}
-{{end}}

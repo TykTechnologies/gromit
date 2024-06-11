@@ -129,15 +129,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 			return fmt.Errorf("Creating a PR requires GITHUB_TOKEN to be set")
 		}
 		repoName := args[0]
-		// Checkout code into a dir named repo
-		repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", Owner, repoName),
-			PolBranch,
-			repoName,
-			ghToken)
-		if err != nil {
-			return fmt.Errorf("git init %s: %v, is the repo private and GITHUB_TOKEN not set?", repoName, err)
-		}
-		err = policy.LoadRepoPolicies(&configPolicies)
+		err := policy.LoadRepoPolicies(&configPolicies)
 		if err != nil {
 			return fmt.Errorf("Could not load config file: %v", err)
 		}
@@ -161,6 +153,13 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 		}
 
 		for _, branch := range branches {
+			repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", Owner, repoName),
+				branch,
+				repoName,
+				ghToken)
+			if err != nil {
+				return fmt.Errorf("git init %s: %v, is the repo private and GITHUB_TOKEN not set?", repoName, err)
+			}
 			pushOpts := &policy.PushOptions{
 				OpDir:        repoName,
 				Branch:       branch,
@@ -168,7 +167,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 				CommitMsg:    msg,
 				Repo:         repo,
 			}
-			err := rp.ProcessBranch(pushOpts)
+			err = rp.ProcessBranch(pushOpts)
 			if err != nil {
 				cmd.Printf("Could not process %s/%s: %v\n", repoName, branch, err)
 				cmd.Println("Will not process remaining branches")
@@ -284,7 +283,7 @@ func init() {
 	policyCmd.AddCommand(serveSubCmd)
 
 	// FIXME: Remove the default from Branch when we can process multiple branches in the same dir
-	policyCmd.PersistentFlags().StringVar(&PolBranch, "branch", "master", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
+	policyCmd.PersistentFlags().StringVar(&PolBranch, "branch", "", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
 	policyCmd.PersistentFlags().Bool("auto", true, "Will automerge if all requirements are meet")
 	rootCmd.AddCommand(policyCmd)
 }
