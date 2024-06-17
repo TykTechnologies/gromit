@@ -1,4 +1,65 @@
 {{ define "auto-test" }}
+{{ $REPO := .Name }}
+{{ range $test := .Branchvals.Tests }}
+  test-controller-{{ $test }}:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    outputs:
+      envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
+      pump: {{`${{ steps.params.outputs.pump }}`}}
+      sink: {{`${{ steps.params.outputs.sink }}`}}
+      gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
+      versions: {{`${{ steps.params.outputs.versions }}`}}
+      exclude: {{`${{ steps.params.outputs.exclude }}`}}
+
+    steps:
+      - name: set params
+        id: params
+        shell: bash
+        env:
+          # Cover pull_request_target too
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
+        run: |
+          set -eo pipefail
+          endpoint="http://tui.internal.dev.tyk.technology/api/{{ $REPO }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ $test }}"
+          curl="curl -s --retry 5 --retry-delay 10 --fail-with-body --retry-all-errors"
+          echo "pump<<EOF
+          $($curl ${endpoint}/Pump)
+          EOF
+          sink<<EOF
+          $($curl ${endpoint}/Sink)
+          EOF
+          envfiles<<EOF
+          $($curl ${endpoint}/EnvFiles)
+          EOF" | tee -a "$GITHUB_OUTPUT"
+
+  {{ $test }}-tests:
+    needs: [ goreleaser, test-controller-{{ $test }}]
+    runs-on: ubuntu-latest-m-2
+    env:
+      METADATA_REPORT_PATH: /tmp/metadata.toml
+      {{ if eq $test "ui" }}
+      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tests/ui/playwright-report/results.xml
+      {{- end }}
+      {{ if eq $test "api" }}
+      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml
+      {{- end }}      
+    permissions:
+      id-token: write # This is required for requesting the Github JWT
+      contents: read # This is required for actions/checkout
+    strategy:
+      fail-fast: false
+      matrix:
+        envfiles: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.envfiles) }}`}}
+        {{- if ne $REPO "tyk-pump" }}
+        pump: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.pump) }}`}}
+        {{ end }}
+        {{- if ne $REPO "tyk-sink" }}
+        sink: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.sink) }}`}}
+        {{ end }}
+        include:
+          - db: postgres15
+            markers: "and not sql"
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -40,46 +101,38 @@
           GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
-          ECR: {{`${{ steps.ecr.outputs.registry }}`}}
-{{- if has "test-square" .features }}        
         run: |
-          echo "ECR=${ECR}
-          tyk_image=\$ECR/tyk:master
-          tyk_analytics_image=\$ECR/tyk-analytics:master
-          # alfa and beta have to come after the override
-          tyk_alfa_image=\$tyk_image
-          tyk_beta_image=\$tyk_image
-{{- else }} 
-          VERSIONS: {{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.versions }}`}}
-        run: |
-          echo "ECR=${ECR}
-          $VERSIONS
-{{- if has "test-square-tyk-ui" .features }}
-          tyk_analytics_image=\$ECR/tyk-analytics:sha-{{`${{ github.sha }}`}}    
-{{- end }}
-{{- end }} 
-          {{- if ne .repo "tyk-pump" }}
+          tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
+          docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} 2>versions.env
+          echo '# alfa and beta have to come after the override
+          tyk_alfa_image=$tyk_image
+          tyk_beta_image=$tyk_image
+          ECR={{`${{steps.ecr.outputs.registry}}`}}
+          {{- if ne $REPO "tyk-pump" }}
           tyk_pump_image={{`${{matrix.pump}}`}}
           {{- end }}
           {{- if ne .repo "tyk-sink" }}
           tyk_sink_image={{`${{matrix.sink}}`}}
           {{- end }}
           confs_dir=./pro-ha
-          env_file=local-{{`${{ matrix.db }}`}}.env" > versions.env
+          env_file=local-{{`${{ matrix.envfiles.db }}`}}.env' >> versions.env
           echo "::group::versions"
           cat versions.env
           echo "::endgroup::"
           # Add Tyk component config variations to $env_file
-          cat confs/{{`${{ matrix.conf }}`}}.env >> local-{{`${{ matrix.db }}`}}.env
+          cat confs/{{`${{ matrix.envfiles.config }}`}}.env >> local-{{`${{ matrix.envfiles.db }}`}}.env
           # bring up env, the project name is important
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml -f {{`${{ matrix.cache_db }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
           ./dash-bootstrap.sh http://localhost:3000
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml -f {{`${{ matrix.cache_db }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
 
       {{ if eq .test "api" }}
       - name: Run tests
         working-directory: auto
         id: test_execution
+        env:
+          # Cover pull_request_target too
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
@@ -87,11 +140,11 @@
           set -o pipefail
           echo "### API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
-            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{ if has "test-square" .features -}}master{{ else if has "test-square-tyk-api" .features -}}{{`${{ github.sha }}`}}{{ else }}{{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}}{{- end }} \
+            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{ if has "test-square" .features -}}master{{ else if has "test-square-tyk-api" .features -}}{{`${{ github.sha }}`}}{{ else }}$BASE_REF{{- end }} \
             pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH#"{{`${{ github.workspace }}`}}"} --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
               echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else
-            echo "::error title=API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}::Test execution failed"
+            echo "::error title=API tests {{`${{ matrix.envfiles.db }}`}} {{`${{ matrix.envfiles.conf }}`}}::Test execution failed"
             cat tests.out >> $GITHUB_STEP_SUMMARY
             exit 1
           fi

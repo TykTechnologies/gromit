@@ -5,18 +5,18 @@
 # - arm64
 # - amd64
 
-{{- template "before_hooks" . }}
+{{- if eq .Name "portal"}}
+before:
+  hooks:
+    - go mod tidy
+    - ./ci/copy-framework-files.sh
+{{- end}}
 
 {{- if .Branchvals.Cgo }}
 {{- template "cgo_builds" . }}
 {{- else }}
 {{- template "builds" . }}
 {{- end }}
-
-{{- if not (has "distroless" .Branchvals.Features) }}
-{{- template "dockers" . }}
-{{- template "docker_manifests" . }}
-{{- end }} {{/* distroless */}}
 
 {{- template "nfpm" . }}
 

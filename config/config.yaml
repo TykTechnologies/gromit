@@ -101,6 +101,10 @@ policy:
               features:
                 - s390x
                 - release-test
+            release-5.4:
+              features:
+                - s390x
+                - release-test
             release-5-lts:
               buildenv: 1.16
               features:
@@ -120,7 +124,6 @@ policy:
           upgradefromver: 3.0.9
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/internal/build
-          buildenv: 1.21-bullseye
           tests: [ui,api]
           branches:
             master:
@@ -132,6 +135,11 @@ policy:
               features:
                 - s390x
                 - test-square-tyk-ui
+            release-5.4:
+              features:
+                - s390x
+                - test-square-tyk-ui
+                - release-test
             release-5-lts:
               buildenv: 1.16
               features:
@@ -204,6 +212,7 @@ policy:
           pcrepo: tyk-mdcb
           dhrepo: tykio/tyk-mdcb-docker
           csrepo: docker.tyk.io/tyk-sink/tyk-sink
+          buildenv: 1.22-bullseye
           exposeports: 80
           binary: tyk-sink
           packagename: tyk-sink

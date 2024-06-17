@@ -1,0 +1,18 @@
+.repo-carousel {
+    display: flex;
+    overflow-x: auto;
+}
+
+.repo-carousel-item {
+    min-width: 300px;
+    padding: 20px;
+    border: 1px solid #ccc;
+    margin-right: 10px;
+}
+
+ul.saved-grid {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-gap: 1em;    
+}

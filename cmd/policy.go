@@ -129,15 +129,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 			return fmt.Errorf("Creating a PR requires GITHUB_TOKEN to be set")
 		}
 		repoName := args[0]
-		// Checkout code into a dir named repo
-		repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", Owner, repoName),
-			PolBranch,
-			repoName,
-			ghToken)
-		if err != nil {
-			return fmt.Errorf("git init %s: %v, is the repo private and GITHUB_TOKEN not set?", repoName, err)
-		}
-		err = policy.LoadRepoPolicies(&configPolicies)
+		err := policy.LoadRepoPolicies(&configPolicies)
 		if err != nil {
 			return fmt.Errorf("Could not load config file: %v", err)
 		}
@@ -161,6 +153,13 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 		}
 
 		for _, branch := range branches {
+			repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", Owner, repoName),
+				branch,
+				repoName,
+				ghToken)
+			if err != nil {
+				return fmt.Errorf("git init %s: %v, is the repo private and GITHUB_TOKEN not set?", repoName, err)
+			}
 			pushOpts := &policy.PushOptions{
 				OpDir:        repoName,
 				Branch:       branch,
@@ -168,7 +167,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 				CommitMsg:    msg,
 				Repo:         repo,
 			}
-			err := rp.ProcessBranch(pushOpts)
+			err = rp.ProcessBranch(pushOpts)
 			if err != nil {
 				cmd.Printf("Could not process %s/%s: %v\n", repoName, branch, err)
 				cmd.Println("Will not process remaining branches")
@@ -213,6 +212,52 @@ var diffSubCmd = &cobra.Command{
 	},
 }
 
+var matchSubCmd = &cobra.Command{
+	Use:   "match <tags...>",
+	Args:  cobra.MinimumNArgs(1),
+	Short: "Given a set of fully qualified tags, return matching tags from other repos",
+	Long:  `Find matching tags from gw, dash, pump and sink. The tag which has the most matches is used. If nothing matches, master is used. This is not capable to figuring out the test suite version at this point.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dcFile, _ := cmd.Flags().GetString("config")
+		config, err := policy.NewDockerAuths(dcFile)
+		if err != nil {
+			return err
+		}
+		var maxMatches policy.Matches
+		repos := []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink"}
+		for _, tag := range args {
+			p := policy.ParseImageName(tag)
+			matches, err := config.GetMatches(p.Registry, p.Tag, repos)
+			if err != nil {
+				log.Warn().Err(err).Msg("looking for matches")
+				continue
+			}
+			if matches.Len() > maxMatches.Len() {
+				maxMatches = matches
+			}
+		}
+		for _, repo := range repos {
+			cmd.Println(maxMatches.Match(repo))
+		}
+		return nil
+	},
+}
+
+var serveSubCmd = &cobra.Command{
+	Use:   "serve",
+	Short: "Start the test controller backend",
+	Long: `The test controller backend stores the test that are to be run for a specific combination of,
+- trigger
+- repo
+- branch.
+This an laternate implementation to the controller which does not embed a server.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tvFile, _ := cmd.Flags().GetString("save")
+		port, _ := cmd.Flags().GetString("port")
+		return policy.Serve(port, tvFile)
+	},
+}
+
 func init() {
 	syncSubCmd.Flags().Bool("pr", false, "Create PR")
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
@@ -225,13 +270,20 @@ func init() {
 
 	genSubCmd.Flags().String("repo", "", "Repository name to use from config file")
 
+	serveSubCmd.Flags().String("port", ":3000", "Port that the backend will bind to")
+	serveSubCmd.Flags().String("save", "testdata/prod-variations.yml", "Test variations are loaded from this file, the directory component is used to save new files")
+
+	matchSubCmd.Flags().String("config", "$HOME/.docker/config.json", "Config file to read authentication token from")
+
+	policyCmd.AddCommand(matchSubCmd)
 	policyCmd.AddCommand(syncSubCmd)
 	policyCmd.AddCommand(controllerSubCmd)
 	policyCmd.AddCommand(diffSubCmd)
 	policyCmd.AddCommand(genSubCmd)
+	policyCmd.AddCommand(serveSubCmd)
 
 	// FIXME: Remove the default from Branch when we can process multiple branches in the same dir
-	policyCmd.PersistentFlags().StringVar(&PolBranch, "branch", "master", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
+	policyCmd.PersistentFlags().StringVar(&PolBranch, "branch", "", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
 	policyCmd.PersistentFlags().Bool("auto", true, "Will automerge if all requirements are meet")
 	rootCmd.AddCommand(policyCmd)
 }

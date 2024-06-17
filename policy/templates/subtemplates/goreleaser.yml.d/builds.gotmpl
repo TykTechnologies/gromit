@@ -1,0 +1,30 @@
+{{define "builds"}}
+builds:
+  - id: std
+    ldflags:
+      - -X {{.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
+      - -X {{.Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
+      - -X {{.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
+      - -X {{.Branchvals.VersionPackage}}.BuiltBy=goreleaser
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+{{ if has "s390x" .Branchvals.Features }}
+      - s390x
+{{ end }}
+    binary: {{.Binary}}
+  - id: fips
+    ldflags:
+      - -X {{.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
+      - -X {{.Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
+      - -X {{.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
+      - -X {{.Branchvals.VersionPackage}}.BuiltBy=goreleaser
+    goos:
+      - linux
+    goarch:
+      - amd64
+    binary: {{.Binary}}
+{{end}}
+

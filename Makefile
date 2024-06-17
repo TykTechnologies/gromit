@@ -14,7 +14,7 @@ GITHUB_TOKEN ?= $(shell pass me/github)
 JIRA_USER    ?= alok@tyk.io
 JIRA_TOKEN   ?= $(shell pass Tyk/atlassian)
 
-gromit: go.mod go.sum *.go $(SRC)
+gromit: go.mod go.sum *.go $(SRC) policy/app/*
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
 
@@ -32,6 +32,15 @@ update-test-cases:
 	@echo Updating test cases for cmd test
 	go test ./cmd/ -update
 
+push: dist/gromit_linux_amd64_v1/gromit
+	goreleaser --clean --snapshot
+	docker push tykio/gromit:latest
+
+deploy: push
+	aws --no-cli-pager ecs update-service --service tui --cluster internal --force-new-deployment
+	aws ecs wait services-stable --service tui --cluster internal
+	./gromit env expose --env=internal
+
 clean:
 	find . -name rice-box.go | xargs rm -fv
 	rm -rf $(REPOS)
@@ -45,12 +54,12 @@ cpr: gromit
 	@GITHUB_TOKEN=$(GITHUB_TOKEN) JIRA_USER=$(JIRA_USER) JIRA_TOKEN=$(JIRA_TOKEN) ./gromit prs $@ --jira $(TICKET) $(REPOS)
 
 upr: gromit
-	@GITHUB_TOKEN=$(GITHUB_TOKEN) JIRA_USER=$(JIRA_USER) JIRA_TOKEN=$(JIRA_TOKEN) ./gromit prs $@ $(REPOS)
+	@GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit prs $@ $(REPOS)
 
 opr: gromit
-	@GITHUB_TOKEN=$(GITHUB_TOKEN) JIRA_USER=$(JIRA_USER) JIRA_TOKEN=$(JIRA_TOKEN) ./gromit prs $@ $(REPOS)
+	@GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit prs $@ $(REPOS)
 
 loc: clean
 	gocloc --skip-duplicated --not-match-d=\.terraform --output-type=json ~gromit ~ci | jq -r '.languages | map([.name, .code]) | transpose[] | @csv'
 
-.PHONY: clean update-test-cases test loc cpr upr opr
+.PHONY: clean update-test-cases test loc cpr upr opr deploy

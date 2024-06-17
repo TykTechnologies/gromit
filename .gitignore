@@ -38,3 +38,4 @@ gpac/**
 __pycache__
 /error.yaml
 /body.md
+/prod-variations.yml
