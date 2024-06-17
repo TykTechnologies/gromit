@@ -7,44 +7,7 @@ on:
       - 'v*'
     
 jobs:
-{{ $repo := .Name }}
-{{ $features := .Branchvals.Features }}
-{{ range $test := .Branchvals.Tests }}
-  {{ $test }}-tests:
-    runs-on: ubuntu-latest
-    env:
-      METADATA_REPORT_PATH: /tmp/metadata.toml
-      {{ if eq $test "ui" }}
-      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/playwright-report/results.xml
-      {{- end }}
-      {{ if eq $test "api" }}
-      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml
-      {{- end }}     
-    permissions:
-      id-token: write # This is required for requesting the Github JWT
-      contents: read # This is required for actions/checkout
-    strategy:
-      fail-fast: false
-      matrix:		
-        conf: ["sha256", "murmur128"]
-        db: ["mongo7", "postgres15"]
-        cache_db: ["redis7"]
-        pump: ["tykio/tyk-pump-docker-pub:v1.8", "$ECR/tyk-pump:master"]
-        sink: ["tykio/tyk-mdcb-docker:v2.4", "$ECR/tyk-sink:master"]
-        exclude: 
-          - pump: tykio/tyk-pump-docker-pub:v1.8
-            sink: $ECR/tyk-sink:master
-          - pump: $ECR/tyk-pump:master
-            sink: tykio/tyk-mdcb-docker:v2.4
-          - db: mongo7
-            conf: murmur128
-          - db: postgres15
-            conf: sha256
-        include:
-          - db: postgres15
-            markers: "and not sql"
-            {{- template "auto-test" (dict "test" $test "repo" $repo "features" $features) }}            
-{{ end }} {{/* end of the range */}} 
+{{- template "auto-test" . }}
   release:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest

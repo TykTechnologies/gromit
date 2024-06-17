@@ -1,5 +1,6 @@
 {{ define "auto-test" }}
 {{ $REPO := .Name }}
+{{ $FEATURES := .Branchvals.Features }}
 {{ range $test := .Branchvals.Tests }}
   test-controller-{{ $test }}:
     needs: goreleaser
@@ -81,7 +82,7 @@
       - name: fetch env from tyk-ci
         env:
           GH_TOKEN: {{`${{ github.token }}`}}
-{{ if has "test-square" .features }}
+{{ if has "test-square" $FEATURES }}
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
@@ -111,7 +112,7 @@
           {{- if ne $REPO "tyk-pump" }}
           tyk_pump_image={{`${{matrix.pump}}`}}
           {{- end }}
-          {{- if ne .repo "tyk-sink" }}
+          {{- if ne $REPO "tyk-sink" }}
           tyk_sink_image={{`${{matrix.sink}}`}}
           {{- end }}
           confs_dir=./pro-ha
@@ -126,7 +127,7 @@
           ./dash-bootstrap.sh http://localhost:3000
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
 
-      {{ if eq .test "api" }}
+      {{ if eq $test "api" }}
       - name: Run tests
         working-directory: auto
         id: test_execution
@@ -140,7 +141,7 @@
           set -o pipefail
           echo "### API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
-            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{ if has "test-square" .features -}}master{{ else if has "test-square-tyk-api" .features -}}{{`${{ github.sha }}`}}{{ else }}$BASE_REF{{- end }} \
+            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{ if has "test-square" $FEATURES -}}master{{ else if has "test-square-tyk-api" $FEATURES -}}{{`${{ github.sha }}`}}{{ else }}$BASE_REF{{- end }} \
             pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH#"{{`${{ github.workspace }}`}}"} --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
               echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else
@@ -148,7 +149,7 @@
             cat tests.out >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
-      {{ else if eq .test "ui" }}
+      {{ else if eq $test "ui" }}
       - name: Install Node.js 18.16
         uses: actions/setup-node@v2.4.1
         with:
@@ -163,7 +164,7 @@
         with:
           repository: TykTechnologies/tyk-analytics
           path: tyk-analytics
-          {{ if eq .repo "tyk-analytics" -}}
+          {{ if eq $REPO "tyk-analytics" -}}
           ref: {{`${{ github.event.pull_request.head.sha }}`}}
           {{- end }}
           fetch-depth: 1
@@ -218,7 +219,7 @@
       - name: Share S3 report link into summary
         if: always() && !github.event.pull_request.draft
         run: |
-          echo "# :clipboard: S3 {{ .test }} Test REPORT: {{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
+          echo "# :clipboard: S3 {{ $test }} Test REPORT: {{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           echo "- Status: {{`${{ steps.test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}" >> $GITHUB_STEP_SUMMARY
           echo "- [Link to report](https://tyk-qa-reports.s3.eu-central-1.amazonaws.com/tyk-analytics/{{`${{ github.run_id }}`}}/index.html)" >> $GITHUB_STEP_SUMMARY
   
@@ -245,7 +246,7 @@
           repo = {{`${{ github.repository }}`}}
           branch = {{`${{ github.ref }}`}}
           commit = {{`${{ github.sha }}`}}
-          test_suite_version = {{ if has "test-square" .features }}master{{ else }}{{`${{ needs.test-controller-`}}{{ .test }}{{`.outputs.gd_tag }}`}}{{ end }}
+          test_suite_version = {{ if has "test-square" $FEATURES }}master{{ else }}{{`${{ needs.test-controller-`}}{{ $test }}{{`.outputs.gd_tag }}`}}{{ end }}
           test_suite_name = {{`${{ github.job }}`}}
           test_suite_run = {{`${{ github.run_id }}`}}-{{`${{ github.run_attempt }}`}}
           db = {{`${{ matrix.db }}`}}
