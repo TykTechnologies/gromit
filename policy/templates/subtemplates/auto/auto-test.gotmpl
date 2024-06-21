@@ -9,10 +9,6 @@
       envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
       pump: {{`${{ steps.params.outputs.pump }}`}}
       sink: {{`${{ steps.params.outputs.sink }}`}}
-      gd_tag: {{`${{ steps.params.outputs.gd_tag }}`}}
-      versions: {{`${{ steps.params.outputs.versions }}`}}
-      exclude: {{`${{ steps.params.outputs.exclude }}`}}
-
     steps:
       - name: set params
         id: params
@@ -239,6 +235,7 @@
         if: always() && steps.test_execution.outcome != 'skipped'
         id: metadata_report
         env:
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
           REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.test_execution.outputs.id}}`}}
         run: |
           # Generate metadata report
@@ -246,7 +243,7 @@
           repo = {{`${{ github.repository }}`}}
           branch = {{`${{ github.ref }}`}}
           commit = {{`${{ github.sha }}`}}
-          test_suite_version = {{ if has "test-square" $FEATURES }}master{{ else }}{{`${{ needs.test-controller-`}}{{ $test }}{{`.outputs.gd_tag }}`}}{{ end }}
+          test_suite_version = $BASE_REF
           test_suite_name = {{`${{ github.job }}`}}
           test_suite_run = {{`${{ github.run_id }}`}}-{{`${{ github.run_attempt }}`}}
           db = {{`${{ matrix.envfiles.db }}`}}
