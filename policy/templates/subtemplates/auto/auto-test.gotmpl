@@ -3,7 +3,9 @@
 {{ $FEATURES := .Branchvals.Features }}
 {{ range $test := .Branchvals.Tests }}
   test-controller-{{ $test }}:
+  {{ if has "releng" $FEATURES }}
     needs: goreleaser
+  {{- end }}
     runs-on: ubuntu-latest
     outputs:
       envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
@@ -31,7 +33,11 @@
           EOF" | tee -a "$GITHUB_OUTPUT"
 
   {{ $test }}-tests:
-    needs: [ goreleaser, test-controller-{{ $test }}]
+    needs:
+    {{ if has "releng" $FEATURES }}
+      - goreleaser
+    {{- end }}  
+      - test-controller-{{ $test }}
     runs-on: ubuntu-latest-m-2
     env:
       METADATA_REPORT_PATH: /tmp/metadata.toml
@@ -57,6 +63,11 @@
         include:
           - db: postgres15
             markers: "and not sql"
+        exclude:
+          - pump: $ECR/tyk-pump:v1.8
+            sink: $ECR/tyk-sink:master
+          - pump: $ECR/tyk-pump:master
+            sink: $ECR/tyk-sink:v2.4            
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -98,8 +109,13 @@
           GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
         run: |
+          {{- if has "releng" $FEATURES }}  
           tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
+          {{- else }}
+          tags=({{`${{steps.ecr.outputs.registry}}`}}:$BASE_REF)
+          {{- end }}
           docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} 2>versions.env
           echo '# alfa and beta have to come after the override
           tyk_alfa_image=$tyk_image
