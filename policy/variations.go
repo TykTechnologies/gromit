@@ -77,11 +77,23 @@ func createVariationKey(branch, trigger, testsuite string) string {
 	return fmt.Sprintf("%s-%s-%s", branch, trigger, testsuite)
 }
 
+func removeDuplicates(s []string) []string {
+	bucket := make(map[string]bool)
+	var result []string
+	for _, str := range s {
+		if _, ok := bucket[str]; !ok {
+			bucket[str] = true
+			result = append(result, str)
+		}
+	}
+	return result
+}
+
 func parseVariations(sv ghMatrix, depth int, rv *repoVariations, path variationPath) {
 	for level, levelMatrix := range sv.Level {
 		levelMatrix.EnvFiles = append(levelMatrix.EnvFiles, sv.EnvFiles...)
-		levelMatrix.Pump = append(levelMatrix.Pump, sv.Pump...)
-		levelMatrix.Sink = append(levelMatrix.Sink, sv.Sink...)
+		levelMatrix.Pump = removeDuplicates(append(levelMatrix.Pump, sv.Pump...))
+		levelMatrix.Sink = removeDuplicates(append(levelMatrix.Sink, sv.Sink...))
 		switch depth {
 		case Branch:
 			path.Branch = level
