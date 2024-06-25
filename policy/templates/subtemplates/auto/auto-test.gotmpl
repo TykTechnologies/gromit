@@ -38,7 +38,11 @@
       - goreleaser
     {{- end }}  
       - test-controller-{{ $test }}
+    {{ if has "releng" $FEATURES }}
     runs-on: ubuntu-latest-m-2
+    {{- else }}
+    runs-on: ubuntu-latest
+    {{- end }}
     env:
       METADATA_REPORT_PATH: /tmp/metadata.toml
       {{ if eq $test "ui" }}
@@ -64,10 +68,10 @@
           - db: postgres15
             markers: "and not sql"
         exclude:
-          - pump: $ECR/tyk-pump:v1.8
+          - pump: tykio/tyk-pump-docker-pub:v1.8
             sink: $ECR/tyk-sink:master
           - pump: $ECR/tyk-pump:master
-            sink: $ECR/tyk-sink:v2.4            
+            sink: tykio/tyk-mdcb-docker:v2.4           
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -114,7 +118,7 @@
           {{- if has "releng" $FEATURES }}  
           tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
           {{- else }}
-          tags=({{`${{steps.ecr.outputs.registry}}`}}:$BASE_REF)
+          tags=({{`${{steps.ecr.outputs.registry}}`}}/$REPO:$BASE_REF)
           {{- end }}
           docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} 2>versions.env
           echo '# alfa and beta have to come after the override
