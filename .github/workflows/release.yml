@@ -60,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal]
+        repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal, tyk-ci]
         branch: [master]
         include:
           - repo: tyk
