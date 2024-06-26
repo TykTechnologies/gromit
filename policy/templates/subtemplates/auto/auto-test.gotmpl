@@ -157,7 +157,7 @@
           set -o pipefail
           echo "### API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
-            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:{{ if has "test-square" $FEATURES -}}master{{ else if has "test-square-tyk-api" $FEATURES -}}{{`${{ github.sha }}`}}{{ else }}$BASE_REF{{- end }} \
+            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:$BASE_REF \
             pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH#"{{`${{ github.workspace }}`}}"} --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
               echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else
