@@ -130,21 +130,17 @@ policy:
               features:
                 - s390x
                 - distroless
-                - test-square-tyk-ui
             release-5.3:
               features:
                 - s390x
-                - test-square-tyk-ui
             release-5.4:
               features:
                 - s390x
-                - test-square-tyk-ui
                 - release-test
             release-5-lts:
               buildenv: 1.16
               features:
                 - el7-pgo-build
-                - test-square-tyk-ui
 
         portal:
           description: >-
