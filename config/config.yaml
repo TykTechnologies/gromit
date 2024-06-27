@@ -21,16 +21,16 @@ policy:
     - ci/Dockerfile.slim
     - ci/aws
     - ci/image
-  # Groups collect repos that have some common feature 
+  # Groups collect repos that have some common feature
   groups:
     # cgo-services contains the metadata required to manage repos that
     # are services and require cgo
     cgo-services:
       # features act as flags whose presence/absence can be used to render
-      # a common set of features across branch(es) 
-      # For eg: all regular builds now support el/7 by default, 
+      # a common set of features across branch(es)
+      # For eg: all regular builds now support el/7 by default,
       # but in order to build the pure go version of dashboard which can run on el7
-      # we make use of the `el7-pgo-build` feature flag to write the template conditions 
+      # we make use of the `el7-pgo-build` feature flag to write the template conditions
       # accordingly to it
       features:
         - releng
@@ -220,5 +220,15 @@ policy:
           features:
             - s390x
             - distroless
+          branches:
+            master:
+    stand-alone-services:
+      repos:
+        tyk-ci:
+          description: >-
+            Tyk automation repo environment for regression testing
+          tests: [api,ui]
+          features:
+            - test-square
           branches:
             master:
