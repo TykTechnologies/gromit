@@ -130,17 +130,25 @@ policy:
               features:
                 - s390x
                 - distroless
+                - test-square-ui
+                - test-square-api
             release-5.3:
               features:
                 - s390x
+                - test-square-ui
+                - test-square-api                
             release-5.4:
               features:
                 - s390x
                 - release-test
+                - test-square-ui
+                - test-square-api                
             release-5-lts:
               buildenv: 1.16
               features:
                 - el7-pgo-build
+                - test-square-ui
+                - test-square-api                
 
         portal:
           description: >-
