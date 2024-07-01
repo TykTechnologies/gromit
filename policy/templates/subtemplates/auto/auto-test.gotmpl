@@ -6,6 +6,9 @@
   {{ if and (has "releng" $FEATURES) (ne $REPO "tyk-analytics-qa-gates") }}
     needs: goreleaser
   {{- end }}
+  {{ if and (has "releng" $FEATURES) (eq $REPO "tyk-analytics-qa-gates") (eq $test "api") }}
+    needs: docker
+  {{- end }}  
     runs-on: ubuntu-latest
     outputs:
       envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
@@ -149,7 +152,11 @@
         id: test_execution
         env:
           # Cover pull_request_target too
+        {{- if eq $REPO "tyk-analytics-qa-gates" }}
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.sha || github.ref}}`}}
+        {{- else }}
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
+        {{- end }}
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
