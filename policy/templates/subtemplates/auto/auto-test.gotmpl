@@ -107,6 +107,37 @@
           gh release download v1.3.0 --repo github.com/TykTechnologies/tyk-ci -p 'ci-env.tgz' -O env.tgz
           tar xzvf env.tgz
 {{ end }}
+{{/* This checkout is used both for UI regresion tests on tyk-analytics and QA gates (api & ui need to build dash from src) */}}
+{{ if or (eq $test "ui") (eq $REPO "tyk-analytics-qa-gates")}}
+      - name: Checkout of Dashboard
+        uses: actions/checkout@v4
+        with:
+          repository: TykTechnologies/tyk-analytics
+          path: tyk-analytics
+          ref: {{`${{ github.event.pull_request.head.sha }}`}}
+          fetch-depth: 1
+          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+          {{ if eq $REPO "tyk-analytics" }}
+          sparse-checkout: |
+            tests/ui
+            bin
+          submodules: false
+          {{ else if eq $REPO "tyk-analytics-qa-gates" }}
+          submodules: true
+          {{ end }}
+          
+{{ end }}
+{{ if eq $REPO "tyk-analytics-qa-gates" }}
+      - name: Build dashboard image
+        run: | 
+          git config --global url."https://{{`${{ secrets.ORG_GH_TOKEN }}`}}@github.com".insteadOf "https://github.com"
+          git config --global --add safe.directory /go/src/github.com/TykTechnologies/tyk-analytics
+          docker build -t internal/tyk-dashboard .
+        env:
+          TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+          DASH_REPO_PATH: {{`${{ github.workspace }}`}}/tyk-analytics
+        working-directory: {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard 
+{{ end }}
       - name: env up
         shell: bash
         working-directory: auto
@@ -117,6 +148,9 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
+          {{- if eq $REPO "tyk-analytics-qa-gates" }}
+          DASH_REPO_PATH: {{`${{ github.workspace }}`}}/tyk-analytics
+          {{- end }}
         run: |
           {{- if and (has "releng" $FEATURES) (ne $REPO "tyk-analytics-qa-gates") }}  
           tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
@@ -134,6 +168,9 @@
           {{- if ne $REPO "tyk-sink" }}
           tyk_sink_image={{`${{matrix.sink}}`}}
           {{- end }}
+          {{- if eq $REPO "tyk-analytics-qa-gates" }}
+          tyk_analytics_image=internal/tyk-dashboard
+          {{- end }}
           confs_dir=./pro-ha
           env_file=local-{{`${{ matrix.envfiles.db }}`}}.env' >> versions.env
           echo "::group::versions"
@@ -142,9 +179,9 @@
           # Add Tyk component config variations to $env_file
           cat confs/{{`${{ matrix.envfiles.config }}`}}.env >> local-{{`${{ matrix.envfiles.db }}`}}.env
           # bring up env, the project name is important
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml {{ if eq $REPO "tyk-analytics-qa-gates" }}-f {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard/compose.yml{{end}} --env-file versions.env --profile master-datacenter up --quiet-pull -d
           ./dash-bootstrap.sh http://localhost:3000
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml {{ if eq $REPO "tyk-analytics-qa-gates" }}-f {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard/compose.yml{{end}} --env-file versions.env --profile slave-datacenter up --quiet-pull -d
 
       {{ if eq $test "api" }}
       - name: Run tests
@@ -182,20 +219,6 @@
           TOKEN: '{{`${{ secrets.ORG_GH_TOKEN }}`}}'
         run: >
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"                    
-      - name: Checkout of Dashboard
-        uses: actions/checkout@v4
-        with:
-          repository: TykTechnologies/tyk-analytics
-          path: tyk-analytics
-          {{ if eq $REPO "tyk-analytics" -}}
-          ref: {{`${{ github.event.pull_request.head.sha }}`}}
-          {{- end }}
-          fetch-depth: 1
-          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          sparse-checkout: |
-            tests/ui
-            bin
-          submodules: false    
       - name: Install test dependecies
         run: |
           npm ci
@@ -299,8 +322,11 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
+          {{- if eq $REPO "tyk-analytics-qa-gates" }}
+          DASH_REPO_PATH: {{`${{ github.workspace }}`}}/tyk-analytics
+          {{- end }}
         run: |
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml -f {{`${{ matrix.cache_db }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml -f {{`${{ matrix.cache_db }}`}}.yml {{ if eq $REPO "tyk-analytics-qa-gates" }}-f {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard/compose.yml{{end}} --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
           echo "::group::DockerLogs"
           cat {{`${{ github.workspace }}`}}/docker-compose.log
           echo "::endgroup::"
