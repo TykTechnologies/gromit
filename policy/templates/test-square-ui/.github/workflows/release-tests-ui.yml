@@ -15,6 +15,6 @@ permissions:
   id-token: write # This is required for requesting the JWT
   contents: read # This is required for actions/checkout
 jobs:
-  {{ $Tests := list "ui"  }}
+  {{ $Tests := list "ui-gate"  }}
   {{ $Branchvals := dict "Features" .Branchvals.Features "Tests" $Tests  }}
-  {{- template "auto-test" (dict "Name" "tyk-analytics-qa-gates" "Branchvals" $Branchvals) }}
+  {{- template "auto-test" (dict "Name" .Name "Branchvals" $Branchvals) }}

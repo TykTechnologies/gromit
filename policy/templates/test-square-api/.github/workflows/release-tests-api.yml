@@ -68,6 +68,6 @@ jobs:
           labels: {{`${{ steps.metadata.outputs.labels }}`}}
           cache-from: type=gha
           cache-to: type=gha,mode=max  
-  {{ $Tests := list "api"  }}
+  {{ $Tests := list "api-gate"  }}
   {{ $Branchvals := dict "Features" .Branchvals.Features "Tests" $Tests  }}
-  {{- template "auto-test" (dict "Name" "tyk-analytics-qa-gates" "Branchvals" $Branchvals) }}
+  {{- template "auto-test" (dict "Name" .Name "Branchvals" $Branchvals) }}
