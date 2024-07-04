@@ -70,11 +70,13 @@
         include:
           - db: postgres15
             markers: "and not sql"
+        {{- if and (ne $REPO "tyk-pump") (ne $REPO "tyk-sink") }}
         exclude:
           - pump: tykio/tyk-pump-docker-pub:v1.8
             sink: $ECR/tyk-sink:master
           - pump: $ECR/tyk-pump:master
-            sink: tykio/tyk-mdcb-docker:v2.4           
+            sink: tykio/tyk-mdcb-docker:v2.4
+        {{- end }}
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
