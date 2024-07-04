@@ -171,7 +171,6 @@
             type=ref,event=pr
             type=sha,format=long
             type=semver,pattern={{`{{major}}`}},prefix=v
-            type=raw,priority=700,value={{`${{ steps.set_outputs.outputs.branch}}`}},enable={{`${{ github.event_name == 'pull_request' }}`}},prefix=
             type=semver,pattern={{`{{major}}.{{minor}}`}},prefix=v
             type=semver,pattern={{`{{version}}`}},prefix=v
 
