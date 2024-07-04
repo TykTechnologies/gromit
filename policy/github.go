@@ -14,7 +14,7 @@ import (
 	_ "embed"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v62/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
@@ -62,6 +62,11 @@ func (gh *GithubClient) RenderPRTemplate(body *string, bv any) (*bytes.Buffer, e
 // CreatePR will create a PR using the user supplied title and the embedded PR body
 // If a PR already exists, it will return that PR
 func (gh *GithubClient) CreatePR(bv any, prOpts *PullRequest) (*github.PullRequest, error) {
+	_, _, err := gh.v3.Repositories.GetBranch(context.Background(), prOpts.Owner, prOpts.Repo, prOpts.PrBranch, 2)
+	if err != nil {
+		log.Warn().Err(err).Msgf("branch %s could not be fetched", prOpts.PrBranch)
+		return nil, NoPRs
+	}
 	body, err := gh.RenderPRTemplate(&prOpts.Jira.Body, bv)
 	if err != nil {
 		return nil, err
