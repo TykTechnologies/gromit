@@ -328,7 +328,7 @@
           DASH_REPO_PATH: {{`${{ github.workspace }}`}}/tyk-analytics
           {{- end }}
         run: |
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache_db }}`}}.yml {{ if or (eq $test "ui-gate") (eq $test "api-gate") }}-f {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard/compose.yml{{end}} --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml {{ if or (eq $test "ui-gate") (eq $test "api-gate") }}-f {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard/compose.yml{{end}} --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
           echo "::group::DockerLogs"
           cat {{`${{ github.workspace }}`}}/docker-compose.log
           echo "::endgroup::"
