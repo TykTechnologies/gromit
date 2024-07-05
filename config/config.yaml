@@ -44,7 +44,7 @@ policy:
       # distrolessbaseimage is used for container images when the
       # distroless feature is set. base is appropriate for cgo
       # builds, static for pure go.
-      distrolessbaseimage: base-debian12:nonroot
+      distrolessbaseimage: base-debian12:latest
       # Repo specific policies start here->
       repos:
         # Repo specific policy for `tyk` starts here->
