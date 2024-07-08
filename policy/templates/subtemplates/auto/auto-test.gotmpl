@@ -116,7 +116,9 @@
         with:
           repository: TykTechnologies/tyk-analytics
           path: tyk-analytics
+          {{ if eq $REPO "tyk-analytics" }}
           ref: {{`${{ github.event.pull_request.head.sha }}`}}
+          {{ end }}
           fetch-depth: 1
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           {{ if eq $test "ui" }}
