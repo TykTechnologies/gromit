@@ -20,7 +20,7 @@
         shell: bash
         env:
           # Cover pull_request_target too
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
         run: |
           set -eo pipefail
           endpoint="http://tui.internal.dev.tyk.technology/api/{{ $REPO }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ $test }}"
@@ -151,7 +151,7 @@
           GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
           {{- if or (eq $test "ui-gate") (eq $test "api-gate") }}
           DASH_REPO_PATH: {{`${{ github.workspace }}`}}/tyk-analytics
           {{- end }}
@@ -196,9 +196,9 @@
         env:
           # Cover pull_request_target too
         {{- if or (eq $test "ui-gate") (eq $test "api-gate") }}
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.sha || github.ref}}`}}
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.sha || github.ref_name }}`}}
         {{- else }}
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name }}`}}
         {{- end }}
         run: |
           # Generate report id
