@@ -156,13 +156,16 @@
           DASH_REPO_PATH: {{`${{ github.workspace }}`}}/tyk-analytics
           {{- end }}
         run: |
-          tags=({{`${{steps.ecr.outputs.registry}}`}}/$REPO:$BASE_REF)
-          docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} 2>versions.env
+          match_tag={{`${{steps.ecr.outputs.registry}}`}}/$REPO:$BASE_REF
+          docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${match_tag} 2>versions.env
+          {{ if or (eq $REPO "tyk") (eq $REPO "tyk-analytics") }}
+          tags={{`${{ needs.goreleaser.outputs.tags }}`}}
+          {{- end }} 
           {{ if eq $REPO "tyk-analytics" }}
-          tyk_analytics_image={{`${{ needs.goreleaser.outputs.tags }}`}}
+          tyk_analytics_image=${tags[0]}
           {{ end }}
           {{ if eq $REPO "tyk" }}
-          tyk_image={{`${{ needs.goreleaser.outputs.tags }}`}}
+          tyk_image=${tags[0]}
           {{ end }}
           echo '# alfa and beta have to come after the override
           tyk_alfa_image=$tyk_image
