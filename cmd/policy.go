@@ -213,31 +213,33 @@ var diffSubCmd = &cobra.Command{
 }
 
 var matchSubCmd = &cobra.Command{
-	Use:   "match <tags...>",
-	Args:  cobra.MinimumNArgs(1),
-	Short: "Given a set of fully qualified tags, return matching tags from other repos",
-	Long:  `Find matching tags from gw, dash, pump and sink. The tag which has the most matches is used. If nothing matches, master is used. This is not capable to figuring out the test suite version at this point.`,
+	Use:   "match <current_tag> <target_tag>",
+	Args:  cobra.MinimumNArgs(2),
+	Short: "Given the current build tag and the target tag, find the matching tags in the repos",
+	Long:  `Find matching tags from gw, dash, pump and sink. The current tag is passed straigth as override image to be used by the test, but the target tag is used to find the matching tags for the other repos.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dcFile, _ := cmd.Flags().GetString("config")
 		config, err := policy.NewDockerAuths(dcFile)
 		if err != nil {
 			return err
 		}
-		var maxMatches policy.Matches
+
 		repos := []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink"}
-		for _, tag := range args {
-			p := policy.ParseImageName(tag)
-			matches, err := config.GetMatches(p.Registry, p.Tag, repos)
-			if err != nil {
-				log.Warn().Err(err).Msg("looking for matches")
-				continue
-			}
-			if matches.Len() > maxMatches.Len() {
-				maxMatches = matches
-			}
+		tagOverride := args[0]
+		tagMatch := args[1]
+
+		p := policy.ParseImageName(tagMatch)
+		o := policy.ParseImageName(tagOverride)
+
+		matches, err := config.GetMatches(p.Registry, p.Tag, repos)
+		if err != nil {
+			log.Warn().Err(err).Msg("looking for matches")
 		}
+
+		matches.Repos[o.Repo] = tagOverride
+
 		for _, repo := range repos {
-			cmd.Println(maxMatches.Match(repo))
+			cmd.Println(matches.Match(repo))
 		}
 		return nil
 	},
