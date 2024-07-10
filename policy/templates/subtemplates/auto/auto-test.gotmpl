@@ -20,7 +20,7 @@
         shell: bash
         env:
           # Cover pull_request_target too
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
         run: |
           set -eo pipefail
           endpoint="http://tui.internal.dev.tyk.technology/api/{{ $REPO }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ $test }}"
@@ -70,11 +70,13 @@
         include:
           - db: postgres15
             markers: "and not sql"
+        {{- if and (ne $REPO "tyk-pump") (ne $REPO "tyk-sink") }}
         exclude:
           - pump: tykio/tyk-pump-docker-pub:v1.8
             sink: $ECR/tyk-sink:master
           - pump: $ECR/tyk-pump:master
-            sink: tykio/tyk-mdcb-docker:v2.4           
+            sink: tykio/tyk-mdcb-docker:v2.4
+        {{- end }}
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -114,7 +116,9 @@
         with:
           repository: TykTechnologies/tyk-analytics
           path: tyk-analytics
+          {{ if eq $REPO "tyk-analytics" }}
           ref: {{`${{ github.event.pull_request.head.sha }}`}}
+          {{ end }}
           fetch-depth: 1
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           {{ if eq $test "ui" }}
@@ -147,17 +151,22 @@
           GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
           {{- if or (eq $test "ui-gate") (eq $test "api-gate") }}
           DASH_REPO_PATH: {{`${{ github.workspace }}`}}/tyk-analytics
           {{- end }}
         run: |
-          {{- if and (has "releng" $FEATURES) (ne $test "ui-gate") (ne $test "api-gate") }}  
-          tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
-          {{- else }}
-          tags=({{`${{steps.ecr.outputs.registry}}`}}/$REPO:$BASE_REF)
-          {{- end }}
-          docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} 2>versions.env
+          match_tag={{`${{steps.ecr.outputs.registry}}`}}/$REPO:$BASE_REF
+          docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${match_tag} 2>versions.env
+          {{ if or (eq $REPO "tyk") (eq $REPO "tyk-analytics") }}
+          tags={{`${{ needs.goreleaser.outputs.tags }}`}}
+          {{- end }} 
+          {{ if eq $REPO "tyk-analytics" }}
+          tyk_analytics_image=${tags[0]}
+          {{ end }}
+          {{ if eq $REPO "tyk" }}
+          tyk_image=${tags[0]}
+          {{ end }}
           echo '# alfa and beta have to come after the override
           tyk_alfa_image=$tyk_image
           tyk_beta_image=$tyk_image
@@ -190,16 +199,16 @@
         env:
           # Cover pull_request_target too
         {{- if or (eq $test "ui-gate") (eq $test "api-gate") }}
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.sha || github.ref}}`}}
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.sha || github.ref_name }}`}}
         {{- else }}
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name }}`}}
         {{- end }}
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
           # Run tests
           set -o pipefail
-          echo "### API tests {{`${{ matrix.db }}`}} {{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
+          echo "### API tests {{`${{ matrix.envfiles.db }}`}} {{`${{ matrix.envfiles.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
             {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:$BASE_REF \
             pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH#"{{`${{ github.workspace }}`}}"} --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
@@ -265,7 +274,7 @@
       - name: Share S3 report link into summary
         if: always() && !github.event.pull_request.draft
         run: |
-          echo "# :clipboard: S3 {{ $test }} Test REPORT: {{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}" >> $GITHUB_STEP_SUMMARY
+          echo "# :clipboard: S3 {{ $test }} Test REPORT: {{`${{ matrix.envfiles.db }}`}}-{{`${{ matrix.envfiles.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           echo "- Status: {{`${{ steps.test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}" >> $GITHUB_STEP_SUMMARY
           echo "- [Link to report](https://tyk-qa-reports.s3.eu-central-1.amazonaws.com/tyk-analytics/{{`${{ github.run_id }}`}}/index.html)" >> $GITHUB_STEP_SUMMARY
   
@@ -326,7 +335,7 @@
           DASH_REPO_PATH: {{`${{ github.workspace }}`}}/tyk-analytics
           {{- end }}
         run: |
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.db }}`}}.yml -f {{`${{ matrix.cache_db }}`}}.yml {{ if or (eq $test "ui-gate") (eq $test "api-gate") }}-f {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard/compose.yml{{end}} --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml {{ if or (eq $test "ui-gate") (eq $test "api-gate") }}-f {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard/compose.yml{{end}} --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
           echo "::group::DockerLogs"
           cat {{`${{ github.workspace }}`}}/docker-compose.log
           echo "::endgroup::"
@@ -335,7 +344,7 @@
         uses: actions/upload-artifact@v4
         if: failure() && (steps.test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
         with:
-          name: docker-compose-logs-{{`${{ github.job }}`}}-{{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}-{{`${{ github.run_id }}`}}
+          name: docker-compose-logs-{{`${{ github.job }}`}}-{{`${{ matrix.envfiles.db }}`}}-{{`${{ matrix.envfiles.conf }}`}}-{{`${{ github.run_id }}`}}
           path: {{`${{ github.workspace }}`}}/docker-compose.log
           retention-days: 3
           overwrite: true
@@ -344,7 +353,7 @@
         if: always() 
         uses: actions/upload-artifact@v4
         with:
-            name: api-test-report-{{`${{ matrix.db }}`}}-{{`${{ matrix.conf }}`}}-{{`${{ github.run_id }}`}}
+            name: api-test-report-{{`${{ matrix.envfiles.db }}`}}-{{`${{ matrix.envfiles.conf }}`}}-{{`${{ github.run_id }}`}}
             retention-days: 3
             path: {{`${{ github.workspace }}`}}/reports
             overwrite: true

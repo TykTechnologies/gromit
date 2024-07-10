@@ -49,6 +49,7 @@ policy:
       repos:
         # Repo specific policy for `tyk` starts here->
         tyk:
+          distrolessbaseimage: base-debian12:latest
           # Description for the repo - this will be used as description for
           # deb/rpm packages, docker images etc.
           description: >-
