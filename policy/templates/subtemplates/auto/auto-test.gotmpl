@@ -158,15 +158,15 @@
         run: |
           match_tag={{`${{steps.ecr.outputs.registry}}`}}/$REPO:$BASE_REF
           docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${match_tag} 2>versions.env
-          {{ if or (eq $REPO "tyk") (eq $REPO "tyk-analytics") }}
-          tags={{`${{ needs.goreleaser.outputs.tags }}`}}
+          {{- if or (eq $REPO "tyk") (eq $REPO "tyk-analytics") }}
+          tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
           {{- end }} 
-          {{ if eq $REPO "tyk-analytics" }}
+          {{- if eq $REPO "tyk-analytics" }}
           tyk_analytics_image=${tags[0]}
-          {{ end }}
-          {{ if eq $REPO "tyk" }}
+          {{- end }}
+          {{- if eq $REPO "tyk" }}
           tyk_image=${tags[0]}
-          {{ end }}
+          {{- end }}
           echo '# alfa and beta have to come after the override
           tyk_alfa_image=$tyk_image
           tyk_beta_image=$tyk_image
