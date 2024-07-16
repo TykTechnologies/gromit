@@ -3,12 +3,11 @@
 {{ $FEATURES := .Branchvals.Features }}
 {{ range $test := .Branchvals.Tests }}
   test-controller-{{ $test }}:
-  {{ if and (has "releng" $FEATURES) (ne $test "api-gate") (ne $test "ui-gate") }}
+  {{ if and (eq $test "api-gate") (eq $REPO "tyk-analytics") }}
+    needs: build-tat
+  {{- else }}  
     needs: goreleaser
   {{- end }}
-  {{ if eq $test "api-gate" }}
-    needs: docker
-  {{- end }}  
     runs-on: ubuntu-latest
     outputs:
       envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
@@ -46,14 +45,6 @@
     {{- else }}
     runs-on: ubuntu-latest
     {{- end }}
-    env:
-      METADATA_REPORT_PATH: /tmp/metadata.toml
-      {{ if or (eq $test "ui") (eq $test "ui-gate") }}
-      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/playwright-report/results.xml
-      {{- end }}
-      {{ if or (eq $test "api") (eq $test "api-gate") }}
-      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml
-      {{- end }}      
     permissions:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
@@ -109,39 +100,6 @@
           gh release download --repo github.com/TykTechnologies/tyk-ci -p 'ci-env.tgz' -O env.tgz
           tar xzvf env.tgz
 {{ end }}
-{{/* This checkout is used both for UI regresion tests on tyk-analytics and QA gates (api & ui need to build dash from src) */}}
-{{ if or (eq $test "ui") (eq $test "ui-gate") (eq $test "api-gate") }}
-      - name: Checkout of Dashboard
-        uses: actions/checkout@v4
-        with:
-          repository: TykTechnologies/tyk-analytics
-          path: tyk-analytics
-          {{ if eq $REPO "tyk-analytics" }}
-          ref: {{`${{ github.event.pull_request.head.sha }}`}}
-          {{ end }}
-          fetch-depth: 1
-          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          {{ if eq $test "ui" }}
-          sparse-checkout: |
-            tests/ui
-            bin
-          submodules: false
-          {{ else }}
-          submodules: true
-          {{ end }}
-          
-{{ end }}
-{{ if or (eq $test "ui-gate") (eq $test "api-gate") }}
-      - name: Build dashboard image
-        run: | 
-          git config --global url."https://{{`${{ secrets.ORG_GH_TOKEN }}`}}@github.com".insteadOf "https://github.com"
-          git config --global --add safe.directory /go/src/github.com/TykTechnologies/tyk-analytics
-          docker build -t internal/tyk-dashboard .
-        env:
-          TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          DASH_REPO_PATH: {{`${{ github.workspace }}`}}/tyk-analytics
-        working-directory: {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard 
-{{ end }}
       - name: env up
         shell: bash
         working-directory: auto
@@ -152,15 +110,12 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
-          {{- if or (eq $test "ui-gate") (eq $test "api-gate") }}
-          DASH_REPO_PATH: {{`${{ github.workspace }}`}}/tyk-analytics
-          {{- end }}
         run: |
           match_tag={{`${{steps.ecr.outputs.registry}}`}}/$REPO:$BASE_REF
-          {{- if and (has "releng" $FEATURES) (ne $test "api-gate") (ne $test "ui-gate") }}
-          tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
+          {{- if eq $REPO "tyk-ci" }}
+          tags=($match_tag)
           {{ else }}
-          tags=(${match_tag})
+          tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
           {{ end -}} 
           docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} ${match_tag} 2>versions.env
           echo '# alfa and beta have to come after the override
@@ -184,9 +139,9 @@
           # Add Tyk component config variations to $env_file
           cat confs/{{`${{ matrix.envfiles.config }}`}}.env >> local-{{`${{ matrix.envfiles.db }}`}}.env
           # bring up env, the project name is important
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml {{ if or (eq $test "ui-gate") (eq $test "api-gate") }}-f {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard/compose.yml{{end}} --env-file versions.env --profile master-datacenter up --quiet-pull -d
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
           ./dash-bootstrap.sh http://localhost:3000
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml {{ if or (eq $test "ui-gate") (eq $test "api-gate") }}-f {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard/compose.yml{{end}} --env-file versions.env --profile slave-datacenter up --quiet-pull -d
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
 
       {{ if or (eq $test "api") (eq $test "api-gate")}}
       - name: Run tests
@@ -246,52 +201,19 @@
           JOB_RUN_ID: {{`${{ github.run_id }}`}}
           JOB_NAME: tyk-analytics - {{`${{ github.ref }}`}} {{`${{ github.event.head_commit.message }}`}}
           RUN_ID: 'tyk-analytics/{{`${{ github.run_id }}`}}'
-
-      - name: Upload Playwright Test Report to S3
-        if: failure() && steps.test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
-        run:
-          npm run upload_report_to_s3
-        env:
-          AWS_ACCESS_KEY_ID: {{`${{ secrets.UI_AWS_ACCESS_KEY_ID }}`}}
-          AWS_SECRET_ACCESS_KEY: {{`${{ secrets.UI_AWS_SECRET_ACCESS_KEY }}`}}
-          RUN_ID: 'tyk-analytics/{{`${{ github.run_id }}`}}'
-        working-directory: tyk-analytics/tests/ui
-
-      - name: Post message to automation team
-        if: failure() && steps.test_execution.outcome != 'success' && !github.event.pull_request.draft 
-        id: slack
-        uses: slackapi/slack-github-action@v1.24.0
-        with:
-          channel-id: '@konrad'
-          slack-message: "GitHub build result: {{`${{ job.status }}`}}\n{{`${{ github.event.pull_request.html_url || github.event.head_commit.url }}`}}"
-        env:
-          SLACK_BOT_TOKEN: {{`${{ secrets.UI_SLACK_AUTH_TOKEN }}`}}
-
-      - name: Share S3 report link into summary
-        if: always() && !github.event.pull_request.draft
-        run: |
-          echo "# :clipboard: S3 {{ $test }} Test REPORT: {{`${{ matrix.envfiles.db }}`}}-{{`${{ matrix.envfiles.conf }}`}}" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: {{`${{ steps.test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}" >> $GITHUB_STEP_SUMMARY
-          echo "- [Link to report](https://tyk-qa-reports.s3.eu-central-1.amazonaws.com/tyk-analytics/{{`${{ github.run_id }}`}}/index.html)" >> $GITHUB_STEP_SUMMARY
-  
-      - name: Xray update
-        working-directory: tyk-analytics/bin
-        if: {{`${{ always() }}`}} && github.event_name != 'pull_request'
-        run: |
-          ./update_xray.sh
-        env:
-          TEST: "QA-890"
-          STATUS: "{{`${{ steps.test_execution.outcome }}`}}"
-          CLIENT_ID: {{`${{secrets.XRAY_CLIENT_ID}}`}}
-          CLIENT_SECRET: {{`${{secrets.XRAY_CLIENT_SECRET}}`}}
-          BRANCH: {{`${{ github.ref }}`}}
       {{- end }} {{/* end of test variation */}}
-      - name: Generate metadata
+      - name: Generate metadata and upload test reports
         if: always() && steps.test_execution.outcome != 'skipped'
         id: metadata_report
         env:
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
           REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.test_execution.outputs.id}}`}}
+          {{ if or (eq $test "ui") (eq $test "ui-gate") }}
+          XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/playwright-report/results.xml
+          {{ else if or (eq $test "api") (eq $test "api-gate") }}
+          XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml
+          {{- end }}      
+          METADATA_REPORT_PATH: /tmp/metadata.toml
         run: |
           # Generate metadata report
           echo "[metadata]
@@ -327,16 +249,13 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           ECR: {{`${{ steps.ecr.outputs.registry }}`}}
-          {{- if or (eq $test "ui-gate") (eq $test "api-gate") }}
-          DASH_REPO_PATH: {{`${{ github.workspace }}`}}/tyk-analytics
-          {{- end }}
         run: |
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml {{ if or (eq $test "ui-gate") (eq $test "api-gate") }}-f {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/ci/Dashboard/compose.yml{{end}} --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
+          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
           echo "::group::DockerLogs"
           cat {{`${{ github.workspace }}`}}/docker-compose.log
           echo "::endgroup::"
 
-      - name: Upload Artifact
+      - name: Upload compose logs
         uses: actions/upload-artifact@v4
         if: failure() && (steps.test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
         with:
@@ -344,14 +263,5 @@
           path: {{`${{ github.workspace }}`}}/docker-compose.log
           retention-days: 3
           overwrite: true
-
-      - name: Archive Integration tests report
-        if: always() 
-        uses: actions/upload-artifact@v4
-        with:
-            name: api-test-report-{{`${{ matrix.envfiles.db }}`}}-{{`${{ matrix.envfiles.conf }}`}}-{{`${{ github.run_id }}`}}
-            retention-days: 3
-            path: {{`${{ github.workspace }}`}}/reports
-            overwrite: true
 {{ end }} {{/* End of range */}}
 {{ end }} {{/* End of auto-test */}}

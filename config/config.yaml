@@ -125,31 +125,31 @@ policy:
           upgradefromver: 3.0.9
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/internal/build
-          tests: [ui,api]
+          tests:
+            - api-gate
+            - ui-gate
+            - ui
+            - api
           branches:
             master:
               features:
                 - s390x
                 - distroless
-                - test-square-ui
-                - test-square-api
+                - test-square
             release-5.3:
               features:
                 - s390x
-                - test-square-ui
-                - test-square-api                
+                - test-square
             release-5.4:
               features:
                 - s390x
                 - release-test
-                - test-square-ui
-                - test-square-api                
+                - test-square
             release-5-lts:
               buildenv: 1.16
               features:
                 - el7-pgo-build
-                - test-square-ui
-                - test-square-api                
+                - test-square
 
         portal:
           description: >-
@@ -231,12 +231,15 @@ policy:
             - distroless
           branches:
             master:
+
     stand-alone-services:
       repos:
         tyk-ci:
           description: >-
             Tyk automation repo environment for regression testing
-          tests: [api,ui]
+          tests:
+            - api-gate
+            - ui-gate
           features:
             - test-square
           branches:

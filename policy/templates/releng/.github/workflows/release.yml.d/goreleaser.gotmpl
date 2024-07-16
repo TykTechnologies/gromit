@@ -176,7 +176,7 @@
 
       - name: push image to CI
         if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: "dist"
           platforms: linux/amd64,linux/arm64
@@ -215,7 +215,7 @@
  
       - name: build multiarch image
         if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: "dist"
           platforms: linux/amd64,linux/arm64
