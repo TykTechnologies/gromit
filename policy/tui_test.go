@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testConfig = "../testdata/test-variations.yaml"
+const testConfig = "../testdata/tui"
 
 // executeMockRequest, creates a new ResponseRecorder
 // then executes the request by calling ServeHTTP in the router
@@ -52,7 +52,7 @@ type APITestCase struct {
 	RequestParams string
 }
 
-func TestVariations(t *testing.T) {
+func TestV1Variations(t *testing.T) {
 	// Order matters, delete after creating
 	cases := []APITestCase{
 		{
@@ -72,6 +72,34 @@ func TestVariations(t *testing.T) {
 		{
 			Name:         "Sink",
 			Endpoint:     "/api/repo1/br0/tr1/ts0/Sink",
+			ResponseJSON: `["sink-br0", "master"]`,
+			HTTPStatus:   http.StatusOK,
+			HTTPMethod:   "GET",
+		},
+	}
+	runSubTests(t, cases)
+}
+
+func TestV2Variations(t *testing.T) {
+	// Order matters, delete after creating
+	cases := []APITestCase{
+		{
+			Name:         "EnvFiles",
+			Endpoint:     "/v2/test-variations/repo1/br0/tr0/ts0/EnvFiles",
+			ResponseJSON: `[{"cache":"repo1-redis0", "config":"repo1-conf0", "db":"repo1-db0"}]`,
+			HTTPStatus:   http.StatusOK,
+			HTTPMethod:   "GET",
+		},
+		{
+			Name:         "Pump",
+			Endpoint:     "/v2/test-var/repo0/br1/tr1/ts0/Pump",
+			ResponseJSON: `["pump-br1", "master"]`,
+			HTTPStatus:   http.StatusOK,
+			HTTPMethod:   "GET",
+		},
+		{
+			Name:         "Sink",
+			Endpoint:     "/v2/test-variations.yaml/repo1/br0/tr1/ts0/Sink",
 			ResponseJSON: `["sink-br0", "master"]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",

@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"strings"
 	"text/template"
 	"time"
 
@@ -23,22 +25,22 @@ import (
 )
 
 // Serve starts the embedded test controller UI
-func Serve(port, tvFile string) error {
+func Serve(port, tvDir string) error {
 	creds := getCredentials(os.Getenv("CREDENTIALS"))
-	s := CreateNewServer(tvFile, creds)
+	s := CreateNewServer(tvDir, creds)
 	log.Info().Msg("starting tui server")
 	return http.ListenAndServe(port, s.Router)
 }
 
 type Server struct {
-	Router          *chi.Mux
-	Variations      TestsuiteVariations
-	SaveDir         string
-	SavedVariations []string
+	Router         *chi.Mux
+	ProdVariations RepoTestsuiteVariations
+	SaveDir        string
+	AllVariations  AllTestsuiteVariations
 	// Db, config can be added here
 }
 
-func CreateNewServer(tvFile string, creds map[string]string) *Server {
+func CreateNewServer(tvDir string, creds map[string]string) *Server {
 	r := chi.NewRouter()
 	// Order is important
 	r.Use(middleware.RequestID)
@@ -53,104 +55,71 @@ func CreateNewServer(tvFile string, creds map[string]string) *Server {
 	r.Get("/ping", ping)
 	r.Mount("/static/", assets())
 
-	saveDir := filepath.Dir(tvFile)
-	if saveDir == "" {
-		saveDir = "."
+	av, err := loadAllVariations(tvDir)
+	if err != nil {
+		log.Fatal().Err(err).Msgf("loading variatios from %s", tvDir)
+	}
+	s := &Server{
+		Router:         r,
+		SaveDir:        tvDir,
+		ProdVariations: av["prod-variations.yml"],
+		AllVariations:  av,
 	}
 
-	s := &Server{
-		Router:  r,
-		SaveDir: saveDir,
-	}
-	err := loadVariations(tvFile, s)
-	if err != nil {
-		log.Fatal().Err(err).Msgf("could not load test variation from %s", tvFile)
-	}
 	r.Route("/api", func(r chi.Router) {
-		r.Get("/", s.dumpJson)
 		r.Get("/{repo}/{branch}/{trigger}/{ts}/{field}", s.lookup)
+	})
+	r.Route("/v2", func(r chi.Router) {
+		r.Get("/dump/{tsv}", s.dumpJson)
+		r.Get("/{tsv}/{repo}/{branch}/{trigger}/{ts}/{field}", s.lookup2)
 	})
 	r.Get("/", s.renderSPA())
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.BasicAuth("tui", creds))
 		r.Put("/save/{name}", s.saveVariation)
-		r.Post("/use/{name}", s.useVariation)
+		r.Post("/reload", s.reload)
 	})
-	r.Mount("/show/", savedVariations(s.SaveDir))
+	r.Mount("/show/", savedVariations(tvDir))
 	return s
 }
 
-// TestsuiteVariations maps savedVariations to a form suitable for runtime use
-type TestsuiteVariations map[string]repoVariations
+// RepoTestsuiteVariations maps savedVariations to a form suitable for runtime use
+type RepoTestsuiteVariations map[string]repoVariations
+type AllTestsuiteVariations map[string]RepoTestsuiteVariations
 
-// loadVariations unrolls the compact saved representation from a file
-// it also sets up handlers for the loaded variations
-func loadVariations(tvFile string, s *Server) error {
-	data, err := os.ReadFile(tvFile)
-	if err != nil {
-		return err
+func (av AllTestsuiteVariations) Files() []string {
+	keys := make([]string, 0, len(av))
+	for k := range av {
+		keys = append(keys, k)
 	}
-	var saved ghMatrix
-	err = yaml.Unmarshal(data, &saved)
-	if err != nil {
-		return fmt.Errorf("could not unmarshal data from %s: %s: %w", tvFile, string(data), err)
-	}
-	// top level variations
-	var global ghMatrix
-	err = copier.CopyWithOption(&global, &saved, copier.Option{IgnoreEmpty: true})
-	if err != nil {
-		log.Warn().Err(err).Msgf("could not copy global variations")
-	}
-	tv := make(TestsuiteVariations)
-	for repo, matrix := range saved.Level {
-		var rv repoVariations
-		var vp variationPath
-		rv.Leaves = make(map[string]ghMatrix)
-		// apply defaults to every repo
-		matrix.EnvFiles = append(matrix.EnvFiles, global.EnvFiles...)
-		matrix.Pump = append(matrix.Pump, global.Pump...)
-		matrix.Sink = append(matrix.Sink, global.Sink...)
-
-		parseVariations(matrix, 0, &rv, vp)
-		tv[repo] = rv
-	}
-	log.Debug().Interface("tv", tv).Msgf("loaded from %s", tvFile)
-
-	s.Variations = tv
-	savedFiles, err := s.findVariations()
-	if err != nil {
-		return fmt.Errorf("cannot find saved variations in %s: %w", s.SaveDir, err)
-	}
-	s.SavedVariations = savedFiles
-
-	return nil
+	return keys
 }
 
-func (s *Server) useVariation(w http.ResponseWriter, r *http.Request) {
-	tvFile := chi.URLParam(r, "name")
-	tvFile = filepath.Join(s.SaveDir, tvFile)
-	err := loadVariations(tvFile, s)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Error().Err(err).Msgf("cannot use %s", tvFile)
+// finds the supplied name as a sub-string among the keys of AllVariations
+func (s *Server) findVariation(name string) (RepoTestsuiteVariations, bool) {
+	found := false
+	re := regexp.MustCompile(name)
+	for k, v := range s.AllVariations {
+		found = re.MatchString(k)
+		if found {
+			return v, found
+		}
 	}
-	w.Write([]byte(fmt.Sprintf("Using %s now", tvFile)))
-}
-
-// findVariations returns a list of files in the directory
-func (s *Server) findVariations() ([]string, error) {
-	files, err := os.ReadDir(s.SaveDir)
-	if err != nil {
-		return []string{}, err
-	}
-	fnames := make([]string, len(files))
-	for i, f := range files {
-		fnames[i] = f.Name()
-	}
-	return fnames, nil
+	return nil, found
 }
 
 // API handlers
+
+func (s *Server) reload(w http.ResponseWriter, r *http.Request) {
+	av, err := loadAllVariations(s.SaveDir)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error().Err(err).Msgf("cannot reload, leaving current config unchanged")
+	}
+	s.AllVariations = av
+	s.ProdVariations = av["prod-variations.yml"]
+	w.Write([]byte(fmt.Sprintf("Using [%s] now", strings.Join(s.AllVariations.Files(), ", "))))
+}
 
 func (s *Server) saveVariation(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
@@ -173,17 +142,11 @@ func (s *Server) saveVariation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	savedFiles, err := s.findVariations()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Error().Err(err).Msgf("could not re-read saved variations from %s", s.SaveDir)
-		return
-	}
-	s.SavedVariations = savedFiles
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf("%s saved successfully", name)))
 }
 
+// FIXME: Remove when lookup2 migration is done
 func (s *Server) lookup(w http.ResponseWriter, r *http.Request) {
 	repo := chi.URLParam(r, "repo")
 	branch := chi.URLParam(r, "branch")
@@ -192,9 +155,53 @@ func (s *Server) lookup(w http.ResponseWriter, r *http.Request) {
 	field := chi.URLParam(r, "field")
 
 	var m *ghMatrix
-	rv, found := s.Variations[repo]
+	rv, found := s.ProdVariations[repo]
 	if !found {
 		http.Error(w, fmt.Sprintf("%s not known", repo), http.StatusNotFound)
+		return
+	}
+	m = rv.Lookup(branch, trigger, testsuite)
+	if m == nil {
+		// if branch not known, send down master's config
+		m = rv.Lookup("master", trigger, testsuite)
+		if m == nil {
+			http.Error(w, fmt.Sprintf("(master, %s, %s) not known for %s", trigger, testsuite, repo), http.StatusNotFound)
+			return
+		}
+	}
+	v := reflect.ValueOf(m)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	f := v.FieldByName(field)
+	if !f.IsValid() {
+		http.Error(w, fmt.Sprintf("%s(%s, %s, %s) has no field %s", repo, branch, trigger, testsuite, field), http.StatusNotFound)
+		return
+	}
+	render.JSON(w, r, f.Interface())
+}
+
+// lookup2 looks up RepoTestsuiteVariations based on the tsv parameter
+// being a regexp match for one of the map keys of s.AllVariations
+func (s *Server) lookup2(w http.ResponseWriter, r *http.Request) {
+	tsv := chi.URLParam(r, "tsv")
+	repo := chi.URLParam(r, "repo")
+	branch := chi.URLParam(r, "branch")
+	trigger := chi.URLParam(r, "trigger")
+	testsuite := chi.URLParam(r, "ts")
+	field := chi.URLParam(r, "field")
+
+	log.Debug().Msgf("looking for %s in %v", tsv, s.AllVariations.Files())
+	rtsv, found := s.findVariation(tsv)
+	if !found {
+		http.Error(w, fmt.Sprintf("%s not found among %v", tsv, s.AllVariations.Files()), http.StatusNotFound)
+		return
+	}
+	var m *ghMatrix
+	rv, found := rtsv[repo]
+	if !found {
+		http.Error(w, fmt.Sprintf("%s not known", repo), http.StatusNotFound)
+		return
 	}
 	m = rv.Lookup(branch, trigger, testsuite)
 	if m == nil {
@@ -218,7 +225,13 @@ func (s *Server) lookup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) dumpJson(w http.ResponseWriter, r *http.Request) {
-	render.JSON(w, r, s.Variations)
+	tsv := chi.URLParam(r, "tsv")
+	rtsv, found := s.findVariation(tsv)
+	if !found {
+		http.Error(w, fmt.Sprintf("%s not found among %v", tsv, s.AllVariations.Files()), http.StatusNotFound)
+		return
+	}
+	render.JSON(w, r, rtsv)
 	return
 }
 
@@ -277,4 +290,70 @@ func getCredentials(jsontext string) map[string]string {
 		log.Fatal().Err(err).Msg("getting creds for authenticated APIs")
 	}
 	return creds
+}
+
+// loadAllVariations loads all yaml files in tvDir returning it in a
+// map indexed by filename
+func loadAllVariations(tvDir string) (AllTestsuiteVariations, error) {
+	files, err := os.ReadDir(tvDir)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not read directory")
+	}
+
+	numVariations := 0
+	av := make(AllTestsuiteVariations)
+	for _, file := range files {
+		fname := file.Name()
+		yaml, _ := regexp.MatchString("\\.ya?ml$", fname)
+		if !yaml {
+			continue
+		}
+		pathName := filepath.Join(tvDir, fname)
+		tv, err := loadVariation(pathName)
+		if err != nil {
+			log.Warn().Err(err).Msgf("could not load test variation from %s", pathName)
+		}
+		av[fname] = tv
+		numVariations++
+		log.Debug().Str("dir", tvDir).Msgf("loaded variation from %s", fname)
+	}
+	if numVariations < 1 {
+		return av, fmt.Errorf("No loadable files in %s", tvDir)
+	}
+	return av, nil
+}
+
+// loadVariation unrolls the compact saved representation from a file
+// it also sets up handlers for the loaded variations
+func loadVariation(tvFile string) (RepoTestsuiteVariations, error) {
+	data, err := os.ReadFile(tvFile)
+	if err != nil {
+		return nil, err
+	}
+	var saved ghMatrix
+	err = yaml.Unmarshal(data, &saved)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal data from %s: %s: %w", tvFile, string(data), err)
+	}
+	// top level variations
+	var global ghMatrix
+	err = copier.CopyWithOption(&global, &saved, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		log.Warn().Err(err).Msgf("could not copy global variations")
+	}
+	tv := make(RepoTestsuiteVariations)
+	for repo, matrix := range saved.Level {
+		var rv repoVariations
+		var vp variationPath
+		rv.Leaves = make(map[string]ghMatrix)
+		// apply defaults to every repo
+		matrix.EnvFiles = append(matrix.EnvFiles, global.EnvFiles...)
+		matrix.Pump = append(matrix.Pump, global.Pump...)
+		matrix.Sink = append(matrix.Sink, global.Sink...)
+
+		parseVariations(matrix, 0, &rv, vp)
+		tv[repo] = rv
+	}
+	log.Debug().Interface("tv", tv).Msgf("loaded from %s", tvFile)
+	return tv, nil
 }

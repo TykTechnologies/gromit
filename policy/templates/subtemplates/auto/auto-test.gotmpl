@@ -1,9 +1,6 @@
 {{ define "auto-test" }}
-{{ $REPO := .Name }}
-{{ $FEATURES := .Branchvals.Features }}
-{{ range $test := .Branchvals.Tests }}
-  test-controller-{{ $test }}:
-  {{ if and (eq $test "api-gate") (eq $REPO "tyk-analytics") }}
+  test-controller-{{ .test }}:
+  {{- if and (eq .test "api") (eq .dot.Name "tyk-analytics") }}
     needs: build-tat
   {{- else }}  
     needs: goreleaser
@@ -22,7 +19,7 @@
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
         run: |
           set -eo pipefail
-          endpoint="http://tui.internal.dev.tyk.technology/api/{{ $REPO }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ $test }}"
+          endpoint="http://tui.internal.dev.tyk.technology/api/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}"
           curl="curl -s --retry 5 --retry-delay 10 --fail-with-body --retry-all-errors"
           echo "pump<<EOF
           $($curl ${endpoint}/Pump)
@@ -34,13 +31,13 @@
           $($curl ${endpoint}/EnvFiles)
           EOF" | tee -a "$GITHUB_OUTPUT"
 
-  {{ $test }}-tests:
+  {{ .test }}-tests:
     needs:
-    {{ if and (has "releng" $FEATURES) (ne $test "api-gate") (ne $test "ui-gate") }}
+    {{- if and (has "releng" .dot.Branchvals.Features) }}
       - goreleaser
     {{- end }}  
-      - test-controller-{{ $test }}
-    {{ if has "releng" $FEATURES }}
+      - test-controller-{{ .test }}
+    {{ if has "releng" .dot.Branchvals.Features }}
     runs-on: ubuntu-latest-m-2
     {{- else }}
     runs-on: ubuntu-latest
@@ -51,17 +48,17 @@
     strategy:
       fail-fast: false
       matrix:
-        envfiles: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.envfiles) }}`}}
-        {{- if ne $REPO "tyk-pump" }}
-        pump: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.pump) }}`}}
+        envfiles: {{`${{ fromJson(needs.test-controller-`}}{{ .test }}{{`.outputs.envfiles) }}`}}
+        {{- if ne .dot.Name "tyk-pump" }}
+        pump: {{`${{ fromJson(needs.test-controller-`}}{{ .test }}{{`.outputs.pump) }}`}}
         {{ end }}
-        {{- if ne $REPO "tyk-sink" }}
-        sink: {{`${{ fromJson(needs.test-controller-`}}{{ $test }}{{`.outputs.sink) }}`}}
+        {{- if ne .dot.Name "tyk-sink" }}
+        sink: {{`${{ fromJson(needs.test-controller-`}}{{ .test }}{{`.outputs.sink) }}`}}
         {{ end }}
         include:
           - db: postgres15
             markers: "and not sql"
-        {{- if and (ne $REPO "tyk-pump") (ne $REPO "tyk-sink") }}
+        {{- if and (ne .dot.Name "tyk-pump") (ne .dot.Name "tyk-sink") }}
         exclude:
           - pump: tykio/tyk-pump-docker-pub:v1.8
             sink: $ECR/tyk-sink:master
@@ -89,17 +86,9 @@
       - name: fetch env from tyk-ci
         env:
           GH_TOKEN: {{`${{ github.token }}`}}
-{{ if has "test-square" $FEATURES }}
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            auto
-            reports
-{{ else }}
         run: |
           gh release download --repo github.com/TykTechnologies/tyk-ci -p 'ci-env.tgz' -O env.tgz
           tar xzvf env.tgz
-{{ end }}
       - name: env up
         shell: bash
         working-directory: auto
@@ -111,8 +100,8 @@
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
         run: |
-          match_tag={{`${{steps.ecr.outputs.registry}}`}}/$REPO:$BASE_REF
-          {{- if eq $REPO "tyk-ci" }}
+          match_tag={{`${{steps.ecr.outputs.registry}}`}}/.dot.Name:$BASE_REF
+          {{- if eq .dot.Name "tyk-ci" }}
           tags=($match_tag)
           {{ else }}
           tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
@@ -122,13 +111,13 @@
           tyk_alfa_image=$tyk_image
           tyk_beta_image=$tyk_image
           ECR={{`${{steps.ecr.outputs.registry}}`}}
-          {{- if ne $REPO "tyk-pump" }}
+          {{- if ne .dot.Name "tyk-pump" }}
           tyk_pump_image={{`${{matrix.pump}}`}}
           {{- end }}
-          {{- if ne $REPO "tyk-sink" }}
+          {{- if ne .dot.Name "tyk-sink" }}
           tyk_sink_image={{`${{matrix.sink}}`}}
           {{- end }}
-          {{- if or (eq $test "ui-gate") (eq $test "api-gate") }}
+          {{- if or (eq .test "ui-gate") (eq .test "api-gate") }}
           tyk_analytics_image=internal/tyk-dashboard
           {{- end }}
           confs_dir=./pro-ha
@@ -143,17 +132,13 @@
           ./dash-bootstrap.sh http://localhost:3000
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
 
-      {{ if or (eq $test "api") (eq $test "api-gate")}}
+      {{- if eq .test "api" }}
       - name: Run tests
         working-directory: auto
         id: test_execution
         env:
           # Cover pull_request_target too
-        {{- if or (eq $test "ui-gate") (eq $test "api-gate") }}
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.sha || github.ref_name }}`}}
-        {{- else }}
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name }}`}}
-        {{- end }}
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
@@ -169,7 +154,8 @@
             cat tests.out >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
-      {{ else if or (eq $test "ui") (eq $test "ui-gate") }}
+
+      {{- else if eq .test "ui" }}
       - name: Install Node.js 18.16
         uses: actions/setup-node@v2.4.1
         with:
@@ -202,17 +188,18 @@
           JOB_NAME: tyk-analytics - {{`${{ github.ref }}`}} {{`${{ github.event.head_commit.message }}`}}
           RUN_ID: 'tyk-analytics/{{`${{ github.run_id }}`}}'
       {{- end }} {{/* end of test variation */}}
+
       - name: Generate metadata and upload test reports
         if: always() && steps.test_execution.outcome != 'skipped'
         id: metadata_report
         env:
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
           REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.test_execution.outputs.id}}`}}
-          {{ if or (eq $test "ui") (eq $test "ui-gate") }}
+          {{ if eq .test "ui" }}
           XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/playwright-report/results.xml
-          {{ else if or (eq $test "api") (eq $test "api-gate") }}
+          {{ else if eq .test "api" }}
           XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml
-          {{- end }}      
+          {{- end }}
           METADATA_REPORT_PATH: /tmp/metadata.toml
         run: |
           # Generate metadata report
@@ -263,5 +250,4 @@
           path: {{`${{ github.workspace }}`}}/docker-compose.log
           retention-days: 3
           overwrite: true
-{{ end }} {{/* End of range */}}
 {{ end }} {{/* End of auto-test */}}

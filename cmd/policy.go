@@ -254,9 +254,9 @@ var serveSubCmd = &cobra.Command{
 - branch.
 This an laternate implementation to the controller which does not embed a server.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		tvFile, _ := cmd.Flags().GetString("save")
+		tvDir, _ := cmd.Flags().GetString("save")
 		port, _ := cmd.Flags().GetString("port")
-		return policy.Serve(port, tvFile)
+		return policy.Serve(port, tvDir)
 	},
 }
 
@@ -273,7 +273,7 @@ func init() {
 	genSubCmd.Flags().String("repo", "", "Repository name to use from config file")
 
 	serveSubCmd.Flags().String("port", ":3000", "Port that the backend will bind to")
-	serveSubCmd.Flags().String("save", "testdata/prod-variations.yml", "Test variations are loaded from this file, the directory component is used to save new files")
+	serveSubCmd.Flags().String("save", "testdata/tui", "Test variations are loaded from and saved to this directory")
 
 	matchSubCmd.Flags().String("config", "$HOME/.docker/config.json", "Config file to read authentication token from")
 
@@ -284,7 +284,6 @@ func init() {
 	policyCmd.AddCommand(genSubCmd)
 	policyCmd.AddCommand(serveSubCmd)
 
-	// FIXME: Remove the default from Branch when we can process multiple branches in the same dir
 	policyCmd.PersistentFlags().StringVar(&PolBranch, "branch", "", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
 	policyCmd.PersistentFlags().Bool("auto", true, "Will automerge if all requirements are meet")
 	rootCmd.AddCommand(policyCmd)

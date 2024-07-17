@@ -18,6 +18,10 @@ gromit: go.mod go.sum *.go $(SRC) policy/app/*
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
 
+serve:
+	command -v entr
+	find policy -type f | entr -rs 'make gromit && CREDENTIALS='\''{"user":"pass"}'\'' ./gromit policy serve'
+
 test: 
 	go test -coverprofile cp.out ./... # dlv test ./cmd #
 
@@ -62,4 +66,4 @@ opr: gromit
 loc: clean
 	gocloc --skip-duplicated --not-match-d=\.terraform --output-type=json ~gromit ~ci | jq -r '.languages | map([.name, .code]) | transpose[] | @csv'
 
-.PHONY: clean update-test-cases test loc cpr upr opr deploy
+.PHONY: clean update-test-cases test loc cpr upr opr deploy push

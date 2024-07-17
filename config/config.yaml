@@ -126,8 +126,6 @@ policy:
           configfile: tyk_analytics.conf
           versionpackage: github.com/TykTechnologies/tyk-analytics/internal/build
           tests:
-            - api-gate
-            - ui-gate
             - ui
             - api
           branches:
@@ -238,8 +236,8 @@ policy:
           description: >-
             Tyk automation repo environment for regression testing
           tests:
-            - api-gate
-            - ui-gate
+            - api
+            - ui
           features:
             - test-square
           branches:

@@ -26,9 +26,14 @@ env:
   
 jobs:
 {{- template "goreleaser" . }}
+
 {{- if not (empty .Branchvals.Tests) }}
-{{- template "auto-test" . }}        
-{{ end }}
+{{- $dot := . }}
+  {{ range $test := .Branchvals.Tests }}
+  {{- template "auto-test" (dict "dot" $dot "test" $test) }}
+  {{ end }}
+{{- end }} {{/* empty tests */}}
+
 {{- template "smoke-tests" . }}
 
   sbom:
