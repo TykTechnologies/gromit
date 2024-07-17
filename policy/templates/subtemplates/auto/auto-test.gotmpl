@@ -15,11 +15,12 @@
         id: params
         shell: bash
         env:
-          # Cover pull_request_target too
+          # startsWith covers pull_request_target too
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
+          VARIATION: test
         run: |
           set -eo pipefail
-          endpoint="http://tui.internal.dev.tyk.technology/api/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}"
+          endpoint="http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}"
           curl="curl -s --retry 5 --retry-delay 10 --fail-with-body --retry-all-errors"
           echo "pump<<EOF
           $($curl ${endpoint}/Pump)
@@ -30,6 +31,7 @@
           envfiles<<EOF
           $($curl ${endpoint}/EnvFiles)
           EOF" | tee -a "$GITHUB_OUTPUT"
+          [[ $VARIATION =~ test ]] && echo "::warning file=release.yml,line=100,col=5,endColumn=7::Using test variation"
 
   {{ .test }}-tests:
     needs:
