@@ -36,6 +36,7 @@
     needs:
       - test-controller-{{ .test }}
     {{ if has "releng" .dot.Branchvals.Features }}
+      - goreleaser
     runs-on: ubuntu-latest-m-2
     {{- else }}
     runs-on: ubuntu-latest
@@ -104,9 +105,9 @@
           match_tag={{`${{steps.ecr.outputs.registry}}`}}/{{ .dot.Name }}:$BASE_REF
           {{- if eq .dot.Name "tyk-ci" }}
           tags=($match_tag)
-          {{ else }}
+          {{- else }}
           tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
-          {{ end -}} 
+          {{- end }} 
           docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} ${match_tag} 2>versions.env
           echo '# alfa and beta have to come after the override
           tyk_alfa_image=$tyk_image
@@ -117,9 +118,6 @@
           {{- end }}
           {{- if ne .dot.Name "tyk-sink" }}
           tyk_sink_image={{`${{matrix.sink}}`}}
-          {{- end }}
-          {{- if or (eq .test "ui-gate") (eq .test "api-gate") }}
-          tyk_analytics_image=internal/tyk-dashboard
           {{- end }}
           confs_dir=./pro-ha
           env_file=local.env' >> versions.env
@@ -144,7 +142,7 @@
         run: |
           pip install requirements.txt
       {{- end }} {{/* tyk-analytics */}}
-      - name: Run tests
+      - name: Run API tests
         id: test_execution
         env:
           # Cover pull_request_target too
@@ -154,7 +152,7 @@
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
           common_cmd=""
           {{- if eq .dot.Name "tyk-analytics" }}
-          cd tyk-analytics/tests/api
+          cd tyk-analytics/tests/${{ .test }}
           cmd="pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH --ci -m {{`${{ matrix.envfiles.apimarkers }}`}} | tee tests.out"
           {{- else }}
           cmd="docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports

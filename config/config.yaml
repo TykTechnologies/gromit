@@ -124,6 +124,9 @@ policy:
           cgo: true
           upgradefromver: 3.0.9
           configfile: tyk_analytics.conf
+          deletedfiles:
+            - .github/workflows/release-tests-api.yml
+            - .github/workflows/release-tests-ui.yml
           versionpackage: github.com/TykTechnologies/tyk-analytics/internal/build
           tests:
             - ui
