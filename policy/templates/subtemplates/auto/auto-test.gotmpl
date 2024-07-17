@@ -143,7 +143,7 @@
           fetch-depth: 1
           sparse-checkout: tests/api
       - uses: actions/setup-python@v5
-      - working_directory: tests/api
+      - working-directory: tests/api
         run: |
           pip install requirements.txt
       {{- end }} {{/* tyk-analytics */}}
