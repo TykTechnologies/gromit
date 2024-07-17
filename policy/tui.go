@@ -208,7 +208,7 @@ func (s *Server) lookup2(w http.ResponseWriter, r *http.Request) {
 		// if branch not known, send down master's config
 		m = rv.Lookup("master", trigger, testsuite)
 		if m == nil {
-			http.Error(w, fmt.Sprintf("(master, %s, %s) not known for %s", trigger, testsuite, repo), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("default (master, %s, %s) not known for %s", trigger, testsuite, repo), http.StatusNotFound)
 			return
 		}
 	}
@@ -315,7 +315,6 @@ func loadAllVariations(tvDir string) (AllTestsuiteVariations, error) {
 		}
 		av[fname] = tv
 		numVariations++
-		log.Debug().Str("dir", tvDir).Msgf("loaded variation from %s", fname)
 	}
 	if numVariations < 1 {
 		return av, fmt.Errorf("No loadable files in %s", tvDir)

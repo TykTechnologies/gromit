@@ -124,6 +124,8 @@ policy:
           cgo: true
           upgradefromver: 3.0.9
           configfile: tyk_analytics.conf
+          deletedfiles:
+            - .github/workflows/release-tests.yml
           versionpackage: github.com/TykTechnologies/tyk-analytics/internal/build
           tests:
             - ui
@@ -133,21 +135,17 @@ policy:
               features:
                 - s390x
                 - distroless
-                - test-square
             release-5.3:
               features:
                 - s390x
-                - test-square
             release-5.4:
               features:
                 - s390x
                 - release-test
-                - test-square
             release-5-lts:
               buildenv: 1.16
               features:
                 - el7-pgo-build
-                - test-square
 
         portal:
           description: >-
@@ -233,6 +231,8 @@ policy:
     stand-alone-services:
       repos:
         tyk-ci:
+          deletedfiles:
+            - .github/workflows/release-tests.yml
           description: >-
             Tyk automation repo environment for regression testing
           tests:

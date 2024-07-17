@@ -58,7 +58,7 @@ func TestV1Variations(t *testing.T) {
 		{
 			Name:         "EnvFiles",
 			Endpoint:     "/api/repo1/br0/tr0/ts0/EnvFiles",
-			ResponseJSON: `[{"cache":"repo1-redis0", "config":"repo1-conf0", "db":"repo1-db0"}]`,
+			ResponseJSON: `[{"cache":"repo1-redis0", "config":"repo1-conf0", "db":"repo1-db0", "apimarkers":"", "uimarkers":""}]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
@@ -85,21 +85,21 @@ func TestV2Variations(t *testing.T) {
 	cases := []APITestCase{
 		{
 			Name:         "EnvFiles",
-			Endpoint:     "/v2/test-variations/repo1/br0/tr0/ts0/EnvFiles",
-			ResponseJSON: `[{"cache":"repo1-redis0", "config":"repo1-conf0", "db":"repo1-db0"}]`,
+			Endpoint:     "/v2/prod-variations/repo0/br0/tr0/ts0/EnvFiles",
+			ResponseJSON: `[{"cache":"repo0-redis0", "config":"repo0-conf0", "db":"", "apimarkers":"m0", "uimarkers":"m1"}]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
 		{
 			Name:         "Pump",
-			Endpoint:     "/v2/test-var/repo0/br1/tr1/ts0/Pump",
+			Endpoint:     "/v2/prod-var/repo0/br1/tr1/ts0/Pump",
 			ResponseJSON: `["pump-br1", "master"]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
 		{
 			Name:         "Sink",
-			Endpoint:     "/v2/test-variations.yaml/repo1/br0/tr1/ts0/Sink",
+			Endpoint:     "/v2/prod-variations.yml/repo1/br0/tr1/ts0/Sink",
 			ResponseJSON: `["sink-br0", "master"]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",

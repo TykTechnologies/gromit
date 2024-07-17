@@ -7,6 +7,8 @@ level: # repos
     envfiles:
       - cache: repo0-redis0
         config: repo0-conf0
+        apimarkers: m0
+        uimarkers: m1
     level: # branches
       br0:
         pump: [pump-br0]

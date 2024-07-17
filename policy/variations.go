@@ -10,9 +10,11 @@ import (
 // recursion allows it to compactly represent the save state
 type ghMatrix struct {
 	EnvFiles []struct {
-		Cache  string `json:"cache"`
-		DB     string `json:"db"`
-		Config string `json:"config"`
+		Cache      string `json:"cache"`
+		DB         string `json:"db"`
+		Config     string `json:"config"`
+		APIMarkers string `json:"apimarkers"`
+		UIMarkers  string `json:"uimarkers"`
 	}
 	Pump  []string            `json:"pump"`
 	Sink  []string            `json:"sink"`

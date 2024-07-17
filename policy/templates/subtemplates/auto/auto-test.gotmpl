@@ -1,65 +1,9 @@
 {{ define "auto-test" }}
-{{- if (eq .dot.Name "tyk-analytics") }} {{/* Need to build tat first */}}
-  build-tat:
-    runs-on: ubuntu-latest
-    outputs:
-      tags: {{`${{ steps.metadata.outputs.tags }}`}}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install flake for linting
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8
-
-      - name: Lint with flake8
-        working-directory: tests/api
-        run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
-          role-session-name: cipush
-          aws-region: eu-central-1
-      - uses: aws-actions/amazon-ecr-login@v2
-        id: ecr
-        with:
-          mask-password: 'true'
-          mask-aws-account-id: 'true'
-          
-      - name: Docker metadata
-        id: metadata
-        uses: docker/metadata-action@v5
-        with:
-          images: {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests
-          flavor: |
-            latest=false
-          tags: |
-            type=ref,event=branch
-            type=sha,format=long,prefix=
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: tests/api
-          file: tests/api/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: {{`${{ steps.metadata.outputs.tags }}`}}
-          labels: {{`${{ steps.metadata.outputs.labels }}`}}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max  
-{{ end }} {{/* build tat */}}
   test-controller-{{ .test }}:
-  {{- if and (eq .test "api") (eq .dot.Name "tyk-analytics") }}
-    needs: build-tat
-  {{- else }}  
-    needs: goreleaser
-  {{- end }}
+  {{- if has "releng" .dot.Branchvals.Features }}
+    needs:
+      - goreleaser
+  {{- end }}  
     runs-on: ubuntu-latest
     outputs:
       envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
@@ -90,15 +34,18 @@
 
   {{ .test }}-tests:
     needs:
-    {{- if and (has "releng" .dot.Branchvals.Features) }}
-      - goreleaser
-    {{- end }}  
       - test-controller-{{ .test }}
     {{ if has "releng" .dot.Branchvals.Features }}
     runs-on: ubuntu-latest-m-2
     {{- else }}
     runs-on: ubuntu-latest
     {{- end }}
+    env:
+      {{- if eq .test "ui" }}
+      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/playwright-report/results.xml
+      {{ else if eq .test "api" }}
+      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml
+      {{- end }}
     permissions:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
@@ -190,8 +137,17 @@
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
 
       {{- if eq .test "api" }}
+      {{- if eq .dot.Name "tyk-analytics" }}
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: tests/api
+      - uses: actions/setup-python@v5
+      - working_directory: tests/api
+        run: |
+          pip install requirements.txt
+      {{- end }} {{/* tyk-analytics */}}
       - name: Run tests
-        working-directory: auto
         id: test_execution
         env:
           # Cover pull_request_target too
@@ -199,12 +155,19 @@
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
+          common_cmd=""
+          {{- if eq .dot.Name "tyk-analytics" }}
+          cd tyk-analytics/tests/api
+          cmd="pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH --ci -m {{`${{ matrix.envfiles.apimarkers }}`}} | tee tests.out"
+          {{- else }}
+          cmd="docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports
+            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:$BASE_REF
+            pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH --ci -m {{`${{ matrix.envfiles.apimarkers }}`}} | tee tests.out"
+          {{- end }}      
           # Run tests
           set -o pipefail
           echo "### API tests {{`${{ matrix.envfiles.db }}`}} {{`${{ matrix.envfiles.conf }}`}}" >> $GITHUB_STEP_SUMMARY
-          if docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports \
-            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:$BASE_REF \
-            pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH#"{{`${{ github.workspace }}`}}"} --ci -m "not local and not dind {{`${{ matrix.markers }}`}}" | tee tests.out; then
+          if $cmd; then
               echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           else
             echo "::error title=API tests {{`${{ matrix.envfiles.db }}`}} {{`${{ matrix.envfiles.conf }}`}}::Test execution failed"
@@ -252,11 +215,6 @@
         env:
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
           REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.test_execution.outputs.id}}`}}
-          {{ if eq .test "ui" }}
-          XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/playwright-report/results.xml
-          {{ else if eq .test "api" }}
-          XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml
-          {{- end }}
           METADATA_REPORT_PATH: /tmp/metadata.toml
         run: |
           # Generate metadata report
