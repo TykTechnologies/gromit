@@ -20,7 +20,7 @@
         run: |
           set -eo pipefail
           endpoint="http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}"
-          curl="curl -s --retry 5 --retry-delay 10 --fail-with-body --retry-all-errors"
+          curl="curl -s --retry 5 --retry-delay 10 --fail-with-body"
           echo "pump<<EOF
           $($curl ${endpoint}/Pump)
           EOF
@@ -59,9 +59,6 @@
         {{- if ne .dot.Name "tyk-sink" }}
         sink: {{`${{ fromJson(needs.test-controller-`}}{{ .test }}{{`.outputs.sink) }}`}}
         {{ end }}
-        include:
-          - db: postgres15
-            markers: "and not sql"
         {{- if and (ne .dot.Name "tyk-pump") (ne .dot.Name "tyk-sink") }}
         exclude:
           - pump: tykio/tyk-pump-docker-pub:v1.8
@@ -79,14 +76,14 @@
         uses: aws-actions/amazon-ecr-login@v2
         with:
           mask-password: 'true'
-          # Only {{`${{ github.actor }}`}} has access
-          # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
       - name: Setup tmate session only in debug mode
         uses: mxschmitt/action-tmate@v3
         if: runner.debug == '1'
         with:
           detached: true
           limit-access-to-actor: true          
+          # Only {{`${{ github.actor }}`}} has access
+          # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
       - name: fetch env from tyk-ci
         env:
           GH_TOKEN: {{`${{ github.token }}`}}
@@ -104,7 +101,7 @@
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
         run: |
-          match_tag={{`${{steps.ecr.outputs.registry}}`}}/.dot.Name:$BASE_REF
+          match_tag={{`${{steps.ecr.outputs.registry}}`}}/{{ .dot.Name }}:$BASE_REF
           {{- if eq .dot.Name "tyk-ci" }}
           tags=($match_tag)
           {{ else }}
@@ -125,12 +122,12 @@
           tyk_analytics_image=internal/tyk-dashboard
           {{- end }}
           confs_dir=./pro-ha
-          env_file=local-{{`${{ matrix.envfiles.db }}`}}.env' >> versions.env
+          env_file=local.env' >> versions.env
           echo "::group::versions"
           cat versions.env
           echo "::endgroup::"
           # Add Tyk component config variations to $env_file
-          cat confs/{{`${{ matrix.envfiles.config }}`}}.env >> local-{{`${{ matrix.envfiles.db }}`}}.env
+          cat confs/{{`${{ matrix.envfiles.config }}`}}.env >> local.env
           # bring up env, the project name is important
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
           ./dash-bootstrap.sh http://localhost:3000
