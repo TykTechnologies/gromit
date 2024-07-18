@@ -95,9 +95,9 @@
           match_tag={{`${{steps.ecr.outputs.registry}}`}}/{{ .dot.Name }}:$BASE_REF
           {{- if eq .dot.Name "tyk-ci" }}
           tags=($match_tag)
-          {{- else }}
+          {{ else }}
           tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
-          {{- end }} 
+          {{ end -}} 
           docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} ${match_tag} 2>versions.env
           echo '# alfa and beta have to come after the override
           tyk_alfa_image=$tyk_image
@@ -110,12 +110,12 @@
           tyk_sink_image={{`${{matrix.sink}}`}}
           {{- end }}
           confs_dir=./pro-ha
-          env_file=local.env' >> versions.env
+          env_file=local-{{`${{ matrix.envfiles.db }}`}}.env' >> versions.env
           echo "::group::versions"
           cat versions.env
           echo "::endgroup::"
           # Add Tyk component config variations to $env_file
-          cat confs/{{`${{ matrix.envfiles.config }}`}}.env >> local.env
+          cat confs/{{`${{ matrix.envfiles.config }}`}}.env >> local-{{`${{ matrix.envfiles.db }}`}}.env
           # bring up env, the project name is important
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
           ./dash-bootstrap.sh http://localhost:3000
