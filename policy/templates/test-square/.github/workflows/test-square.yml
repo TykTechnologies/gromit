@@ -7,8 +7,6 @@ on:
 {{- if eq .Name "tyk-analytics" }}
       - 'tests/ui/**'
       - 'tests/api/**'
-{{- else if eq .Name "tyk-ci" }}
-      - 'auto/**'   
 {{- end }}
   push:
     branches:
@@ -18,8 +16,6 @@ on:
 {{- if eq .Name "tyk-analytics" }}
       - 'tests/ui/**'
       - 'tests/api/**'
-{{- else if eq .Name "tyk-ci" }}
-      - 'auto/**'   
 {{- end }}
 
 jobs:
@@ -28,7 +24,7 @@ jobs:
 {{- template "auto-test" (dict "dot" $DOT "test" $test) }}
 {{- end }}
 
-{{ if eq .Name "tyk-ci" }}
+{{ if eq .Name "tyk-pro" }}
   release:
     if: {{`${{ startsWith(github.ref, 'refs/tags') }}`}}
     runs-on: ubuntu-latest
@@ -40,16 +36,11 @@ jobs:
       contents: write  
     steps:
       - uses: actions/checkout@v3
-          
-      - name: CI env
-        run:
-          tar czf ci-env.tgz auto/
 
       - uses: softprops/action-gh-release@v1
         with:
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           name: {{`${{ github.ref_name }}`}}
           tag_name: {{`${{ github.ref_name }}`}}
-          body_path: auto/release.md
-          files: ci-env.tgz
+          body_path: release.md
 {{- end }} {{/* tyk-ci */}}
