@@ -196,10 +196,10 @@ func loadVariation(tvFile string) (RepoTestsuiteVariations, error) {
 		rv.Leaves = make(map[string]ghMatrix)
 		// apply defaults to every repo
 		matrix.EnvFiles = append(matrix.EnvFiles, global.EnvFiles...)
-		matrix.Pump = append(matrix.Pump, global.Pump...)
-		matrix.Sink = append(matrix.Sink, global.Sink...)
-		matrix.Distros.Deb = append(matrix.Distros.Deb, global.Distros.Deb...)
-		matrix.Distros.Rpm = append(matrix.Distros.Rpm, global.Distros.Rpm...)
+		matrix.Pump = removeDuplicates(append(matrix.Pump, global.Pump...))
+		matrix.Sink = removeDuplicates(append(matrix.Sink, global.Sink...))
+		matrix.Distros.Deb = removeDuplicates(append(matrix.Distros.Deb, global.Distros.Deb...))
+		matrix.Distros.Rpm = removeDuplicates(append(matrix.Distros.Rpm, global.Distros.Rpm...))
 
 		parseVariations(matrix, 0, &rv, vp)
 		tv[repo] = rv

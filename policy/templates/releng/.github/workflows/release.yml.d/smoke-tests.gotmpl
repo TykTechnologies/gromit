@@ -23,7 +23,10 @@
 {{if eq .Name "tyk-sink" }}
   {{ $pcrepo =  print $.PCRepo "-stable" }}
 {{ end }}
-  upgrade-deb:
+
+{{ $repo := .Name }}
+{{ range $flavour := list("deb" "rpm")}}
+  upgrade-{{ $flavour }}:
     services:
       httpbin.org:
         image: kennethreitz/httpbin
@@ -31,12 +34,12 @@
     needs:
       - test-controller-distros
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         arch:
           - amd64
           - arm64
-        distro: {{`${{ fromJson(needs.test-controller-distros.outputs.deb) }}`}}
+        distro: {{`${{ fromJson(needs.test-controller-distros.outputs.`}}{{ $flavour }}{{`) }}`}}
 
     steps:
       - uses: actions/checkout@v4
@@ -54,12 +57,22 @@
       - name: generate dockerfile
         run: |
           echo 'FROM {{`${{ matrix.distro }}`}}
+{{- if eq $flavour "deb" }}
           ARG TARGETARCH
           COPY {{ .PackageName }}*_${TARGETARCH}.deb /{{ .PackageName }}.deb
           RUN apt-get update && apt-get install -y curl
           RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $pcrepo }}/script.deb.sh | bash && apt-get install -y {{ .PackageName }}={{ .Branchvals.UpgradeFromVer }}
           RUN dpkg -i {{ .PackageName }}.deb
-  {{- if eq .Name "tyk" }}
+{{- else if eq $flavour "rpm" }}
+          COPY {{ .PackageName }}*.x86_64.rpm /{{ .PackageName }}.rpm
+          RUN command -v curl || yum install -y curl
+          RUN command -v useradd || yum install -y shadow-utils
+          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $pcrepo }}/script.rpm.sh | bash && yum install -y {{ .PackageName }}-{{ .Branchvals.UpgradeFromVer }}-1
+          RUN curl https://keyserver.tyk.io/tyk.io.rpm.signing.key.2020 -o {{ $pcrepo }}.key && rpm --import {{ $pcrepo }}.key
+          RUN rpm --checksig {{ .PackageName }}.rpm
+          RUN rpm -Uvh --force {{ .PackageName }}.rpm
+{{- end }} {{/* if flavour */}}
+  {{- if eq $repo "tyk" }}
           RUN /opt/tyk-gateway/install/setup.sh --listenport=8080 --redishost=localhost --redisport=6379 --domain=""
           COPY ci/tests/api-functionality/data/api.json /opt/tyk-gateway/apps/
           CMD ["/opt/tyk-gateway/tyk", "--conf", "/opt/tyk-gateway/tyk.conf"]
@@ -83,62 +96,7 @@
           sleep 2
           ./ci/tests/api-functionality/api_test.sh
   {{- end }}
-
-  upgrade-rpm:
-    services:
-      httpbin.org:
-        image: kennethreitz/httpbin
-    needs: goreleaser
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        distro: {{`${{ fromJson(needs.test-controller-distros.outputs.rpm) }}`}}
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: rpm
-
-      - uses: docker/setup-buildx-action@v3
-
-      - name: generate dockerfile
-        run: |
-          echo 'FROM {{`${{ matrix.distro }}`}}
-          COPY {{ .PackageName }}*.x86_64.rpm /{{ .PackageName }}.rpm
-          RUN command -v curl || yum install -y curl
-          RUN command -v useradd || yum install -y shadow-utils
-          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $pcrepo }}/script.rpm.sh | bash && yum install -y {{ .PackageName }}-{{ .Branchvals.UpgradeFromVer }}-1
-          RUN curl https://keyserver.tyk.io/tyk.io.rpm.signing.key.2020 -o {{ $pcrepo }}.key && rpm --import {{ $pcrepo }}.key
-          RUN rpm --checksig {{ .PackageName }}.rpm
-          RUN rpm -Uvh --force {{ .PackageName }}.rpm
-  {{- if eq .Name "tyk" }}
-          RUN /opt/tyk-gateway/install/setup.sh --listenport=8080 --redishost=localhost --redisport=6379 --domain=""
-          COPY ci/tests/api-functionality/data/api.json /opt/tyk-gateway/apps/
-          CMD ["/opt/tyk-gateway/tyk", "--conf", "/opt/tyk-gateway/tyk.conf"]
-  {{- end }}
-          ' > Dockerfile
-
-      - name: install on {{`${{ matrix.distro }}`}}
-        uses: docker/build-push-action@v6
-        with:
-          context: "."
-          file: Dockerfile
-          push: false
-  {{- if eq .Name "tyk" }}
-          tags: test   # matrix.distro for ubi has invalid chars for a tag
-          load: true
-
-      - name: Test the built container image with api functionality test.
-        run: |
-          docker run -d -p8080:8080 --network {{`${{ job.container.network }}`}} --rm test
-          sleep 2
-          ./ci/tests/api-functionality/api_test.sh
-  {{ end }}
+{{- end }} {{/* range flavour */}}
 
   {{- if has "release-test" .Branchvals.Features }}
   release-tests:
