@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"bytes"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -19,9 +20,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httprate"
 	"github.com/go-chi/render"
-	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/yaml.v3"
 )
 
 // Serve starts the embedded test controller UI
@@ -71,7 +70,9 @@ func CreateNewServer(tvDir string, creds map[string]string) *Server {
 	})
 	r.Route("/v2", func(r chi.Router) {
 		r.Get("/dump/{tsv}", s.dumpJson)
-		r.Get("/{tsv}/{repo}/{branch}/{trigger}/{ts}/{field}", s.lookup2)
+		r.Get("/{tsv}/{repo}/{branch}/{trigger}/{ts}/{field}.json", s.renderObj("json"))
+		r.Get("/{tsv}/{repo}/{branch}/{trigger}/{ts}/{field}.gho", s.renderObj("gho"))
+		r.Get("/{tsv}/{repo}/{branch}/{trigger}/{ts}.gho", s.renderObj("gho"))
 	})
 	r.Get("/", s.renderSPA())
 	r.Group(func(r chi.Router) {
@@ -81,18 +82,6 @@ func CreateNewServer(tvDir string, creds map[string]string) *Server {
 	})
 	r.Mount("/show/", savedVariations(tvDir))
 	return s
-}
-
-// RepoTestsuiteVariations maps savedVariations to a form suitable for runtime use
-type RepoTestsuiteVariations map[string]repoVariations
-type AllTestsuiteVariations map[string]RepoTestsuiteVariations
-
-func (av AllTestsuiteVariations) Files() []string {
-	keys := make([]string, 0, len(av))
-	for k := range av {
-		keys = append(keys, k)
-	}
-	return keys
 }
 
 // finds the supplied name as a sub-string among the keys of AllVariations
@@ -181,47 +170,89 @@ func (s *Server) lookup(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, f.Interface())
 }
 
+func (s *Server) renderObj(format string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tsv := chi.URLParam(r, "tsv")
+		repo := chi.URLParam(r, "repo")
+		branch := chi.URLParam(r, "branch")
+		trigger := chi.URLParam(r, "trigger")
+		testsuite := chi.URLParam(r, "ts")
+		field := chi.URLParam(r, "field")
+
+		m, err := s.findMatrix(tsv, repo, branch, trigger, testsuite)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		var obj any
+		if len(field) > 0 {
+			v := reflect.ValueOf(m)
+			if v.Kind() == reflect.Ptr {
+				v = v.Elem()
+			}
+			f := v.FieldByName(field)
+			if !f.IsValid() {
+				http.Error(w, fmt.Sprintf("%s(%s, %s, %s) has no field %s", repo, branch, trigger, testsuite, field), http.StatusNotFound)
+				return
+			}
+			obj = f.Interface()
+		} else {
+			obj = *m
+		}
+		switch format {
+		case "json":
+			render.JSON(w, r, obj)
+		case "gho":
+			renderGHO(w, obj)
+		}
+	}
+}
+
+// renderGHO writes the supplied object in a form that github actions can parse it as a variable
+func renderGHO(w http.ResponseWriter, obj any) {
+	val := reflect.ValueOf(obj)
+	typ := val.Type()
+
+	var buf bytes.Buffer
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		fieldValue := val.Field(i)
+
+		fieldName := field.Tag.Get("json")
+		fjson, err := json.Marshal(fieldValue.Interface())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if len(fieldName) > 0 {
+			buf.WriteString(fieldName + "<<EOF\n")
+			buf.Write(fjson)
+			buf.WriteString("\nEOF\n")
+		}
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	buf.WriteTo(w)
+}
+
 // lookup2 looks up RepoTestsuiteVariations based on the tsv parameter
 // being a regexp match for one of the map keys of s.AllVariations
-func (s *Server) lookup2(w http.ResponseWriter, r *http.Request) {
-	tsv := chi.URLParam(r, "tsv")
-	repo := chi.URLParam(r, "repo")
-	branch := chi.URLParam(r, "branch")
-	trigger := chi.URLParam(r, "trigger")
-	testsuite := chi.URLParam(r, "ts")
-	field := chi.URLParam(r, "field")
-
+func (s *Server) findMatrix(tsv, repo, branch, trigger, testsuite string) (*ghMatrix, error) {
 	log.Debug().Msgf("looking for %s in %v", tsv, s.AllVariations.Files())
 	rtsv, found := s.findVariation(tsv)
 	if !found {
-		http.Error(w, fmt.Sprintf("%s not found among %v", tsv, s.AllVariations.Files()), http.StatusNotFound)
-		return
+		return nil, fmt.Errorf("%s not found among %v", tsv, s.AllVariations.Files())
 	}
 	var m *ghMatrix
 	rv, found := rtsv[repo]
 	if !found {
-		http.Error(w, fmt.Sprintf("%s not known", repo), http.StatusNotFound)
-		return
+		return nil, fmt.Errorf("%s not known", repo)
 	}
 	m = rv.Lookup(branch, trigger, testsuite)
 	if m == nil {
-		// if branch not known, send down master's config
-		m = rv.Lookup("master", trigger, testsuite)
-		if m == nil {
-			http.Error(w, fmt.Sprintf("default (master, %s, %s) not known for %s", trigger, testsuite, repo), http.StatusNotFound)
-			return
-		}
+		return nil, fmt.Errorf("(%s or master, %s, %s) not known for %s", branch, trigger, testsuite, repo)
 	}
-	v := reflect.ValueOf(m)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-	f := v.FieldByName(field)
-	if !f.IsValid() {
-		http.Error(w, fmt.Sprintf("%s(%s, %s, %s) has no field %s", repo, branch, trigger, testsuite, field), http.StatusNotFound)
-		return
-	}
-	render.JSON(w, r, f.Interface())
+	return m, nil
 }
 
 func (s *Server) dumpJson(w http.ResponseWriter, r *http.Request) {
@@ -290,69 +321,4 @@ func getCredentials(jsontext string) map[string]string {
 		log.Fatal().Err(err).Msg("getting creds for authenticated APIs")
 	}
 	return creds
-}
-
-// loadAllVariations loads all yaml files in tvDir returning it in a
-// map indexed by filename
-func loadAllVariations(tvDir string) (AllTestsuiteVariations, error) {
-	files, err := os.ReadDir(tvDir)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not read directory")
-	}
-
-	numVariations := 0
-	av := make(AllTestsuiteVariations)
-	for _, file := range files {
-		fname := file.Name()
-		yaml, _ := regexp.MatchString("\\.ya?ml$", fname)
-		if !yaml {
-			continue
-		}
-		pathName := filepath.Join(tvDir, fname)
-		tv, err := loadVariation(pathName)
-		if err != nil {
-			log.Warn().Err(err).Msgf("could not load test variation from %s", pathName)
-		}
-		av[fname] = tv
-		numVariations++
-	}
-	if numVariations < 1 {
-		return av, fmt.Errorf("No loadable files in %s", tvDir)
-	}
-	return av, nil
-}
-
-// loadVariation unrolls the compact saved representation from a file
-// it also sets up handlers for the loaded variations
-func loadVariation(tvFile string) (RepoTestsuiteVariations, error) {
-	data, err := os.ReadFile(tvFile)
-	if err != nil {
-		return nil, err
-	}
-	var saved ghMatrix
-	err = yaml.Unmarshal(data, &saved)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal data from %s: %s: %w", tvFile, string(data), err)
-	}
-	// top level variations
-	var global ghMatrix
-	err = copier.CopyWithOption(&global, &saved, copier.Option{IgnoreEmpty: true})
-	if err != nil {
-		log.Warn().Err(err).Msgf("could not copy global variations")
-	}
-	tv := make(RepoTestsuiteVariations)
-	for repo, matrix := range saved.Level {
-		var rv repoVariations
-		var vp variationPath
-		rv.Leaves = make(map[string]ghMatrix)
-		// apply defaults to every repo
-		matrix.EnvFiles = append(matrix.EnvFiles, global.EnvFiles...)
-		matrix.Pump = append(matrix.Pump, global.Pump...)
-		matrix.Sink = append(matrix.Sink, global.Sink...)
-
-		parseVariations(matrix, 0, &rv, vp)
-		tv[repo] = rv
-	}
-	log.Debug().Interface("tv", tv).Msgf("loaded from %s", tvFile)
-	return tv, nil
 }

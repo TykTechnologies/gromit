@@ -19,17 +19,7 @@
           VARIATION: test
         run: |
           set -eo pipefail
-          endpoint="http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}"
-          curl="curl -s --retry 5 --retry-delay 10 --fail-with-body"
-          echo "pump<<EOF
-          $($curl ${endpoint}/Pump)
-          EOF
-          sink<<EOF
-          $($curl ${endpoint}/Sink)
-          EOF
-          envfiles<<EOF
-          $($curl ${endpoint}/EnvFiles)
-          EOF" | tee -a "$GITHUB_OUTPUT"
+          curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}.gho" | tee -a "$GITHUB_OUTPUT"
           [[ $VARIATION =~ test ]] && echo "::warning file=release.yml,line=100,col=5,endColumn=7::Using test variation"
 
   {{ .test }}-tests:

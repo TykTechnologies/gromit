@@ -23,6 +23,11 @@ level: # repos
         sink: [sink-br1]
         level: # trigger
           tr1:
+            distros:
+              rpm:
+                - d0
+              deb:
+                - d1
             envfiles:
               - cache: repo0-redis-tr1
                 config: repo0-conf-tr1

@@ -2,8 +2,13 @@ package policy
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
 
+	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
+	"gopkg.in/yaml.v3"
 )
 
 // ghMatrix models the github action matrix structure
@@ -15,9 +20,13 @@ type ghMatrix struct {
 		Config     string `json:"config"`
 		APIMarkers string `json:"apimarkers"`
 		UIMarkers  string `json:"uimarkers"`
-	}
-	Pump  []string            `json:"pump"`
-	Sink  []string            `json:"sink"`
+	} `json:"envfiles"`
+	Pump    []string `json:"pump"`
+	Sink    []string `json:"sink"`
+	Distros struct {
+		Deb []string `json:"deb"`
+		Rpm []string `json:"rpm"`
+	} `json:"distros"`
 	Level map[string]ghMatrix `copier:"-"` // assumption: copies are _never_ recursive
 }
 
@@ -37,6 +46,18 @@ type repoVariations struct {
 
 type variationPath struct {
 	Branch, Trigger, Testsuite string
+}
+
+// RepoTestsuiteVariations maps savedVariations to a form suitable for runtime use
+type RepoTestsuiteVariations map[string]repoVariations
+type AllTestsuiteVariations map[string]RepoTestsuiteVariations
+
+func (av AllTestsuiteVariations) Files() []string {
+	keys := make([]string, 0, len(av))
+	for k := range av {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func (rv repoVariations) Branches() []string {
@@ -70,7 +91,7 @@ func (rv repoVariations) Testsuites(branch, trigger string) []string {
 func (rv repoVariations) Lookup(branch, trigger, testsuite string) *ghMatrix {
 	m, found := rv.Leaves[createVariationKey(branch, trigger, testsuite)]
 	if !found {
-		return nil
+		m = rv.Leaves[createVariationKey("master", trigger, testsuite)]
 	}
 	return &m
 }
@@ -96,6 +117,8 @@ func parseVariations(sv ghMatrix, depth int, rv *repoVariations, path variationP
 		levelMatrix.EnvFiles = append(levelMatrix.EnvFiles, sv.EnvFiles...)
 		levelMatrix.Pump = removeDuplicates(append(levelMatrix.Pump, sv.Pump...))
 		levelMatrix.Sink = removeDuplicates(append(levelMatrix.Sink, sv.Sink...))
+		levelMatrix.Distros.Deb = removeDuplicates(append(levelMatrix.Distros.Deb, sv.Distros.Deb...))
+		levelMatrix.Distros.Rpm = removeDuplicates(append(levelMatrix.Distros.Rpm, sv.Distros.Rpm...))
 		switch depth {
 		case Branch:
 			path.Branch = level
@@ -116,4 +139,71 @@ func parseVariations(sv ghMatrix, depth int, rv *repoVariations, path variationP
 		}
 	}
 	return
+}
+
+// loadAllVariations loads all yaml files in tvDir returning it in a
+// map indexed by filename
+func loadAllVariations(tvDir string) (AllTestsuiteVariations, error) {
+	files, err := os.ReadDir(tvDir)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not read directory")
+	}
+
+	numVariations := 0
+	av := make(AllTestsuiteVariations)
+	for _, file := range files {
+		fname := file.Name()
+		yaml, _ := regexp.MatchString("\\.ya?ml$", fname)
+		if !yaml {
+			continue
+		}
+		pathName := filepath.Join(tvDir, fname)
+		tv, err := loadVariation(pathName)
+		if err != nil {
+			log.Warn().Err(err).Msgf("could not load test variation from %s", pathName)
+		}
+		av[fname] = tv
+		numVariations++
+	}
+	if numVariations < 1 {
+		return av, fmt.Errorf("No loadable files in %s", tvDir)
+	}
+	return av, nil
+}
+
+// loadVariation unrolls the compact saved representation from a file
+// it also sets up handlers for the loaded variations
+func loadVariation(tvFile string) (RepoTestsuiteVariations, error) {
+	data, err := os.ReadFile(tvFile)
+	if err != nil {
+		return nil, err
+	}
+	var saved ghMatrix
+	err = yaml.Unmarshal(data, &saved)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal data from %s: %s: %w", tvFile, string(data), err)
+	}
+	// top level variations
+	var global ghMatrix
+	err = copier.CopyWithOption(&global, &saved, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		log.Warn().Err(err).Msgf("could not copy global variations")
+	}
+	tv := make(RepoTestsuiteVariations)
+	for repo, matrix := range saved.Level {
+		var rv repoVariations
+		var vp variationPath
+		rv.Leaves = make(map[string]ghMatrix)
+		// apply defaults to every repo
+		matrix.EnvFiles = append(matrix.EnvFiles, global.EnvFiles...)
+		matrix.Pump = append(matrix.Pump, global.Pump...)
+		matrix.Sink = append(matrix.Sink, global.Sink...)
+		matrix.Distros.Deb = append(matrix.Distros.Deb, global.Distros.Deb...)
+		matrix.Distros.Rpm = append(matrix.Distros.Rpm, global.Distros.Rpm...)
+
+		parseVariations(matrix, 0, &rv, vp)
+		tv[repo] = rv
+	}
+	log.Debug().Interface("tv", tv).Msgf("loaded from %s", tvFile)
+	return tv, nil
 }
