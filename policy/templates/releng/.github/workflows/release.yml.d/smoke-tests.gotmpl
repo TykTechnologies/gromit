@@ -16,7 +16,7 @@
           VARIATION: test
         run: |
           set -eo pipefail
-          curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/distros.gho" | tee -a "$GITHUB_OUTPUT"
+          curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/api/Distros.gho" | tee -a "$GITHUB_OUTPUT"
           [[ $VARIATION =~ test ]] && echo "::warning file=release.yml,line=100,col=5,endColumn=7::Using test variation"
 
 {{- $pcrepo :=  $.PCRepo }}
@@ -29,7 +29,6 @@
         image: kennethreitz/httpbin
     runs-on: ubuntu-latest
     needs:
-      - goreleaser
       - test-controller-distros
     strategy:
       fail-fast: false
