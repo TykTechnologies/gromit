@@ -159,7 +159,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 				repoName,
 				ghToken)
 			if err != nil {
-				return fmt.Errorf("git init %s: %v, is the repo private and GITHUB_TOKEN not set?", repoName, err)
+				return fmt.Errorf("git init %s/%s: %v, is the repo private and GITHUB_TOKEN not set?", rp.Owner, repoName, err)
 			}
 			pushOpts := &policy.PushOptions{
 				OpDir:        repoName,

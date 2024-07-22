@@ -93,11 +93,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
         run: |
+          set -eo pipefail
           ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }}
           echo "## :hospital: ℞ ${{ matrix.repo }}" >> $GITHUB_STEP_SUMMARY
           cd ${{ matrix.repo }} && for b in $(git for-each-ref --format '%(refname:short)' refs/heads); do
-             echo -e "<details>\n <summary> ${{ matrix.repo }} $b </summary>\n\n"
-             echo '```diff\n'
+             echo -e "<details>\n <summary> ${{ matrix.repo }} $b </summary>\n"
+             echo '```diff'
              git diff origin/${b} $b
              echo -e '```\n</details>'
           done | tee -a $GITHUB_STEP_SUMMARY

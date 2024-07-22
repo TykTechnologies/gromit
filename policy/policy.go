@@ -47,6 +47,7 @@ type repoConfig struct {
 // The group level is applicable for all the repos in that group.
 // Repeating the same repo in multiple groups is UB
 type Policies struct {
+	Owner        string
 	DeletedFiles []string
 	Groups       map[string]repoConfig
 }
@@ -172,6 +173,7 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 	if err != nil {
 		return rp, err
 	}
+	log.Trace().Interface("rp", rp).Msg("computed repo vals")
 
 	allBranches := make(map[string]branchVals)
 	for b, bbv := range r.Branches {
@@ -195,7 +197,7 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 		rbv.Features = newSetFromSlices(group.Features, r.Features, bbv.Features).Members()
 		rbv.DeletedFiles = newSetFromSlices(p.DeletedFiles, group.DeletedFiles, r.DeletedFiles, bbv.DeletedFiles).Members()
 
-		log.Trace().Interface("bv", rbv).Str("branch", b).Msg("computed")
+		log.Trace().Interface("bv", rbv).Str("branch", b).Msg("computed branch vals")
 		allBranches[b] = rbv
 	}
 	rp.Branches = allBranches

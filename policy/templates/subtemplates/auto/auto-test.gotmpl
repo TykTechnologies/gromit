@@ -35,11 +35,7 @@
     runs-on: ubuntu-latest
     {{- end }}
     env:
-      {{- if eq .test "ui" }}
-      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/tyk-analytics/tests/ui/playwright-report/results.xml
-      {{ else if eq .test "api" }}
-      XUNIT_REPORT_PATH: {{`${{ github.workspace }}`}}/reports/pytest-report.xml
-      {{- end }}
+      XUNIT_REPORT_PATH: {{`${{ github.workspace}}`}}/test-results.xml
     permissions:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
@@ -146,62 +142,49 @@
         id: test_execution
         env:
           # Cover pull_request_target too
+          {{- if eq .dot.Name "tyk-pro" }}
+          BASE_REF: master
+          {{- else }}
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name }}`}}
+          {{- end }}
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
-          common_cmd=""
+          pytest="pytest -c pytest_ci.ini --junitxml=${XUNIT_REPORT_PATH} --ci -m {{`${{ matrix.envfiles.apimarkers }}`}}"
           {{- if eq .dot.Name "tyk-analytics" }}
           cd tyk-analytics/tests/${{ .test }}
-          cmd="pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH --ci -m {{`${{ matrix.envfiles.apimarkers }}`}} | tee tests.out"
+          cmd=${pytest}
           {{- else }}
-          cmd="docker run --rm --network auto_default --env-file pytest.env -v {{`${{ github.workspace }}`}}/reports:/app/reports
-            {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:$BASE_REF
-            pytest -c pytest_ci.ini --junitxml=./${XUNIT_REPORT_PATH --ci -m {{`${{ matrix.envfiles.apimarkers }}`}} | tee tests.out"
-          {{- end }}      
+          touch $XUNIT_REPORT_PATH
+          cmd="docker run --rm --network auto_default -v $XUNIT_REPORT_PATH:$XUNIT_REPORT_PATH {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:$BASE_REF $pytest"
+          {{- end }}
           # Run tests
-          set -o pipefail
-          echo "### API tests {{`${{ matrix.envfiles.db }}`}} {{`${{ matrix.envfiles.conf }}`}}" >> $GITHUB_STEP_SUMMARY
-          if $cmd; then
-              echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "::error title=API tests {{`${{ matrix.envfiles.db }}`}} {{`${{ matrix.envfiles.conf }}`}}::Test execution failed"
-            cat tests.out >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
+          eval $cmd
 
       {{- else if eq .test "ui" }}
+      - uses: actions/checkout@v4
+        with:
+          repository: TykTechnologies/tyk-analytics
+          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+          fetch-depth: 1
+          sparse-checkout: tests/ui
+          path: tyk-analytics
       - name: Install Node.js 18.16
         uses: actions/setup-node@v4
         with:
           node-version: "18.16"
-      - name: Fix private module deps
-        env:
-          TOKEN: '{{`${{ secrets.ORG_GH_TOKEN }}`}}'
-        run: >
-          git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"                    
-      - name: Install test dependecies
-        run: |
-          npm ci
-        working-directory: tyk-analytics/tests/ui
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
-        working-directory: tyk-analytics/tests/ui
       - name: Execute UI tests
         id: test_execution
-        run: |
-          # Generate report id
-          echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
-          npm run test -- --workers=3
         working-directory: tyk-analytics/tests/ui
         env:
           GW_URL: 'https://localhost:8080/'
           NODE_TLS_REJECT_UNAUTHORIZED: 0
-          SLACK_AUTH_TOKEN: {{`${{ secrets.UI_SLACK_AUTH_TOKEN }}`}}
-          EVENT_TRIGGER: {{`${{ github.event_name }}`}} ({{`${{ github.actor }}`}})
-          JOB_RUN_ID: {{`${{ github.run_id }}`}}
-          JOB_NAME: tyk-analytics - {{`${{ github.ref }}`}} {{`${{ github.event.head_commit.message }}`}}
-          RUN_ID: 'tyk-analytics/{{`${{ github.run_id }}`}}'
+        run: |
+          # Generate report id
+          echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
+          npm install
+          npx playwright install --with-deps chromium
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium --reporter=junit
 
       {{- end }} {{/* end of test variation */}}
 
