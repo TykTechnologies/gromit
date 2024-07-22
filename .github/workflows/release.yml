@@ -37,7 +37,7 @@ jobs:
             
       - uses: goreleaser/goreleaser-action@v6
         with:
-          version: latest
+          version: '~> v2'
           args: release --clean ${{ !startsWith(github.ref, 'refs/tags/') && '--snapshot' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
@@ -61,12 +61,16 @@ jobs:
       fail-fast: false
       matrix:
         repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal, tyk-pro]
+        include:
+          - owner: TykTechnologies
+          - repo: tyk-pro
+            owner: tyklabs
 
     steps:
       - name: checkout ${{matrix.repo}}/${{matrix.branch}}
         uses: actions/checkout@v4
         with:
-          repository: TykTechnologies/${{ matrix.repo }}
+          repository: ${{ matrix.owner }}/${{ matrix.repo }}
           ref: ${{ matrix.branch }}
           token: ${{ secrets.ORG_GH_TOKEN }}
           path: ${{ matrix.repo }}
@@ -84,20 +88,16 @@ jobs:
           chmod +x $gromit
           echo "bin=${gromit}" >> "$GITHUB_OUTPUT"
 
-      - name: diffs
-        run: |
-          ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }}
-          echo "## :hospital: ℞ ${{ matrix.repo }}" >> $GITHUB_STEP_SUMMARY
-          for b in $(git for-each-ref --format '%(refname:short)' refs/heads); do
-             echo "### $b"
-             echo '```diff'
-             git diff $b origin/${b}
-             echo '```'
-          done | tee -a $GITHUB_STEP_SUMMARY
-
-      - name: update ${{ matrix.repo }}:releng/${{ matrix.branch }}
+      - name: update ${{ matrix.repo }}
         if: ${{ (github.event_name == 'push' && github.ref_name == 'master') || endsWith(github.head_ref, 'releng') }}
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
         run: |
-          ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }} --branch ${{ matrix.branch }}
+          ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }}
+          echo "## :hospital: ℞ ${{ matrix.repo }}" >> $GITHUB_STEP_SUMMARY
+          cd ${{ matrix.repo }} && for b in $(git for-each-ref --format '%(refname:short)' refs/heads); do
+             echo -e "<details>\n <summary> ${{ matrix.repo }} $b </summary>\n\n"
+             echo '```diff\n'
+             git diff origin/${b} $b
+             echo -e '```\n</details>'
+          done | tee -a $GITHUB_STEP_SUMMARY
