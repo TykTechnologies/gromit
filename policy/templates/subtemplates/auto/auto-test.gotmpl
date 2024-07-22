@@ -57,6 +57,12 @@
             sink: tykio/tyk-mdcb-docker:v2.4
         {{- end }}
     steps:
+      {{- if eq .dot.Name "tyk-analytics" }}
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: tests/{{ .test }}
+      {{- end }}
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
@@ -129,10 +135,6 @@
 
       {{- if eq .test "api" }}
       {{- if eq .dot.Name "tyk-analytics" }}
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          sparse-checkout: tests/api
       - uses: actions/setup-python@v5
       - working-directory: tests/api
         run: |
@@ -150,9 +152,10 @@
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
-          pytest="pytest -c pytest_ci.ini --junitxml=${XUNIT_REPORT_PATH} --ci -m {{`${{ matrix.envfiles.apimarkers }}`}}"
+          mkdir /app && ln -s test/api/pytest_ci.ini /app/pytest_ci.ini
+          pytest="pytest -c /app/pytest_ci.ini --junitxml=${XUNIT_REPORT_PATH} --ci -m {{`${{ matrix.envfiles.apimarkers }}`}}"
           {{- if eq .dot.Name "tyk-analytics" }}
-          cd tyk-analytics/tests/${{ .test }}
+          cd tests/${{ .test }}
           cmd=${pytest}
           {{- else }}
           touch $XUNIT_REPORT_PATH
@@ -162,20 +165,13 @@
           eval $cmd
 
       {{- else if eq .test "ui" }}
-      - uses: actions/checkout@v4
-        with:
-          repository: TykTechnologies/tyk-analytics
-          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          fetch-depth: 1
-          sparse-checkout: tests/ui
-          path: tyk-analytics
       - name: Install Node.js 18.16
         uses: actions/setup-node@v4
         with:
           node-version: "18.16"
       - name: Execute UI tests
         id: test_execution
-        working-directory: tyk-analytics/tests/ui
+        working-directory: tests/{{ .test }}
         env:
           GW_URL: 'https://localhost:8080/'
           NODE_TLS_REJECT_UNAUTHORIZED: 0
@@ -216,9 +212,7 @@
             cat ${METADATA_REPORT_PATH}
             echo "::endgroup::"
           fi
-          #Upload xunit report
           aws s3 cp ${XUNIT_REPORT_PATH}  s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.xml
-          #Upload metadata report
           aws s3 cp ${METADATA_REPORT_PATH} s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.metadata.toml
 
       - name: Docker logs for all components

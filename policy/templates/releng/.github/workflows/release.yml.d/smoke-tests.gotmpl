@@ -59,20 +59,20 @@
       - name: generate dockerfile
         run: |
           echo 'FROM {{`${{ matrix.distro }}`}}
-{{- if eq $flavour "deb" }}
           ARG TARGETARCH
+{{- if eq $flavour "deb" }}
           COPY {{ $pcname }}*_${TARGETARCH}.deb /{{ $pcname }}.deb
           RUN apt-get update && apt-get install -y curl
           RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $pcrepo }}/script.deb.sh | bash && apt-get install -y {{ $pcname }}={{ $fromVer }}
-          RUN dpkg -i {{ $pcname }}.deb
+          RUN dpkg -i /{{ $pcname }}.deb
 {{- else if eq $flavour "rpm" }}
           COPY {{ $pcname }}*.x86_64.rpm /{{ $pcname }}.rpm
           RUN command -v curl || yum install -y curl
           RUN command -v useradd || yum install -y shadow-utils
           RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $pcrepo }}/script.rpm.sh | bash && yum install -y {{ $pcname }}-{{ $fromVer }}-1
           RUN curl https://keyserver.tyk.io/tyk.io.rpm.signing.key.2020 -o {{ $pcrepo }}.key && rpm --import {{ $pcrepo }}.key
-          RUN rpm --checksig {{ $pcname }}.rpm
-          RUN rpm -Uvh --force {{ $pcname }}.rpm
+          RUN rpm --checksig /{{ $pcname }}.rpm
+          RUN rpm -Uvh --force /{{ $pcname }}.rpm
 {{- end }} {{/* if flavour */}}
   {{- if eq $repo "tyk" }}
           RUN /opt/tyk-gateway/install/setup.sh --listenport=8080 --redishost=localhost --redisport=6379 --domain=""
