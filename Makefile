@@ -36,6 +36,9 @@ update-test-cases:
 	@echo Updating test cases for cmd test
 	go test ./cmd/ -update
 
+update-actions-versions: bin/update-actions-versions.sed
+	find policy/templates/ -type f -print0 | xargs -0 sed -i -f $^
+
 push: dist/gromit_linux_amd64_v1/gromit
 	goreleaser --clean --snapshot
 	docker push tykio/gromit:latest
