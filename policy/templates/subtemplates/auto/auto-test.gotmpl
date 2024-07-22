@@ -163,7 +163,7 @@
           {{- end }}
           pytest="pytest -c $pytest_file --junitxml=${XUNIT_REPORT_PATH} --ci -m {{`${{ matrix.envfiles.apimarkers }}`}}"
           {{- if eq .dot.Name "tyk-analytics" }}
-          cd tests/{{`${{ .test }}`}}
+          cd tests/{{ .test }}
           cmd=${pytest}
           {{ else }}
           touch $XUNIT_REPORT_PATH
