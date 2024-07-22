@@ -9,6 +9,10 @@ on:
       - 'tests/api/**'
 {{- end }}
   push:
+{{- if eq .Name "tyk-pro" }}
+    tags:
+      - 'v*'
+{{- end }}
     branches:
       - master
       - release-*
