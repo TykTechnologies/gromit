@@ -4,6 +4,8 @@
 # - arm64
 # - amd64
 
+version: 2
+
 {{- if has "el7-pgo-build" .Branchvals.Features }}
   {{- template "cgo_builds" . }}
 {{- else }}

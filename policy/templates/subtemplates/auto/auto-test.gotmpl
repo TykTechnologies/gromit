@@ -121,9 +121,10 @@
           tyk_sink_image={{`${{matrix.sink}}`}}
           {{- end }}
           confs_dir=./pro-ha
-          env_file=./confs/{{`${{ matrix.envfiles.config }}`}}.env' >> versions.env
+          env_file=local.env' >> versions.env
+          cat ./confs/{{`${{ matrix.envfiles.config }}`}}.env local-{{`${{ matrix.envfiles.db }}`}}.env > local.env
           echo "::group::versions"
-          cat versions.env
+          cat versions.env local.env
           echo "::endgroup::"
           # bring up env, the project name is important
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d

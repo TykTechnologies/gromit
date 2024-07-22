@@ -5,6 +5,8 @@
 # - arm64
 # - amd64
 
+version: 2
+
 {{- if eq .Name "portal"}}
 before:
   hooks:
