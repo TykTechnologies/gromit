@@ -19,6 +19,7 @@ import (
 // itself, allowing each repo to override any of the values at upper
 // levels
 type repoConfig struct {
+	Owner               string
 	Description         string
 	PCRepo              string
 	DHRepo              string
@@ -73,6 +74,7 @@ type branchVals struct {
 // implements all the overriding/merging logic between the various
 // levels of the Policies type.
 type RepoPolicy struct {
+	Owner          string
 	Name           string
 	Description    string
 	Default        string

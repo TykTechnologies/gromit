@@ -3,8 +3,8 @@ on:
   workflow_dispatch:
   workflow_call:
   pull_request:
-    paths:
 {{- if eq .Name "tyk-analytics" }}
+    paths:
       - 'tests/ui/**'
       - 'tests/api/**'
 {{- end }}
@@ -12,8 +12,8 @@ on:
     branches:
       - master
       - release-*
-    paths:
 {{- if eq .Name "tyk-analytics" }}
+    paths:
       - 'tests/ui/**'
       - 'tests/api/**'
 {{- end }}
@@ -21,7 +21,7 @@ on:
 jobs:
 {{- $DOT := . }}
 {{- range $test := .Branchvals.Tests }}
-{{- template "auto-test" (dict "dot" $DOT "test" $test) }}
+  {{- template "auto-test" (dict "dot" $DOT "test" $test) }}
 {{- end }}
 
 {{ if eq .Name "tyk-pro" }}
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
     {{- range $test := .Branchvals.Tests }}
-      - {{ $test }}
+      - {{ $test }}-tests
     {{- end }}
     permissions:
       contents: write  
@@ -43,4 +43,4 @@ jobs:
           name: {{`${{ github.ref_name }}`}}
           tag_name: {{`${{ github.ref_name }}`}}
           body_path: release.md
-{{- end }} {{/* tyk-ci */}}
+{{- end }} {{/* tyk-pro */}}

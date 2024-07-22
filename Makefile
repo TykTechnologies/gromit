@@ -9,7 +9,7 @@ ifeq ($(shell uname),Darwin)
 SRC 	:= $(shell find -E . -name '*.go' -o -regex '.*\.(go)?tmpl' -o -regex '.*\.ya?ml')
 endif
 
-REPOS        ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal
+REPOS        ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal tyk-pro
 GITHUB_TOKEN ?= $(shell pass me/github)
 JIRA_USER    ?= alok@tyk.io
 JIRA_TOKEN   ?= $(shell pass Tyk/atlassian)

@@ -20,7 +20,10 @@
         run: |
           set -eo pipefail
           curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}.gho" | tee -a "$GITHUB_OUTPUT"
-          [[ $VARIATION =~ test ]] && echo "::warning file=release.yml,line=100,col=5,endColumn=7::Using test variation"
+          [[ $VARIATION =~ test ]] && {
+              echo "::warning file=release.yml,line=100,col=5,endColumn=7::Using test variation"
+              echo "### :warning: You are using VARIATION with test in test-controller-{{ .test }}" >> $GITHUB_STEP_SUMMARY
+          }
 
   {{ .test }}-tests:
     needs:
@@ -75,13 +78,19 @@
           limit-access-to-actor: true          
           # Only {{`${{ github.actor }}`}} has access
           # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
-      - name: fetch env from tyk-ci
+{{- if eq .dot.Name "tyk-pro" }}
+      - uses: actions/checkout@v4
+        with:
+          path: auto
+          fetch-depth: 1
+{{- else }}
+      - name: fetch env from tyk-pro
         env:
           GH_TOKEN: {{`${{ github.token }}`}}
         run: |
-          gh release download --repo github.com/TykLabs/tyk-pro -p 'auto-env.tgz' -O env.tgz
-          mkdir auto
-          tar xzvf env.tgz -C auto
+          gh release download --repo github.com/tyklabs/tyk-pro --archive tar.gz -O env.tgz
+          mkdir auto && tar --strip-components=1 -C auto -xzvf env.tgz
+{{- end }}
       - name: env up
         shell: bash
         working-directory: auto
@@ -94,11 +103,12 @@
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
         run: |
           match_tag={{`${{steps.ecr.outputs.registry}}`}}/{{ .dot.Name }}:$BASE_REF
-          {{- if eq .dot.Name "tyk-ci" }}
+          {{- if eq .dot.Name "tyk-pro" }}
           tags=($match_tag)
           {{ else }}
           tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
-          {{ end -}} 
+          {{- end }}
+          set -eaxo pipefail
           docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} ${match_tag} 2>versions.env
           echo '# alfa and beta have to come after the override
           tyk_alfa_image=$tyk_image
@@ -111,12 +121,10 @@
           tyk_sink_image={{`${{matrix.sink}}`}}
           {{- end }}
           confs_dir=./pro-ha
-          env_file=local-{{`${{ matrix.envfiles.db }}`}}.env' >> versions.env
+          env_file=./confs/{{`${{ matrix.envfiles.config }}`}}.env' >> versions.env
           echo "::group::versions"
           cat versions.env
           echo "::endgroup::"
-          # Add Tyk component config variations to $env_file
-          cat confs/{{`${{ matrix.envfiles.config }}`}}.env >> local-{{`${{ matrix.envfiles.db }}`}}.env
           # bring up env, the project name is important
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
           ./dash-bootstrap.sh http://localhost:3000
@@ -193,6 +201,7 @@
           JOB_RUN_ID: {{`${{ github.run_id }}`}}
           JOB_NAME: tyk-analytics - {{`${{ github.ref }}`}} {{`${{ github.event.head_commit.message }}`}}
           RUN_ID: 'tyk-analytics/{{`${{ github.run_id }}`}}'
+
       {{- end }} {{/* end of test variation */}}
 
       - name: Generate metadata and upload test reports

@@ -3,6 +3,8 @@
 # specific/ branch specific options.
 
 policy:
+  # Owner component of Github reponame
+  owner: TykTechnologies
   # deletedfiles are files that should not exist, usually the
   # detritutus of failed experiments or features than have been
   # superceded, they will be removed if policy sync encounters them
@@ -229,9 +231,12 @@ policy:
           branches:
             master:
 
-    stand-alone-services:
+    # Quis qustodiet ipsos custodes?
+    # A:
+    test-square:
       repos:
-        tyk-ci:
+        tyk-pro:
+          owner: tyklabs
           deletedfiles:
             - .github/workflows/release-tests.yml
           description: >-
@@ -242,4 +247,4 @@ policy:
           features:
             - test-square
           branches:
-            master:
+            main:

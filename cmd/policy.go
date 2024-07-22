@@ -26,8 +26,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// PolBranch so that it does not conflict with PrBranch
-var PolBranch string
+// polBranch so that it does not conflict with PrBranch
+var polBranch string
+var owner string
 
 // policyCmd represents the policy command
 var policyCmd = &cobra.Command{
@@ -58,8 +59,7 @@ This command does not overlay the rendered output into a git tree. You will have
 		dir := args[0]
 		repoName, _ := cmd.Flags().GetString("repo")
 		rp, err := configPolicies.GetRepoPolicy(repoName)
-		rp.SetTimestamp(time.Now().UTC())
-		rp.SetBranch(PolBranch)
+		rp.SetBranch(polBranch)
 		if err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repoName, err)
 		}
@@ -120,6 +120,7 @@ var syncSubCmd = &cobra.Command{
 	Short: "(re-)generate the templates for all known branches for <repo>",
 	Long: `Policies are driven by a config file. The config file models the variables of all the repositories under management. See https://github.com/TykTechnologies/gromit/tree/master/policy/config.yaml.
 Operates directly on github and creates PRs. Requires an OAuth2 token (for private repos) and a section in the config file describing the policy. Will render templates, overlaid onto a git repo.
+If <repo> is specified as "owner/repo", the owner will override the --owner arg.
 If --pr is supplied, a PR will be created with the changes and @devops will be asked for a review.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -142,10 +143,10 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 		autoMerge, _ := cmd.Flags().GetBool("auto")
 
 		var prs, branches []string
-		if PolBranch == "" {
+		if polBranch == "" {
 			branches = rp.GetAllBranches()
 		} else {
-			branches = []string{PolBranch}
+			branches = []string{polBranch}
 		}
 
 		if pr {
@@ -153,7 +154,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 		}
 
 		for _, branch := range branches {
-			repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", Owner, repoName),
+			repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", rp.Owner, repoName),
 				branch,
 				repoName,
 				ghToken)
@@ -177,7 +178,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 				prOpts := &policy.PullRequest{
 					BaseBranch: repo.Branch(),
 					PrBranch:   pushOpts.RemoteBranch,
-					Owner:      Owner,
+					Owner:      owner,
 					Repo:       repoName,
 					AutoMerge:  autoMerge,
 				}
@@ -265,7 +266,7 @@ func init() {
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
 	syncSubCmd.Flags().String("msg", "Auto generated from templates by gromit", "Commit message for the automated commit by gromit.")
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
-	syncSubCmd.Flags().StringVar(&Owner, "owner", "TykTechnologies", "Github org")
+	syncSubCmd.Flags().StringVar(&owner, "owner", "TykTechnologies", "Github org")
 	syncSubCmd.Flags().StringVar(&Prefix, "prefix", "releng/", "Prefix for the branch with the changes. The default is releng/<branch>")
 
 	diffSubCmd.Flags().Bool("colours", true, "Use colours in output")
@@ -284,7 +285,7 @@ func init() {
 	policyCmd.AddCommand(genSubCmd)
 	policyCmd.AddCommand(serveSubCmd)
 
-	policyCmd.PersistentFlags().StringVar(&PolBranch, "branch", "", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
+	policyCmd.PersistentFlags().StringVar(&polBranch, "branch", "", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
 	policyCmd.PersistentFlags().Bool("auto", true, "Will automerge if all requirements are meet")
 	rootCmd.AddCommand(policyCmd)
 }

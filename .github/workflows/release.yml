@@ -60,21 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal, tyk-ci]
-        branch: [master]
-        include:
-          - repo: tyk
-            branch: release-5-lts
-          - repo: tyk-analytics
-            branch: release-5-lts
-          - repo: tyk
-            branch: release-5.3
-          - repo: tyk-analytics
-            branch: release-5.3
-          - repo: tyk
-            branch: release-5.4
-          - repo: tyk-analytics
-            branch: release-5.4
+        repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal, tyk-pro]
 
     steps:
       - name: checkout ${{matrix.repo}}/${{matrix.branch}}
@@ -100,16 +86,14 @@ jobs:
 
       - name: diffs
         run: |
-          ${{ steps.gromit.outputs.bin }} policy gen --branch ${{matrix.branch}} --repo ${{ matrix.repo }} ${{ matrix.repo }}
-          echo "## :hospital: ℞ ${{ matrix.repo }} ${{ matrix.feature }} ${{matrix.branch}}" >> $GITHUB_STEP_SUMMARY
-          if ${{ steps.gromit.outputs.bin }} policy diff --colours=false ${{ matrix.repo }} 2>summary 1>diff; then
-             echo No treatment required :sunglasses: :thumbsup: >> $GITHUB_STEP_SUMMARY
-          else
-             echo "::error title=${{ matrix.repo }} ${{ matrix.feature }} ${{matrix.branch}}::$(cat summary)"
-             echo '```diff' >> $GITHUB_STEP_SUMMARY
-             cat diff >> $GITHUB_STEP_SUMMARY
-             echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
+          ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }}
+          echo "## :hospital: ℞ ${{ matrix.repo }}" >> $GITHUB_STEP_SUMMARY
+          for b in $(git for-each-ref --format '%(refname:short)' refs/heads); do
+             echo "### $b"
+             echo '```diff'
+             git diff $b origin/${b}
+             echo '```'
+          done | tee -a $GITHUB_STEP_SUMMARY
 
       - name: update ${{ matrix.repo }}:releng/${{ matrix.branch }}
         if: ${{ (github.event_name == 'push' && github.ref_name == 'master') || endsWith(github.head_ref, 'releng') }}

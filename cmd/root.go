@@ -34,10 +34,6 @@ var cfgFile string
 // AWScfg is used in cluster, sow, reap and the server
 var AWScfg aws.Config
 
-// Owner of the github repos
-// used in policy and prs
-var Owner string
-
 // Configuration under the policy key
 // used in policy and prs
 var configPolicies policy.Policies
