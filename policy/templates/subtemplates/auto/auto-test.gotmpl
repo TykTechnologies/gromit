@@ -156,10 +156,14 @@
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
-          mkdir /app && ln -s test/api/pytest_ci.ini /app/pytest_ci.ini
-          pytest="pytest -c /app/pytest_ci.ini --junitxml=${XUNIT_REPORT_PATH} --ci -m {{`${{ matrix.envfiles.apimarkers }}`}}"
           {{- if eq .dot.Name "tyk-analytics" }}
-          cd tests/${{ .test }}
+          pytest_file="{{`${{ github.workspace }}`}}/tests/{{ .test }}/pytest_local.ini"
+          {{ else }}
+          pytest_file="/app/pytest_ci.ini"
+          {{- end }}
+          pytest="pytest -c $pytest_file --junitxml=${XUNIT_REPORT_PATH} --ci -m {{`${{ matrix.envfiles.apimarkers }}`}}"
+          {{- if eq .dot.Name "tyk-analytics" }}
+          cd tests/{{`${{ .test }}`}}
           cmd=${pytest}
           {{ else }}
           touch $XUNIT_REPORT_PATH
