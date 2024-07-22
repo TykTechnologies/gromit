@@ -57,12 +57,16 @@
             sink: tykio/tyk-mdcb-docker:v2.4
         {{- end }}
     steps:
-      {{- if eq .dot.Name "tyk-analytics" }}
+      {{- if or (eq .dot.Name "tyk-analytics") (eq .test "ui") }}
       - uses: actions/checkout@v4
         with:
+        {{- if ne .dot.Name "tyk-analytics" }}
+          repository: TykTechnologies/tyk-analytics
+          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+        {{- end }}
           fetch-depth: 1
           sparse-checkout: tests/{{ .test }}
-      {{- end }}
+      {{- end }}  
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
@@ -157,18 +161,30 @@
           {{- if eq .dot.Name "tyk-analytics" }}
           cd tests/${{ .test }}
           cmd=${pytest}
-          {{- else }}
+          {{ else }}
           touch $XUNIT_REPORT_PATH
           cmd="docker run --rm --network auto_default -v $XUNIT_REPORT_PATH:$XUNIT_REPORT_PATH {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:$BASE_REF $pytest"
-          {{- end }}
+          {{ end -}}
           # Run tests
           eval $cmd
 
-      {{- else if eq .test "ui" }}
+      {{ else if eq .test "ui" }}
       - name: Install Node.js 18.16
         uses: actions/setup-node@v4
         with:
           node-version: "18.16"
+      - name: Fix private module deps
+        env:
+          TOKEN: '{{`${{ secrets.ORG_GH_TOKEN }}`}}'
+        run: >
+          git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"                    
+      - name: Install test dependecies
+        run: |
+          npm ci
+        working-directory: tests/ui
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: tests/ui          
       - name: Execute UI tests
         id: test_execution
         working-directory: tests/{{ .test }}
@@ -182,7 +198,7 @@
           npx playwright install --with-deps chromium
           PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium --reporter=junit
 
-      {{- end }} {{/* end of test variation */}}
+      {{ end -}} {{/* end of test variation */}}
 
       - name: Generate metadata and upload test reports
         if: always() && steps.test_execution.outcome != 'skipped'
