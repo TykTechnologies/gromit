@@ -16,7 +16,7 @@
         env:
           # startsWith covers pull_request_target too
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
-          VARIATION: test
+          VARIATION: esteban
         run: |
           set -eo pipefail
           curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}.gho" | tee -a "$GITHUB_OUTPUT"
