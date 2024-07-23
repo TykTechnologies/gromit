@@ -113,7 +113,7 @@
           tags=($match_tag)
           {{ else }}
           tags=({{`${{ needs.goreleaser.outputs.tags }}`}})
-          {{- end }}
+          {{ end -}}
           set -eaxo pipefail
           docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} ${match_tag} 2>versions.env
           echo '# alfa and beta have to come after the override
@@ -122,10 +122,10 @@
           ECR={{`${{steps.ecr.outputs.registry}}`}}
           {{- if ne .dot.Name "tyk-pump" }}
           tyk_pump_image={{`${{matrix.pump}}`}}
-          {{- end }}
+          {{ end }}
           {{- if ne .dot.Name "tyk-sink" }}
           tyk_sink_image={{`${{matrix.sink}}`}}
-          {{- end }}
+          {{ end -}}
           confs_dir=./pro-ha
           env_file=local.env' >> versions.env
           cat ./confs/{{`${{ matrix.envfiles.config }}`}}.env local-{{`${{ matrix.envfiles.db }}`}}.env > local.env
@@ -137,7 +137,7 @@
           ./dash-bootstrap.sh http://localhost:3000
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
 
-      {{- if eq .test "api" }}
+      {{ if eq .test "api" }}
       {{- if eq .dot.Name "tyk-analytics" }}
       - uses: actions/setup-python@v5
       - working-directory: tests/api
@@ -160,7 +160,7 @@
           pytest_file="{{`${{ github.workspace }}`}}/tests/{{ .test }}/pytest_local.ini"
           {{ else }}
           pytest_file="/app/pytest_ci.ini"
-          {{- end }}
+          {{ end -}}
           pytest="pytest -c $pytest_file --junitxml=${XUNIT_REPORT_PATH} --ci -m {{`${{ matrix.envfiles.apimarkers }}`}}"
           {{- if eq .dot.Name "tyk-analytics" }}
           cd tests/{{ .test }}
@@ -202,7 +202,7 @@
           npx playwright install --with-deps chromium
           PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium --reporter=junit
 
-      {{ end -}} {{/* end of test variation */}}
+      {{- end }} {{/* end of test variation */}}
 
       - name: Generate metadata and upload test reports
         if: always() && steps.test_execution.outcome != 'skipped'
