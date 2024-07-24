@@ -24,7 +24,7 @@
               echo "::warning file=release.yml,line=100,col=5,endColumn=7::Using test variation"
               echo "### :warning: You are using VARIATION with test in test-controller-{{ .test }}" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
   {{ .test }}-tests:
     needs:
       - test-controller-{{ .test }}
@@ -161,7 +161,7 @@
           {{ else }}
           pytest_file="/app/pytest_ci.ini"
           {{ end -}}
-          pytest="pytest -c $pytest_file --junitxml=${XUNIT_REPORT_PATH} --ci -m {{`${{ matrix.envfiles.apimarkers }}`}}"
+          pytest="pytest -c $pytest_file --junitxml=${XUNIT_REPORT_PATH} --ci -m \"{{`${{ matrix.envfiles.apimarkers }}`}}\""
           {{- if eq .dot.Name "tyk-analytics" }}
           cd tests/{{ .test }}
           cmd=${pytest}
