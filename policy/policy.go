@@ -19,6 +19,7 @@ import (
 // itself, allowing each repo to override any of the values at upper
 // levels
 type repoConfig struct {
+	Owner               string
 	Description         string
 	PCRepo              string
 	DHRepo              string
@@ -46,6 +47,7 @@ type repoConfig struct {
 // The group level is applicable for all the repos in that group.
 // Repeating the same repo in multiple groups is UB
 type Policies struct {
+	Owner        string
 	DeletedFiles []string
 	Groups       map[string]repoConfig
 }
@@ -73,6 +75,7 @@ type branchVals struct {
 // implements all the overriding/merging logic between the various
 // levels of the Policies type.
 type RepoPolicy struct {
+	Owner          string
 	Name           string
 	Description    string
 	Default        string
@@ -170,6 +173,7 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 	if err != nil {
 		return rp, err
 	}
+	log.Trace().Interface("rp", rp).Msg("computed repo vals")
 
 	allBranches := make(map[string]branchVals)
 	for b, bbv := range r.Branches {
@@ -193,7 +197,7 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 		rbv.Features = newSetFromSlices(group.Features, r.Features, bbv.Features).Members()
 		rbv.DeletedFiles = newSetFromSlices(p.DeletedFiles, group.DeletedFiles, r.DeletedFiles, bbv.DeletedFiles).Members()
 
-		log.Trace().Interface("bv", rbv).Str("branch", b).Msg("computed")
+		log.Trace().Interface("bv", rbv).Str("branch", b).Msg("computed branch vals")
 		allBranches[b] = rbv
 	}
 	rp.Branches = allBranches
@@ -203,7 +207,7 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 // ProcessBranch will render the templates into a git worktree for the supplied branch, commit and push the changes upstream
 // The upstream branch name is the supplied branch name prefixed with releng/ and is returned
 func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
-	log.Info().Msgf("processing branch %s", pushOpts.Branch)
+	log.Debug().Msgf("processing branch %s", pushOpts.Branch)
 	err := pushOpts.Repo.FetchBranch(pushOpts.Branch)
 	if err != nil {
 		return fmt.Errorf("git checkout %s:%s: %v", pushOpts.Repo.url, pushOpts.Branch, err)
@@ -217,7 +221,7 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 		return fmt.Errorf("bundle %v: %v", rp.Branchvals.Features, err)
 	}
 	files, err := b.Render(&rp, pushOpts.OpDir, nil)
-	log.Info().Strs("files", files).Msg("Rendered files")
+	log.Debug().Strs("files", files).Msg("rendered files")
 	if err != nil {
 		return fmt.Errorf("bundle gen %v: %v", rp.Branchvals.Features, err)
 	}

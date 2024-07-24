@@ -8,53 +8,57 @@
     <script type="text/javascript" src="/static/carousel.js"></script>
   </head>
   <body>
-    <h2>Current variations</h2>
-    <div id="repos" class="repo-carousel">
-      {{ range $repoName, $repo := .Variations }}
-      <div class="repo-carousel-item">
-	<h3>{{ $repoName }}</h3>
-	{{ range $b := $repo.Branches }}
-        {{ range $tr := $repo.Triggers $b }}
-        {{ range $ts := $repo.Testsuites $b $tr }}
-	{{ $matrix := $repo.Lookup $b $tr $ts }}
-        <p>
-	  On {{ $tr }} to {{ $b }}, {{ $ts }} testsuite will run with
-	  <ul>
-	    <li>Environment files</li>
-	    <ul>
-	    {{range $ef := $matrix.EnvFiles}}
-	      <li> {{ $ef }}</li>
-	    {{ end }}
-	    </ul>
-	    {{ if ne $repoName "tyk-pump" }}
-	    <li>Pump versions</li>
-	    <ul>
-	    {{range $ef := $matrix.Pump}}
-	      <li> {{ $ef }}</li>
-	    {{ end }}
-	    </ul>
-	    {{ end }} {{/* if not pump */}}
-	    {{ if ne $repoName "tyk-sink" }}
-	    <li>Sink versions</li>
-	    <ul>
-	    {{range $ef := $matrix.Sink}}
-	      <li> {{ $ef }}</li>
-	    {{ end }}
-	    </ul>
-	    {{ end }} {{/* if not sink */}}
-	  </ul>
-	</p>
-        {{ end }} {{/* testsuites */}}
-        {{ end }} {{/* triggers */}}
-	{{ end }} {{/* branches */}}
-      </div>
-      {{ end }} {{/* repos */}}
-    </div>
-    <h2>Saved variations</h2>
+    <h1>Available variations</h2>
+    {{ range $fname, $variations := .AllVariations }}
+       <h2> {{ $fname }}</h2>
+       <div id="repos" class="repo-carousel">
+	 {{ range $repoName, $repo := $variations }}
+	 <div class="repo-carousel-item">
+	   <h3>{{ $repoName }}</h3>
+	   {{ range $b := $repo.Branches }}
+	   {{ range $tr := $repo.Triggers $b }}
+	   {{ range $ts := $repo.Testsuites $b $tr }}
+	   {{ $matrix := $repo.Lookup $b $tr $ts }}
+	   <p>
+	     On {{ $tr }} to {{ $b }}, {{ $ts }} testsuite will run with
+	     <ul>
+	       <li>Environment files</li>
+	       <ul>
+	       {{range $ef := $matrix.EnvFiles}}
+		 <li> {{ $ef }}</li>
+	       {{ end }}
+	       </ul>
+	       {{ if ne $repoName "tyk-pump" }}
+	       <li>Pump versions</li>
+	       <ul>
+	       {{range $ef := $matrix.Pump}}
+		 <li> {{ $ef }}</li>
+	       {{ end }}
+	       </ul>
+	       {{ end }} {{/* if not pump */}}
+	       {{ if ne $repoName "tyk-sink" }}
+	       <li>Sink versions</li>
+	       <ul>
+	       {{range $ef := $matrix.Sink}}
+		 <li> {{ $ef }}</li>
+	       {{ end }}
+	       </ul>
+	       {{ end }} {{/* if not sink */}}
+	     </ul>
+	   </p>
+	   {{ end }} {{/* testsuites */}}
+	   {{ end }} {{/* triggers */}}
+	   {{ end }} {{/* branches */}}
+	 </div>
+	 {{ end }} {{/* repos */}}
+       </div>
+       <hr>
+  {{ end }} {{/* AllVariations */}}
+    <h1>Files in {{ .SaveDir }} </h1>
     <ul class="saved-grid">
-      {{ range $file := .SavedVariations }}
+      {{ range $file := .AllVariations.Files }}
       <li><a href="/show/{{ $file }}" target="_blank" rel="noopener noreferrer">{{ $file }}</a></li>
-      {{ end }} {{/* variations */}}
+      {{end}}
     </ul>
   </body>
 </html>

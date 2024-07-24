@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testConfig = "../testdata/test-variations.yaml"
+const testConfig = "../testdata/tui"
 
 // executeMockRequest, creates a new ResponseRecorder
 // then executes the request by calling ServeHTTP in the router
@@ -48,17 +48,18 @@ type APITestCase struct {
 	Payload       string
 	HTTPStatus    int
 	ResponseJSON  string
+	ResponseText  string
 	HTTPMethod    string
 	RequestParams string
 }
 
-func TestVariations(t *testing.T) {
+func TestV1Variations(t *testing.T) {
 	// Order matters, delete after creating
 	cases := []APITestCase{
 		{
 			Name:         "EnvFiles",
 			Endpoint:     "/api/repo1/br0/tr0/ts0/EnvFiles",
-			ResponseJSON: `[{"cache":"repo1-redis0", "config":"repo1-conf0", "db":"repo1-db0"}]`,
+			ResponseJSON: `[{"cache":"repo1-redis0", "config":"repo1-conf0", "db":"repo1-db0", "apimarkers":"", "uimarkers":""}]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
@@ -80,6 +81,52 @@ func TestVariations(t *testing.T) {
 	runSubTests(t, cases)
 }
 
+func TestV2Variations(t *testing.T) {
+	// Order matters, delete after creating
+	cases := []APITestCase{
+		{
+			Name:         "EnvFiles",
+			Endpoint:     "/v2/prod-variations/repo0/br0/tr0/ts0/EnvFiles.json",
+			ResponseJSON: `[{"cache":"repo0-redis0", "config":"repo0-conf0", "db":"", "apimarkers":"m0", "uimarkers":"m1"}]`,
+			HTTPStatus:   http.StatusOK,
+			HTTPMethod:   "GET",
+		},
+		{
+			Name:     "gho",
+			Endpoint: "/v2/prod-var/repo0/br1/tr1/ts0.gho",
+			ResponseText: `envfiles<<EOF
+[{"cache":"repo0-redis-tr1","db":"","config":"repo0-conf-tr1","apimarkers":"","uimarkers":""},{"cache":"repo0-redis0","db":"","config":"repo0-conf0","apimarkers":"m0","uimarkers":"m1"}]
+EOF
+pump<<EOF
+["pump-br1","master"]
+EOF
+sink<<EOF
+["sink-br1","master"]
+EOF
+distros<<EOF
+{"deb":["d1"],"rpm":["d0"]}
+EOF
+`,
+			HTTPStatus: http.StatusOK,
+			HTTPMethod: "GET",
+		},
+		{
+			Name:     "field-gho",
+			Endpoint: "/v2/prod-variations.yml/repo0/br1/tr1/ts0/Distros.gho",
+			ResponseText: `deb<<EOF
+["d1"]
+EOF
+rpm<<EOF
+["d0"]
+EOF
+`,
+			HTTPStatus: http.StatusOK,
+			HTTPMethod: "GET",
+		},
+	}
+	runSubTests(t, cases)
+}
+
 func runSubTests(t *testing.T, cases []APITestCase) {
 	creds := getCredentials(`{"user": "pass"}`)
 	s := CreateNewServer(testConfig, creds)
@@ -90,6 +137,9 @@ func runSubTests(t *testing.T, cases []APITestCase) {
 			checkResponseCode(t, tc.HTTPStatus, response.Code)
 			if tc.ResponseJSON != "" {
 				require.JSONEq(t, tc.ResponseJSON, response.Body.String())
+			}
+			if tc.ResponseText != "" {
+				require.Equal(t, tc.ResponseText, response.Body.String())
 			}
 		})
 	}

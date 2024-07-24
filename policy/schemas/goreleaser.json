@@ -156,6 +156,9 @@
 					},
 					"opencolletive": {
 						"$ref": "#/$defs/OpenCollective"
+					},
+					"bluesky": {
+						"$ref": "#/$defs/Bluesky"
 					}
 				},
 				"additionalProperties": false,
@@ -208,7 +211,7 @@
 							}
 						]
 					},
-					"strip_parent_binary_folder": {
+					"strip_binary_directory": {
 						"type": "boolean"
 					},
 					"files": {
@@ -233,6 +236,9 @@
 							}
 						],
 						"description": "you can now remove this"
+					},
+					"strip_parent_binary_folder": {
+						"type": "boolean"
 					}
 				},
 				"additionalProperties": false,
@@ -261,13 +267,13 @@
 					"region": {
 						"type": "string"
 					},
-					"disableSSL": {
+					"disable_ssl": {
 						"type": "boolean"
 					},
-					"folder": {
+					"directory": {
 						"type": "string"
 					},
-					"kmskey": {
+					"kms_key": {
 						"type": "string"
 					},
 					"ids": {
@@ -294,6 +300,50 @@
 								"type": "boolean"
 							}
 						]
+					},
+					"s3_force_path_style": {
+						"type": "boolean"
+					},
+					"acl": {
+						"type": "string"
+					},
+					"cache_control": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"content_disposition": {
+						"type": "string"
+					},
+					"include_meta": {
+						"type": "boolean"
+					},
+					"disableSSL": {
+						"type": "boolean",
+						"description": "use disable_ssl instead"
+					},
+					"kmskey": {
+						"type": "string",
+						"description": "use kms_key instead"
+					},
+					"folder": {
+						"type": "string"
+					}
+				},
+				"additionalProperties": false,
+				"type": "object"
+			},
+			"Bluesky": {
+				"properties": {
+					"enabled": {
+						"type": "boolean"
+					},
+					"username": {
+						"type": "string"
+					},
+					"message_template": {
+						"type": "string"
 					}
 				},
 				"additionalProperties": false,
@@ -380,7 +430,14 @@
 						"type": "boolean"
 					},
 					"buildmode": {
-						"type": "string"
+						"type": "string",
+						"enum": [
+							"c-archive",
+							"c-shared",
+							"pie",
+							""
+						],
+						"default": ""
 					},
 					"ldflags": {
 						"$ref": "#/$defs/StringArray"
@@ -438,7 +495,14 @@
 						"type": "string"
 					},
 					"buildmode": {
-						"type": "string"
+						"type": "string",
+						"enum": [
+							"c-archive",
+							"c-shared",
+							"pie",
+							""
+						],
+						"default": ""
 					},
 					"ldflags": {
 						"$ref": "#/$defs/StringArray"
@@ -491,7 +555,7 @@
 						],
 						"default": ""
 					},
-					"skip": {
+					"disable": {
 						"oneOf": [
 							{
 								"type": "string"
@@ -511,6 +575,9 @@
 						],
 						"default": "git"
 					},
+					"format": {
+						"type": "string"
+					},
 					"groups": {
 						"items": {
 							"$ref": "#/$defs/ChangelogGroup"
@@ -519,6 +586,17 @@
 					},
 					"abbrev": {
 						"type": "integer"
+					},
+					"skip": {
+						"oneOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "boolean"
+							}
+						],
+						"description": "use disable instead"
 					}
 				},
 				"additionalProperties": false,
@@ -546,6 +624,9 @@
 					},
 					"algorithm": {
 						"type": "string"
+					},
+					"split": {
+						"type": "boolean"
 					},
 					"ids": {
 						"items": {
@@ -1024,7 +1105,8 @@
 							"gz",
 							"tar.xz",
 							"txz",
-							"binary"
+							"binary",
+							"none"
 						],
 						"default": "tar.gz"
 					}
@@ -1140,6 +1222,9 @@
 					},
 					"mod": {
 						"type": "string"
+					},
+					"dir": {
+						"type": "string"
 					}
 				},
 				"additionalProperties": false,
@@ -1159,7 +1244,7 @@
 					"commit_msg_template": {
 						"type": "string"
 					},
-					"folder": {
+					"directory": {
 						"type": "string"
 					},
 					"caveats": {
@@ -1214,6 +1299,12 @@
 					"url_template": {
 						"type": "string"
 					},
+					"url_headers": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
 					"custom_require": {
 						"type": "string"
 					},
@@ -1249,6 +1340,9 @@
 					"plist": {
 						"type": "string",
 						"description": "use service instead"
+					},
+					"folder": {
+						"type": "string"
 					}
 				},
 				"additionalProperties": false,
@@ -1499,6 +1593,21 @@
 				"additionalProperties": false,
 				"type": "object"
 			},
+			"Libdirs": {
+				"properties": {
+					"header": {
+						"type": "string"
+					},
+					"carchive": {
+						"type": "string"
+					},
+					"cshared": {
+						"type": "string"
+					}
+				},
+				"additionalProperties": false,
+				"type": "object"
+			},
 			"LinkedIn": {
 				"properties": {
 					"enabled": {
@@ -1510,6 +1619,80 @@
 				},
 				"additionalProperties": false,
 				"type": "object"
+			},
+			"MacOSNotarize": {
+				"properties": {
+					"issuer_id": {
+						"type": "string"
+					},
+					"key": {
+						"type": "string"
+					},
+					"key_id": {
+						"type": "string"
+					},
+					"timeout": {
+						"type": "integer"
+					},
+					"wait": {
+						"type": "boolean"
+					}
+				},
+				"additionalProperties": false,
+				"type": "object",
+				"required": [
+					"issuer_id",
+					"key",
+					"key_id"
+				]
+			},
+			"MacOSSign": {
+				"properties": {
+					"certificate": {
+						"type": "string"
+					},
+					"password": {
+						"type": "string"
+					}
+				},
+				"additionalProperties": false,
+				"type": "object",
+				"required": [
+					"certificate",
+					"password"
+				]
+			},
+			"MacOSSignNotarize": {
+				"properties": {
+					"ids": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"enabled": {
+						"oneOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "boolean"
+							}
+						]
+					},
+					"sign": {
+						"$ref": "#/$defs/MacOSSign"
+					},
+					"notarize": {
+						"$ref": "#/$defs/MacOSNotarize"
+					}
+				},
+				"additionalProperties": false,
+				"type": "object",
+				"required": [
+					"sign",
+					"notarize"
+				]
 			},
 			"Mastodon": {
 				"properties": {
@@ -1671,7 +1854,14 @@
 					},
 					"formats": {
 						"items": {
-							"type": "string"
+							"type": "string",
+							"enum": [
+								"apk",
+								"deb",
+								"rpm",
+								"termux.deb",
+								"archlinux"
+							]
 						},
 						"type": "array"
 					},
@@ -1698,6 +1888,9 @@
 					},
 					"bindir": {
 						"type": "string"
+					},
+					"libdirs": {
+						"$ref": "#/$defs/Libdirs"
 					},
 					"changelog": {
 						"type": "string"
@@ -1790,6 +1983,27 @@
 						"$ref": "#/$defs/NFPMDebSignature"
 					},
 					"lintian_overrides": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"compression": {
+						"type": "string",
+						"enum": [
+							"gzip",
+							"xz",
+							"none"
+						],
+						"default": "gzip"
+					},
+					"fields": {
+						"additionalProperties": {
+							"type": "string"
+						},
+						"type": "object"
+					},
+					"predepends": {
 						"items": {
 							"type": "string"
 						},
@@ -2110,6 +2324,21 @@
 					}
 				]
 			},
+			"Notarize": {
+				"properties": {
+					"macos": {
+						"items": {
+							"$ref": "#/$defs/MacOSSignNotarize"
+						},
+						"type": "array"
+					}
+				},
+				"additionalProperties": false,
+				"type": "object",
+				"required": [
+					"macos"
+				]
+			},
 			"OpenCollective": {
 				"properties": {
 					"enabled": {
@@ -2133,7 +2362,8 @@
 					"version": {
 						"type": "integer",
 						"enum": [
-							1
+						  1,
+						  2
 						],
 						"default": 1
 					},
@@ -2275,6 +2505,9 @@
 						},
 						"type": "array"
 					},
+					"notarize": {
+						"$ref": "#/$defs/Notarize"
+					},
 					"docker_signs": {
 						"items": {
 							"$ref": "#/$defs/Sign"
@@ -2384,6 +2617,9 @@
 						"type": "boolean"
 					},
 					"signature": {
+						"type": "boolean"
+					},
+					"meta": {
 						"type": "boolean"
 					},
 					"dir": {
@@ -2567,6 +2803,12 @@
 							"replace"
 						],
 						"default": "keep-existing"
+					},
+					"replace_existing_artifacts": {
+						"type": "boolean"
+					},
+					"include_meta": {
+						"type": "boolean"
 					}
 				},
 				"additionalProperties": false,
@@ -2706,7 +2948,7 @@
 					"repository": {
 						"$ref": "#/$defs/RepoRef"
 					},
-					"folder": {
+					"directory": {
 						"type": "string"
 					},
 					"commit_author": {
@@ -2776,6 +3018,9 @@
 					"bucket": {
 						"$ref": "#/$defs/RepoRef",
 						"description": "use repository instead"
+					},
+					"folder": {
+						"type": "string"
 					}
 				},
 				"additionalProperties": false,
@@ -3422,6 +3667,9 @@
 					"signature": {
 						"type": "boolean"
 					},
+					"meta": {
+						"type": "boolean"
+					},
 					"custom_artifact_name": {
 						"type": "boolean"
 					},
@@ -3559,7 +3807,6 @@
 				"additionalProperties": false,
 				"type": "object",
 				"required": [
-					"package_identifier",
 					"publisher",
 					"repository",
 					"short_description",

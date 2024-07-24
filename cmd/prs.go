@@ -87,7 +87,7 @@ var cprSubCmd = &cobra.Command{
 					Jira:       jIssue,
 					BaseBranch: branch,
 					PrBranch:   Prefix + branch,
-					Owner:      Owner,
+					Owner:      rp.Owner,
 					Repo:       repoName,
 					AutoMerge:  autoMerge,
 				}
@@ -173,7 +173,7 @@ func processRepo(repoName string, f func(*policy.PullRequest) error) error {
 		prOpts := &policy.PullRequest{
 			BaseBranch: branch,
 			PrBranch:   Prefix + branch,
-			Owner:      Owner,
+			Owner:      rp.Owner,
 			Repo:       repoName,
 		}
 		err := f(prOpts)

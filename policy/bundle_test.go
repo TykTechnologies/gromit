@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/TykTechnologies/gromit/config"
 )
@@ -52,7 +51,6 @@ func TestBundleRender(t *testing.T) {
 				t.Fail()
 				continue
 			}
-			rp.SetTimestamp(time.Now().UTC())
 			tmpDir, err := os.MkdirTemp("", r+"-"+b.Name)
 			if err != nil {
 				t.Fatalf("Error creating temp dir: %v", err)
@@ -61,9 +59,12 @@ func TestBundleRender(t *testing.T) {
 
 			err = rp.SetBranch("master")
 			if err != nil {
-				t.Logf("Could not set branch to master for repo: %s", r)
-				t.Fail()
-				continue
+				t.Logf("Could not set branch to master for repo: %s, trying main", r)
+				err = rp.SetBranch("main")
+				if err != nil {
+					t.Logf("Could not set branch to main for repo: %s", r)
+					t.Fail()
+				}
 			}
 			_, err = b.Render(rp, tmpDir, nil)
 			if err != nil {

@@ -23,12 +23,22 @@ on:
 
 env:
   GOPRIVATE: github.com/TykTechnologies
+  VARIATION: test
+  DOCKER_BUILD_SUMMARY: false
+  DOCKER_BUILD_RECORD_UPLOAD: false
+  # startsWith covers pull_request_target too
+  BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
   
 jobs:
 {{- template "goreleaser" . }}
+
 {{- if not (empty .Branchvals.Tests) }}
-{{- template "auto-test" . }}        
-{{ end }}
+{{- $dot := . }}
+  {{ range $test := .Branchvals.Tests }}
+  {{- template "auto-test" (dict "dot" $dot "test" $test) }}
+  {{ end }}
+{{- end }} {{/* empty tests */}}
+
 {{- template "smoke-tests" . }}
 
   sbom:

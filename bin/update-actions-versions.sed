@@ -1,0 +1,15 @@
+s|\(uses: actions/cache\)@v.|\1@v4|g
+s|\(uses: actions/checkout\)@v.|\1@v4|g
+s|\(uses: actions/download-artifact\)@v.|\1@v4|g
+s|\(uses: actions/setup-node\)@v.*|\1@v4|g
+s|\(uses: actions/setup-python\)@v.*|\1@v5|g
+s|\(uses: actions/upload-artifact\)@v.|\1@v4|g
+s|\(uses: aws-actions/amazon-ecr-login\)@v.|\1@v2|g
+s|\(uses: aws-actions/configure-aws-credentials\)@v.|\1@v4|g
+s|\(uses: docker/build-push-action\)@v.|\1@v6|g
+s|\(uses: docker/login-action\)@v.|\1@v3|g
+s|\(uses: docker/metadata-action\)@v.|\1@v5|g
+s|\(uses: docker/setup-buildx-action\)@v.|\1@v3|g
+s|\(uses: docker/setup-qemu-action\)@v.|\1@v3|g
+s|\(uses: mxschmitt/action-tmate\)@v.|\1@v3|g
+s|\(uses: softprops/action-gh-release\)@v.|\1@v1|g

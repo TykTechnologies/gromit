@@ -2,21 +2,22 @@ SHELL 	:= bash
 VERSION := $(shell git describe --tags)
 COMMIT 	:= $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
-ifeq ($(shell uname),Linux)
-SRC 	:= $(shell find . -regextype egrep -name '*.go' -o -regex '.*\.(go)?tmpl' -o -regex '.*\.ya?ml')
-endif
-ifeq ($(shell uname),Darwin)
-SRC 	:= $(shell find -E . -name '*.go' -o -regex '.*\.(go)?tmpl' -o -regex '.*\.ya?ml')
-endif
 
-REPOS        ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal
+SRC 	     := $(shell find cmd config confgen env orgs policy util -name '*.go')
+TEMPLATES    := $(shell find policy/{templates,app} -type f)
+
+REPOS        ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal tyk-pro
 GITHUB_TOKEN ?= $(shell pass me/github)
 JIRA_USER    ?= alok@tyk.io
 JIRA_TOKEN   ?= $(shell pass Tyk/atlassian)
 
-gromit: go.mod go.sum *.go $(SRC) policy/app/*
+gromit: go.mod go.sum *.go $(SRC) $(TEMPLATES)
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
+
+serve:
+	command -v entr
+	find policy -type f | entr -rs 'make gromit && CREDENTIALS='\''{"user":"pass"}'\'' ./gromit policy serve'
 
 test: 
 	go test -coverprofile cp.out ./... # dlv test ./cmd #
@@ -32,6 +33,9 @@ update-test-cases:
 	@echo Updating test cases for cmd test
 	go test ./cmd/ -update
 
+update-actions-versions: bin/update-actions-versions.sed
+	echo $(TEMPLATES) | xargs sed -i -f $^
+
 push: dist/gromit_linux_amd64_v1/gromit
 	goreleaser --clean --snapshot
 	docker push tykio/gromit:latest
@@ -42,9 +46,9 @@ deploy: push
 	./gromit env expose --env=internal
 
 clean:
-	find . -name rice-box.go | xargs rm -fv
+	find . -name rice-box.go -o -name error.yaml | xargs rm -fv
 	rm -rf $(REPOS)
-	rm -fv gromit error.yaml
+	rm -fv gromit
 
 sync: gromit
 	@$(foreach r,$(REPOS), GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit policy sync $(r);)
@@ -62,4 +66,4 @@ opr: gromit
 loc: clean
 	gocloc --skip-duplicated --not-match-d=\.terraform --output-type=json ~gromit ~ci | jq -r '.languages | map([.name, .code]) | transpose[] | @csv'
 
-.PHONY: clean update-test-cases test loc cpr upr opr deploy
+.PHONY: clean update-test-cases test loc cpr upr opr deploy push

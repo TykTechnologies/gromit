@@ -1,0 +1,19 @@
+envfiles:
+  - cache: redis0
+    db: db0
+    config: conf0
+    apimarkers: m0
+    uimarkers: m1
+pump:
+  - master
+sink:
+  - master
+level: # repos
+  repo0:
+    level: # branches
+      br0:
+        level: # trigger
+          tr0:
+            level: # testsuite
+              ts0:
+              ts1:

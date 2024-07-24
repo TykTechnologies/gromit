@@ -3,6 +3,8 @@
 # specific/ branch specific options.
 
 policy:
+  # Owner component of Github reponame
+  owner: TykTechnologies
   # deletedfiles are files that should not exist, usually the
   # detritutus of failed experiments or features than have been
   # superceded, they will be removed if policy sync encounters them
@@ -124,32 +126,29 @@ policy:
           cgo: true
           upgradefromver: 3.0.9
           configfile: tyk_analytics.conf
+          deletedfiles:
+            - .github/workflows/release-tests-api.yml
+            - .github/workflows/release-tests-ui.yml
           versionpackage: github.com/TykTechnologies/tyk-analytics/internal/build
-          tests: [ui,api]
+          tests:
+            - ui
+            - api
           branches:
             master:
               features:
                 - s390x
                 - distroless
-                - test-square-ui
-                - test-square-api
             release-5.3:
               features:
                 - s390x
-                - test-square-ui
-                - test-square-api                
             release-5.4:
               features:
                 - s390x
                 - release-test
-                - test-square-ui
-                - test-square-api                
             release-5-lts:
               buildenv: 1.16
               features:
                 - el7-pgo-build
-                - test-square-ui
-                - test-square-api                
 
         portal:
           description: >-
@@ -231,13 +230,21 @@ policy:
             - distroless
           branches:
             master:
-    stand-alone-services:
+
+    # Quis qustodiet ipsos custodes?
+    # A:
+    test-square:
       repos:
-        tyk-ci:
+        tyk-pro:
+          owner: tyklabs
+          deletedfiles:
+            - .github/workflows/release-tests.yml
           description: >-
             Tyk automation repo environment for regression testing
-          tests: [api,ui]
+          tests:
+            - api
+            - ui
           features:
             - test-square
           branches:
-            master:
+            main:
