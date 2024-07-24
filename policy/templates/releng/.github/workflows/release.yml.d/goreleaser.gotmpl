@@ -213,7 +213,7 @@
             org.opencontainers.image.vendor=tyk.io
             org.opencontainers.image.version={{`${{ github.ref_name }}`}}
  
-      - name: build multiarch image
+      - name: push image to prod
         if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
         uses: docker/build-push-action@v6
         with:
@@ -232,7 +232,8 @@
           tags: {{`${{ steps.tag_metadata.outputs.tags }}`}}
           labels: {{`${{ steps.tag_metadata.outputs.labels }}`}}
 
-      - uses: actions/upload-artifact@v4
+      - name: save deb
+        uses: actions/upload-artifact@v4
         if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         with:
           name: deb
@@ -240,8 +241,10 @@
           path: |
             dist/*.deb
             !dist/*PAYG*.deb
+            !dist/*fips*.deb
 
-      - uses: actions/upload-artifact@v4
+      - name: save rpm
+        uses: actions/upload-artifact@v4
         if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         with:
           name: rpm
@@ -249,4 +252,5 @@
           path: |
             dist/*.rpm
             !dist/*PAYG*.rpm
+            !dist/*fips*.rpm
 {{ end -}}{{/* End of definition */}}

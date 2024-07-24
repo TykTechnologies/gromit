@@ -207,7 +207,7 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 // ProcessBranch will render the templates into a git worktree for the supplied branch, commit and push the changes upstream
 // The upstream branch name is the supplied branch name prefixed with releng/ and is returned
 func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
-	log.Info().Msgf("processing branch %s", pushOpts.Branch)
+	log.Debug().Msgf("processing branch %s", pushOpts.Branch)
 	err := pushOpts.Repo.FetchBranch(pushOpts.Branch)
 	if err != nil {
 		return fmt.Errorf("git checkout %s:%s: %v", pushOpts.Repo.url, pushOpts.Branch, err)
@@ -221,7 +221,7 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 		return fmt.Errorf("bundle %v: %v", rp.Branchvals.Features, err)
 	}
 	files, err := b.Render(&rp, pushOpts.OpDir, nil)
-	log.Info().Strs("files", files).Msg("Rendered files")
+	log.Debug().Strs("files", files).Msg("rendered files")
 	if err != nil {
 		return fmt.Errorf("bundle gen %v: %v", rp.Branchvals.Features, err)
 	}

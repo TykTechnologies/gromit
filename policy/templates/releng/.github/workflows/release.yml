@@ -23,6 +23,9 @@ on:
 
 env:
   GOPRIVATE: github.com/TykTechnologies
+  VARIATION: test
+  DOCKER_BUILD_SUMMARY: false
+  DOCKER_BUILD_RECORD_UPLOAD: false
   
 jobs:
 {{- template "goreleaser" . }}

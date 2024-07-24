@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/TykTechnologies/gromit/policy"
 	"github.com/rs/zerolog/log"
@@ -138,7 +137,6 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 		if err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repoName, err)
 		}
-		rp.SetTimestamp(time.Now().UTC())
 		msg, _ := cmd.Flags().GetString("msg")
 		autoMerge, _ := cmd.Flags().GetBool("auto")
 
@@ -189,7 +187,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 				prs = append(prs, *pr.HTMLURL)
 			}
 		}
-		cmd.Println("PRs created:")
+		cmd.Println("PRs created or updated:")
 		for _, pr := range prs {
 			cmd.Printf("- %s\n", pr)
 		}

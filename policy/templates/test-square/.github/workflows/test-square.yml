@@ -22,6 +22,9 @@ on:
       - 'tests/api/**'
 {{- end }}
 
+env:
+  VARIATION: test
+
 jobs:
 {{- $DOT := . }}
 {{- range $test := .Branchvals.Tests }}

@@ -46,7 +46,7 @@ deploy: push
 	./gromit env expose --env=internal
 
 clean:
-	find . -name rice-box.go -o error.yaml | xargs rm -fv
+	find . -name rice-box.go -o -name error.yaml | xargs rm -fv
 	rm -rf $(REPOS)
 	rm -fv gromit
 

@@ -16,12 +16,11 @@
         env:
           # startsWith covers pull_request_target too
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
-          VARIATION: esteban
         run: |
           set -eo pipefail
           curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}.gho" | tee -a "$GITHUB_OUTPUT"
           if [[ $VARIATION =~ test ]] ;then
-              echo "::warning file=release.yml,line=100,col=5,endColumn=7::Using test variation"
+              echo "::warning file=.github/workflows/release.yml,line=26,col=1,endColumn=8::Using test variation"
               echo "### :warning: You are using VARIATION with test in test-controller-{{ .test }}" >> $GITHUB_STEP_SUMMARY
           fi
 
@@ -57,16 +56,12 @@
             sink: tykio/tyk-mdcb-docker:v2.4
         {{- end }}
     steps:
-      {{- if or (eq .dot.Name "tyk-analytics") (eq .test "ui") }}
       - uses: actions/checkout@v4
         with:
-        {{- if ne .dot.Name "tyk-analytics" }}
           repository: TykTechnologies/tyk-analytics
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-        {{- end }}
           fetch-depth: 1
           sparse-checkout: tests/{{ .test }}
-      {{- end }}  
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
@@ -140,9 +135,9 @@
       {{ if eq .test "api" }}
       {{- if eq .dot.Name "tyk-analytics" }}
       - uses: actions/setup-python@v5
-      - working-directory: tests/api
-        run: |
-          pip install -r requirements.txt
+        with:
+          cache: 'pip'
+          python-version: '3.10'
       {{- end }} {{/* tyk-analytics */}}
       - name: Run API tests
         id: test_execution
@@ -156,18 +151,46 @@
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
-          {{- if eq .dot.Name "tyk-analytics" }}
-          pytest_file="{{`${{ github.workspace }}`}}/tests/{{ .test }}/pytest_local.ini"
-          {{ else }}
-          pytest_file="/app/pytest_ci.ini"
-          {{ end -}}
-          pytest="pytest -c $pytest_file --junitxml=${XUNIT_REPORT_PATH} --ci -m \"{{`${{ matrix.envfiles.apimarkers }}`}}\""
+          pytest="pytest --random-order --maxfail=3 --junitxml=${XUNIT_REPORT_PATH} --cache-clear --log-cli-level=ERROR  -m \"{{`${{ matrix.envfiles.apimarkers }}`}}\""
           {{- if eq .dot.Name "tyk-analytics" }}
           cd tests/{{ .test }}
-          cmd=${pytest}
+          pip install -r requirements.txt
+          cat >pytest.env <<-EOF
+          TYK_TEST_BASE_URL=http://localhost:3000/
+          TYK_TEST_GW_URL=https://localhost:8080/
+          TYK_TEST_GW_1_ALFA_URL=https://localhost:8181/
+          TYK_TEST_GW_1_BETA_URL=https://localhost:8182/
+          TYK_TEST_GW_2_ALFA_URL=https://localhost:8281/
+          TYK_TEST_GW_2_BETA_URL=https://localhost:8282/
+          TYK_TEST_MONGODB=localhost:27017
+          TYK_TEST_REDIS=localhost
+          TYK_TEST_DB_ADMIN=12345
+          TYK_TEST_GW_SECRET=352d20ee67be67f6340b4c0605b044b7
+          TYK_TEST_DB_NAME=tyk_analytics
+          TYK_TEST_FEDERATION_HOST=federation
+          TYK_TEST_GRAPHQL_FAKER_HOST=graphql-faker
+          GATEWAY_CONTAINER_NAME=tyk
+          EOF
+          cmd="env $(cat pytest.ev | xargs) $pytest"
           {{ else }}
+          cat >pytest.env <<-EOF
+          TYK_TEST_BASE_URL=http://tyk-analytics:3000/
+          TYK_TEST_GW_URL=https://tyk:8080/
+          TYK_TEST_GW_1_ALFA_URL=https://tyk-gateway-datacenter-1-alfa:8181/
+          TYK_TEST_GW_1_BETA_URL=https://tyk-gateway-datacenter-1-beta:8182/
+          TYK_TEST_GW_2_ALFA_URL=https://tyk-gateway-datacenter-2-alfa:8281/
+          TYK_TEST_GW_2_BETA_URL=https://tyk-gateway-datacenter-2-beta:8282/
+          TYK_TEST_MONGODB=mongo:27017
+          TYK_TEST_REDIS=redis
+          TYK_TEST_DB_ADMIN=12345
+          TYK_TEST_GW_SECRET=352d20ee67be67f6340b4c0605b044b7
+          TYK_TEST_DB_NAME=tyk_analytics
+          TYK_TEST_FEDERATION_HOST=federation
+          TYK_TEST_GRAPHQL_FAKER_HOST=graphql-faker
+          GATEWAY_CONTAINER_NAME=tyk
+          EOF
           touch $XUNIT_REPORT_PATH
-          cmd="docker run --rm --network auto_default -v $XUNIT_REPORT_PATH:$XUNIT_REPORT_PATH {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:$BASE_REF $pytest"
+          cmd="docker run --env-file pytest.env --rm --network auto_default -v $XUNIT_REPORT_PATH:$XUNIT_REPORT_PATH {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:$BASE_REF $pytest"
           {{ end -}}
           # Run tests
           eval $cmd
@@ -177,18 +200,12 @@
         uses: actions/setup-node@v4
         with:
           node-version: "18.16"
+          cache: 'npm'
       - name: Fix private module deps
         env:
           TOKEN: '{{`${{ secrets.ORG_GH_TOKEN }}`}}'
         run: >
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"                    
-      - name: Install test dependecies
-        run: |
-          npm ci
-        working-directory: tests/ui
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
-        working-directory: tests/ui          
       - name: Execute UI tests
         id: test_execution
         working-directory: tests/{{ .test }}
@@ -198,11 +215,11 @@
         run: |
           # Generate report id
           echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
-          npm install
+          npm ci
           npx playwright install --with-deps chromium
-          PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium --reporter=junit
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium --reporter=junit --grep "{{`${{ matrix.envfiles.uimarkers }}`}}"
 
-      {{- end }} {{/* end of test variation */}}
+      {{- end }} {{/* end of if .test */}}
 
       - name: Generate metadata and upload test reports
         if: always() && steps.test_execution.outcome != 'skipped'
