@@ -24,6 +24,7 @@ on:
 
 env:
   VARIATION: test
+  BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
 
 jobs:
 {{- $DOT := . }}

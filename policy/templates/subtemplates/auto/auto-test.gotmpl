@@ -13,15 +13,12 @@
       - name: set params
         id: params
         shell: bash
-        env:
-          # startsWith covers pull_request_target too
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
         run: |
           set -eo pipefail
           curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}.gho" | tee -a "$GITHUB_OUTPUT"
-          if [[ $VARIATION =~ test ]] ;then
-              echo "::warning file=.github/workflows/release.yml,line=26,col=1,endColumn=8::Using test variation"
-              echo "### :warning: You are using VARIATION with test in test-controller-{{ .test }}" >> $GITHUB_STEP_SUMMARY
+          if ! [[ $VARIATION =~ prod ]] ;then
+              echo "::warning file=.github/workflows/release.yml,line=26,col=1,endColumn=8::Using non-prod variation"
+              echo "### :warning: You are using VARIATION=${VARIATION} in test-controller-{{ .test }}" >> $GITHUB_STEP_SUMMARY
           fi
 
   {{ .test }}-tests:
@@ -35,6 +32,9 @@
     {{- end }}
     env:
       XUNIT_REPORT_PATH: {{`${{ github.workspace}}`}}/test-results.xml
+{{- if eq .dot.Name "tyk-pro" }}
+      BASE_REF: master
+{{- end }}
     permissions:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
@@ -56,12 +56,6 @@
             sink: tykio/tyk-mdcb-docker:v2.4
         {{- end }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: TykTechnologies/tyk-analytics
-          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          fetch-depth: 1
-          sparse-checkout: tests/{{ .test }}
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
@@ -101,7 +95,6 @@
           GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
         run: |
           match_tag={{`${{steps.ecr.outputs.registry}}`}}/{{ .dot.Name }}:$BASE_REF
           {{- if eq .dot.Name "tyk-pro" }}
@@ -132,28 +125,33 @@
           ./dash-bootstrap.sh http://localhost:3000
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
 
+      - uses: actions/checkout@v4
+        with:
+          repository: TykTechnologies/tyk-analytics
+          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+          fetch-depth: 1
+          sparse-checkout: tests/{{ .test }}
+
+      - name: Branch for test code
+        id: timestamp
+        working-directory: tests/{{ .test }}
+        run: |
+          # Generate report id
+          git fetch --no-tags --depth 1 origin "refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          git switch $BASE_REF
+          echo "ts=$(date +%s%N)" >> $GITHUB_OUTPUT
+
       {{ if eq .test "api" }}
-      {{- if eq .dot.Name "tyk-analytics" }}
+
       - uses: actions/setup-python@v5
         with:
           cache: 'pip'
           python-version: '3.10'
-      {{- end }} {{/* tyk-analytics */}}
       - name: Run API tests
         id: test_execution
-        env:
-          # Cover pull_request_target too
-          {{- if eq .dot.Name "tyk-pro" }}
-          BASE_REF: master
-          {{- else }}
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name }}`}}
-          {{- end }}
+        working-directory: tests/{{ .test }}
         run: |
-          # Generate report id
-          echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
-          pytest="pytest --random-order --maxfail=3 --junitxml=${XUNIT_REPORT_PATH} --cache-clear --log-cli-level=ERROR  -m \"{{`${{ matrix.envfiles.apimarkers }}`}}\""
-          {{- if eq .dot.Name "tyk-analytics" }}
-          cd tests/{{ .test }}
+          pytest="pytest --random-order --maxfail=3 --junitxml=${XUNIT_REPORT_PATH} --cache-clear --log-cli-level=ERROR"
           pip install -r requirements.txt
           cat >pytest.env <<-EOF
           TYK_TEST_BASE_URL=http://localhost:3000/
@@ -171,31 +169,10 @@
           TYK_TEST_GRAPHQL_FAKER_HOST=graphql-faker
           GATEWAY_CONTAINER_NAME=tyk
           EOF
-          cmd="env $(cat pytest.ev | xargs) $pytest"
-          {{ else }}
-          cat >pytest.env <<-EOF
-          TYK_TEST_BASE_URL=http://tyk-analytics:3000/
-          TYK_TEST_GW_URL=https://tyk:8080/
-          TYK_TEST_GW_1_ALFA_URL=https://tyk-gateway-datacenter-1-alfa:8181/
-          TYK_TEST_GW_1_BETA_URL=https://tyk-gateway-datacenter-1-beta:8182/
-          TYK_TEST_GW_2_ALFA_URL=https://tyk-gateway-datacenter-2-alfa:8281/
-          TYK_TEST_GW_2_BETA_URL=https://tyk-gateway-datacenter-2-beta:8282/
-          TYK_TEST_MONGODB=mongo:27017
-          TYK_TEST_REDIS=redis
-          TYK_TEST_DB_ADMIN=12345
-          TYK_TEST_GW_SECRET=352d20ee67be67f6340b4c0605b044b7
-          TYK_TEST_DB_NAME=tyk_analytics
-          TYK_TEST_FEDERATION_HOST=federation
-          TYK_TEST_GRAPHQL_FAKER_HOST=graphql-faker
-          GATEWAY_CONTAINER_NAME=tyk
-          EOF
-          touch $XUNIT_REPORT_PATH
-          cmd="docker run --env-file pytest.env --rm --network auto_default -v $XUNIT_REPORT_PATH:$XUNIT_REPORT_PATH {{`${{ steps.ecr.outputs.registry }}`}}/tyk-automated-tests:$BASE_REF $pytest"
-          {{ end -}}
-          # Run tests
-          eval $cmd
+          env $(cat pytest.env | xargs) $pytest -m "{{`${{ matrix.envfiles.apimarkers }}`}}"
 
       {{ else if eq .test "ui" }}
+
       - name: Install Node.js 18.16
         uses: actions/setup-node@v4
         with:
@@ -207,29 +184,26 @@
         run: >
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"                    
       - name: Execute UI tests
-        id: test_execution
         working-directory: tests/{{ .test }}
         env:
           GW_URL: 'https://localhost:8080/'
           NODE_TLS_REJECT_UNAUTHORIZED: 0
+          UI_MARKERS: {{`${{ matrix.envfiles.uimarkers && '--grep matrix.envfiles.uimarkers' || '' }}`}}
         run: |
-          # Generate report id
-          echo "id=$(date +%s%N)" >> $GITHUB_OUTPUT
           npm ci
           npx playwright install --with-deps chromium
-          PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium --reporter=junit --grep "{{`${{ matrix.envfiles.uimarkers }}`}}"
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium --reporter=junit $UI_MARKERS
 
       {{- end }} {{/* end of if .test */}}
 
       - name: Generate metadata and upload test reports
-        if: always() && steps.test_execution.outcome != 'skipped'
         id: metadata_report
         env:
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref}}`}}
-          REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.test_execution.outputs.id}}`}}
-          METADATA_REPORT_PATH: /tmp/metadata.toml
+          REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.timestamp.outputs.ts}}`}}
+          METADATA_REPORT_PATH: metadata.toml
         run: |
           # Generate metadata report
+          set -eo pipefail
           echo "[metadata]
           repo = {{`${{ github.repository }}`}}
           branch = {{`${{ github.ref }}`}}
@@ -242,13 +216,7 @@
           cache = {{`${{ matrix.envfiles.cache }}`}}
           pump_compatibility = {{`${{ matrix.pump }}`}}
           sink_compatibility = {{`${{ matrix.sink }}`}}
-          " > ${METADATA_REPORT_PATH}
-          # Print metadata report
-          if [[ "{{`${{ runner.debug }}`}}" == "1" ]]; then
-            echo "::group::metadata report"
-            cat ${METADATA_REPORT_PATH}
-            echo "::endgroup::"
-          fi
+          " | tee ${METADATA_REPORT_PATH}
           aws s3 cp ${XUNIT_REPORT_PATH}  s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.xml
           aws s3 cp ${METADATA_REPORT_PATH} s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.metadata.toml
 
