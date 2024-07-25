@@ -28,6 +28,21 @@
 		 <li> {{ $ef }}</li>
 	       {{ end }}
 	       </ul>
+	       <li>Distros</li>
+	       <ul>
+				   <li>Rpm</li>
+					 <ul>
+	         {{range $rpm := $matrix.Distros.Rpm}}
+					 <li> {{ $rpm }}</li>
+	         {{ end }}
+					 </ul>
+				   <li>Deb</li>
+					 <ul>
+	         {{range $deb := $matrix.Distros.Deb}}
+					 <li> {{ $deb }}</li>
+	         {{ end }}
+					 </ul>
+				</ul>					 							 
 	       {{ if ne $repoName "tyk-pump" }}
 	       <li>Pump versions</li>
 	       <ul>
