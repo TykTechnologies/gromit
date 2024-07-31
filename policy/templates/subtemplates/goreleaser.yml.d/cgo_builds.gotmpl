@@ -5,12 +5,10 @@ builds:
   - id: {{ $b }}
     flags:
       - -tags=ignore
-  {{- if not (has "plugin-compiler-fix-vendor" $r.Branchvals.Features) }}
       - -trimpath
       - -tags=goplugin
-  {{- end}} {{/* tyk */}}
   {{ if eq $b "fips" }}
-      - -tags=goplugin,fips,boringcrypto
+      - -tags=fips,boringcrypto
     env:
       - GOEXPERIMENT=boringcrypto
   {{- end }} {{/* fips */}}
@@ -29,10 +27,8 @@ builds:
   - id: std-arm64
     flags:
       - -tags=ignore
-  {{- if not (has "plugin-compiler-fix-vendor" $r.Branchvals.Features) }}
       - -trimpath
       - -tags=goplugin
-  {{- end}} {{/* tyk */}}
     ldflags:
       - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
       - -X {{$r.Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
@@ -50,10 +46,8 @@ builds:
   - id: std-s390x
     flags:
       - -tags=ignore
-  {{- if not (has "plugin-compiler-fix-vendor" $r.Branchvals.Features) }}
       - -trimpath
       - -tags=goplugin
-  {{- end}} {{/* tyk */}}
     ldflags:
       - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
       - -X {{$r.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
