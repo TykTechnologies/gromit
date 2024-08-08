@@ -23,6 +23,7 @@ policy:
     - ci/Dockerfile.slim
     - ci/aws
     - ci/image
+    - ci/auto
   # Groups collect repos that have some common feature
   groups:
     # cgo-services contains the metadata required to manage repos that
