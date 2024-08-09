@@ -189,7 +189,7 @@
         env:
           GW_URL: 'https://localhost:8080/'
           NODE_TLS_REJECT_UNAUTHORIZED: 0
-          UI_MARKERS: {{`${{ matrix.envfiles.uimarkers && format('--grep {0}', matrix.envfiles.uimarkers' || '' }}`}}
+          UI_MARKERS: {{`${{ matrix.envfiles.uimarkers && format('--grep {0}', matrix.envfiles.uimarkers ) || '' }}`}}
         run: |
           npm ci
           npx playwright install --with-deps chromium
