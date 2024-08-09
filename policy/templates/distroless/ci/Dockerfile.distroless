@@ -22,7 +22,7 @@ ENTRYPOINT ["/opt/{{ .PackageName }}/{{ .Binary }}" ]
 ENV PROVIDER_NAME="Tyk Dashboard (Edit me)"
 ENV PROVIDER_DATA="{}"
 
-CMD ["--bootstrap", "--user=$ADMIN_EMAIL", "--pass=$ADMIN_PASSWORD", "--provider-name=$PROVIDER_NAME", "--provider-data=$PROVIDER_DATA"]
+CMD [/opt/{{ .PackageName }}/{{ .Binary }}]
 {{- else }}
 CMD [ "--conf=/opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}" ]
 {{- end }}
