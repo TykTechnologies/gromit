@@ -128,13 +128,14 @@
       - uses: actions/checkout@v4
         with:
           repository: TykTechnologies/tyk-analytics
+          path: tyk-analytics
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           fetch-depth: 1
           sparse-checkout: tests/{{ .test }}
 
       - name: Branch for test code
         id: timestamp
-        working-directory: tests/{{ .test }}
+        working-directory: tyk-analytics/tests/{{ .test }}
         run: |
           # Generate report id
           git fetch --no-tags --depth 1 origin "refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
@@ -149,7 +150,7 @@
           python-version: '3.10'
       - name: Run API tests
         id: test_execution
-        working-directory: tests/{{ .test }}
+        working-directory: tyk-analytics/tests/{{ .test }}
         run: |
           pytest="pytest --ci --random-order --junitxml=${XUNIT_REPORT_PATH} --cache-clear --log-cli-level=ERROR"
           pip install -r requirements.txt
@@ -184,11 +185,11 @@
         run: >
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"                    
       - name: Execute UI tests
-        working-directory: tests/{{ .test }}
+        working-directory: tyk-analytics/tests/{{ .test }}
         env:
           GW_URL: 'https://localhost:8080/'
           NODE_TLS_REJECT_UNAUTHORIZED: 0
-          UI_MARKERS: {{`${{ matrix.envfiles.uimarkers && '--grep matrix.envfiles.uimarkers' || '' }}`}}
+          UI_MARKERS: {{`${{ matrix.envfiles.uimarkers && format('--grep {0}', matrix.envfiles.uimarkers' || '' }}`}}
         run: |
           npm ci
           npx playwright install --with-deps chromium
