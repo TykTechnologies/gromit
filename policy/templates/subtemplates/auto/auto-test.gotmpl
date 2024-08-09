@@ -178,6 +178,7 @@
         uses: actions/setup-node@v4
         with:
           node-version: "18.16"
+          cache-dependency-path: tyk-analytics/tests/{{ .test }}
           cache: 'npm'
       - name: Fix private module deps
         env:
