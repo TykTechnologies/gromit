@@ -200,6 +200,7 @@
 
       - name: Generate metadata and upload test reports
         id: metadata_report
+        if: always() && (steps.test_execution.conclusion != 'skipped') 
         env:
           REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.timestamp.outputs.ts}}`}}
           METADATA_REPORT_PATH: metadata.toml
