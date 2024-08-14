@@ -23,7 +23,7 @@ on:
 
 env:
   GOPRIVATE: github.com/TykTechnologies
-  VARIATION: prod
+  VARIATION: test
   DOCKER_BUILD_SUMMARY: false
   DOCKER_BUILD_RECORD_UPLOAD: false
   # startsWith covers pull_request_target too
