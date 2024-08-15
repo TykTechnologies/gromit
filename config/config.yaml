@@ -102,9 +102,10 @@ policy:
                 - distroless
             release-5.3:
               features:
+                - distroless
                 - s390x
                 - release-test
-            release-5.4:
+            release-5.5:
               features:
                 - s390x
                 - release-test
@@ -136,12 +137,14 @@ policy:
           branches:
             master:
               features:
+                - distroless
                 - s390x
                 - distroless
             release-5.3:
               features:
+                - distroless
                 - s390x
-            release-5.4:
+            release-5.5:
               features:
                 - s390x
                 - release-test
