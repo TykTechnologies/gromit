@@ -124,6 +124,7 @@
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
           ./dash-bootstrap.sh http://localhost:3000
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
+          echo "$(cat pytest.env | grep USER_API_SECRET)" >> $GITHUB_OUTPUT
 
       - uses: actions/checkout@v4
         with:
@@ -169,6 +170,7 @@
           TYK_TEST_FEDERATION_HOST=federation
           TYK_TEST_GRAPHQL_FAKER_HOST=graphql-faker
           GATEWAY_CONTAINER_NAME=tyk
+          USER_API_SECRET={{`${{ steps.env_up.outputs.USER_API_SECRET }}`}}
           EOF
           env $(cat pytest.env | xargs) $pytest -m "{{`${{ matrix.envfiles.apimarkers }}`}}"
 
