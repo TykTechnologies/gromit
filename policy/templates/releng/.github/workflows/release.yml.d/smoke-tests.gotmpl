@@ -18,7 +18,6 @@
           curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/api/Distros.gho" | tee -a "$GITHUB_OUTPUT"
           if ! [[ $VARIATION =~ prod ]];then
             echo "::warning file=.github/workflows/release.yml,line=24,col=1,endColumn=8::Using test variation"
-            echo "### :warning: You are using VARIATION=${VARIATION} in test-controller-{{ .test }}" >> $GITHUB_STEP_SUMMARY
           fi
 
 {{- $pcrepo :=  $.PCRepo }}
