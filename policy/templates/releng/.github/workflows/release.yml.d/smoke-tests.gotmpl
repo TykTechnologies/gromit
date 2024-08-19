@@ -16,7 +16,10 @@
         run: |
           set -eo pipefail
           curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/api/Distros.gho" | tee -a "$GITHUB_OUTPUT"
-          ! [[ $VARIATION =~ prod ]] && echo "::warning file=.github/workflows/release.yml,line=26,col=1,endColumn=8::Using test variation"
+          if ! [[ $VARIATION =~ prod ]];then
+            echo "::warning file=.github/workflows/release.yml,line=24,col=1,endColumn=8::Using test variation"
+            echo "### :warning: You are using VARIATION=${VARIATION} in test-controller-{{ .test }}" >> $GITHUB_STEP_SUMMARY
+          fi
 
 {{- $pcrepo :=  $.PCRepo }}
 {{if eq .Name "tyk-sink" }}
