@@ -17,7 +17,7 @@
           set -eo pipefail
           curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}.gho" | tee -a "$GITHUB_OUTPUT"
           if ! [[ $VARIATION =~ prod ]] ;then
-              echo "::warning file=.github/workflows/release.yml,line=26,col=1,endColumn=8::Using non-prod variation"
+              echo "::warning file=.github/workflows/release.yml,line=24,col=1,endColumn=8::Using non-prod variation"
               echo "### :warning: You are using VARIATION=${VARIATION} in test-controller-{{ .test }}" >> $GITHUB_STEP_SUMMARY
           fi
 
@@ -124,17 +124,19 @@
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
           ./dash-bootstrap.sh http://localhost:3000
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
+          echo "$(cat pytest.env | grep USER_API_SECRET)" >> $GITHUB_OUTPUT
 
       - uses: actions/checkout@v4
         with:
           repository: TykTechnologies/tyk-analytics
+          path: tyk-analytics
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           fetch-depth: 1
           sparse-checkout: tests/{{ .test }}
 
       - name: Branch for test code
         id: timestamp
-        working-directory: tests/{{ .test }}
+        working-directory: tyk-analytics/tests/{{ .test }}
         run: |
           # Generate report id
           git fetch --no-tags --depth 1 origin "refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
@@ -149,9 +151,9 @@
           python-version: '3.10'
       - name: Run API tests
         id: test_execution
-        working-directory: tests/{{ .test }}
+        working-directory: tyk-analytics/tests/{{ .test }}
         run: |
-          pytest="pytest --random-order --maxfail=3 --junitxml=${XUNIT_REPORT_PATH} --cache-clear --log-cli-level=ERROR"
+          pytest="pytest --ci --random-order --force-flaky --no-success-flaky-report --maxfail=3 --junitxml=${XUNIT_REPORT_PATH} --cache-clear --ignore=./tests/mdcb -v --log-cli-level=ERROR"
           pip install -r requirements.txt
           cat >pytest.env <<-EOF
           TYK_TEST_BASE_URL=http://localhost:3000/
@@ -168,6 +170,7 @@
           TYK_TEST_FEDERATION_HOST=federation
           TYK_TEST_GRAPHQL_FAKER_HOST=graphql-faker
           GATEWAY_CONTAINER_NAME=tyk
+          USER_API_SECRET={{`${{ steps.env_up.outputs.USER_API_SECRET }}`}}
           EOF
           env $(cat pytest.env | xargs) $pytest -m "{{`${{ matrix.envfiles.apimarkers }}`}}"
 
@@ -177,6 +180,7 @@
         uses: actions/setup-node@v4
         with:
           node-version: "18.16"
+          cache-dependency-path: tyk-analytics/tests/{{ .test }}
           cache: 'npm'
       - name: Fix private module deps
         env:
@@ -184,11 +188,11 @@
         run: >
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"                    
       - name: Execute UI tests
-        working-directory: tests/{{ .test }}
+        working-directory: tyk-analytics/tests/{{ .test }}
         env:
           GW_URL: 'https://localhost:8080/'
           NODE_TLS_REJECT_UNAUTHORIZED: 0
-          UI_MARKERS: {{`${{ matrix.envfiles.uimarkers && '--grep matrix.envfiles.uimarkers' || '' }}`}}
+          UI_MARKERS: {{`${{ matrix.envfiles.uimarkers && format('--grep {0}', matrix.envfiles.uimarkers ) || '' }}`}}
         run: |
           npm ci
           npx playwright install --with-deps chromium
@@ -198,6 +202,7 @@
 
       - name: Generate metadata and upload test reports
         id: metadata_report
+        if: always() && (steps.test_execution.conclusion != 'skipped') 
         env:
           REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.timestamp.outputs.ts}}`}}
           METADATA_REPORT_PATH: metadata.toml

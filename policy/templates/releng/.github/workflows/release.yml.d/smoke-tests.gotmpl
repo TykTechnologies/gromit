@@ -16,7 +16,9 @@
         run: |
           set -eo pipefail
           curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/api/Distros.gho" | tee -a "$GITHUB_OUTPUT"
-          ! [[ $VARIATION =~ prod ]] && echo "::warning file=.github/workflows/release.yml,line=26,col=1,endColumn=8::Using test variation"
+          if ! [[ $VARIATION =~ prod ]];then
+            echo "::warning file=.github/workflows/release.yml,line=24,col=1,endColumn=8::Using test variation"
+          fi
 
 {{- $pcrepo :=  $.PCRepo }}
 {{if eq .Name "tyk-sink" }}
@@ -65,7 +67,7 @@
           RUN apt-get update && apt-get install -y curl
           RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $pcrepo }}/script.deb.sh | bash && apt-get install -y {{ $pcname }}={{ $fromVer }}
           RUN dpkg -i /{{ $pcname }}.deb
-{{- else if eq $distro "rpm" }}
+{{ else if eq $distro "rpm" }}
           ARG RHELARCH
           COPY {{ $pcname }}*.${RHELARCH}.rpm /{{ $pcname }}.rpm
           RUN command -v curl || yum install -y curl
@@ -74,12 +76,12 @@
           RUN curl https://keyserver.tyk.io/tyk.io.rpm.signing.key.2020 -o {{ $pcrepo }}.key && rpm --import {{ $pcrepo }}.key
           RUN rpm --checksig /{{ $pcname }}.rpm
           RUN rpm -Uvh --force /{{ $pcname }}.rpm
-{{- end }} {{/* if $distro */}}
-  {{- if eq $repo "tyk" }}
+{{ end }} {{/* if $distro */}}
+{{- if eq $repo "tyk" }}
           RUN /opt/tyk-gateway/install/setup.sh --listenport=8080 --redishost=localhost --redisport=6379 --domain=""
           COPY ci/tests/api-functionality/data/api.json /opt/tyk-gateway/apps/
           CMD ["/opt/tyk-gateway/tyk", "--conf", "/opt/tyk-gateway/tyk.conf"]
-  {{- end }}
+{{- end }}
           ' | tee Dockerfile
 
       - name: install on {{`${{ matrix.distro }}`}}
