@@ -24,7 +24,7 @@ on:
 
 env:
   VARIATION: prod
-  BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.head_ref || github.ref_name}}`}}
+  BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
 
 jobs:
 {{- $DOT := . }}
