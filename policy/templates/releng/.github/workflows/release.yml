@@ -20,7 +20,10 @@ on:
       - release-**
     tags:
       - 'v*'
-
+concurrency:
+  group: {{`${{ github.workflow }}-${{ github.ref }}`}}
+  cancel-in-progress: true
+  
 env:
   GOPRIVATE: github.com/TykTechnologies
   VARIATION: prod

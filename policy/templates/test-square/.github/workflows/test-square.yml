@@ -21,11 +21,12 @@ on:
       - 'tests/ui/**'
       - 'tests/api/**'
 {{- end }}
-
+concurrency:
+  group: {{`${{ github.workflow }}-${{ github.ref }}`}}
+  cancel-in-progress: true
 env:
   VARIATION: prod
   BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
-
 jobs:
 {{- $DOT := . }}
 {{- range $test := .Branchvals.Tests }}
