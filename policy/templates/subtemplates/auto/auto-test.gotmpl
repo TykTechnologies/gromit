@@ -137,6 +137,10 @@
       - name: Branch for test code
         id: timestamp
         working-directory: tyk-analytics/tests/{{ .test }}
+        {{- if eq .dot.Name "tyk-analytics" }}
+        env: 
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.head_ref || github.ref_name}}`}}
+        {{- end }}
         run: |
           # Generate report id
           git fetch --no-tags --depth 1 origin "refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
