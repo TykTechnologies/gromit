@@ -33,7 +33,7 @@ func Serve(port, tvDir string) error {
 
 type Server struct {
 	Router         *chi.Mux
-	ProdVariations RepoTestsuiteVariations
+	ProdVariations variations
 	SaveDir        string
 	AllVariations  AllTestsuiteVariations
 	// Db, config can be added here
@@ -85,7 +85,7 @@ func CreateNewServer(tvDir string, creds map[string]string) *Server {
 }
 
 // finds the supplied name as a sub-string among the keys of AllVariations
-func (s *Server) findVariation(name string) (RepoTestsuiteVariations, bool) {
+func (s *Server) findVariation(name string) (variations, bool) {
 	found := false
 	re := regexp.MustCompile(name)
 	for k, v := range s.AllVariations {
@@ -94,7 +94,7 @@ func (s *Server) findVariation(name string) (RepoTestsuiteVariations, bool) {
 			return v, found
 		}
 	}
-	return nil, found
+	return variations{}, found
 }
 
 // API handlers
@@ -144,15 +144,10 @@ func (s *Server) lookup(w http.ResponseWriter, r *http.Request) {
 	field := chi.URLParam(r, "field")
 
 	var m *ghMatrix
-	rv, found := s.ProdVariations[repo]
-	if !found {
-		http.Error(w, fmt.Sprintf("%s not known", repo), http.StatusNotFound)
-		return
-	}
-	m = rv.Lookup(branch, trigger, testsuite)
+	m = s.ProdVariations.Lookup(repo, branch, trigger, testsuite)
 	if m == nil {
 		// if branch not known, send down master's config
-		m = rv.Lookup("master", trigger, testsuite)
+		m = s.ProdVariations.Lookup(repo, "master", trigger, testsuite)
 		if m == nil {
 			http.Error(w, fmt.Sprintf("(master, %s, %s) not known for %s", trigger, testsuite, repo), http.StatusNotFound)
 			return
@@ -235,23 +230,20 @@ func renderGHO(w http.ResponseWriter, obj any) {
 	buf.WriteTo(w)
 }
 
-// lookup2 looks up RepoTestsuiteVariations based on the tsv parameter
+// findMatrix looks up RepoTestsuiteVariations based on the tsv parameter
 // being a regexp match for one of the map keys of s.AllVariations
 func (s *Server) findMatrix(tsv, repo, branch, trigger, testsuite string) (*ghMatrix, error) {
 	log.Debug().Msgf("looking for %s in %v", tsv, s.AllVariations.Files())
-	rtsv, found := s.findVariation(tsv)
+	v, found := s.findVariation(tsv)
 	if !found {
 		return nil, fmt.Errorf("%s not found among %v", tsv, s.AllVariations.Files())
 	}
 	var m *ghMatrix
-	rv, found := rtsv[repo]
-	if !found {
-		return nil, fmt.Errorf("%s not known", repo)
-	}
-	m = rv.Lookup(branch, trigger, testsuite)
+	m = v.Lookup(repo, branch, trigger, testsuite)
 	if m == nil {
 		return nil, fmt.Errorf("(%s or master, %s, %s) not known for %s", branch, trigger, testsuite, repo)
 	}
+	log.Debug().Interface("matrix", m).Msgf("found in %s", tsv)
 	return m, nil
 }
 

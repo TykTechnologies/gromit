@@ -59,21 +59,21 @@ func TestV1Variations(t *testing.T) {
 		{
 			Name:         "EnvFiles",
 			Endpoint:     "/api/repo1/br0/tr0/ts0/EnvFiles",
-			ResponseJSON: `[{"cache":"repo1-redis0", "config":"repo1-conf0", "db":"repo1-db0", "apimarkers":"", "uimarkers":""}]`,
+			ResponseJSON: `[{"cache":"redis0", "config":"conf0", "db":"db0", "apimarkers":"am0", "uimarkers":"um0"}]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
 		{
 			Name:         "Pump",
-			Endpoint:     "/api/repo0/br1/tr1/ts0/Pump",
+			Endpoint:     "/api/repo0/br1/tr1/ts1/Pump",
 			ResponseJSON: `["pump-br1", "master"]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
 		{
 			Name:         "Sink",
-			Endpoint:     "/api/repo1/br0/tr1/ts0/Sink",
-			ResponseJSON: `["sink-br0", "master"]`,
+			Endpoint:     "/api/repo0/unknown/tr0/ts0/Sink",
+			ResponseJSON: `["master"]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
@@ -87,15 +87,15 @@ func TestV2Variations(t *testing.T) {
 		{
 			Name:         "EnvFiles",
 			Endpoint:     "/v2/prod-variations/repo0/br0/tr0/ts0/EnvFiles.json",
-			ResponseJSON: `[{"cache":"repo0-redis0", "config":"repo0-conf0", "db":"", "apimarkers":"m0", "uimarkers":"m1"}]`,
+			ResponseJSON: `[{"cache":"redis0", "config":"conf0", "db":"db0", "apimarkers":"am0", "uimarkers":"um0"}]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
 		{
 			Name:     "gho",
-			Endpoint: "/v2/prod-var/repo0/br1/tr1/ts0.gho",
+			Endpoint: "/v2/prod-var/repo0/br1/tr1/ts1.gho",
 			ResponseText: `envfiles<<EOF
-[{"cache":"repo0-redis-tr1","db":"","config":"repo0-conf-tr1","apimarkers":"","uimarkers":""},{"cache":"repo0-redis0","db":"","config":"repo0-conf0","apimarkers":"m0","uimarkers":"m1"}]
+[{"cache":"redis-br1","db":"db-br1","config":"conf-br1","apimarkers":"br1-am1","uimarkers":"br1-um1"},{"cache":"redis1","db":"db1","config":"conf1","apimarkers":"am1","uimarkers":"um1"},{"cache":"redis0","db":"db0","config":"conf0","apimarkers":"am0","uimarkers":"um0"}]
 EOF
 pump<<EOF
 ["pump-br1","master"]
@@ -112,7 +112,7 @@ EOF
 		},
 		{
 			Name:     "field-gho",
-			Endpoint: "/v2/prod-variations.yml/repo0/br1/tr1/ts0/Distros.gho",
+			Endpoint: "/v2/prod-variations.yml/repo1/unknown/tr0/ts0/Distros.gho",
 			ResponseText: `deb<<EOF
 ["d1"]
 EOF
