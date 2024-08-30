@@ -193,6 +193,7 @@
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"                    
       - name: Execute UI tests
         working-directory: tyk-analytics/tests/{{ .test }}
+        id: test_execution
         env:
           GW_URL: 'https://localhost:8080/'
           NODE_TLS_REJECT_UNAUTHORIZED: 0
