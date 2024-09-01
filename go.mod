@@ -3,19 +3,19 @@ module github.com/TykTechnologies/gromit
 go 1.22.0
 
 require (
-	github.com/Masterminds/sprig/v3 v3.2.3
+	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/ProtonMail/go-crypto v1.1.0-alpha.5-proton
 	github.com/aws/aws-sdk-go-v2 v1.30.4
-	github.com/aws/aws-sdk-go-v2/config v1.27.28
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.175.1
-	github.com/aws/aws-sdk-go-v2/service/ecs v1.45.0
-	github.com/aws/aws-sdk-go-v2/service/route53 v1.42.4
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.32.5
-	github.com/aws/aws-sdk-go-v2/service/ssm v1.52.5
-	github.com/aws/aws-sdk-go-v2/service/sts v1.30.4
+	github.com/aws/aws-sdk-go-v2/config v1.27.31
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.177.0
+	github.com/aws/aws-sdk-go-v2/service/ecs v1.45.2
+	github.com/aws/aws-sdk-go-v2/service/route53 v1.43.0
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.32.6
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.52.6
+	github.com/aws/aws-sdk-go-v2/service/sts v1.30.5
 	github.com/ctreminiom/go-atlassian v1.6.1
 	github.com/go-chi/chi/v5 v5.1.0
-	github.com/go-chi/httprate v0.12.1
+	github.com/go-chi/httprate v0.14.1
 	github.com/go-chi/render v1.0.3
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/go-redis/redis/v8 v8.11.5
@@ -38,12 +38,12 @@ require (
 )
 
 require (
-	dario.cat/mergo v1.0.0 // indirect
+	dario.cat/mergo v1.0.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.2.0 // indirect
+	github.com/Masterminds/semver/v3 v3.3.0 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/ajg/form v1.5.1 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.28 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.30 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.12 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.16 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.16 // indirect
@@ -70,8 +70,7 @@ require (
 	github.com/google/renameio v0.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/huandu/xstrings v1.4.0 // indirect
-	github.com/imdario/mergo v0.3.16 // indirect
+	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -89,12 +88,12 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
-	github.com/shopspring/decimal v1.3.1 // indirect
+	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29 // indirect
 	github.com/skeema/knownhosts v1.2.2 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
-	github.com/spf13/cast v1.6.0 // indirect
+	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tidwall/gjson v1.17.1 // indirect
