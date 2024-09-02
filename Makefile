@@ -10,8 +10,9 @@ REPOS        ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal t
 GITHUB_TOKEN ?= $(shell pass me/github)
 JIRA_USER    ?= alok@tyk.io
 JIRA_TOKEN   ?= $(shell pass Tyk/atlassian)
+VARIATION    ?= inverted
 
-gromit: go.mod go.sum *.go $(SRC) $(TEMPLATES)
+gromit: go.mod go.sum *.go $(SRC) $(TEMPLATES) update-variation
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
 
@@ -34,7 +35,10 @@ update-test-cases:
 	go test ./cmd/ -update
 
 update-actions-versions: bin/update-actions-versions.sed
-	echo $(TEMPLATES) | xargs sed -i -f $^
+	echo $(TEMPLATES) | xargs sed -i -f $<
+
+update-variation: policy/templates/test-square/.github/workflows/test-square.yml policy/templates/releng/.github/workflows/release.yml
+	sed -i 's/VARIATION: .*/VARIATION: $(VARIATION)/' $^
 
 push: dist/gromit_linux_amd64_v1/gromit
 	goreleaser --clean --snapshot
