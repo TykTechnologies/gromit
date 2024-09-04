@@ -138,6 +138,7 @@ policy:
           branches:
             master:
               features:
+                - nightly-e2e
                 - distroless
                 - s390x
                 - distroless
