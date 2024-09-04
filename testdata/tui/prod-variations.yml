@@ -9,6 +9,7 @@ level: # repos
         config: repo0-conf0
         apimarkers: m0
         uimarkers: m1
+        gwdash: branch0
     level: # branches
       br0:
         pump: [pump-br0]

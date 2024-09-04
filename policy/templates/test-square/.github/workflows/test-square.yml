@@ -29,7 +29,7 @@ env:
 jobs:
 {{- $DOT := . }}
 {{- range $test := .Branchvals.Tests }}
-  {{- template "auto-test" (dict "dot" $DOT "test" $test) }}
+  {{- template "auto-test" (dict "dot" $DOT "test" $test "flow" "test-square") }}
 {{- end }}
 
 {{ if eq .Name "tyk-pro" }}

@@ -59,7 +59,7 @@ func TestV1Variations(t *testing.T) {
 		{
 			Name:         "EnvFiles",
 			Endpoint:     "/api/repo1/br0/tr0/ts0/EnvFiles",
-			ResponseJSON: `[{"cache":"repo1-redis0", "config":"repo1-conf0", "db":"repo1-db0", "apimarkers":"", "uimarkers":""}]`,
+			ResponseJSON: `[{"cache":"repo1-redis0", "config":"repo1-conf0", "db":"repo1-db0", "apimarkers":"", "uimarkers":"", "gwdash":""}]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
@@ -87,7 +87,7 @@ func TestV2Variations(t *testing.T) {
 		{
 			Name:         "EnvFiles",
 			Endpoint:     "/v2/prod-variations/repo0/br0/tr0/ts0/EnvFiles.json",
-			ResponseJSON: `[{"cache":"repo0-redis0", "config":"repo0-conf0", "db":"", "apimarkers":"m0", "uimarkers":"m1"}]`,
+			ResponseJSON: `[{"cache":"repo0-redis0", "config":"repo0-conf0", "db":"", "apimarkers":"m0", "uimarkers":"m1", "gwdash":"branch0"}]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
@@ -95,7 +95,7 @@ func TestV2Variations(t *testing.T) {
 			Name:     "gho",
 			Endpoint: "/v2/prod-var/repo0/br1/tr1/ts0.gho",
 			ResponseText: `envfiles<<EOF
-[{"cache":"repo0-redis-tr1","db":"","config":"repo0-conf-tr1","apimarkers":"","uimarkers":""},{"cache":"repo0-redis0","db":"","config":"repo0-conf0","apimarkers":"m0","uimarkers":"m1"}]
+[{"cache":"repo0-redis-tr1","db":"","config":"repo0-conf-tr1","apimarkers":"","uimarkers":"","gwdash":""},{"cache":"repo0-redis0","db":"","config":"repo0-conf0","apimarkers":"m0","uimarkers":"m1","gwdash":"branch0"}]
 EOF
 pump<<EOF
 ["pump-br1","master"]

@@ -1,6 +1,6 @@
 {{ define "auto-test" }}
   test-controller-{{ .test }}:
-  {{- if has "releng" .dot.Branchvals.Features }}
+  {{- if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
     needs:
       - goreleaser
   {{- end }}  
@@ -24,7 +24,7 @@
   {{ .test }}-tests:
     needs:
       - test-controller-{{ .test }}
-    {{ if has "releng" .dot.Branchvals.Features }}
+    {{- if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
       - goreleaser
     runs-on: ubuntu-latest-m-2
     {{- else }}
@@ -96,6 +96,7 @@
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
         run: |
+        {{- if ne .flow "nightly" }}
           match_tag={{`${{steps.ecr.outputs.registry}}`}}/{{ .dot.Name }}:$BASE_REF
           {{- if eq .dot.Name "tyk-pro" }}
           tags=($match_tag)
@@ -104,7 +105,12 @@
           {{ end -}}
           set -eaxo pipefail
           docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} ${match_tag} 2>versions.env
+        {{- end}}
           echo '# alfa and beta have to come after the override
+          {{- if eq .flow "nightly" }}
+          tyk_image={{`${{steps.ecr.outputs.registry}}`}}/tyk:{{`${{ matrix.envfiles.gwdash }}`}}
+          tyk_analytics_image={{`${{steps.ecr.outputs.registry}}`}}/tyk-analytics:{{`${{ matrix.envfiles.gwdash }}`}}
+          {{- end}}
           tyk_alfa_image=$tyk_image
           tyk_beta_image=$tyk_image
           ECR={{`${{steps.ecr.outputs.registry}}`}}
