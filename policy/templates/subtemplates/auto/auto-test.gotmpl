@@ -145,7 +145,11 @@
         working-directory: tyk-analytics/tests/{{ .test }}
         {{- if eq .dot.Name "tyk-analytics" }}
         env: 
+        {{- if eq .flow "nightly" }}
+          BASE_REF: {{`${{ matrix.envfiles.gwdash }}`}}
+        {{ else }}
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.head_ref || github.ref_name}}`}}
+        {{- end }}
         {{- end }}
         run: |
           # Generate report id
