@@ -143,18 +143,20 @@
       - name: Branch for test code
         id: timestamp
         working-directory: tyk-analytics/tests/{{ .test }}
-        {{- if eq .dot.Name "tyk-analytics" }}
-        env: 
+        env:
+        {{- if eq .dot.Name "tyk-analytics" }} 
         {{- if eq .flow "nightly" }}
-          BASE_REF: {{`${{ matrix.envfiles.gwdash }}`}}
+          BRANCH_REF: {{`${{ matrix.envfiles.gwdash }}`}}
         {{ else }}
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.head_ref || github.ref_name}}`}}
+          BRANCH_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.head_ref || github.ref_name}}`}}
         {{- end }}
+        {{ else }}
+          BRANCH_REF: ${BASE_REF}
         {{- end }}
         run: |
           # Generate report id
-          git fetch --no-tags --depth 1 origin "refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
-          git switch $BASE_REF
+          git fetch --no-tags --depth 1 origin "refs/heads/${BRANCH_REF}:refs/remotes/origin/${BRANCH_REF}"
+          git switch $BRANCH_REF
           echo "ts=$(date +%s%N)" >> $GITHUB_OUTPUT
 
       {{ if eq .test "api" }}
