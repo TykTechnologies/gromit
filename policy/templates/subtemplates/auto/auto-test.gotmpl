@@ -1,5 +1,6 @@
 {{ define "auto-test" }}
   test-controller-{{ .test }}:
+    if: github.event.pull_request.draft == false
   {{- if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
     needs:
       - goreleaser
