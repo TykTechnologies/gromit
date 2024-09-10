@@ -235,6 +235,7 @@
 
       - name: save deb
         uses: actions/upload-artifact@v4
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         with:
           name: deb
           retention-days: 1
@@ -245,6 +246,7 @@
 
       - name: save rpm
         uses: actions/upload-artifact@v4
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         with:
           name: rpm
           retention-days: 1
