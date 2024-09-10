@@ -135,7 +135,7 @@
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           fetch-depth: 1
           {{- if ne .dot.Name "tyk-analytics" }}
-          ref: $BASE_REF
+          ref: {{`${{ env.BASE_REF }}`}}
           {{- end }}
           sparse-checkout: tests/{{ .test }}
 
