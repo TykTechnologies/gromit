@@ -1,5 +1,6 @@
 {{ define "goreleaser" }}
   goreleaser:
+    if: github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
     runs-on: ubuntu-latest-m
     permissions:
