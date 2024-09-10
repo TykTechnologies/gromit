@@ -1,5 +1,6 @@
 {{ define "smoke-tests" }}
   test-controller-distros:
+    if: github.event.pull_request.draft == false
     needs:
       - goreleaser
     runs-on: ubuntu-latest
