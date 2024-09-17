@@ -27,10 +27,8 @@
       - test-controller-{{ .test }}
     {{ if has "releng" .dot.Branchvals.Features }}
       - goreleaser
-    runs-on: ubuntu-latest-m-2
-    {{- else }}
-    runs-on: ubuntu-latest
     {{- end }}
+    runs-on: ubuntu-latest-m-2
     env:
       XUNIT_REPORT_PATH: {{`${{ github.workspace}}`}}/test-results.xml
 {{- if eq .dot.Name "tyk-pro" }}
