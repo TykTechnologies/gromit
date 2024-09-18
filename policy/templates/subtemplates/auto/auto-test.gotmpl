@@ -27,10 +27,8 @@
       - test-controller-{{ .test }}
     {{ if has "releng" .dot.Branchvals.Features }}
       - goreleaser
-    runs-on: ubuntu-latest-m-2
-    {{- else }}
-    runs-on: ubuntu-latest
     {{- end }}
+    runs-on: ubuntu-latest-m-2
     env:
       XUNIT_REPORT_PATH: {{`${{ github.workspace}}`}}/test-results.xml
 {{- if eq .dot.Name "tyk-pro" }}
@@ -126,6 +124,7 @@
           ./dash-bootstrap.sh http://localhost:3000
           docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
           echo "$(cat pytest.env | grep USER_API_SECRET)" >> $GITHUB_OUTPUT
+          echo "ts=$(date +%s%N)" >> $GITHUB_OUTPUT
 
       - uses: actions/checkout@v4
         with:
@@ -133,20 +132,10 @@
           path: tyk-analytics
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           fetch-depth: 1
+          {{- if ne .dot.Name "tyk-analytics" }}
+          ref: {{`${{ env.BASE_REF }}`}}
+          {{- end }}
           sparse-checkout: tests/{{ .test }}
-
-      - name: Branch for test code
-        id: timestamp
-        working-directory: tyk-analytics/tests/{{ .test }}
-        {{- if eq .dot.Name "tyk-analytics" }}
-        env: 
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.head_ref || github.ref_name}}`}}
-        {{- end }}
-        run: |
-          # Generate report id
-          git fetch --no-tags --depth 1 origin "refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
-          git switch $BASE_REF
-          echo "ts=$(date +%s%N)" >> $GITHUB_OUTPUT
 
       {{ if eq .test "api" }}
 
@@ -227,7 +216,7 @@
         id: metadata_report
         if: always() && (steps.test_execution.conclusion != 'skipped') 
         env:
-          REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.timestamp.outputs.ts}}`}}
+          REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.env_up.outputs.ts}}`}}
           METADATA_REPORT_PATH: metadata.toml
         run: |
           # Generate metadata report
