@@ -27,30 +27,39 @@ type ghMatrix struct {
 		Deb []string `json:"deb"`
 		Rpm []string `json:"rpm"`
 	} `json:"distros"`
-	Level map[string]ghMatrix `copier:"-"` // assumption: copies are _never_ recursive
+	Level map[string]ghMatrix `copier:"-"` // map testsuite→ghMatrix
 }
 
 // Tree depth of ghMatrix
 const (
-	Branch    = 0
-	Trigger   = 1
-	TestSuite = 2
+	Testsuite = 0
+	Branch    = 1
+	Trigger   = 2
+	Repo      = 3
 )
 
-// repoVariations models the matrix for a repo along with some fields
-// to ease template rendering. The ghMatrix used here is not recursive.
-type repoVariations struct {
+// variations flattens the saved matrix form so that it can be looked up in any order
+// The template are in repo→branch→trigger→testsuite
+// API calls use testsuite→branch→trigger→repo
+// The ghMatrix used here is not recursive.
+type variations struct {
 	Leaves map[string]ghMatrix
 	Paths  []variationPath
 }
 
 type variationPath struct {
-	Branch, Trigger, Testsuite string
+	Testsuite, Trigger, Branch, Repo string
 }
 
-// RepoTestsuiteVariations maps savedVariations to a form suitable for runtime use
-type RepoTestsuiteVariations map[string]repoVariations
-type AllTestsuiteVariations map[string]RepoTestsuiteVariations
+func NewVariations() *variations {
+	var v variations
+	v.Leaves = make(map[string]ghMatrix)
+
+	return &v
+}
+
+// RepoTestsuiteVariations maps file→variations
+type AllTestsuiteVariations map[string]variations
 
 func (av AllTestsuiteVariations) Files() []string {
 	keys := make([]string, 0, len(av))
@@ -60,44 +69,59 @@ func (av AllTestsuiteVariations) Files() []string {
 	return keys
 }
 
-func (rv repoVariations) Branches() []string {
+func (v variations) Repos() []string {
 	var rvals []string
-	for _, path := range rv.Paths {
-		rvals = append(rvals, path.Branch)
+	for _, path := range v.Paths {
+		rvals = append(rvals, path.Repo)
 	}
 	return newSetFromSlices(rvals).Members()
 }
 
-func (rv repoVariations) Triggers(branch string) []string {
+func (v variations) Branches(repo string) []string {
 	var rvals []string
-	for _, path := range rv.Paths {
-		if path.Branch == branch {
+	for _, path := range v.Paths {
+		if path.Repo == repo {
+			rvals = append(rvals, path.Branch)
+		}
+	}
+	return newSetFromSlices(rvals).Members()
+}
+
+func (v variations) Triggers(repo, branch string) []string {
+	var rvals []string
+	for _, path := range v.Paths {
+		if path.Repo == repo && path.Branch == branch {
 			rvals = append(rvals, path.Trigger)
 		}
 	}
 	return newSetFromSlices(rvals).Members()
 }
 
-func (rv repoVariations) Testsuites(branch, trigger string) []string {
+func (v variations) Testsuites(repo, branch, trigger string) []string {
 	var rvals []string
-	for _, path := range rv.Paths {
-		if path.Branch == branch && path.Trigger == trigger {
+	for _, path := range v.Paths {
+		if path.Repo == repo && path.Branch == branch && path.Trigger == trigger {
 			rvals = append(rvals, path.Testsuite)
 		}
 	}
 	return newSetFromSlices(rvals).Members()
 }
 
-func (rv repoVariations) Lookup(branch, trigger, testsuite string) *ghMatrix {
-	m, found := rv.Leaves[createVariationKey(branch, trigger, testsuite)]
+func (v variations) Lookup(repo, branch, trigger, testsuite string) *ghMatrix {
+	m, found := v.Leaves[createVariationKey(repo, branch, trigger, testsuite)]
 	if !found {
-		m = rv.Leaves[createVariationKey("master", trigger, testsuite)]
+		log.Debug().Msgf("(%s, %s, %s, %s) not known, using (%s, master, %s, %s)", repo, branch, trigger, testsuite, repo, trigger, testsuite)
+		m = v.Leaves[createVariationKey(repo, "master", trigger, testsuite)]
 	}
 	return &m
 }
 
-func createVariationKey(branch, trigger, testsuite string) string {
-	return fmt.Sprintf("%s-%s-%s", branch, trigger, testsuite)
+func createVariationKey(keys ...string) string {
+	var vkey string
+	for _, key := range keys {
+		vkey += key
+	}
+	return vkey
 }
 
 func removeDuplicates(s []string) []string {
@@ -110,35 +134,6 @@ func removeDuplicates(s []string) []string {
 		}
 	}
 	return result
-}
-
-func parseVariations(sv ghMatrix, depth int, rv *repoVariations, path variationPath) {
-	for level, levelMatrix := range sv.Level {
-		levelMatrix.EnvFiles = append(levelMatrix.EnvFiles, sv.EnvFiles...)
-		levelMatrix.Pump = removeDuplicates(append(levelMatrix.Pump, sv.Pump...))
-		levelMatrix.Sink = removeDuplicates(append(levelMatrix.Sink, sv.Sink...))
-		levelMatrix.Distros.Deb = removeDuplicates(append(levelMatrix.Distros.Deb, sv.Distros.Deb...))
-		levelMatrix.Distros.Rpm = removeDuplicates(append(levelMatrix.Distros.Rpm, sv.Distros.Rpm...))
-		switch depth {
-		case Branch:
-			path.Branch = level
-		case Trigger:
-			path.Trigger = level
-		case TestSuite:
-			path.Testsuite = level
-			key := createVariationKey(path.Branch, path.Trigger, path.Testsuite)
-			var tsPath = path // make a copy
-			rv.Leaves[key] = levelMatrix
-			rv.Paths = append(rv.Paths, tsPath)
-		}
-		if depth > TestSuite {
-			log.Warn().Fields(sv).Msgf("cannot parse test variation levels > %d", TestSuite)
-			return
-		} else {
-			parseVariations(levelMatrix, depth+1, rv, path)
-		}
-	}
-	return
 }
 
 // loadAllVariations loads all yaml files in tvDir returning it in a
@@ -162,7 +157,7 @@ func loadAllVariations(tvDir string) (AllTestsuiteVariations, error) {
 		if err != nil {
 			log.Warn().Err(err).Msgf("could not load test variation from %s", pathName)
 		}
-		av[fname] = tv
+		av[fname] = *tv
 		numVariations++
 	}
 	if numVariations < 1 {
@@ -173,15 +168,18 @@ func loadAllVariations(tvDir string) (AllTestsuiteVariations, error) {
 
 // loadVariation unrolls the compact saved representation from a file
 // it also sets up handlers for the loaded variations
-func loadVariation(tvFile string) (RepoTestsuiteVariations, error) {
+func loadVariation(tvFile string) (*variations, error) {
+	v := NewVariations()
+	var vp variationPath
+
 	data, err := os.ReadFile(tvFile)
 	if err != nil {
-		return nil, err
+		return v, err
 	}
 	var saved ghMatrix
 	err = yaml.Unmarshal(data, &saved)
 	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal data from %s: %s: %w", tvFile, string(data), err)
+		return v, fmt.Errorf("could not unmarshal data from %s: %s: %w", tvFile, string(data), err)
 	}
 	// top level variations
 	var global ghMatrix
@@ -189,21 +187,38 @@ func loadVariation(tvFile string) (RepoTestsuiteVariations, error) {
 	if err != nil {
 		log.Warn().Err(err).Msgf("could not copy global variations")
 	}
-	tv := make(RepoTestsuiteVariations)
-	for repo, matrix := range saved.Level {
-		var rv repoVariations
-		var vp variationPath
-		rv.Leaves = make(map[string]ghMatrix)
-		// apply defaults to every repo
-		matrix.EnvFiles = append(matrix.EnvFiles, global.EnvFiles...)
-		matrix.Pump = removeDuplicates(append(matrix.Pump, global.Pump...))
-		matrix.Sink = removeDuplicates(append(matrix.Sink, global.Sink...))
-		matrix.Distros.Deb = removeDuplicates(append(matrix.Distros.Deb, global.Distros.Deb...))
-		matrix.Distros.Rpm = removeDuplicates(append(matrix.Distros.Rpm, global.Distros.Rpm...))
+	parseVariations(saved, 0, v, vp)
+	log.Debug().Interface("v", v).Msgf("loaded from %s", tvFile)
+	return v, nil
+}
 
-		parseVariations(matrix, 0, &rv, vp)
-		tv[repo] = rv
+func parseVariations(sv ghMatrix, depth int, v *variations, path variationPath) {
+	for level, levelMatrix := range sv.Level {
+		levelMatrix.EnvFiles = append(levelMatrix.EnvFiles, sv.EnvFiles...)
+		levelMatrix.Pump = removeDuplicates(append(levelMatrix.Pump, sv.Pump...))
+		levelMatrix.Sink = removeDuplicates(append(levelMatrix.Sink, sv.Sink...))
+		levelMatrix.Distros.Deb = removeDuplicates(append(levelMatrix.Distros.Deb, sv.Distros.Deb...))
+		levelMatrix.Distros.Rpm = removeDuplicates(append(levelMatrix.Distros.Rpm, sv.Distros.Rpm...))
+		switch depth {
+		case Testsuite:
+			path.Testsuite = level
+		case Branch:
+			path.Branch = level
+		case Trigger:
+			path.Trigger = level
+		case Repo:
+			path.Repo = level
+			key := createVariationKey(path.Repo, path.Branch, path.Trigger, path.Testsuite)
+			var tsPath = path // make a copy
+			v.Leaves[key] = levelMatrix
+			v.Paths = append(v.Paths, tsPath)
+		}
+		if depth > Repo {
+			log.Warn().Fields(sv).Msgf("cannot parse test variation levels > %d", Repo)
+			return
+		} else {
+			parseVariations(levelMatrix, depth+1, v, path)
+		}
 	}
-	log.Debug().Interface("tv", tv).Msgf("loaded from %s", tvFile)
-	return tv, nil
+	return
 }
