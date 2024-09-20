@@ -1,3 +1,9 @@
+envfiles:
+  - cache: redis0
+    config: conf0
+    db: db0
+    apimarkers: am0
+    uimarkers: um0
 pump:
   - master
 sink:
@@ -16,40 +22,40 @@ level: # repos
         sink: [sink-br0]
         level: # trigger
           tr0:
-            level: # testsuite
-              ts0:
-              ts1:
+            level: # repo
+              repo0:
+              repo1:
       br1:
-        pump: [pump-br1]
-        sink: [sink-br1]
+        pump:
+          - pump-br1
+        sink:
+          - sink-br1
         level: # trigger
           tr1:
-            distros:
-              rpm:
-                - d0
-              deb:
-                - d1
-            envfiles:
-              - cache: repo0-redis-tr1
-                config: repo0-conf-tr1
-            level: # testsuite
-              ts0:
-              ts1:
-  repo1:
+            level: # repo
+              repo0:
+              repo1:
+  ts1:
     envfiles:
-      - cache: repo1-redis0
-        db: repo1-db0
-        config: repo1-conf0
-    level: # branches
-      br0:
-        pump: [pump-br0]
-        sink: [sink-br0]
+      - cache: redis1
+        config: conf1
+        db: db1
+        apimarkers: am1
+        uimarkers: um1
+    level: # branch
+      br1:
+        envfiles:
+          - cache: redis-br1
+            config: conf-br1
+            db: db-br1
+            apimarkers: br1-am1
+            uimarkers: br1-um1
+        pump:
+          - pump-br1
+        sink:
+          - sink-br1
         level: # trigger
-          tr0:
-            level: # testsuite
-              ts0:
-              ts1:
           tr1:
-            level: # testsuite
-              ts0:
-              ts1:
+            level: # repo
+              repo0:
+              repo1:

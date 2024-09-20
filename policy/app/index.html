@@ -9,71 +9,71 @@
   </head>
   <body>
     <h1>Available variations</h2>
-    {{ range $fname, $variations := .AllVariations }}
-       <h2> {{ $fname }}</h2>
-       <div id="repos" class="repo-carousel">
-	 {{ range $repoName, $repo := $variations }}
-	 <div class="repo-carousel-item">
-	   <h3>{{ $repoName }}</h3>
-	   {{ range $b := $repo.Branches }}
-	   {{ range $tr := $repo.Triggers $b }}
-	   {{ range $ts := $repo.Testsuites $b $tr }}
-	   {{ $matrix := $repo.Lookup $b $tr $ts }}
-	   <p>
-	     On {{ $tr }} to {{ $b }}, {{ $ts }} testsuite will run with
-	     <ul>
-	       <li>Environment files</li>
-	       <ul>
-	       {{range $ef := $matrix.EnvFiles}}
-		 <li> {{ $ef }}</li>
-	       {{ end }}
-	       </ul>
-	       <li>Distros</li>
-	       <ul>
-				   <li>Rpm</li>
-					 <ul>
-	         {{range $rpm := $matrix.Distros.Rpm}}
-					 <li> {{ $rpm }}</li>
-	         {{ end }}
-					 </ul>
-				   <li>Deb</li>
-					 <ul>
-	         {{range $deb := $matrix.Distros.Deb}}
-					 <li> {{ $deb }}</li>
-	         {{ end }}
-					 </ul>
-				</ul>					 							 
-	       {{ if ne $repoName "tyk-pump" }}
-	       <li>Pump versions</li>
-	       <ul>
-	       {{range $ef := $matrix.Pump}}
-		 <li> {{ $ef }}</li>
-	       {{ end }}
-	       </ul>
-	       {{ end }} {{/* if not pump */}}
-	       {{ if ne $repoName "tyk-sink" }}
-	       <li>Sink versions</li>
-	       <ul>
-	       {{range $ef := $matrix.Sink}}
-		 <li> {{ $ef }}</li>
-	       {{ end }}
-	       </ul>
-	       {{ end }} {{/* if not sink */}}
-	     </ul>
-	   </p>
-	   {{ end }} {{/* testsuites */}}
-	   {{ end }} {{/* triggers */}}
-	   {{ end }} {{/* branches */}}
-	 </div>
-	 {{ end }} {{/* repos */}}
-       </div>
-       <hr>
-  {{ end }} {{/* AllVariations */}}
-    <h1>Files in {{ .SaveDir }} </h1>
-    <ul class="saved-grid">
-      {{ range $file := .AllVariations.Files }}
-      <li><a href="/show/{{ $file }}" target="_blank" rel="noopener noreferrer">{{ $file }}</a></li>
-      {{end}}
-    </ul>
-  </body>
+{{ range $fname, $variations := .AllVariations }}
+<h2> {{ $fname }}</h2>
+<div id="repos" class="repo-carousel">
+  {{ range $r := $variations.Repos }}
+  <div class="repo-carousel-item">
+    <h3>{{ $r }}</h3>
+    {{ range $b := $variations.Branches $r }}
+    {{ range $tr := $variations.Triggers $r $b }}
+    {{ range $ts := $variations.Testsuites $r $b $tr }}
+    {{ $matrix := $variations.Lookup $r $b $tr $ts }}
+    <p>
+      On {{ $tr }} to {{ $b }}, {{ $ts }} testsuite will run with
+      <ul>
+	<li>Environment files</li>
+	<ul>
+	  {{range $ef := $matrix.EnvFiles}}
+	  <li> {{ $ef }}</li>
+	  {{ end }}
+	</ul>
+	<li>Distros</li>
+	<ul>
+	  <li>Rpm</li>
+	  <ul>
+	    {{range $rpm := $matrix.Distros.Rpm}}
+	    <li> {{ $rpm }}</li>
+	    {{ end }}
+	  </ul>
+	  <li>Deb</li>
+	  <ul>
+	    {{range $deb := $matrix.Distros.Deb}}
+	    <li> {{ $deb }}</li>
+	    {{ end }}
+	  </ul>
+	</ul>
+	{{ if ne $r "tyk-pump" }}
+	<li>Pump versions</li>
+	<ul>
+	  {{range $ef := $matrix.Pump}}
+	  <li> {{ $ef }}</li>
+	  {{ end }}
+	</ul>
+	{{ end }} {{/* if not pump */}}
+	{{ if ne $r "tyk-sink" }}
+	<li>Sink versions</li>
+	<ul>
+	  {{range $ef := $matrix.Sink}}
+	  <li> {{ $ef }}</li>
+	  {{ end }}
+	</ul>
+	{{ end }} {{/* if not sink */}}
+      </ul>
+    </p>
+    {{ end }} {{/* testsuites */}}
+    {{ end }} {{/* triggers */}}
+    {{ end }} {{/* branches */}}
+  </div>
+  {{ end }} {{/* repos */}}
+</div>
+<hr>
+{{ end }} {{/* AllVariations */}}
+<h1>Files in {{ .SaveDir }} </h1>
+<ul class="saved-grid">
+  {{ range $file := .AllVariations.Files }}
+  <li><a href="/show/{{ $file }}" target="_blank" rel="noopener noreferrer">{{ $file }}</a></li>
+  {{end}}
+</ul>
+</body>
 </html>
