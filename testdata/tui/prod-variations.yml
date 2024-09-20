@@ -4,22 +4,20 @@ envfiles:
     db: db0
     apimarkers: am0
     uimarkers: um0
+    gwdash: branch0
 pump:
   - master
 sink:
   - master
-level: # repos
-  repo0:
-    envfiles:
-      - cache: repo0-redis0
-        config: repo0-conf0
-        apimarkers: m0
-        uimarkers: m1
-        gwdash: branch0
-    level: # branches
-      br0:
-        pump: [pump-br0]
-        sink: [sink-br0]
+distros:
+  deb:
+    - d1
+  rpm:
+    - d0
+level: # testsuites
+  ts0:
+    level: # branch
+      master:
         level: # trigger
           tr0:
             level: # repo
@@ -42,6 +40,7 @@ level: # repos
         db: db1
         apimarkers: am1
         uimarkers: um1
+        gwdash: branch1
     level: # branch
       br1:
         envfiles:
