@@ -59,7 +59,7 @@ func TestV1Variations(t *testing.T) {
 		{
 			Name:         "EnvFiles",
 			Endpoint:     "/api/repo1/br0/tr0/ts0/EnvFiles",
-			ResponseJSON: `[{"cache":"redis0", "config":"conf0", "db":"db0", "apimarkers":"am0", "uimarkers":"um0"}]`,
+			ResponseJSON: `[{"cache":"redis0", "config":"conf0", "db":"db0", "apimarkers":"am0", "uimarkers":"um0", "gwdash":"branch0"}]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
@@ -87,7 +87,7 @@ func TestV2Variations(t *testing.T) {
 		{
 			Name:         "EnvFiles",
 			Endpoint:     "/v2/prod-variations/repo0/br0/tr0/ts0/EnvFiles.json",
-			ResponseJSON: `[{"cache":"redis0", "config":"conf0", "db":"db0", "apimarkers":"am0", "uimarkers":"um0"}]`,
+			ResponseJSON: `[{"cache":"redis0", "config":"conf0", "db":"db0", "apimarkers":"am0", "gwdash":"branch0", "uimarkers":"um0"}]`,
 			HTTPStatus:   http.StatusOK,
 			HTTPMethod:   "GET",
 		},
@@ -95,7 +95,7 @@ func TestV2Variations(t *testing.T) {
 			Name:     "gho",
 			Endpoint: "/v2/prod-var/repo0/br1/tr1/ts1.gho",
 			ResponseText: `envfiles<<EOF
-[{"cache":"redis-br1","db":"db-br1","config":"conf-br1","apimarkers":"br1-am1","uimarkers":"br1-um1"},{"cache":"redis1","db":"db1","config":"conf1","apimarkers":"am1","uimarkers":"um1"},{"cache":"redis0","db":"db0","config":"conf0","apimarkers":"am0","uimarkers":"um0"}]
+[{"cache":"redis-br1","db":"db-br1","config":"conf-br1","apimarkers":"br1-am1","uimarkers":"br1-um1","gwdash":""},{"cache":"redis1","db":"db1","config":"conf1","apimarkers":"am1","uimarkers":"um1","gwdash":"branch1"},{"cache":"redis0","db":"db0","config":"conf0","apimarkers":"am0","uimarkers":"um0","gwdash":"branch0"}]
 EOF
 pump<<EOF
 ["pump-br1","master"]

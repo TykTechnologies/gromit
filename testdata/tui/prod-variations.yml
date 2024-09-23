@@ -4,6 +4,7 @@ envfiles:
     db: db0
     apimarkers: am0
     uimarkers: um0
+    gwdash: branch0
 pump:
   - master
 sink:
@@ -39,6 +40,7 @@ level: # testsuites
         db: db1
         apimarkers: am1
         uimarkers: um1
+        gwdash: branch1
     level: # branch
       br1:
         envfiles:

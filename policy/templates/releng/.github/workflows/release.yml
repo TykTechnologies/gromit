@@ -35,7 +35,7 @@ jobs:
 {{- if not (empty .Branchvals.Tests) }}
 {{- $dot := . }}
   {{ range $test := .Branchvals.Tests }}
-  {{- template "auto-test" (dict "dot" $dot "test" $test) }}
+  {{- template "auto-test" (dict "dot" $dot "test" $test "flow" "releng") }}
   {{ end }}
 {{- end }} {{/* empty tests */}}
 
