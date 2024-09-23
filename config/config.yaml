@@ -107,7 +107,7 @@ policy:
                 - distroless
                 - s390x
                 - release-test
-            release-5.5:
+            release-5.6:
               features:
                 - s390x
                 - release-test
@@ -148,7 +148,7 @@ policy:
               features:
                 - distroless
                 - s390x
-            release-5.5:
+            release-5.6:
               features:
                 - s390x
                 - release-test
