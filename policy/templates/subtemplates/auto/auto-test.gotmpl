@@ -142,7 +142,9 @@
           ref: {{`${{ env.BASE_REF }}`}}
           {{- end }}
           {{- if eq .flow "nightly" }}
-          ref: {{`${{ matrix.envfiles.gwdash }}`}}
+            ref: {{`${{ matrix.envfiles.gwdash }}`}}
+          {{- else }}
+            ref: $BASE_REF
           {{- end }}
           sparse-checkout: tests/{{ .test }}
           
