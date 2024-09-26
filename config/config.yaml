@@ -165,6 +165,7 @@ policy:
           exposeports: 80
           binary: dev-portal
           packagename: portal
+          buildenv: 1.22-bullseye
           cgo: true
           upgradefromver: 1.0.0
           configfile: portal.conf
