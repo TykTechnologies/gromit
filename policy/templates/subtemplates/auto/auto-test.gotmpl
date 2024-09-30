@@ -138,15 +138,39 @@
           path: tyk-analytics
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           fetch-depth: 1
-          {{- if ne .dot.Name "tyk-analytics" }}
-          ref: {{`${{ env.BASE_REF }}`}}
           {{- end }}
           {{- if eq .flow "nightly" }}
           ref: {{`${{ matrix.envfiles.gwdash }}`}}
-          {{- else }}
-          ref: $BASE_REF
           {{- end }}
           sparse-checkout: tests/{{ .test }}
+
+      {{- if .dot.Name "tyk" }}
+      - name: Choosing test code branch
+        run: |
+            if [[ "${{ github.event_name }}" == "release" ]]; then
+              TAG_NAME="${{ github.event.release.tag_name }}"
+              git checkout "$TAG_NAME"
+            fi
+            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              PR_BRANCH="${{ github.event.pull_request.head.ref }}"
+              TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
+              if git rev-parse "origin/$PR_BRANCH" >/dev/null 2>&1; then
+                echo "PR branch $PR_BRANCH exists. Checking out..."
+                git checkout "$PR_BRANCH"
+              elif git rev-parse "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
+                echo "Target branch $TARGET_BRANCH exists. Checking out..."
+                git checkout "$TARGET_BRANCH"
+              fi
+            fi
+            if [[ "${{ github.event_name }}" == "push" ]]; then
+              PUSH_BRANCH="${{ github.ref_name }}"
+              if git rev-parse "origin/$PUSH_BRANCH" >/dev/null 2>&1; then
+                echo "Push branch $PUSH_BRANCH exists. Checking out..."
+                git checkout "$PUSH_BRANCH"
+              fi
+            fi
+            echo "Current commit: $(git rev-parse HEAD)"
+        {{- end }}
           
       {{ if eq .test "api" }}
 
