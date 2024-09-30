@@ -147,7 +147,7 @@
       {{- if .dot.Name "tyk" }}
       - name: Choosing test code branch
         run: |
-            if [[ {{`${{ github.event_name }}}}` == "release" ]]; then
+            if [[ {{`${{ github.event_name }}`}} == "release" ]]; then
               TAG_NAME={{`${{ github.event.release.tag_name }}`}}
               git checkout "$TAG_NAME"
             fi
