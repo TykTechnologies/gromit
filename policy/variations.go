@@ -111,7 +111,7 @@ func (v variations) Testsuites(repo, branch, trigger string) []string {
 func (v variations) Lookup(repo, branch, trigger, testsuite string) *ghMatrix {
 	m, found := v.Leaves[createVariationKey(repo, branch, trigger, testsuite)]
 	if !found {
-		log.Debug().Msgf("(%s, %s, %s, %s) not known, using (%s, master, %s, %s)", repo, branch, trigger, testsuite, repo, trigger, testsuite)
+		log.Info().Msgf("(%s, %s, %s, %s) not known, using (%s, master, %s, %s)", repo, branch, trigger, testsuite, repo, trigger, testsuite)
 		m = v.Leaves[createVariationKey(repo, "master", trigger, testsuite)]
 	}
 	return &m
