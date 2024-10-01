@@ -137,7 +137,9 @@
           repository: TykTechnologies/tyk-analytics
           path: tyk-analytics
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          fetch-depth: 1
+          {{- if ne .dot.Name "tyk-analytics" }}
+          fetch-depth: 0
+          {{- end }}
           {{- if eq .flow "nightly" }}
           ref: {{`${{ matrix.envfiles.gwdash }}`}}
           {{- end }}
