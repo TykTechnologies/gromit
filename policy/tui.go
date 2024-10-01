@@ -238,8 +238,7 @@ func (s *Server) findMatrix(tsv, repo, branch, trigger, testsuite string) (*ghMa
 	if !found {
 		return nil, fmt.Errorf("%s not found among %v", tsv, s.AllVariations.Files())
 	}
-	var m *ghMatrix
-	m = v.Lookup(repo, branch, trigger, testsuite)
+	m := v.Lookup(repo, branch, trigger, testsuite)
 	if m == nil {
 		return nil, fmt.Errorf("(%s or master, %s, %s) not known for %s", branch, trigger, testsuite, repo)
 	}
