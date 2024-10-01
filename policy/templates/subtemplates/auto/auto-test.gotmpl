@@ -231,6 +231,7 @@
 
       {{- end }} {{/* end of if .test */}}
 
+      {{- if eq .test "ui" }}
       - name: Upload Playwright Test Report to S3
         if: failure() && steps.test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
         run:
@@ -247,6 +248,7 @@
           echo "# :clipboard: S3 UI Test REPORT: {{`${{ matrix.envfiles.db }}`}}-{{`${{ matrix.envfiles.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           echo "- Status: {{`${{ steps.test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}" >> $GITHUB_STEP_SUMMARY
           echo "- [Link to report](https://tyk-qa-reports.s3.eu-central-1.amazonaws.com/tyk-analytics/{{`${{ github.run_id }}`}}/index.html)" >> $GITHUB_STEP_SUMMARY
+      {{- end }}
 
       - name: Generate metadata and upload test reports
         id: metadata_report
