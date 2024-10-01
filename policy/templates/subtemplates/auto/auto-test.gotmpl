@@ -143,13 +143,15 @@
           {{- end }}
           sparse-checkout: tests/{{ .test }}
 
-      {{- if .dot.Name "tyk" }}
+      {{- if ne .dot.Name "tyk-analytics" }}
       - name: Choosing test code branch
         run: |
+            {{- if eq .dot.Name "tyk" }}
             if [[ {{`${{ github.event_name }}`}} == "release" ]]; then
               TAG_NAME={{`${{ github.event.release.tag_name }}`}}
               git checkout "$TAG_NAME"
             fi
+            {{- end }}
             if [[ {{`${{ github.event_name }}`}} == "pull_request" ]]; then
               PR_BRANCH={{`${{ github.event.pull_request.head.ref }}`}}
               TARGET_BRANCH={{`${{ github.event.pull_request.base.ref }}`}}
