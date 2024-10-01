@@ -233,7 +233,7 @@
         run: |
           npm ci
           npx playwright install --with-deps chromium
-          PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium $UI_MARKERS
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium --reporter=junit,html $UI_MARKERS
 
       {{- end }} {{/* end of if .test */}}
 
