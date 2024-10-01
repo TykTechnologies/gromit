@@ -145,6 +145,7 @@
 
       {{- if ne .dot.Name "tyk-analytics" }}
       - name: Choosing test code branch
+        working-directory: tyk-analytics/tests/{{ .test }}
         run: |
             {{- if eq .dot.Name "tyk" }}
             if [[ {{`${{ github.event_name }}`}} == "release" ]]; then
