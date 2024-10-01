@@ -108,6 +108,7 @@ policy:
                 - s390x
                 - release-test
             release-5.5:
+              buildenv: 1.21-bullseye
               features:
                 - distroless
                 - s390x

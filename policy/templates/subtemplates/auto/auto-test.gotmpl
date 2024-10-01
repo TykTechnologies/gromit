@@ -149,6 +149,7 @@
         run: |
             {{- if eq .dot.Name "tyk" }}
             if [[ {{`${{ github.event_name }}`}} == "release" ]]; then
+              echo "Checking out release tag..."
               TAG_NAME={{`${{ github.event.release.tag_name }}`}}
               git checkout "$TAG_NAME"
             fi
@@ -156,17 +157,19 @@
             if [[ {{`${{ github.event_name }}`}} == "pull_request" ]]; then
               PR_BRANCH={{`${{ github.event.pull_request.head.ref }}`}}
               TARGET_BRANCH={{`${{ github.event.pull_request.base.ref }}`}}
-              if git rev-parse "origin/$PR_BRANCH" >/dev/null 2>&1; then
+              echo "Looking for PR_BRANCH:$PR_BRANCH or TARGET_BRANCH:$TARGET_BRANCH..."
+              if git rev-parse --verify "origin/$PR_BRANCH" >/dev/null 2>&1; then
                 echo "PR branch $PR_BRANCH exists. Checking out..."
                 git checkout "$PR_BRANCH"
-              elif git rev-parse "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
+              elif git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
                 echo "Target branch $TARGET_BRANCH exists. Checking out..."
                 git checkout "$TARGET_BRANCH"
               fi
             fi
             if [[ {{`${{ github.event_name }}`}} == "push" ]]; then
               PUSH_BRANCH={{`${{ github.ref_name }}`}}
-              if git rev-parse "origin/$PUSH_BRANCH" >/dev/null 2>&1; then
+              echo "Looking for PUSH_BRANCH:$PUSH_BRANCH..."
+              if git rev-parse --verify "origin/$PUSH_BRANCH" >/dev/null 2>&1; then
                 echo "Push branch $PUSH_BRANCH exists. Checking out..."
                 git checkout "$PUSH_BRANCH"
               fi
