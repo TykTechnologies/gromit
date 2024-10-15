@@ -134,7 +134,7 @@ policy:
           exposeports: "3000 5000"
           binary: tyk-analytics
           packagename: tyk-dashboard
-          cgo: true
+          cgo: false
           upgradefromver: 3.0.9
           configfile: tyk_analytics.conf
           deletedfiles:
@@ -151,11 +151,13 @@ policy:
                 - distroless
                 - s390x
                 - distroless
+                - release-test
             release-5.3:
               buildenv: 1.22-bullseye
               features:
                 - distroless
                 - s390x
+                - release-test
             release-5.5:
               features:
                 - distroless
