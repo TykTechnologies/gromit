@@ -134,7 +134,7 @@ policy:
           exposeports: "3000 5000"
           binary: tyk-analytics
           packagename: tyk-dashboard
-          cgo: false
+          cgo: true
           upgradefromver: 3.0.9
           configfile: tyk_analytics.conf
           deletedfiles:
@@ -146,6 +146,7 @@ policy:
             - api
           branches:
             master:
+              cgo: false
               features:
                 - nightly-e2e
                 - distroless
