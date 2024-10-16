@@ -1,64 +1,68 @@
 {{define "cgo_builds"}}
 {{ $r := . }}
-builds:
-  {{- range $b := list "std" "fips" }}
-  - id: {{ $b }}
-    flags:
-      - -tags=ignore
-      - -trimpath
-      - -tags=goplugin
-  {{ if eq $b "fips" }}
-      - -tags=fips,boringcrypto
-    env:
-      - GOEXPERIMENT=boringcrypto
-  {{- end }} {{/* fips */}}
-    ldflags:
-      - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
-      - -X {{$r.Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
-      - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
-      - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
-    goos:
-      - linux
-    goarch:
-      - amd64
-    binary: {{$r.Binary}}
-  {{ end }} {{/* range std, fips */}}
-  
-  - id: std-arm64
-    flags:
-      - -tags=ignore
-      - -trimpath
-      - -tags=goplugin
-    ldflags:
-      - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
-      - -X {{$r.Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
-      - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
-      - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
-    env:
-      - CC=aarch64-linux-gnu-gcc
-    goos:
-      - linux
-    goarch:
-      - arm64
-    binary: {{$r.Binary}}
 
-  {{ if has "s390x" $r.Branchvals.Features -}}
-  - id: std-s390x
-    flags:
-      - -tags=ignore
-      - -trimpath
-      - -tags=goplugin
-    ldflags:
-      - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
-      - -X {{$r.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
-      - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
-      - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
-    env:
-      - CC=s390x-linux-gnu-gcc
-    goos:
-      - linux
-    goarch:
-      - s390x
-    binary: {{$r.Binary}}
-  {{ end }} {{/* s390x */}}
+{{ $types := list "" }}
+{{ if has "ee" $r.Branchvals.Features }}
+{{ $types = list "" "ee" }}
+{{ end }}
+
+builds:
+  {{- range $type := $types }}
+    {{- range $b := list "std" "fips" }}
+    - id: {{ $b }}{{ if ne $type "" }}-{{ $type }}{{ end }}
+      flags:
+        - -trimpath
+        - -tags=ignore,goplugin{{ if eq $b "fips" }},fips,boringcrypto{{ end }}{{ if ne $type "" }},{{ $type }}{{ end }}
+      {{ if eq $b "fips" }}
+      env:
+        - GOEXPERIMENT=boringcrypto
+      {{- end }}
+      ldflags:
+        - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
+        - -X {{$r.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
+        - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
+        - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
+      goos:
+        - linux
+      goarch:
+        - amd64
+      binary: {{$r.Binary}}{{ if ne $type "" }}-{{ $type }}{{ end }}
+    {{ end }}
+
+    - id: std-arm64{{ if ne $type "" }}-{{ $type }}{{ end }}
+      flags:
+        - -trimpath
+        - -tags=ignore,goplugin{{ if ne $type "" }},{{ $type }}{{ end }}
+      ldflags:
+        - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
+        - -X {{$r.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
+        - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
+        - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
+      env:
+        - CC=aarch64-linux-gnu-gcc
+      goos:
+        - linux
+      goarch:
+        - arm64
+      binary: {{$r.Binary}}{{ if ne $type "" }}-{{ $type }}{{ end }}
+
+    {{ if has "s390x" $r.Branchvals.Features -}}
+    - id: std-s390x{{ if ne $type "" }}-{{ $type }}{{ end }}
+      flags:
+        - -trimpath
+        - -tags=ignore,goplugin{{ if ne $type "" }},{{ $type }}{{ end }}
+      ldflags:
+        - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
+        - -X {{$r.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
+        - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
+        - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
+      env:
+        - CC=s390x-linux-gnu-gcc
+      goos:
+        - linux
+      goarch:
+        - s390x
+      binary: {{$r.Binary}}{{ if ne $type "" }}-{{ $type }}{{ end }}
+    {{ end }}
+  {{- end }}
 {{end}}
