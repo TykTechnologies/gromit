@@ -211,6 +211,7 @@ policy:
           tests: [api]
           features:
             - s390x
+            - distroless
           branches:
             master:
 
@@ -232,7 +233,7 @@ policy:
 
         tyk-sink:
           description: >-
-           Tyk RPC server backend (bridge)
+            Tyk RPC server backend (bridge)
           pcrepo: tyk-mdcb
           dhrepo: tykio/tyk-mdcb-docker
           csrepo: docker.tyk.io/tyk-sink/tyk-sink
@@ -250,6 +251,26 @@ policy:
             - distroless
           branches:
             master:
+
+        midsommar:
+          description: >-
+            Tyk AI Portal
+          pcrepo: midsommar
+          dhrepo: tykio/midsommar
+          csrepo: docker.tyk.io/midsommar/midsommar
+          buildenv: 1.22-bullseye
+          exposeports: 80
+          binary: midsommar
+          packagename: midsommar
+          cgo: false
+          upgradefromver: 0.0.1
+          configfile: midsommar.conf
+          versionpackage: github.com/TykTechnologies/midsommar/main
+          features:
+            - s390x
+            - distroless
+          branches:
+            main:
 
     # Quis qustodiet ipsos custodes?
     # A:
