@@ -101,6 +101,8 @@ policy:
                 - s390x
                 - release-test
                 - distroless
+                - ee
+                - fips
             release-5.3:
               buildenv: 1.22-bullseye
               features:
@@ -232,7 +234,7 @@ policy:
 
         tyk-sink:
           description: >-
-           Tyk RPC server backend (bridge)
+            Tyk RPC server backend (bridge)
           pcrepo: tyk-mdcb
           dhrepo: tykio/tyk-mdcb-docker
           csrepo: docker.tyk.io/tyk-sink/tyk-sink
