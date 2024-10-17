@@ -4,7 +4,7 @@
   {{- if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
     needs:
       - goreleaser
-  {{- end }}  
+  {{- end }}
     runs-on: ubuntu-latest
     outputs:
       envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
@@ -69,7 +69,7 @@
         if: runner.debug == '1'
         with:
           detached: true
-          limit-access-to-actor: true          
+          limit-access-to-actor: true
           # Only {{`${{ github.actor }}`}} has access
           # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
 {{- if eq .dot.Name "tyk-pro" }}
@@ -138,16 +138,15 @@
           path: tyk-analytics
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           fetch-depth: 1
-          {{- if ne .dot.Name "tyk-analytics" }}
-          ref: {{`${{ env.BASE_REF }}`}}
-          {{- end }}
           {{- if eq .flow "nightly" }}
           ref: {{`${{ matrix.envfiles.gwdash }}`}}
+          {{- else if ne .dot.Name "tyk-analytics" }}
+          ref: {{`${{ env.BASE_REF }}`}}
           {{- else }}
           ref: $BASE_REF
           {{- end }}
           sparse-checkout: tests/{{ .test }}
-          
+
       {{ if eq .test "api" }}
 
       - uses: actions/setup-python@v5
@@ -191,7 +190,7 @@
         env:
           TOKEN: '{{`${{ secrets.ORG_GH_TOKEN }}`}}'
         run: >
-          git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"                    
+          git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
       - name: Execute UI tests
         working-directory: tyk-analytics/tests/{{ .test }}
         id: test_execution
@@ -225,7 +224,7 @@
 
       - name: Generate metadata and upload test reports
         id: metadata_report
-        if: always() && (steps.test_execution.conclusion != 'skipped') 
+        if: always() && (steps.test_execution.conclusion != 'skipped')
         env:
           REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.env_up.outputs.ts}}`}}
           METADATA_REPORT_PATH: metadata.toml
