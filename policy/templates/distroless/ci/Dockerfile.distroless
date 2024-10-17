@@ -2,11 +2,12 @@
 
 FROM {{ .Branchvals.BaseImage }} as DEB
 ARG TARGETARCH
+ARG EDITION
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 COPY *${TARGETARCH}.deb /
-RUN rm -f /*fips*.deb && dpkg -i /{{ .PackageName }}*${TARGETARCH}.deb && rm /*.deb
+RUN rm -f /*fips*.deb && dpkg -i /{{ .PackageName }}${EDITION}*${TARGETARCH}.deb && rm /*.deb
 
 FROM gcr.io/distroless/{{ .Branchvals.DistrolessBaseImage }}
 
