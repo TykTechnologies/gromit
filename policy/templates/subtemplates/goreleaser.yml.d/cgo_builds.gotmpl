@@ -9,6 +9,7 @@
 builds:
   {{- range $type := $types }}
     {{- range $b := list "std" "fips" }}
+
     - id: {{ $b }}{{ if ne $type "" }}-{{ $type }}{{ end }}
       flags:
         - -trimpath
@@ -26,7 +27,7 @@ builds:
         - linux
       goarch:
         - amd64
-      binary: {{$r.Binary}}{{ if ne $type "" }}-{{ $type }}{{ end }}
+      binary: {{$r.Binary}}
     {{ end }}
 
     - id: std-arm64{{ if ne $type "" }}-{{ $type }}{{ end }}
@@ -44,7 +45,7 @@ builds:
         - linux
       goarch:
         - arm64
-      binary: {{$r.Binary}}{{ if ne $type "" }}-{{ $type }}{{ end }}
+      binary: {{$r.Binary}}
 
     {{ if has "s390x" $r.Branchvals.Features -}}
     - id: std-s390x{{ if ne $type "" }}-{{ $type }}{{ end }}
@@ -62,7 +63,7 @@ builds:
         - linux
       goarch:
         - s390x
-      binary: {{$r.Binary}}{{ if ne $type "" }}-{{ $type }}{{ end }}
+      binary: {{$r.Binary}}
     {{ end }}
   {{- end }}
 {{end}}
