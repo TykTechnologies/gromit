@@ -1,20 +1,32 @@
 {{define "cgo_builds"}}
 {{ $r := . }}
+{{ $has_ee := has "ee" $r.Branchvals.Features }}
+{{ $has_fips := has "fips" $r.Branchvals.Features }}
+
+{{ $builds := list "std" }}
+
+{{ if $has_fips }}
+  {{ $builds = append $builds "fips" }}
+{{ end }}
+
+{{ if $has_ee }}
+  {{ $builds = append $builds "ee" }}
+{{ end }}
+
 builds:
-  {{- range $b := list "std" "fips" }}
+  {{- range $b := $builds }}
   - id: {{ $b }}
     flags:
       - -tags=ignore
       - -trimpath
-      - -tags=goplugin
-  {{ if eq $b "fips" }}
-      - -tags=fips,boringcrypto
+      - -tags=goplugin{{ if eq $b "fips" }},fips,boringcrypto{{ if $has_ee }},ee{{ end }}{{ else if eq $b "ee" }},ee{{ end }}
+    {{ if eq $b "fips" }}
     env:
       - GOEXPERIMENT=boringcrypto
-  {{- end }} {{/* fips */}}
+    {{ end }}
     ldflags:
       - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
-      - -X {{$r.Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
+      - -X {{$r.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
       - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
       - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
     goos:
@@ -22,16 +34,16 @@ builds:
     goarch:
       - amd64
     binary: {{$r.Binary}}
-  {{ end }} {{/* range std, fips */}}
-  
-  - id: std-arm64
+
+  {{ if ne $b "fips" }}
+  - id: {{ $b }}-arm64
     flags:
       - -tags=ignore
       - -trimpath
-      - -tags=goplugin
+      - -tags=goplugin{{ if eq $b "ee" }},ee{{ end }}
     ldflags:
       - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
-      - -X {{$r.Branchvals.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
+      - -X {{$r.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
       - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
       - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
     env:
@@ -43,11 +55,11 @@ builds:
     binary: {{$r.Binary}}
 
   {{ if has "s390x" $r.Branchvals.Features -}}
-  - id: std-s390x
+  - id: {{ $b }}-s390x
     flags:
       - -tags=ignore
       - -trimpath
-      - -tags=goplugin
+      - -tags=goplugin{{ if eq $b "ee" }},ee{{ end }}
     ldflags:
       - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
       - -X {{$r.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
@@ -61,4 +73,7 @@ builds:
       - s390x
     binary: {{$r.Binary}}
   {{ end }} {{/* s390x */}}
+  {{ end }} {{/* !fips */}}
+
+  {{ end }} {{/* range over $builds */}}
 {{end}}
