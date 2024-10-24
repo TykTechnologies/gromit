@@ -18,7 +18,9 @@ builds:
   - id: {{ $b }}
     flags:
       - -tags=ignore
+      {{ if not (or (eq .Branch "release-5-lts") (eq .Branch "release-4-lts")) }}
       - -trimpath
+      {{ end }}
       - -tags=goplugin{{ if eq $b "fips" }},fips,boringcrypto{{ if $has_ee }},ee{{ end }}{{ else if eq $b "ee" }},ee{{ end }}
     {{ if eq $b "fips" }}
     env:
@@ -39,7 +41,9 @@ builds:
   - id: {{ $b }}-arm64
     flags:
       - -tags=ignore
+      {{ if not (or (eq .Branch "release-5-lts") (eq .Branch "release-4-lts")) }}
       - -trimpath
+      {{ end }}
       - -tags=goplugin{{ if eq $b "ee" }},ee{{ end }}
     ldflags:
       - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
@@ -58,7 +62,9 @@ builds:
   - id: {{ $b }}-s390x
     flags:
       - -tags=ignore
+      {{ if not (or (eq .Branch "release-5-lts") (eq .Branch "release-4-lts")) }}
       - -trimpath
+      {{ end }}
       - -tags=goplugin{{ if eq $b "ee" }},ee{{ end }}
     ldflags:
       - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
