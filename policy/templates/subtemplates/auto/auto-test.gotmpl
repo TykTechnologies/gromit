@@ -137,16 +137,48 @@
           repository: TykTechnologies/tyk-analytics
           path: tyk-analytics
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          fetch-depth: 1
+          {{- if ne .dot.Name "tyk-analytics" }}
+          fetch-depth: 0
+          {{- end }}
           {{- if eq .flow "nightly" }}
           ref: {{`${{ matrix.envfiles.gwdash }}`}}
-          {{- else if ne .dot.Name "tyk-analytics" }}
-          ref: {{`${{ env.BASE_REF }}`}}
-          {{- else }}
-          ref: $BASE_REF
           {{- end }}
           sparse-checkout: tests/{{ .test }}
 
+      {{- if ne .dot.Name "tyk-analytics" }}
+      - name: Choosing test code branch
+        working-directory: tyk-analytics/tests/{{ .test }}
+        run: |
+            {{- if eq .dot.Name "tyk" }}
+            if [[ {{`${{ github.event_name }}`}} == "release" ]]; then
+              echo "Checking out release tag..."
+              TAG_NAME={{`${{ github.event.release.tag_name }}`}}
+              git checkout "$TAG_NAME"
+            fi
+            {{- end }}
+            if [[ {{`${{ github.event_name }}`}} == "pull_request" ]]; then
+              PR_BRANCH={{`${{ github.event.pull_request.head.ref }}`}}
+              TARGET_BRANCH={{`${{ github.event.pull_request.base.ref }}`}}
+              echo "Looking for PR_BRANCH:$PR_BRANCH or TARGET_BRANCH:$TARGET_BRANCH..."
+              if git rev-parse --verify "origin/$PR_BRANCH" >/dev/null 2>&1; then
+                echo "PR branch $PR_BRANCH exists. Checking out..."
+                git checkout "$PR_BRANCH"
+              elif git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
+                echo "Target branch $TARGET_BRANCH exists. Checking out..."
+                git checkout "$TARGET_BRANCH"
+              fi
+            fi
+            if [[ {{`${{ github.event_name }}`}} == "push" ]]; then
+              PUSH_BRANCH={{`${{ github.ref_name }}`}}
+              echo "Looking for PUSH_BRANCH:$PUSH_BRANCH..."
+              if git rev-parse --verify "origin/$PUSH_BRANCH" >/dev/null 2>&1; then
+                echo "Push branch $PUSH_BRANCH exists. Checking out..."
+                git checkout "$PUSH_BRANCH"
+              fi
+            fi
+            echo "Current commit: $(git rev-parse HEAD)"
+      {{- end }}
+          
       {{ if eq .test "api" }}
 
       - uses: actions/setup-python@v5
@@ -201,10 +233,11 @@
         run: |
           npm ci
           npx playwright install --with-deps chromium
-          PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium --reporter=junit $UI_MARKERS
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium --reporter=junit,html $UI_MARKERS
 
       {{- end }} {{/* end of if .test */}}
 
+      {{- if eq .test "ui" }}
       - name: Upload Playwright Test Report to S3
         if: failure() && steps.test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
         run:
@@ -221,6 +254,7 @@
           echo "# :clipboard: S3 UI Test REPORT: {{`${{ matrix.envfiles.db }}`}}-{{`${{ matrix.envfiles.conf }}`}}" >> $GITHUB_STEP_SUMMARY
           echo "- Status: {{`${{ steps.test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}" >> $GITHUB_STEP_SUMMARY
           echo "- [Link to report](https://tyk-qa-reports.s3.eu-central-1.amazonaws.com/tyk-analytics/{{`${{ github.run_id }}`}}/index.html)" >> $GITHUB_STEP_SUMMARY
+      {{- end }}
 
       - name: Generate metadata and upload test reports
         id: metadata_report
