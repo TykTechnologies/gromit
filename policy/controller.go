@@ -108,7 +108,7 @@ func (p runParameters) SetOutputs(op io.Writer, gh GHoutput) error {
 // release.yml:api-tests
 func (p runParameters) SetVersions(op io.Writer) error {
 	return template.Must(template.New("policy").Funcs(sprig.TxtFuncMap()).Parse(`versions<<EOF
-tyk_image=$ECR/tyk:{{ .gdTag }}
+tyk_image=$ECR/tyk-ee:{{ .gdTag }}
 tyk_analytics_image=$ECR/tyk-analytics:{{ .gdTag }}
 tyk_pump_image=$ECR/tyk-pump:master
 tyk_sink_image=$ECR/tyk-sink:master
