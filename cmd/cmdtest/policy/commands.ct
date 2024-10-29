@@ -5,7 +5,7 @@ $ setenv BASE_REF main
 $ setenv JOB api
 $ gromit policy controller --loglevel error
 versions<<EOF
-tyk_image=$ECR/tyk:master
+tyk_image=$ECR/tyk-ee:master
 tyk_analytics_image=$ECR/tyk-analytics:master
 tyk_pump_image=$ECR/tyk-pump:master
 tyk_sink_image=$ECR/tyk-sink:master
