@@ -165,7 +165,7 @@
       {{ end }}
       {{ range $edition := $editions }}
       - name: Docker metadata for CI {{ $edition }}
-        id: ci_metadata_{{ $edition }}
+        id: ci_metadata
         if: {{`${{ matrix.golang_cross == '` }}{{$.Branchvals.Buildenv}}{{`' }}`}}
         uses: docker/metadata-action@v5
         with:
