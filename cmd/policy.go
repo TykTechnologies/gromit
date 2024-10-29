@@ -223,7 +223,7 @@ var matchSubCmd = &cobra.Command{
 			return err
 		}
 
-		repos := []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink"}
+		repos := []string{"tyk-ee", "tyk-analytics", "tyk-pump", "tyk-sink"}
 		tagOverride := args[0]
 		tagMatch := args[1]
 

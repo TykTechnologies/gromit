@@ -165,7 +165,7 @@
       {{ end }}
       {{ range $edition := $editions }}
       - name: Docker metadata for CI {{ $edition }}
-        id: ci_metadata_{{ $edition }}
+        id: ci_metadata
         if: {{`${{ matrix.golang_cross == '` }}{{$.Branchvals.Buildenv}}{{`' }}`}}
         uses: docker/metadata-action@v5
         with:
@@ -208,7 +208,7 @@
       {{ end }}
       {{ range $edition := $editions }}
       - name: Docker metadata for tag push {{ $edition }}
-        id: tag_metadata_{{ $edition }}
+        id: tag_metadata
         uses: docker/metadata-action@v5
         with:
           images: |
@@ -242,8 +242,8 @@
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: {{`${{ startsWith(github.ref, 'refs/tags') }}`}}
-          tags: {{`${{ steps.tag_metadata_` }}{{ $edition }}{{`.outputs.tags }}`}}
-          labels: {{`${{ steps.tag_metadata_` }}{{ $edition }}{{`.outputs.labels }}`}}
+          tags: {{`${{ steps.tag_metadata.outputs.tags }}`}}
+          labels: {{`${{ steps.tag_metadata.outputs.labels }}`}}
           build-args: |
             EDITION={{ if $edition }}-{{ end }}{{ $edition }}
       {{ end }}
