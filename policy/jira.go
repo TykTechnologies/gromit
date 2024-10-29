@@ -45,6 +45,9 @@ func (j *JiraClient) GetIssue(id string) (*JiraIssue, error) {
 		return nil, err
 	}
 	var b string
+	if i.Fields.Description == nil {
+		return nil, fmt.Errorf("Please add a description to the jira, it is copied to the PR to give reviewers better context")
+	}
 	for _, c := range i.Fields.Description.Content {
 		switch c.Type {
 		case "paragraph":
