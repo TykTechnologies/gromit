@@ -63,7 +63,7 @@ func TestOutput(t *testing.T) {
 		{
 			job: "ui",
 			want: `versions<<EOF
-tyk_image=$ECR/tyk:master
+tyk_image=$ECR/tyk-ee:master
 tyk_analytics_image=$ECR/tyk-analytics:master
 tyk_pump_image=$ECR/tyk-pump:master
 tyk_sink_image=$ECR/tyk-sink:master
@@ -102,7 +102,7 @@ EOF
 		{
 			job: "ui",
 			want: `versions<<EOF
-tyk_image=$ECR/tyk:master
+tyk_image=$ECR/tyk-ee:master
 tyk_analytics_image=$ECR/tyk-analytics:master
 tyk_pump_image=$ECR/tyk-pump:master
 tyk_sink_image=$ECR/tyk-sink:master
@@ -140,7 +140,7 @@ EOF
 		}, {
 			job: "api",
 			want: `versions<<EOF
-tyk_image=$ECR/tyk:release-5-lts
+tyk_image=$ECR/tyk-ee:release-5-lts
 tyk_analytics_image=$ECR/tyk-analytics:release-5-lts
 tyk_pump_image=$ECR/tyk-pump:master
 tyk_sink_image=$ECR/tyk-sink:master
