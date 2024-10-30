@@ -110,6 +110,9 @@
           tyk_image={{`${{steps.ecr.outputs.registry}}`}}/tyk-ee:{{`${{ matrix.envfiles.gwdash }}`}}
           tyk_analytics_image={{`${{steps.ecr.outputs.registry}}`}}/tyk-analytics:{{`${{ matrix.envfiles.gwdash }}`}}
           {{- end}}
+          {{ if ne .dot.Name "tyk" }}
+          tyk_image="$ECR/tyk-ee"
+          {{- end }}
           tyk_alfa_image=$tyk_image
           tyk_beta_image=$tyk_image
           ECR={{`${{steps.ecr.outputs.registry}}`}}
