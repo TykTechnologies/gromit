@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/TykTechnologies/gromit/policy"
 	"github.com/rs/zerolog/log"
@@ -223,7 +224,8 @@ var matchSubCmd = &cobra.Command{
 			return err
 		}
 
-		repos := []string{"tyk-ee", "tyk-analytics", "tyk-pump", "tyk-sink"}
+		rs, _ := cmd.Flags().GetString("repos")
+		repos := strings.Split(rs, ",")
 		tagOverride := args[0]
 		tagMatch := args[1]
 
@@ -275,6 +277,7 @@ func init() {
 	serveSubCmd.Flags().String("save", "testdata/tui", "Test variations are loaded from and saved to this directory")
 
 	matchSubCmd.Flags().String("config", "$HOME/.docker/config.json", "Config file to read authentication token from")
+	matchSubCmd.Flags().String("repos", "tyk-ee,tyk-analytics,tyk-pump,tyk-sink", "Config file to read authentication token from")
 
 	policyCmd.AddCommand(matchSubCmd)
 	policyCmd.AddCommand(syncSubCmd)

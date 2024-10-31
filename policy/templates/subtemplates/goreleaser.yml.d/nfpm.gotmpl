@@ -1,36 +1,17 @@
 {{define "nfpm" }}
 {{ $r := . }}
-{{ $has_ee := has "ee" $r.Branchvals.Features }}
-{{ $has_fips := has "fips" $r.Branchvals.Features }}
-
-{{ $builds := list "std" }}
-
-{{ if $has_fips }}
-  {{ $builds = append $builds "fips" }}
-{{ end }}
-
-{{ if $has_ee }}
-  {{ $builds = append $builds "ee" }}
-{{ end }}
-
 nfpms:
-  {{ range $b := $builds }}
+  {{- range $b, $bv := .Branchvals.Builds }}
     - id: {{ $b }}
       vendor: "Tyk Technologies Ltd"
       homepage: "https://tyk.io"
       maintainer: "Tyk <info@tyk.io>"
-      description: {{ $r.Description }}
-      package_name: {{ if eq $b "fips" }}{{ $r.PackageName }}-fips{{ else }}{{ $r.PackageName }}{{ end }}{{ if eq $b "ee" }}-ee{{ end }}
+      description: {{ $bv.Description }}
+      package_name: {{ $bv.BuildPackageName }}
       file_name_template: "{{`{{ .ConventionalFileName }}`}}"
       builds:
-      {{- if and $r.Branchvals.Cgo (ne $b "fips")}}
-        - {{ $b }}
-        - {{ $b }}-arm64
-        {{ if has "s390x" $r.Branchvals.Features }}
-        - {{ $b }}-s390x
-        {{- end }}
-      {{- else }}
-        - {{ $b }}
+      {{- range $a := $bv.Archs }}
+        - {{ printf "%s-%s" $b $a.Go }}
       {{- end }}
       formats:
         - deb
@@ -136,5 +117,5 @@ nfpms:
         signature:
           key_file: tyk.io.signing.key
           type: origin
-  {{- end }} {{/* range over $builds */}}
+  {{- end }} {{/* range over Branchvals.Builds */}}
 {{- end }}

@@ -10,7 +10,7 @@ REPOS        ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal t
 GITHUB_TOKEN ?= $(shell pass me/github)
 JIRA_USER    ?= alok@tyk.io
 JIRA_TOKEN   ?= $(shell pass Tyk/atlassian)
-VARIATION    ?= inverted
+VARIATION    ?= prod-variation
 
 gromit: go.mod go.sum *.go $(SRC) $(TEMPLATES) update-variation
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
