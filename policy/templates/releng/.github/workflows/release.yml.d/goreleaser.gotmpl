@@ -41,7 +41,10 @@
             debvers: 'ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/jammy debian/jessie debian/buster debian/bullseye debian/bookworm'
   {{- end }} {{/* el7-pgo-build */}}
     outputs:
-      tags: {{`${{ steps.ci_metadata.outputs.tags }}`}}
+{{ $r := . }}
+{{- range $b, $bv := $r.GetDockerBuilds }}
+      {{ $b }}_tags: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.tags }}`}}
+{{- end }}
       commit_author: {{`${{ steps.set_outputs.outputs.commit_author}}`}}
 
     steps:
@@ -75,7 +78,6 @@
           username: {{`${{ secrets.DOCKER_USERNAME }}`}}
           password: {{`${{ secrets.DOCKER_PASSWORD }}`}}
 
-  {{- if .CSRepo }}
       - name: Login to Cloudsmith
         if: startsWith(github.ref, 'refs/tags')
         uses: docker/login-action@v3
@@ -83,7 +85,6 @@
           registry: docker.tyk.io
           username: {{`${{ secrets.CLOUDSMITH_USERNAME }}`}}
           password: {{`${{ secrets.CLOUDSMITH_API_KEY }}`}}
-  {{- end }}
 
       - uses: actions/cache@v4
         with:
@@ -159,17 +160,14 @@
         with:
           mask-password: 'true'
 
-      {{ $editions := list "" }}
-      {{ if has "ee" .Branchvals.Features }}
-        {{ $editions = append $editions "ee" }}
-      {{ end }}
-      {{ range $edition := $editions }}
-      - name: Docker metadata for CI {{ $edition }}
-        id: ci_metadata
-        if: {{`${{ matrix.golang_cross == '` }}{{$.Branchvals.Buildenv}}{{`' }}`}}
+{{- range $b, $bv := $r.GetDockerBuilds }}
+      - name: Docker metadata for {{ $b }} CI
+        id: ci_metadata_{{ $b }}
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
         uses: docker/metadata-action@v5
         with:
-          images: {{`${{ steps.ecr.outputs.registry }}`}}/{{ $.Name }}{{ if eq $edition "ee" }}-ee{{ end }}
+          images: |
+            {{printf "%s/%s" `${{ steps.ecr.outputs.registry }}` $bv.CIRepo}}
           flavor: |
             latest=false
           tags: |
@@ -180,13 +178,13 @@
             type=semver,pattern={{`{{major}}.{{minor}}`}},prefix=v
             type=semver,pattern={{`{{version}}`}},prefix=v
 
-      - name: push image to CI {{ $edition }}
-        if: {{`${{ matrix.golang_cross == '` }}{{$.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
+      - name: push {{ $b }} image to CI
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
         uses: docker/build-push-action@v6
         with:
           context: "dist"
-          platforms: linux/amd64,linux/arm64
-          {{- if has "distroless" $.Branchvals.Features }}
+          platforms: {{ $r.GetDockerPlatforms | join "," }}
+          {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
           {{- else }}
           file: ci/Dockerfile.std
@@ -196,24 +194,19 @@
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          tags: {{`${{ steps.ci_metadata` }}{{ $edition }}{{`.outputs.tags }}`}}
-          labels: {{`${{ steps.tag_metadata.outputs.labels }}`}}
+          tags: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.tags }}`}}
+          labels: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.labels }}`}}
           build-args: |
-            EDITION={{ if $edition }}-{{ end }}{{ $edition }}
-      {{ end }}
+            BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
 
-      {{ $editions := list "" }}
-      {{ if has "ee" .Branchvals.Features }}
-        {{ $editions = append $editions "ee" }}
-      {{ end }}
-      {{ range $edition := $editions }}
-      - name: Docker metadata for tag push {{ $edition }}
-        id: tag_metadata
+      - name: Docker metadata for tag push
+        id: tag_metadata_{{ $b }}
         uses: docker/metadata-action@v5
         with:
           images: |
-            {{ if eq $edition "ee" }}{{ $.DHRepo }}-ee{{ else }}{{ $.DHRepo }}{{ end }}
-            {{ if ne $edition "ee" }}{{ $.CSRepo }}{{ end }}
+          {{- range $image :=  $r.GetImages "DHRepo" "CSRepo" }}
+            {{ $image }}
+          {{end}}
           flavor: |
             latest=false
             prefix=v
@@ -221,18 +214,18 @@
             type=semver,pattern={{`{{major}}.{{minor}}`}}
             type=semver,pattern={{`{{version}}`}}
           labels: |
-            org.opencontainers.image.title={{ $.PackageName }}{{ if eq $edition "ee" }} Enterprise Edition{{ end }} {{ if has "distroless" $.Branchvals.Features }} (distroless) {{ end }}
-            org.opencontainers.image.description={{ $.Description }}
+            org.opencontainers.image.title={{ $bv.ImageTitle }}
+            org.opencontainers.image.description={{ $bv.Description }}
             org.opencontainers.image.vendor=tyk.io
             org.opencontainers.image.version={{`${{ github.ref_name }}`}}
 
-      - name: push image to prod {{ $edition }}
-        if: {{`${{ matrix.golang_cross == '` }}{{$.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
+      - name: push {{ $b }} image to prod
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
         uses: docker/build-push-action@v6
         with:
           context: "dist"
-          platforms: linux/amd64,linux/arm64
-          {{- if has "distroless" $.Branchvals.Features }}
+          platforms: {{ $r.GetDockerPlatforms | join "," }}
+          {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
           {{- else }}
           file: ci/Dockerfile.std
@@ -242,11 +235,11 @@
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: {{`${{ startsWith(github.ref, 'refs/tags') }}`}}
-          tags: {{`${{ steps.tag_metadata.outputs.tags }}`}}
-          labels: {{`${{ steps.tag_metadata.outputs.labels }}`}}
+          tags: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.tags }}`}}
+          labels: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.labels }}`}}
           build-args: |
-            EDITION={{ if $edition }}-{{ end }}{{ $edition }}
-      {{ end }}
+            BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
+{{ end }} {{/* range getDockerBuilds */}}
 
       - name: save deb
         uses: actions/upload-artifact@v4

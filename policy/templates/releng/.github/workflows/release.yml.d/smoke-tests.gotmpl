@@ -21,10 +21,7 @@
             echo "::warning file=.github/workflows/release.yml,line=24,col=1,endColumn=8::Using test variation"
           fi
 
-{{- $pcrepo :=  $.PCRepo }}
-{{if eq .Name "tyk-sink" }}
-  {{ $pcrepo =  print $.PCRepo "-stable" }}
-{{ end }}
+{{- $uprepo :=  .Branchvals.Builds.std.UpgradeRepo }}
 
 {{ $repo := .Name }}
 {{ $pcname := .PackageName }}
@@ -66,15 +63,15 @@
           ARG TARGETARCH
           COPY {{ $pcname }}*_${TARGETARCH}.deb /{{ $pcname }}.deb
           RUN apt-get update && apt-get install -y curl
-          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $pcrepo }}/script.deb.sh | bash && apt-get install -y {{ $pcname }}={{ $fromVer }}
+          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $uprepo }}/script.deb.sh | bash && apt-get install -y {{ $pcname }}={{ $fromVer }}
           RUN dpkg -i /{{ $pcname }}.deb
 {{ else if eq $distro "rpm" }}
           ARG RHELARCH
           COPY {{ $pcname }}*.${RHELARCH}.rpm /{{ $pcname }}.rpm
           RUN command -v curl || yum install -y curl
           RUN command -v useradd || yum install -y shadow-utils
-          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $pcrepo }}/script.rpm.sh | bash && yum install -y {{ $pcname }}-{{ $fromVer }}-1
-          RUN curl https://keyserver.tyk.io/tyk.io.rpm.signing.key.2020 -o {{ $pcrepo }}.key && rpm --import {{ $pcrepo }}.key
+          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $uprepo }}/script.rpm.sh | bash && yum install -y {{ $pcname }}-{{ $fromVer }}-1
+          RUN curl https://keyserver.tyk.io/tyk.io.rpm.signing.key.2020 -o {{ $uprepo }}.key && rpm --import {{ $uprepo }}.key
           RUN rpm --checksig /{{ $pcname }}.rpm
           RUN rpm -Uvh --force /{{ $pcname }}.rpm
 {{ end }} {{/* if $distro */}}
@@ -102,9 +99,11 @@
 
       - name: Test the built container image with api functionality test.
         run: |
-          docker run -d -p8080:8080 --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
+          docker run -d -p8080:8080 --name=test --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
           sleep 2
           ./ci/tests/api-functionality/api_test.sh
+          sleep 2
+          docker stop test || true
   {{- end }}
 {{- end }} {{/* range distro */}}
 
