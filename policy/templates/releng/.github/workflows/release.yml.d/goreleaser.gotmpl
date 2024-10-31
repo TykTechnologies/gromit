@@ -196,7 +196,7 @@
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          tags: {{`${{ steps.ci_metadata_` }}{{ $edition }}{{`.outputs.tags }}`}}
+          tags: {{`${{ steps.ci_metadata` }}{{ $edition }}{{`.outputs.tags }}`}}
           labels: {{`${{ steps.tag_metadata.outputs.labels }}`}}
           build-args: |
             EDITION={{ if $edition }}-{{ end }}{{ $edition }}
