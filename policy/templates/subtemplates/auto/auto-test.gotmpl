@@ -5,7 +5,7 @@
     needs:
       - goreleaser
   {{- end }}
-    runs-on: ubuntu-latest-m-2
+    runs-on: ubuntu-latest
     outputs:
       envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
       pump: {{`${{ steps.params.outputs.pump }}`}}
