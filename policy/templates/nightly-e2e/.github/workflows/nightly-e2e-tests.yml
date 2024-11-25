@@ -12,6 +12,8 @@ on:
   # Trigger tests every week day at midnight
   schedule:
     - cron: "0 0 * * 1-5"
+  workflow_dispatch:
+    
 
 env:
   VARIATION: prod
