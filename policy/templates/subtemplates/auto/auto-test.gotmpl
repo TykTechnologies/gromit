@@ -107,7 +107,7 @@
         {{- end}}
           echo '# alfa and beta have to come after the override
           {{- if eq .flow "nightly" }}
-          tyk_image={{`${{steps.ecr.outputs.registry}}`}}/tyk-ee:{{`${{ matrix.envfiles.gwdash }}`}}
+          tyk_ee_image={{`${{steps.ecr.outputs.registry}}`}}/tyk-ee:{{`${{ matrix.envfiles.gwdash }}`}}
           tyk_analytics_image={{`${{steps.ecr.outputs.registry}}`}}/tyk-analytics:{{`${{ matrix.envfiles.gwdash }}`}}
           {{- end}}
           {{ if ne .dot.Name "tyk" }}
