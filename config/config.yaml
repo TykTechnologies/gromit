@@ -103,18 +103,6 @@ policy:
                 - distroless
                 - ee
                 - fips
-            release-5.3:
-              buildenv: 1.22-bullseye
-              features:
-                - distroless
-                - s390x
-                - release-test
-            release-5.5:
-              buildenv: 1.21-bullseye
-              features:
-                - distroless
-                - s390x
-                - release-test
             release-5.6:
               features:
                 - distroless
@@ -125,6 +113,13 @@ policy:
               features:
                 - plugin-compiler-fix-vendor
                 - python-support
+            release-5.7:
+              features:
+                - s390x
+                - release-test
+                - distroless
+                - ee
+                - fips
 
         tyk-analytics:
           description: >-
@@ -154,18 +149,6 @@ policy:
                 - s390x
                 - distroless
                 - release-test
-            release-5.3:
-              buildenv: 1.22-bullseye
-              features:
-                - distroless
-                - s390x
-                - release-test
-            release-5.5:
-              buildenv: 1.21-bullseye
-              features:
-                - distroless
-                - s390x
-                - release-test
             release-5.6:
               features:
                 - distroless
@@ -175,6 +158,11 @@ policy:
               buildenv: 1.16
               features:
                 - el7-pgo-build
+            release-5.7:
+              features:
+                - distroless
+                - s390x
+                - release-test
 
         portal:
           description: >-
