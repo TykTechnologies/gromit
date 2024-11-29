@@ -6,8 +6,8 @@ ARG EDITION
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-COPY *${TARGETARCH}.deb /
-RUN rm -f /*fips*.deb && dpkg -i /{{ .PackageName }}${EDITION}_*${TARGETARCH}.deb && rm /*.deb
+COPY ${BUILD_PACKAGE_NAME}*${TARGETARCH}.deb /
+RUN dpkg -i /${BUILD_PACKAGE_NAME}_*${TARGETARCH}.deb && rm /*.deb
 
 FROM gcr.io/distroless/{{ .Branchvals.DistrolessBaseImage }}
 
