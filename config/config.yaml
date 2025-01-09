@@ -40,7 +40,7 @@ policy:
       # The build environment used for this repo. Right now, this value
       # is used for selecting the appropriate golang-cross image
       # used for building the binary, packages and docker images.
-      buildenv: 1.22-bullseye
+      buildenv: 1.23-bullseye
       # baseimage what the container images are based on. It needs to be a
       # debian compatible distro as the Dockerfile assumes apt-get
       baseimage: debian:bookworm-slim
