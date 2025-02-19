@@ -55,6 +55,7 @@ func TestBundleRender(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error creating temp dir: %v", err)
 			}
+			t.Logf("templates rendered to: %s", tmpDir)
 			defer os.RemoveAll(tmpDir)
 
 			err = rp.SetBranch("master")
