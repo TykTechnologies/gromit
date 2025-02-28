@@ -284,3 +284,61 @@ policy:
             - test-square
           branches:
             main:
+
+# pkgs is used by the pkgs subcommand to weed packagecloud. Unlike the
+# policy, key, you cannot override parameters from other levels.
+# Precedence is exceptions > versioncutoff > agecutoff
+
+# Quirks of x/mod/semver:
+# - all versions string have a v prefix though the packages do not
+# - vMAJOR is treated as vMAJOR.0.0
+# - vMAJOR.MINOR is treated as vMAJOR.MINOR.0
+pkgs:
+  tyk-gateway:
+    # exceptions are those versions that should not be deleted from
+    # packagecloud 
+    exceptions:
+      - v2.6.2
+      - v2.9.3
+      - v2.9.4
+      - v2.9.4.1
+      - v2.9.4.5
+      - v2.9.4.3-1
+      - v2.9.4.7
+      - v2.8.3
+    # versions older (semver) than versioncutoff will be removed. A
+    # package version that is not semver will not be removed.
+    versioncutoff: v3
+  tyk-dashboard:
+    exceptions:
+      - v2.6.2
+      - v2.9.3
+      - v2.9.4
+      - v2.9.4.1
+      - v2.9.4.5
+      - v2.9.4.3-1
+      - v2.9.4.7
+      - v2.8.3
+    versioncutoff: v3
+  tyk-gateway-unstable:
+    # packages uploaded before agecutoff will be removed
+    agecutoff: 2160h # 90d
+  tyk-dashboard-unstable:
+    agecutoff: 2160h # 90d
+  tyk-pump:
+    agecutoff: 26280h # 3y
+  tyk-mdcb:
+    agecutoff: 26280h # 3y
+  tyk-pump-unstable:
+    agecutoff: 26280h # 3y
+  tyk-mdcb-unstable:
+    agecutoff: 26280h # 3y
+  portal:
+    agecutoff: 17520h # 2y
+  portal-unstable:
+    agecutoff: 2160h # 90d
+  tyk-identity-broker:
+    agecutoff: 26280h # 3y
+  tyk-identity-broker-unstable:
+    agecutoff: 2160h # 90d
+    
