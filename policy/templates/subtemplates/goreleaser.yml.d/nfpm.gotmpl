@@ -58,7 +58,7 @@ nfpms:
           dst: "/opt/{{ $r.PackageName }}/schemas"
         - src: "webclient/lang/*"
           dst: "/opt/{{ $r.PackageName }}/lang"
-        - src: tyk_config_sample.config
+        - src: tyk-analytics.conf.example
           dst: /opt/{{ $r.PackageName }}/{{ $r.Branchvals.ConfigFile }}
           type: "config|noreplace"
     {{- end}}
