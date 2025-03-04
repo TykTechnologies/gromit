@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -194,8 +195,8 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 			return rp, err
 		}
 		// attributes that are unions
-		rbv.Features = newSetFromSlices(group.Features, r.Features, bbv.Features).Members()
-		rbv.DeletedFiles = newSetFromSlices(p.DeletedFiles, group.DeletedFiles, r.DeletedFiles, bbv.DeletedFiles).Members()
+		rbv.Features = util.NewSetFromSlices(group.Features, r.Features, bbv.Features).Members()
+		rbv.DeletedFiles = util.NewSetFromSlices(p.DeletedFiles, group.DeletedFiles, r.DeletedFiles, bbv.DeletedFiles).Members()
 
 		log.Trace().Interface("bv", rbv).Str("branch", b).Msg("computed branch vals")
 		allBranches[b] = rbv
