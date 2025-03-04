@@ -11,8 +11,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/peterhellberg/link"
 	"github.com/rs/zerolog/log"
+	bar "github.com/schollz/progressbar/v3"
 	"github.com/spf13/viper"
 	pc "github.com/tyklabs/packagecloud/api/v1"
 	"golang.org/x/sync/errgroup"
@@ -144,26 +146,7 @@ func (c *Client) AllPackages(repo string, filter *Filter) (pkgList, *errgroup.Gr
 	return ch, pkgs
 }
 
-func getContentLength(url string) (int64, error) {
-	resp, err := http.Head(url)
-	if err != nil {
-		return 0, fmt.Errorf("failed to send HEAD request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("bad status for HEAD: %s", resp.Status)
-	}
-
-	size := resp.ContentLength
-	if size < 0 {
-		return 0, fmt.Errorf("content length not found")
-	}
-
-	return size, nil
-}
-
-// download a package into savedir/name/distro/
+// download a package into savedir/name/distro/ if not already downloaded
 func (c *Client) download(item pc.PackageDetail, savedir string) error {
 	dirpath := fmt.Sprintf("%s/%s/%s", savedir, item.Name, item.DistroVersion)
 	err := os.MkdirAll(dirpath, 0755)
@@ -174,19 +157,16 @@ func (c *Client) download(item pc.PackageDetail, savedir string) error {
 	if err != nil {
 		return fmt.Errorf("could not open %s: %v", dirpath, err)
 	}
-	fi, err := dir.Stat(item.Filename)
-	var fsSize int64 = 0
+	var md5sum string
+	f, err := dir.Open(item.Filename)
 	if err != nil && !os.IsNotExist(err) {
-		log.Warn().Err(err).Msgf("stat %s/%s", dirpath, item.Filename)
+		log.Warn().Err(err).Msgf("open %s/%s", dirpath, item.Filename)
 	}
+	defer f.Close()
 	if err == nil {
-		fsSize = fi.Size()
+		md5sum = util.Md5Sum(f)
 	}
-	size, err := getContentLength(item.DownloadURL)
-	if err != nil {
-		log.Warn().Err(err).Msgf("filesize %s", item.DownloadURL)
-	}
-	if fsSize != size {
+	if md5sum != item.Md5Sum {
 		f, err := dir.Create(item.Filename)
 		if err != nil {
 			return fmt.Errorf("could not create %s/%s: %v", dirpath, item.Filename, err)
@@ -212,18 +192,49 @@ func (c *Client) download(item pc.PackageDetail, savedir string) error {
 	return nil
 }
 
+// (c *Client) delete deletes the given package from the repo permanently
+func (c *Client) delete(item pc.PackageDetail) error {
+	var buf bytes.Buffer
+	req, err := http.NewRequestWithContext(c.ctx, "DELETE", item.DestroyURL, &buf)
+	if err != nil {
+		return fmt.Errorf("http newrequest err: %v", err)
+	}
+	req.Header.Set("Pragma", "no-cache")
+
+	req.SetBasicAuth(c.token, "")
+	err = c.limiter.Wait(c.ctx)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("invalid response: %s err: %q", resp.Status, b)
+	}
+	return nil
+}
+
 // Clean deletes the packages from packagecloud
-func (c *Client) Clean(pList pkgList, concurrency int, savedir string) error {
+func (c *Client) Clean(pList pkgList, concurrency int, savedir string, delete bool, progress *bar.ProgressBar) error {
 	errChan := make(chan error)
 	defer close(errChan)
+	defer progress.Finish()
 	pkgs := new(errgroup.Group)
 	for range concurrency {
 		pkgs.Go(func() error {
 			for item := range pList {
-				fmt.Println(item.Name, item.DistroVersion, item.Filename)
+				//fmt.Println(item.Name, item.DistroVersion, item.Filename)
+				progress.Add(1)
 				err := c.download(item, savedir)
 				if err != nil {
-					errChan <- err
+					errChan <- fmt.Errorf("download err: %v", err)
+					continue
+				}
+				if delete {
+					err = c.delete(item)
+					if err != nil {
+						errChan <- fmt.Errorf("delete err: %v", err)
+					}
 				}
 			}
 			return nil

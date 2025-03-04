@@ -21,6 +21,7 @@ import (
 
 	"github.com/TykTechnologies/gromit/pkgs"
 	"github.com/rs/zerolog/log"
+	bar "github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -61,6 +62,10 @@ Each repo is processed sequentially, Deletions within a repo are processed concu
 	Run: func(cmd *cobra.Command, args []string) {
 		concurrency, _ := cmd.Flags().GetInt("concurrency")
 		savedir, _ := cmd.Flags().GetString("savedir")
+		delete, err := cmd.Flags().GetBool("delete")
+		if err != nil {
+			log.Fatal().Err(err).Msg("parsing -delete flag")
+		}
 		for _, repoName := range args {
 			log.Logger = log.With().Str("repo", repoName).Logger()
 			filter, err := repos.MakeFilter(repoName)
@@ -69,7 +74,8 @@ Each repo is processed sequentially, Deletions within a repo are processed concu
 				break
 			}
 			pkgChan, pkgs := pkgClient.AllPackages(repoName, filter)
-			cleanErr := pkgClient.Clean(pkgChan, concurrency, savedir)
+			progress := bar.Default(-1, repoName)
+			cleanErr := pkgClient.Clean(pkgChan, concurrency, savedir, delete, progress)
 			if err := pkgs.Wait(); err != nil {
 				log.Warn().Err(err).Msg("fetching all packages")
 				break
@@ -77,7 +83,7 @@ Each repo is processed sequentially, Deletions within a repo are processed concu
 			if cleanErr != nil {
 				log.Warn().Err(cleanErr).Msg("cleaning up packages")
 			}
-			fmt.Printf("%s %s\n", repoName, filter)
+			fmt.Println(repoName, filter)
 		}
 	},
 }
@@ -92,4 +98,5 @@ func init() {
 
 	cleanSubCmd.Flags().Int("concurrency", 3, "Cleanup concurrency level")
 	cleanSubCmd.Flags().String("savedir", "./backup", "Local directory root to save packages before deleting")
+	cleanSubCmd.Flags().Bool("delete", false, "Actually delete the package from the repo")
 }
