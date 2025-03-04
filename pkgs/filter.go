@@ -42,19 +42,27 @@ func (f Filter) String() string {
 }
 
 func (r Repos) MakeFilter(repoName string) (*Filter, error) {
-	var f Filter
 	repo, found := r[repoName]
 	if !found {
-		return &f, fmt.Errorf("%s not known among %v", repoName, r)
+		return nil, fmt.Errorf("%s not known among %v", repoName, r)
 	}
 	if repo.VersionCutoff != "" && !semver.IsValid(repo.VersionCutoff) {
-		return &f, fmt.Errorf("%s cannot be parsed as semver", repo.VersionCutoff)
+		return nil, fmt.Errorf("%s cannot be parsed as semver", repo.VersionCutoff)
 	}
-	f.Version = repo.VersionCutoff
-	f.Age = repo.AgeCutoff
-	f.Exceptions = util.NewSetFromSlices(repo.Exceptions)
+	return &Filter{
+		Version:    repo.VersionCutoff,
+		Age:        repo.AgeCutoff,
+		Exceptions: util.NewSetFromSlices(repo.Exceptions),
+	}, nil
+}
 
-	return &f, nil
+func (r Repos) ShouldBackup(repoName string) bool {
+	repo, found := r[repoName]
+	if !found {
+		log.Warn().Msgf("%s not known among %v but assuming it needs to be backed up. Add %s to the config file to avoid this warning.", repoName, r, repoName)
+		return true
+	}
+	return !repo.NotBackup
 }
 
 // Satisfies behaviour depends on the order of the conditionals:
@@ -62,15 +70,16 @@ func (r Repos) MakeFilter(repoName string) (*Filter, error) {
 // 2. Is it older than the versioncutoff?
 // 3. Was the package uploaded before the agecutoff?
 func (f *Filter) Satisfies(item pc.PackageDetail, now time.Time) bool {
-	if f.Exceptions.Has(item.Version) {
+	v := "v" + item.Version
+	if f.Exceptions.Has(v) {
 		log.Trace().Msgf("v%s is protected", item.Version)
 		return false
 	}
-	if f.Version != "" && semver.IsValid(item.Version) {
-		if semver.Compare(f.Version, item.Version) <= 0 {
+	if f.Version != "" && semver.IsValid(v) {
+		if semver.Compare(f.Version, v) <= 0 {
 			return true
 		} else {
-			log.Trace().Msgf("%s v%s is newer than %s", item.Name, item.Version, f.Version)
+			log.Trace().Msgf("%s v%s is newer than %s", item.Name, v, f.Version)
 		}
 	}
 	if f.Age != 0 {

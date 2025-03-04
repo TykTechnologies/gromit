@@ -38,6 +38,15 @@ type pkgConfig struct {
 	Exceptions    []string
 	VersionCutoff string
 	AgeCutoff     time.Duration
+	NotBackup     bool
+}
+
+type CleanConfig struct {
+	Concurrency int
+	Savedir     string
+	Delete      bool
+	Backup      bool
+	RepoName    string
 }
 
 type Repos map[string]pkgConfig
@@ -157,16 +166,17 @@ func (c *Client) download(item pc.PackageDetail, savedir string) error {
 	if err != nil {
 		return fmt.Errorf("could not open %s: %v", dirpath, err)
 	}
-	var md5sum string
+	var sha256sum string
 	f, err := dir.Open(item.Filename)
 	if err != nil && !os.IsNotExist(err) {
 		log.Warn().Err(err).Msgf("open %s/%s", dirpath, item.Filename)
 	}
 	defer f.Close()
 	if err == nil {
-		md5sum = util.Md5Sum(f)
+		sha256sum = util.Sha256Sum(f)
 	}
-	if md5sum != item.Md5Sum {
+	if sha256sum != item.Sha256Sum {
+		log.Debug().Msgf("downloading %s/%s as it's hash %s does not match repo hash %s", dirpath, item.Filename, sha256sum, item.Sha256Sum)
 		f, err := dir.Create(item.Filename)
 		if err != nil {
 			return fmt.Errorf("could not create %s/%s: %v", dirpath, item.Filename, err)
@@ -215,23 +225,26 @@ func (c *Client) delete(item pc.PackageDetail) error {
 }
 
 // Clean deletes the packages from packagecloud
-func (c *Client) Clean(pList pkgList, concurrency int, savedir string, delete bool, progress *bar.ProgressBar) error {
+func (c *Client) Clean(pList pkgList, cc CleanConfig) error {
 	errChan := make(chan error)
 	defer close(errChan)
+	progress := bar.Default(-1, cc.RepoName)
 	defer progress.Finish()
 	pkgs := new(errgroup.Group)
-	for range concurrency {
+	for range cc.Concurrency {
 		pkgs.Go(func() error {
 			for item := range pList {
-				//fmt.Println(item.Name, item.DistroVersion, item.Filename)
+				//fmt.Println(item.Name, item.DistroVersion, item.Filename, item.Sha256Sum)
 				progress.Add(1)
-				err := c.download(item, savedir)
-				if err != nil {
-					errChan <- fmt.Errorf("download err: %v", err)
-					continue
+				if cc.Backup {
+					err := c.download(item, cc.Savedir)
+					if err != nil {
+						errChan <- fmt.Errorf("download err: %v", err)
+						continue
+					}
 				}
-				if delete {
-					err = c.delete(item)
+				if cc.Delete {
+					err := c.delete(item)
 					if err != nil {
 						errChan <- fmt.Errorf("delete err: %v", err)
 					}

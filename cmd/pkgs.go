@@ -21,7 +21,6 @@ import (
 
 	"github.com/TykTechnologies/gromit/pkgs"
 	"github.com/rs/zerolog/log"
-	bar "github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -66,16 +65,22 @@ Each repo is processed sequentially, Deletions within a repo are processed concu
 		if err != nil {
 			log.Fatal().Err(err).Msg("parsing -delete flag")
 		}
+		cc := pkgs.CleanConfig{
+			Concurrency: concurrency,
+			Savedir:     savedir,
+			Delete:      delete,
+		}
 		for _, repoName := range args {
 			log.Logger = log.With().Str("repo", repoName).Logger()
+			cc.RepoName = repoName
+			cc.Backup = repos.ShouldBackup(repoName)
 			filter, err := repos.MakeFilter(repoName)
 			if err != nil {
 				log.Warn().Err(err).Msg("making filter")
 				break
 			}
 			pkgChan, pkgs := pkgClient.AllPackages(repoName, filter)
-			progress := bar.Default(-1, repoName)
-			cleanErr := pkgClient.Clean(pkgChan, concurrency, savedir, delete, progress)
+			cleanErr := pkgClient.Clean(pkgChan, cc)
 			if err := pkgs.Wait(); err != nil {
 				log.Warn().Err(err).Msg("fetching all packages")
 				break
