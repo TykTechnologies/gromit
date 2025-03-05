@@ -33,7 +33,6 @@ func NewClient(authToken, owner string, rps float64, burst int) *Client {
 	return &Client{authToken, owner, limiter, context.TODO()}
 }
 
-// pkgConfig models the config file
 type pkgConfig struct {
 	Exceptions    []string
 	VersionCutoff string
@@ -41,6 +40,7 @@ type pkgConfig struct {
 	NotBackup     bool
 }
 
+// CleanConfig is the consolidated options that can be passed to the Clean method
 type CleanConfig struct {
 	Concurrency int
 	Savedir     string
@@ -49,6 +49,7 @@ type CleanConfig struct {
 	RepoName    string
 }
 
+// Repos models the config file
 type Repos map[string]pkgConfig
 
 type pkgList chan pc.PackageDetail
@@ -102,7 +103,6 @@ func (c *Client) get(url string) (*http.Response, error, string) {
 // AllPackages returns an errgroup that can be used by the caller to
 // collect errors and a channel to read PackageDetails from. Only
 // items that satisy the supplied filter are written to the channel.
-// The JSON array returned by packagecloud is parsed as documented in
 func (c *Client) AllPackages(repo string, filter *Filter) (pkgList, *errgroup.Group) {
 	ch := make(pkgList)
 	url := fmt.Sprintf("%s/%s/%s/packages.json", pcPrefix, c.owner, repo)
@@ -202,7 +202,7 @@ func (c *Client) download(item pc.PackageDetail, savedir string) error {
 	return nil
 }
 
-// (c *Client) delete deletes the given package from the repo permanently
+// delete deletes the given package from the repo permanently
 func (c *Client) delete(item pc.PackageDetail) error {
 	var buf bytes.Buffer
 	req, err := http.NewRequestWithContext(c.ctx, "DELETE", item.DestroyURL, &buf)
@@ -224,7 +224,7 @@ func (c *Client) delete(item pc.PackageDetail) error {
 	return nil
 }
 
-// Clean deletes the packages from packagecloud
+// Clean optionally backs up and then removes the packages from packagecloud
 func (c *Client) Clean(pList pkgList, cc CleanConfig) error {
 	errChan := make(chan error)
 	defer close(errChan)

@@ -310,7 +310,7 @@ pkgs:
       - v2.9.4.7
       - v2.8.3
       - v3.0.8 # used in upgrade tests
-    # versions older (semver) than versioncutoff will be removed. A
+    # versions strictly older (semver) than versioncutoff will be removed. A
     # package version that is not semver will not be removed.
     versioncutoff: v3
   tyk-dashboard:

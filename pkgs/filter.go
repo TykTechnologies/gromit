@@ -46,11 +46,12 @@ func (r Repos) MakeFilter(repoName string) (*Filter, error) {
 	if !found {
 		return nil, fmt.Errorf("%s not known among %v", repoName, r)
 	}
-	if repo.VersionCutoff != "" && !semver.IsValid(repo.VersionCutoff) {
+	v := semver.Canonical(repo.VersionCutoff)
+	if v != "" && !semver.IsValid(v) {
 		return nil, fmt.Errorf("%s cannot be parsed as semver", repo.VersionCutoff)
 	}
 	return &Filter{
-		Version:    repo.VersionCutoff,
+		Version:    v,
 		Age:        repo.AgeCutoff,
 		Exceptions: util.NewSetFromSlices(repo.Exceptions),
 	}, nil
@@ -76,11 +77,13 @@ func (f *Filter) Satisfies(item pc.PackageDetail, now time.Time) bool {
 		return false
 	}
 	if f.Version != "" && semver.IsValid(v) {
-		if semver.Compare(f.Version, v) <= 0 {
+		if semver.Compare(v, f.Version) < 0 {
 			return true
 		} else {
-			log.Trace().Msgf("%s v%s is newer than %s", item.Name, v, f.Version)
+			log.Trace().Msgf("%s %s is newer than %s", item.Name, v, f.Version)
 		}
+	} else {
+		log.Trace().Msgf("%s %s invalid semver", item.Name, v)
 	}
 	if f.Age != 0 {
 		pAge := now.Sub(item.CreateTime)
