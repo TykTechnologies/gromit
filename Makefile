@@ -10,7 +10,8 @@ REPOS        ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal t
 GITHUB_TOKEN ?= $(shell pass me/github)
 JIRA_USER    ?= alok@tyk.io
 JIRA_TOKEN   ?= $(shell pass Tyk/atlassian)
-VARIATION    ?= inverted
+VARIATION    ?= prod-variations
+PC_TOKEN     ?= $(shell pass Tyk/packagecloud)
 
 gromit: go.mod go.sum *.go $(SRC) $(TEMPLATES) update-variation
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
@@ -53,6 +54,15 @@ clean:
 	find . -name rice-box.go -o -name error.yaml | xargs rm -fv
 	rm -rf $(REPOS)
 	rm -fv gromit
+
+unstable-cleanup: gromit
+	@PACKAGECLOUD_TOKEN=$(PC_TOKEN) ./gromit pkgs clean -delete tyk-gateway-unstable tyk-dashboard-unstable tyk-pump-unstable tyk-mdcb-unstable portal-unstable tyk-identity-broker-unstable
+
+stable-cleanup: gromit
+	@PACKAGECLOUD_TOKEN=$(PC_TOKEN) ./gromit pkgs clean tyk-gateway tyk-dashboard tyk-pump tyk-mdcb portal tyk-identity-broker
+
+stable-cleanup-really: gromit
+	@PACKAGECLOUD_TOKEN=$(PC_TOKEN) ./gromit pkgs clean -delete tyk-gateway tyk-dashboard tyk-pump tyk-mdcb portal tyk-identity-broker
 
 sync: gromit
 	@$(foreach r,$(REPOS), GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit policy sync $(r);)
