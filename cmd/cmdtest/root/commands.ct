@@ -14,6 +14,7 @@ Available Commands:
   help        Help about any command
   orgs        Dump/restore org keys and mongodb
   passwd      Returns the password hash of the given plaintext
+  pkgs        Interact with package repositories
   policy      Templatised policies that are driven by the config file
   prs         Operate upon PRs for the named repos
   version     Print version
