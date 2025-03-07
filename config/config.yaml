@@ -364,3 +364,6 @@ pkgs:
   tyk-identity-broker-unstable:
     notbackup: true
     agecutoff: 2160h # 90d
+  tyk-sync-unstable:
+    notbackup: true
+    agecutoff: 2160h # 90d

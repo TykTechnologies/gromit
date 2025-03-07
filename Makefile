@@ -13,6 +13,8 @@ JIRA_TOKEN   ?= $(shell pass Tyk/atlassian)
 VARIATION    ?= prod-variations
 PC_TOKEN     ?= $(shell pass Tyk/packagecloud)
 
+UNSTABLE_REPOS := tyk-gateway-unstable tyk-dashboard-unstable tyk-pump-unstable tyk-mdcb-unstable portal-unstable tyk-identity-broker-unstable tyk-sync-unstable
+STABLE_REPOS := tyk-gateway tyk-dashboard tyk-pump tyk-mdcb portal tyk-identity-broker
 gromit: go.mod go.sum *.go $(SRC) $(TEMPLATES) update-variation
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
@@ -56,13 +58,13 @@ clean:
 	rm -fv gromit
 
 unstable-cleanup: gromit
-	@PACKAGECLOUD_TOKEN=$(PC_TOKEN) ./gromit pkgs clean -delete tyk-gateway-unstable tyk-dashboard-unstable tyk-pump-unstable tyk-mdcb-unstable portal-unstable tyk-identity-broker-unstable
+	@PACKAGECLOUD_TOKEN=$(PC_TOKEN) ./gromit pkgs clean --delete $(UNSTABLE_REPOS)
 
 stable-cleanup: gromit
-	@PACKAGECLOUD_TOKEN=$(PC_TOKEN) ./gromit pkgs clean tyk-gateway tyk-dashboard tyk-pump tyk-mdcb portal tyk-identity-broker
+	@PACKAGECLOUD_TOKEN=$(PC_TOKEN) ./gromit pkgs clean $(STABLE_REPOS)
 
 stable-cleanup-really: gromit
-	@PACKAGECLOUD_TOKEN=$(PC_TOKEN) ./gromit pkgs clean -delete tyk-gateway tyk-dashboard tyk-pump tyk-mdcb portal tyk-identity-broker
+	@PACKAGECLOUD_TOKEN=$(PC_TOKEN) ./gromit pkgs clean --delete $(STABLE_REPOS)
 
 sync: gromit
 	@$(foreach r,$(REPOS), GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit policy sync $(r);)

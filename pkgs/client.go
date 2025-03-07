@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -54,7 +55,7 @@ type Repos map[string]pkgConfig
 
 type pkgList chan pc.PackageDetail
 
-const pcPrefix = "https://packagecloud.io/api/v1/repos"
+const pcPrefix = "https://packagecloud.io"
 
 // LoadPkgs returns a map of repos→config from the embedded or
 // supplied config file
@@ -105,7 +106,7 @@ func (c *Client) get(url string) (*http.Response, error, string) {
 // items that satisy the supplied filter are written to the channel.
 func (c *Client) AllPackages(repo string, filter *Filter) (pkgList, *errgroup.Group) {
 	ch := make(pkgList)
-	url := fmt.Sprintf("%s/%s/%s/packages.json", pcPrefix, c.owner, repo)
+	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/packages.json", pcPrefix, c.owner, repo)
 	pkgs := new(errgroup.Group)
 	pkgs.Go(func() error {
 		defer close(ch)
@@ -115,40 +116,24 @@ func (c *Client) AllPackages(repo string, filter *Filter) (pkgList, *errgroup.Gr
 			if err != nil {
 				return fmt.Errorf("http get err: %v", err)
 			}
-			defer resp.Body.Close()
-			decoder := json.NewDecoder(resp.Body)
-
-			// Stream and parse JSON array as shown in
-			// https://pkg.go.dev/encoding/json#example-Decoder.Decode-Stream
-
-			// read opening bracket
-			_, err = decoder.Token()
+			var items []pc.PackageDetail
+			err = json.NewDecoder(resp.Body).Decode(&items)
 			if err != nil {
-				return err
+				return fmt.Errorf("json parse err: %v", err)
 			}
-			for decoder.More() {
-				var item pc.PackageDetail
-				err := decoder.Decode(&item)
-				if err != nil {
-					return fmt.Errorf("json parse err: %v", err)
-				}
+			for _, item := range items {
 				filter.IncTotal()
-
 				if filter.Satisfies(item, time.Now()) {
 					ch <- item
 					filter.IncFiltered()
 				}
+
 			}
-			// read closing bracket
-			_, err = decoder.Token()
-			if err != nil {
-				return err
-			}
-			if next != "" {
-				url = next
-			} else {
+			resp.Body.Close()
+			if next == "" {
 				break
 			}
+			url = next
 		}
 		return nil
 	})
@@ -205,22 +190,28 @@ func (c *Client) download(item pc.PackageDetail, savedir string) error {
 // delete deletes the given package from the repo permanently
 func (c *Client) delete(item pc.PackageDetail) error {
 	var buf bytes.Buffer
-	req, err := http.NewRequestWithContext(c.ctx, "DELETE", item.DestroyURL, &buf)
+	purl, err := url.JoinPath(pcPrefix, item.DestroyURL)
+	if err != nil {
+		return fmt.Errorf("creating URL: %v", err)
+	}
+	req, err := http.NewRequestWithContext(c.ctx, "DELETE", purl, &buf)
 	if err != nil {
 		return fmt.Errorf("http newrequest err: %v", err)
 	}
-	req.Header.Set("Pragma", "no-cache")
-
 	req.SetBasicAuth(c.token, "")
 	err = c.limiter.Wait(c.ctx)
 	if err != nil {
 		return err
 	}
 	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("http err %s", purl)
+	}
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("invalid response: %s err: %q", resp.Status, b)
+		return fmt.Errorf("invalid response: %s err: %q for %s", resp.Status, b, purl)
 	}
+	log.Debug().Msgf("deleted %s", purl)
 	return nil
 }
 

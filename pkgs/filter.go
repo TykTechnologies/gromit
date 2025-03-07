@@ -2,6 +2,7 @@ package pkgs
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ type Filter struct {
 	total       int
 	filtered    int
 	mu          sync.Mutex
+	vtrans      *strings.Replacer
 }
 
 //nolint:copylocks
@@ -54,6 +56,7 @@ func (r Repos) MakeFilter(repoName string) (*Filter, error) {
 		Version:    v,
 		Age:        repo.AgeCutoff,
 		Exceptions: util.NewSetFromSlices(repo.Exceptions),
+		vtrans:     strings.NewReplacer("~", "-"),
 	}, nil
 }
 
@@ -71,7 +74,7 @@ func (r Repos) ShouldBackup(repoName string) bool {
 // 2. Is it older than the versioncutoff?
 // 3. Was the package uploaded before the agecutoff?
 func (f *Filter) Satisfies(item pc.PackageDetail, now time.Time) bool {
-	v := "v" + item.Version
+	v := "v" + f.vtrans.Replace(item.Version)
 	if f.Exceptions.Has(v) {
 		log.Trace().Msgf("v%s is protected", item.Version)
 		return false
@@ -82,18 +85,16 @@ func (f *Filter) Satisfies(item pc.PackageDetail, now time.Time) bool {
 		} else {
 			log.Trace().Msgf("%s %s is newer than %s", item.Name, v, f.Version)
 		}
-	} else {
-		log.Trace().Msgf("%s %s invalid semver", item.Name, v)
 	}
 	if f.Age != 0 {
 		pAge := now.Sub(item.CreateTime)
 		if pAge > f.Age {
 			return true
 		} else {
-			log.Trace().Msgf("%s v%s created on %s younger than %s", item.Version, item.Version, item.CreateTime, f.Age)
+			log.Trace().Msgf("%s v%s created on %s younger than %s", item.Name, item.Version, item.CreateTime, f.Age)
 		}
 	}
-	log.Trace().Interface("pkg", item).Msg("filtered out because no filter condition applies")
+	//log.Trace().Interface("pkg", item).Msg("filtered out because no filter condition applies")
 	return false
 }
 
