@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/TykTechnologies/gromit/pkgs"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -69,6 +70,12 @@ Each repo is processed sequentially, Deletions within a repo are processed concu
 			Concurrency: concurrency,
 			Savedir:     savedir,
 			Delete:      delete,
+			Progress:    true,
+		}
+		ll := zerolog.GlobalLevel()
+		if ll < zerolog.InfoLevel {
+			cc.Progress = false
+			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, NoColor: true, PartsExclude: []string{zerolog.TimestampFieldName}})
 		}
 		for _, repoName := range args {
 			log.Logger = log.With().Str("repo", repoName).Logger()

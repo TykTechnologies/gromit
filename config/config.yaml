@@ -352,6 +352,7 @@ pkgs:
     agecutoff: 2160h # 90d
   tyk-dashboard-unstable:
     notbackup: true
+    #agecutoff: 1440h # 60d
     agecutoff: 2160h # 90d
   tyk-pump-unstable:
     notbackup: true

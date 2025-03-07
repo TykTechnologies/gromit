@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/TykTechnologies/gromit/util"
@@ -48,6 +47,7 @@ type CleanConfig struct {
 	Delete      bool
 	Backup      bool
 	RepoName    string
+	Progress    bool
 }
 
 // Repos models the config file
@@ -86,17 +86,9 @@ func (c *Client) get(url string) (*http.Response, error, string) {
 		b, _ := io.ReadAll(resp.Body)
 		return resp, fmt.Errorf("invalid response: %s err: %q", resp.Status, b), ""
 	}
-	total := resp.Header.Get("Total")
-	perPage := resp.Header.Get("Per-Page")
-	totalInt, _ := strconv.Atoi(total)
-	perPageInt, _ := strconv.Atoi(perPage)
-
-	if total != "" && perPage != "" && totalInt > perPageInt {
-		webLink := link.ParseResponse(resp)
-		if n, ok := webLink["next"]; ok {
-			return resp, nil, n.URI
-		}
-
+	webLink := link.ParseResponse(resp)
+	if n, ok := webLink["next"]; ok {
+		return resp, nil, n.URI
 	}
 	return resp, nil, ""
 }
@@ -217,38 +209,38 @@ func (c *Client) delete(item pc.PackageDetail) error {
 
 // Clean optionally backs up and then removes the packages from packagecloud
 func (c *Client) Clean(pList pkgList, cc CleanConfig) error {
-	errChan := make(chan error)
-	defer close(errChan)
-	progress := bar.Default(-1, cc.RepoName)
+	var progress *bar.ProgressBar
+	if cc.Progress {
+		progress = bar.Default(-1, cc.RepoName)
+	} else {
+		progress = bar.DefaultSilent(-1, cc.RepoName)
+	}
 	defer progress.Finish()
 	pkgs := new(errgroup.Group)
 	for range cc.Concurrency {
 		pkgs.Go(func() error {
 			for item := range pList {
 				//fmt.Println(item.Name, item.DistroVersion, item.Filename, item.Sha256Sum)
-				progress.Add(1)
 				if cc.Backup {
 					err := c.download(item, cc.Savedir)
 					if err != nil {
-						errChan <- fmt.Errorf("download err: %v", err)
+						log.Error().Err(err).Msgf("downloading %s", item.DownloadURL)
 						continue
 					}
 				}
 				if cc.Delete {
 					err := c.delete(item)
 					if err != nil {
-						errChan <- fmt.Errorf("delete err: %v", err)
+						log.Error().Err(err).Msgf("while deleting %s %s %s", item.Name, item.Version, item.DistroVersion)
+						continue
 					}
 				}
+				// no errors
+				progress.Add(1)
 			}
 			return nil
 		})
 	}
-	go func() {
-		for cleanErr := range errChan {
-			log.Error().Err(cleanErr).Msg("while cleaning")
-		}
-	}()
 
 	if err := pkgs.Wait(); err != nil {
 		return err
