@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/TykTechnologies/gromit/util"
 	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
@@ -75,7 +76,7 @@ func (v variations) Repos() []string {
 	for _, path := range v.Paths {
 		rvals = append(rvals, path.Repo)
 	}
-	return newSetFromSlices(rvals).Members()
+	return util.NewSetFromSlices(rvals).Members()
 }
 
 func (v variations) Branches(repo string) []string {
@@ -85,7 +86,7 @@ func (v variations) Branches(repo string) []string {
 			rvals = append(rvals, path.Branch)
 		}
 	}
-	return newSetFromSlices(rvals).Members()
+	return util.NewSetFromSlices(rvals).Members()
 }
 
 func (v variations) Triggers(repo, branch string) []string {
@@ -95,7 +96,7 @@ func (v variations) Triggers(repo, branch string) []string {
 			rvals = append(rvals, path.Trigger)
 		}
 	}
-	return newSetFromSlices(rvals).Members()
+	return util.NewSetFromSlices(rvals).Members()
 }
 
 func (v variations) Testsuites(repo, branch, trigger string) []string {
@@ -105,7 +106,7 @@ func (v variations) Testsuites(repo, branch, trigger string) []string {
 			rvals = append(rvals, path.Testsuite)
 		}
 	}
-	return newSetFromSlices(rvals).Members()
+	return util.NewSetFromSlices(rvals).Members()
 }
 
 func (v variations) Lookup(repo, branch, trigger, testsuite string) *ghMatrix {

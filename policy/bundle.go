@@ -165,7 +165,7 @@ func (b *Bundle) write(buf *bytes.Buffer, opFile string) error {
 
 // String will provide a human readable bundle listing
 func (b *Bundle) String() string {
-	return fmt.Sprintf(b.Name) + b.tree.String(0)
+	return b.Name + b.tree.String(0)
 }
 
 // Count is the public function that wraps the implementation

@@ -26,7 +26,7 @@ on:
 
 env:
   GOPRIVATE: github.com/TykTechnologies
-  VARIATION: inverted
+  VARIATION: prod-variations
   DOCKER_BUILD_SUMMARY: false
   DOCKER_BUILD_RECORD_UPLOAD: false
   # startsWith covers pull_request_target too

@@ -284,3 +284,87 @@ policy:
             - test-square
           branches:
             main:
+
+# pkgs is used by the pkgs subcommand to weed packagecloud. Unlike the
+# policy, key, you cannot override parameters from other levels.
+# Precedence is exceptions > versioncutoff > agecutoff
+
+# Quirks of x/mod/semver:
+# - all versions string have a v prefix though the packages do not
+# - vMAJOR is treated as vMAJOR.0.0
+# - vMAJOR.MINOR is treated as vMAJOR.MINOR.0
+pkgs:
+  tyk-gateway:
+    # notbackup determines if packages are downloaded before being deleted
+    # It is inverted so that if it is omitted from some repo, it will failsafe to false
+    notbackup: false
+    # exceptions are those versions that should not be deleted from
+    # packagecloud. These don't have to be semver. 
+    exceptions:
+      - v2.6.2
+      - v2.9.3
+      - v2.9.4
+      - v2.9.4.1
+      - v2.9.4.5
+      - v2.9.4.3-1
+      - v2.9.4.7
+      - v2.8.3
+      - v3.0.8 # used in upgrade tests
+    # versions strictly older (semver) than versioncutoff will be removed. A
+    # package version that is not semver will not be removed.
+    versioncutoff: v3
+  tyk-dashboard:
+    notbackup: false
+    exceptions:
+      - v2.6.2
+      - v2.9.3
+      - v2.9.4
+      - v2.9.4.1
+      - v2.9.4.5
+      - v2.9.4.3-1
+      - v2.9.4.7
+      - v2.8.3
+      - v3.0.8 # used in upgrade tests
+    versioncutoff: v3
+  tyk-pump:
+    notbackup: false
+    exceptions:
+      - v1.6.0 # used in upgrade tests
+    agecutoff: 26280h # 3y
+  tyk-mdcb:
+    notbackup: false
+    exceptions:
+      - v1.8.2 # used in upgrade tests
+    agecutoff: 26280h # 3y
+  portal:
+    notbackup: false
+    exceptions:
+      - v1.0.0
+    agecutoff: 26280h # 3y
+  tyk-identity-broker:
+    notbackup: false
+    exceptions:
+      - v1.1.0 # used in upgrade tests
+    agecutoff: 26280h # 3y
+  tyk-gateway-unstable:
+    notbackup: true
+    # packages uploaded before agecutoff will be removed
+    agecutoff: 2160h # 90d
+  tyk-dashboard-unstable:
+    notbackup: true
+    #agecutoff: 1440h # 60d
+    agecutoff: 2160h # 90d
+  tyk-pump-unstable:
+    notbackup: true
+    agecutoff: 2160h # 90d
+  tyk-mdcb-unstable:
+    agecutoff: 2160h # 90d
+  portal-unstable:
+    notbackup: true
+    agecutoff: 2160h # 90d
+  tyk-identity-broker-unstable:
+    notbackup: true
+    agecutoff: 2160h # 90d
+  tyk-sync-unstable:
+    notbackup: true
+    agecutoff: 2160h # 90d
