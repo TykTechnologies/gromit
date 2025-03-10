@@ -10,11 +10,12 @@ REPOS        ?= tyk tyk-analytics tyk-pump tyk-identity-broker tyk-sink portal t
 GITHUB_TOKEN ?= $(shell pass me/github)
 JIRA_USER    ?= alok@tyk.io
 JIRA_TOKEN   ?= $(shell pass Tyk/atlassian)
-VARIATION    ?= prod-variations
+VARIATION    ?= prod-variation
 PC_TOKEN     ?= $(shell pass Tyk/packagecloud)
 
 UNSTABLE_REPOS := tyk-gateway-unstable tyk-dashboard-unstable tyk-pump-unstable tyk-mdcb-unstable portal-unstable tyk-identity-broker-unstable tyk-sync-unstable
 STABLE_REPOS := tyk-gateway tyk-dashboard tyk-pump tyk-mdcb portal tyk-identity-broker
+
 gromit: go.mod go.sum *.go $(SRC) $(TEMPLATES) update-variation
 	go build -v -trimpath -ldflags "-X github.com/TykTechnologies/gromit/util.version=$(VERSION) -X github.com/TykTechnologies/gromit/util.commit=$(COMMIT) -X github.com/TykTechnologies/gromit/util.buildDate=$(BUILD_DATE)"
 	go mod tidy
