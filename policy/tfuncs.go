@@ -1,6 +1,10 @@
 package policy
 
-import "reflect"
+import (
+	"reflect"
+
+	"github.com/TykTechnologies/gromit/util"
+)
 
 // Template functions called while rendering
 
@@ -14,7 +18,7 @@ func (rp RepoPolicy) GetCC(target, host string) string {
 
 // getImages returns the list of container manifests
 func (rp RepoPolicy) GetImages(repos ...string) []string {
-	images := make(set[string])
+	images := make(util.Set[string])
 	for _, bv := range rp.Branchvals.Builds {
 		for _, repo := range repos {
 			image := getBuildField(bv, repo)
@@ -28,7 +32,7 @@ func (rp RepoPolicy) GetImages(repos ...string) []string {
 
 // getDockerPlatforms returns the list of docker platforms that are to be supported
 func (rp RepoPolicy) GetDockerPlatforms() []string {
-	platforms := make(set[string])
+	platforms := make(util.Set[string])
 	for _, bv := range rp.Branchvals.Builds {
 		for _, a := range bv.Archs {
 			if len(a.Docker) > 0 {

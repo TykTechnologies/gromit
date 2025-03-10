@@ -43,7 +43,7 @@ policy:
       buildenv: 1.23-bullseye
       # baseimage what the container images are based on. It needs to be a
       # debian compatible distro as the Dockerfile assumes apt-get
-      baseimage: debian:bookworm-slim
+      baseimage: debian:trixie-slim
       # distrolessbaseimage is used for container images when the
       # distroless feature is set. base is appropriate for cgo
       # builds, static for pure go.
@@ -172,17 +172,12 @@ policy:
               features:
                 - distroless
                 - release-test
-            release-5.5:
-              buildenv: 1.21-bullseye
-              features:
-                - s390x
-                - release-test
             release-5-lts:
               buildenv: 1.16
               features:
                 - plugin-compiler-fix-vendor
                 - python-support
-            release-5.7:
+            release-5.8:
               builds:
                 ee:
                   flags:
@@ -260,6 +255,26 @@ policy:
                   docker: linux/amd64
               env:
                 - GOEXPERIMENT=boringcrypto
+            ee:
+              flags:
+                - -tags=goplugin,ee
+              description: >-
+                Enterprise Edition Dashboard for the Tyk API Gateway.
+              imagetitle: Tyk Dashboard Enterprise Edition
+              buildpackagename: tyk-dashboard-ee
+              pcrepo: tyk-ee-unstable
+              dhrepo: tykio/tyk-gateway-ee
+              cirepo: tyk-ee
+              archs:
+                - go: amd64
+                  deb: amd64
+                  docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
           branches:
             master:
               cgo: false
@@ -477,7 +492,7 @@ policy:
             main:
 
 # pkgs is used by the pkgs subcommand to weed packagecloud. Unlike the
-# policy, key, you cannot override parameters from other levels.
+# policy key, you cannot override parameters from other levels.
 # Precedence is exceptions > versioncutoff > agecutoff
 
 # Quirks of x/mod/semver:

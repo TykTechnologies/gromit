@@ -99,7 +99,7 @@
 
       - name: Test the built container image with api functionality test.
         run: |
-          docker run -d -p8080:8080 --name=test --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
+          docker run -d -p8080:8080 --name=test --platform linux/{{`${{ matrix.arch }}`}} --network {{`${{ job.container.network }}`}} --rm test-{{`${{ matrix.distro }}-${{ matrix.arch }}`}}
           sleep 2
           ./ci/tests/api-functionality/api_test.sh
           sleep 2
