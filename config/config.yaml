@@ -168,7 +168,7 @@ policy:
                 - release-test
                 - distroless
             release-5.3:
-              buildenv: 1.22-bullseye
+              buildenv: 1.23-bullseye
               features:
                 - distroless
                 - release-test
@@ -255,26 +255,6 @@ policy:
                   docker: linux/amd64
               env:
                 - GOEXPERIMENT=boringcrypto
-            ee:
-              flags:
-                - -tags=goplugin,ee
-              description: >-
-                Enterprise Edition Dashboard for the Tyk API Gateway.
-              imagetitle: Tyk Dashboard Enterprise Edition
-              buildpackagename: tyk-dashboard-ee
-              pcrepo: tyk-ee-unstable
-              dhrepo: tykio/tyk-gateway-ee
-              cirepo: tyk-ee
-              archs:
-                - go: amd64
-                  deb: amd64
-                  docker: linux/amd64
-                - go: arm64
-                  deb: aarch64
-                  docker: linux/arm64
-                - go: s390x
-                  deb: s390x
-                  docker: linux/s390x
           branches:
             master:
               cgo: false
@@ -282,6 +262,15 @@ policy:
                 - nightly-e2e
                 - distroless
                 - release-test
+            release-5.3:
+              buildenv: 1.23-bullseye
+              features:
+                - distroless
+                - release-test
+            release-5-lts:
+              buildenv: 1.16
+              features:
+                - el7-pgo-build
             release-5.8:
               buildenv: 1.23-bullseye
               cgo: false
@@ -328,8 +317,8 @@ policy:
       features:
         - releng
         - distroless
-      buildenv: 1.21-bookworm
-      baseimage: debian:bookworm-slim
+      buildenv: 1.22-bookworm
+      baseimage: debian:trixie-slim
       distrolessbaseimage: static-debian12:nonroot
       repos:
         tyk-pump:
@@ -352,6 +341,26 @@ policy:
               dhrepo: tykio/tyk-pump-docker-pub
               csrepo: docker.tyk.io/tyk-pump/tyk-pump
               cirepo: tyk-pump
+              archs:
+                - go: amd64
+                  deb: amd64
+                  docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
+            ee:
+              description: >-
+                Tyk Analytics Pump Enterprise Edition.
+                To move analytics data from Redis to any supported back end (multiple back ends can be written to at once).
+              imagetitle: Tyk Analytics Pump Enterprise Edition
+              buildpackagename: tyk-pump-ee
+              upgraderepo: tyk-ee
+              pcrepo: tyk-ee-unstable
+              dhrepo: tykio/tyk-pump-ee
+              cirepo: tyk-pump-ee
               archs:
                 - go: amd64
                   deb: amd64
@@ -411,7 +420,7 @@ policy:
             master:
 
         tyk-sink:
-          buildenv: 1.22-bullseye
+          buildenv: 1.23-bullseye
           exposeports: 80
           binary: tyk-sink
           cgo: false
@@ -427,7 +436,7 @@ policy:
               imagetitle: Tyk Dashboard
               buildpackagename: tyk-sink
               pcrepo: tyk-mdcb-unstable
-              upgraderepo: tyk-mdcb
+              upgraderepo: tyk-mdcb-stable
               dhrepo: tykio/tyk-mdcb-docker
               cirepo: tyk-sink
               archs:
@@ -536,17 +545,17 @@ pkgs:
     notbackup: false
     exceptions:
       - v1.6.0 # used in upgrade tests
-    agecutoff: 26280h # 3y
+    versioncutoff: v1
   tyk-mdcb:
     notbackup: false
     exceptions:
       - v1.8.2 # used in upgrade tests
-    agecutoff: 26280h # 3y
+    versioncutoff: v1.7
   portal:
     notbackup: false
     exceptions:
       - v1.0.0
-    agecutoff: 26280h # 3y
+    versioncutoff: v1
   tyk-identity-broker:
     notbackup: false
     exceptions:

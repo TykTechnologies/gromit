@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -14,15 +15,16 @@ import (
 	_ "embed"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/google/go-github/v62/github"
+	"github.com/google/go-github/v69/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
 )
 
 type GithubClient struct {
-	v3 *github.Client
-	v4 *githubv4.Client
+	v3  *github.Client
+	v4  *githubv4.Client
+	ctx context.Context
 }
 
 type PullRequest struct {
@@ -30,6 +32,7 @@ type PullRequest struct {
 	BaseBranch, PrBranch string
 	Owner, Repo          string
 	AutoMerge            bool
+	Reviewers            []string
 }
 
 var NoPRs = errors.New("no matching PRs found")
@@ -42,8 +45,9 @@ func NewGithubClient(ghToken string) *GithubClient {
 	tc := oauth2.NewClient(context.Background(), ts)
 
 	return &GithubClient{
-		v3: github.NewClient(tc),
-		v4: githubv4.NewClient(tc),
+		v3:  github.NewClient(tc),
+		v4:  githubv4.NewClient(tc),
+		ctx: context.TODO(),
 	}
 }
 
@@ -62,7 +66,7 @@ func (gh *GithubClient) RenderPRTemplate(body *string, bv any) (*bytes.Buffer, e
 // CreatePR will create a PR using the user supplied title and the embedded PR body
 // If a PR already exists, it will return that PR
 func (gh *GithubClient) CreatePR(bv any, prOpts *PullRequest) (*github.PullRequest, error) {
-	_, _, err := gh.v3.Repositories.GetBranch(context.Background(), prOpts.Owner, prOpts.Repo, prOpts.PrBranch, 2)
+	_, _, err := gh.v3.Repositories.GetBranch(gh.ctx, prOpts.Owner, prOpts.Repo, prOpts.PrBranch, 2)
 	if err != nil {
 		log.Warn().Err(err).Msgf("branch %s could not be fetched", prOpts.PrBranch)
 		return nil, NoPRs
@@ -77,14 +81,14 @@ func (gh *GithubClient) CreatePR(bv any, prOpts *PullRequest) (*github.PullReque
 	}
 
 	clientPROpts := &github.NewPullRequest{
-		Title: github.String(fmt.Sprintf("[%s %s] %s", prOpts.Jira.Id, prOpts.BaseBranch, title.String())),
-		Head:  github.String(prOpts.PrBranch),
-		Base:  github.String(prOpts.BaseBranch),
-		Body:  github.String(body.String()),
-		Draft: github.Bool(false),
+		Title: github.Ptr(fmt.Sprintf("[%s %s] %s", prOpts.Jira.Id, prOpts.BaseBranch, title.String())),
+		Head:  github.Ptr(prOpts.PrBranch),
+		Base:  github.Ptr(prOpts.BaseBranch),
+		Body:  github.Ptr(body.String()),
+		Draft: github.Ptr(false),
 	}
 	log.Trace().Interface("propts", prOpts).Str("owner", prOpts.Owner).Str("repo", prOpts.Repo).Msg("creating PR")
-	pr, resp, err := gh.v3.PullRequests.Create(context.Background(), prOpts.Owner, prOpts.Repo, clientPROpts)
+	pr, resp, err := gh.v3.PullRequests.Create(gh.ctx, prOpts.Owner, prOpts.Repo, clientPROpts)
 	// Attempt to detect if a PR already existingPR, complexity due to
 	// https://github.com/google/go-github/issues/1441
 	existingPR := false
@@ -111,19 +115,33 @@ func (gh *GithubClient) CreatePR(bv any, prOpts *PullRequest) (*github.PullReque
 		}
 		pr.Title = clientPROpts.Title
 		pr.Body = clientPROpts.Body
-		prNum := pr.GetNumber()
-		pr, resp, err := gh.v3.PullRequests.Edit(context.Background(), prOpts.Owner, prOpts.Repo, prNum, pr)
-		log.Trace().Fields(resp).Str("owner", prOpts.Owner).Str("repo", prOpts.Repo).Msgf("updating PR#%d", prNum)
+		pr, resp, err := gh.v3.PullRequests.Edit(gh.ctx, prOpts.Owner, prOpts.Repo, pr.GetNumber(), pr)
+		respBytes, _ := io.ReadAll(resp.Body)
+		log.Trace().Bytes("resp", respBytes).Msgf("updating %s/%s/pull/%d", prOpts.Owner, prOpts.Repo, pr.GetNumber())
 		if err != nil {
-			return pr, fmt.Errorf("Updating PR#%d failed: %w", prNum, err)
+			return pr, fmt.Errorf("updating %s/%s/pull/%d failed", prOpts.Owner, prOpts.Repo, pr.GetNumber())
 		}
-		log.Info().Msgf("Updated existing PR#%d", prNum)
+		log.Info().Msgf("updated %s/%s/pull/%d", prOpts.Owner, prOpts.Repo, pr.GetNumber())
 	}
 	log.Trace().Interface("pr", pr).Msgf("PR %s/%s<-%s", prOpts.Owner, prOpts.BaseBranch, prOpts.PrBranch)
 	if prOpts.AutoMerge {
 		err = gh.EnableAutoMerge(pr.GetNodeID())
+		if err != nil {
+			log.Error().Err(err).Msgf("adding reviewers for %s/%s/pull/%d", prOpts.Owner, prOpts.Repo, pr.GetNumber())
+		}
 	}
-	return pr, err
+	if len(prOpts.Reviewers) > 0 {
+		rr := github.ReviewersRequest{
+			Reviewers: prOpts.Reviewers,
+		}
+		_, resp, err = gh.v3.PullRequests.RequestReviewers(gh.ctx, prOpts.Owner, prOpts.Repo, pr.GetNumber(), rr)
+		respBytes, _ := io.ReadAll(resp.Body)
+		log.Trace().Bytes("resp", respBytes).Msgf("adding reviewers for %s/%s/pull/%d", prOpts.Owner, prOpts.Repo, pr.GetNumber())
+		if err != nil {
+			log.Error().Err(err).Msgf("adding reviewers for %s/%s/pull/%d", prOpts.Owner, prOpts.Repo, pr.GetNumber())
+		}
+	}
+	return pr, nil
 }
 
 // getPR searches for PRs created for the head ref/branch
@@ -132,7 +150,7 @@ func (gh *GithubClient) getPR(prOpts *PullRequest) (*github.PullRequest, error) 
 		Base: prOpts.BaseBranch,
 		Head: prOpts.Owner + ":" + prOpts.PrBranch,
 	}
-	prs, resp, err := gh.v3.PullRequests.List(context.Background(), prOpts.Owner, prOpts.Repo, prlOpts)
+	prs, resp, err := gh.v3.PullRequests.List(gh.ctx, prOpts.Owner, prOpts.Repo, prlOpts)
 	if err != nil {
 		return nil, fmt.Errorf("listing PRs: %v", err)
 	}
@@ -156,8 +174,8 @@ func (gh *GithubClient) ClosePR(prOpts *PullRequest) error {
 			return err
 		}
 	}
-	pr.State = github.String("closed")
-	pr, resp, err := gh.v3.PullRequests.Edit(context.Background(), prOpts.Owner, prOpts.Repo, *pr.Number, pr)
+	pr.State = github.Ptr("closed")
+	pr, resp, err := gh.v3.PullRequests.Edit(gh.ctx, prOpts.Owner, prOpts.Repo, *pr.Number, pr)
 	log.Trace().Interface("resp", resp).Interface("pr", pr).Msg("closing PR")
 	log.Info().Msgf("closed %s#%d", prOpts.Repo, *pr.Number)
 	return err
@@ -180,7 +198,7 @@ func (gh *GithubClient) UpdatePrBranch(prOpts *PullRequest) error {
 again:
 	// Default value of pruOpts should DTRT
 	var pruOpts github.PullRequestBranchUpdateOptions
-	pru, resp, err := gh.v3.PullRequests.UpdateBranch(context.Background(), prOpts.Owner, prOpts.Repo, *pr.Number, &pruOpts)
+	pru, resp, err := gh.v3.PullRequests.UpdateBranch(gh.ctx, prOpts.Owner, prOpts.Repo, *pr.Number, &pruOpts)
 	log.Trace().Interface("resp", resp).Interface("pr", pru).Msgf("updating branch for %s:%s<-%s", prOpts.Repo, prOpts.BaseBranch, prOpts.PrBranch)
 	_, isae := err.(*github.AcceptedError)
 	if attempts > 0 && !isae {
@@ -225,7 +243,7 @@ func (gh *GithubClient) EnableAutoMerge(prID string) error {
 		PullRequestID: prID,
 	}
 
-	return gh.v4.Mutate(context.Background(), &mutation, amInput, nil)
+	return gh.v4.Mutate(gh.ctx, &mutation, amInput, nil)
 }
 
 // https://stackoverflow.com/questions/39320371/how-start-web-server-to-open-page-in-browser-in-golang

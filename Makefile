@@ -72,7 +72,7 @@ sync: gromit
 
 cpr: gromit
 	test -n "$(TICKET)"
-	@GITHUB_TOKEN=$(GITHUB_TOKEN) JIRA_USER=$(JIRA_USER) JIRA_TOKEN=$(JIRA_TOKEN) ./gromit prs $@ --jira $(TICKET) $(REPOS)
+	@GITHUB_TOKEN=$(GITHUB_TOKEN) JIRA_USER=$(JIRA_USER) JIRA_TOKEN=$(JIRA_TOKEN) ./gromit prs $@ --jira $(TICKET) $(if ifdef REVIEWERS,--reviewers $(REVIEWERS),) $(REPOS)
 
 upr: gromit
 	@GITHUB_TOKEN=$(GITHUB_TOKEN) ./gromit prs $@ $(REPOS)

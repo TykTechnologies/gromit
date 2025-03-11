@@ -16,9 +16,11 @@ concurrency:
   cancel-in-progress: {{`${{ github.event_name == 'pull_request' }}`}}
 
 on: 
+{{- if ne .Name "portal" }}
   # Trigger release every monday at midnight for master CI images
   schedule:
     - cron: "0 0 * * 1"
+{{- end }}
   pull_request:
   push:
     branches:
@@ -54,3 +56,8 @@ jobs:
       DEPDASH_URL: ${{`{{ secrets.DEPDASH_URL }}`}}
       DEPDASH_KEY: ${{`{{ secrets.DEPDASH_KEY }}`}}
       ORG_GH_TOKEN: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
+{{/*
+Local Variables:
+mode: go-template
+End:
+*/}}

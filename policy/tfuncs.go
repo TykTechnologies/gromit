@@ -54,6 +54,12 @@ func (rp RepoPolicy) GetDockerBuilds() buildMap {
 	return dBuilds
 }
 
+// (rp RepoPolicy) HasBuild(build string) checks if the supplied build is defined
+func (rp RepoPolicy) HasBuild(build string) bool {
+	_, found := rp.Branchvals.Builds[build]
+	return found
+}
+
 // getBuildField helps with accessing properties of the build type
 func getBuildField(v *build, field string) string {
 	r := reflect.ValueOf(v)

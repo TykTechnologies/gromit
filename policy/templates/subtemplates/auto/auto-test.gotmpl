@@ -99,6 +99,8 @@
           match_tag={{`${{steps.ecr.outputs.registry}}`}}/{{ .dot.Name }}:$BASE_REF
           {{- if eq .dot.Name "tyk-pro" }}
           tags=($match_tag)
+          {{ else if .dot.HasBuild "ee" }}
+          tags=({{`${{ needs.goreleaser.outputs.ee_tags }}`}})
           {{ else }}
           tags=({{`${{ needs.goreleaser.outputs.std_tags }}`}})
           {{ end -}}

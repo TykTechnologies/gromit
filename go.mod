@@ -22,7 +22,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/go-cmdtest v0.4.1-0.20220921163831-55ab3332a786
-	github.com/google/go-github/v62 v62.0.0
+	github.com/google/go-github/v69 v69.2.0
 	github.com/google/yamlfmt v0.16.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/peterhellberg/link v1.2.0

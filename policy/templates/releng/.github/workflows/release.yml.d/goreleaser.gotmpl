@@ -35,10 +35,10 @@
             cgo: {{ if .Branchvals.Cgo }} 1 {{ else }} 0 {{end}}
   {{- if has "el7-pgo-build" .Branchvals.Features }}
             rpmvers: 'el/8 el/9 amazon/2023'
-            debvers: 'ubuntu/bionic ubuntu/focal ubuntu/jammy debian/buster debian/bullseye debian/bookworm'
+            debvers: 'ubuntu/focal ubuntu/jammy ubuntu/noble debian/buster debian/bullseye debian/bookworm debian/trixie'
   {{- else }} {{/* debvers and rpmvers for repos that do not need special el7-pgo-build support */}}
             rpmvers: 'el/7 el/8 el/9 amazon/2 amazon/2023'
-            debvers: 'ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/jammy debian/jessie debian/buster debian/bullseye debian/bookworm'
+            debvers: 'ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/jammy ubuntu/noble debian/jessie debian/buster debian/bullseye debian/bookworm debian/trixie'
   {{- end }} {{/* el7-pgo-build */}}
     outputs:
 {{ $r := . }}
