@@ -16,15 +16,7 @@ before:
     - ./ci/copy-framework-files.sh
 {{- end}}
 
-{{- if .Branchvals.Cgo }}
-{{- template "cgo_builds" . }}
-{{- else }}
 {{- template "builds" . }}
-{{- end }}
-
-{{- template "nfpm" . }}
-
-{{- template "publishers" . }}
 
 # This disables archives
 archives:

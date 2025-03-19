@@ -1,17 +1,20 @@
 package policy
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
+	"maps"
+
 	"github.com/TykTechnologies/gromit/util"
+
+	"dario.cat/mergo"
 	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/maps"
 )
 
 // repoConfig contains all the attributes of a repo. Each element here
@@ -21,15 +24,11 @@ import (
 // levels
 type repoConfig struct {
 	Owner               string
-	Description         string
-	PCRepo              string
-	DHRepo              string
-	CSRepo              string
-	PackageName         string
-	Reviewers           []string
 	ExposePorts         string
+	PackageName         string
 	Binary              string
 	Buildenv            string
+	Builds              buildMap
 	BaseImage           string
 	DistrolessBaseImage string
 	Cgo                 bool
@@ -42,6 +41,27 @@ type repoConfig struct {
 	Branches            map[string]branchVals `copier:"-"`
 	Repos               map[string]repoConfig `copier:"-"`
 }
+
+// build models the variations in build and their corresponding packages
+type build struct {
+	Flags            []string
+	BuildPackageName string
+	Description      string
+	ImageTitle       string
+	PCRepo           string
+	UpgradeRepo      string
+	DHRepo           string
+	CSRepo           string
+	CIRepo           string
+	Env              []string
+	Archs            []struct {
+		Docker string
+		Deb    string
+		Go     string
+	}
+}
+
+type buildMap map[string]*build
 
 // Policies models the config file structure. There are three levels
 // at which a particular value can be set: group-level, repo, branch.
@@ -67,6 +87,7 @@ type branchVals struct {
 	UpgradeFromVer      string
 	Tests               []string
 	Features            []string
+	Builds              buildMap
 	DeletedFiles        []string
 }
 
@@ -78,13 +99,10 @@ type branchVals struct {
 type RepoPolicy struct {
 	Owner          string
 	Name           string
-	Description    string
 	Default        string
-	PCRepo         string
-	DHRepo         string
-	CSRepo         string
-	Binary         string
 	PackageName    string
+	Binary         string
+	Builds         buildMap
 	Reviewers      []string
 	ExposePorts    string
 	Cgo            bool
@@ -94,9 +112,7 @@ type RepoPolicy struct {
 	Branch         string
 	Branchvals     branchVals
 	Branches       map[string]branchVals
-	prBranch       string
 	Timestamp      string
-	Visibility     string
 }
 
 // PushOptions collects the input required to update templates for a
@@ -116,7 +132,6 @@ func (rp *RepoPolicy) SetTimestamp(ts time.Time) {
 		ts = time.Now().UTC()
 	}
 	rp.Timestamp = ts.Format(time.UnixDate)
-
 }
 
 // GetTimeStamp returns the timestamp currently set for the given repopolicy.
@@ -127,7 +142,7 @@ func (rp *RepoPolicy) GetTimeStamp() (time.Time, error) {
 	return ts, err
 }
 
-// SetBranch sets the Branch and Branchvals properties so that templates can simply access them instead of looking them up in the Branches map
+// SetBranch sets the Branch and Branchvals properties so that templates can simply access them instead of looking them up in the Branches map. This must be called before calling Render()
 func (rp *RepoPolicy) SetBranch(branch string) error {
 	bv, found := rp.Branches[branch]
 	if !found {
@@ -141,7 +156,7 @@ func (rp *RepoPolicy) SetBranch(branch string) error {
 
 // GetAllBranches returns all the branches that are managed for this repo
 func (rp *RepoPolicy) GetAllBranches() []string {
-	return maps.Keys(rp.Branches)
+	return slices.Sorted(maps.Keys(rp.Branches))
 }
 
 // GetRepoPolicy will fetch the RepoPolicy for the supplied repo with
@@ -194,6 +209,9 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 		if err != nil {
 			return rp, err
 		}
+		// builds are merged
+		log.Debug().Msgf("Merging builds for %s/%s", rp.Name, b)
+		rbv.Builds = mergeBuilds(r.Builds, bbv.Builds)
 		// attributes that are unions
 		rbv.Features = util.NewSetFromSlices(group.Features, r.Features, bbv.Features).Members()
 		rbv.DeletedFiles = util.NewSetFromSlices(p.DeletedFiles, group.DeletedFiles, r.DeletedFiles, bbv.DeletedFiles).Members()
@@ -203,6 +221,16 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 	}
 	rp.Branches = allBranches
 	return rp, nil
+}
+
+// mergeBuilds returns a merged build map from _r_epo and _b_ranch level
+func mergeBuilds(r, b buildMap) buildMap {
+	merged := make(buildMap)
+	maps.Copy(merged, r)
+	if err := mergo.Merge(&merged, b, mergo.WithOverride, mergo.WithAppendSlice); err != nil {
+		log.Fatal().Interface("dst", merged).Interface("src", b).Msgf("could not merge branch-level build definitions for: %v", err)
+	}
+	return merged
 }
 
 // ProcessBranch will render the templates into a git worktree for the supplied branch, commit and push the changes upstream
@@ -269,36 +297,6 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 	log.Info().Msgf("pushed %s to %s", pushOpts.RemoteBranch, rp.Name)
 
 	return nil
-}
-
-// Stringer implementation for Policies
-func (p Policies) String() string {
-	w := new(bytes.Buffer)
-	for _, grp := range p.Groups {
-		for repo, crPol := range grp.Repos {
-			fmt.Fprintf(w, "%s: package %s, image %s", repo, crPol.PackageName, crPol.DHRepo)
-			rp, err := p.GetRepoPolicy(repo)
-			if err != nil {
-				log.Fatal().Str("repo", repo).Err(err).Msg("failed to get policy, this should not happen")
-			}
-			fmt.Fprintf(w, " %s\n", rp)
-		}
-	}
-	return w.String()
-}
-
-// Stringer implementation for RepoPolicy
-func (rp RepoPolicy) String() string {
-	w := new(bytes.Buffer)
-	for b, bv := range rp.Branches {
-		fmt.Fprintf(w, " %s: package %s, image %s, features %v", b, rp.PackageName, rp.DHRepo, bv.Features)
-		if len(bv.Buildenv) > 0 {
-			fmt.Fprintf(w, " built on %s", bv.Buildenv)
-		} else {
-			fmt.Fprintf(w, " not built")
-		}
-	}
-	return w.String()
 }
 
 // LoadRepoPolicies populates the supplied policies with the policy key from a the config file

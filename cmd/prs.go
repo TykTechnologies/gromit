@@ -70,6 +70,7 @@ var cprSubCmd = &cobra.Command{
 			log.Fatal().Err(err).Msgf("could not get Jira issue %s", issue)
 		}
 		autoMerge, _ := cmd.Flags().GetBool("auto")
+		reviewers, _ := cmd.Flags().GetStringSlice("reviewers")
 		var prs []string
 		for _, repoName := range args {
 			rp, err := configPolicies.GetRepoPolicy(repoName)
@@ -90,15 +91,16 @@ var cprSubCmd = &cobra.Command{
 					Owner:      rp.Owner,
 					Repo:       repoName,
 					AutoMerge:  autoMerge,
+					Reviewers:  reviewers,
 				}
 				pr, err := gh.CreatePR(rp, prOpts)
 				if err != nil {
-					cmd.Printf("Could not create PR for %s:%s: %v", repoName, branch, err)
+					cmd.Printf("Could not create PR for %s:%s: %v\n", repoName, branch, err)
 				}
 				prs = append(prs, *pr.HTMLURL)
 			}
 		}
-		cmd.Println("PRs created:")
+		cmd.Println("PRs created/updated:")
 		for _, pr := range prs {
 			cmd.Printf("- %s\n", pr)
 		}
@@ -188,6 +190,7 @@ func init() {
 	prsCmd.PersistentFlags().StringVar(&PrBranch, "branch", "", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
 	prsCmd.PersistentFlags().StringVar(&Prefix, "prefix", "releng/", "Given the base branch from --branch, the head branch will be assumed to be <prefix><branch>")
 
+	cprSubCmd.Flags().StringSlice("reviewers", []string{}, "Extra individual (not team) reviewers, apart from code owners for the PR")
 	cprSubCmd.Flags().Bool("auto", true, "Will automerge if all requirements are meet")
 	cprSubCmd.Flags().String("jira", "", "Title and body will be filled in from Jira issue")
 	cprSubCmd.MarkFlagRequired("jira")

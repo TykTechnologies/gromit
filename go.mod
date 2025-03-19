@@ -3,6 +3,7 @@ module github.com/TykTechnologies/gromit
 go 1.24
 
 require (
+	dario.cat/mergo v1.0.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/ProtonMail/go-crypto v1.1.6
 	github.com/aws/aws-sdk-go-v2 v1.36.3
@@ -21,7 +22,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/go-cmdtest v0.4.1-0.20220921163831-55ab3332a786
-	github.com/google/go-github/v62 v62.0.0
+	github.com/google/go-github/v69 v69.2.0
 	github.com/google/yamlfmt v0.16.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/peterhellberg/link v1.2.0
@@ -44,7 +45,6 @@ require (
 )
 
 require (
-	dario.cat/mergo v1.0.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
