@@ -20,7 +20,7 @@ before:
 
 # This disables archives
 archives:
-  - format: binary
+  - formats: [ 'binary' ]
     allow_different_binary_count: true
 
 checksum:
