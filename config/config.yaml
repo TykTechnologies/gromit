@@ -100,6 +100,7 @@ policy:
               flags:
                 - -tags=goplugin,fips,boringcrypto
               buildpackagename: tyk-gateway-fips
+              pcrepo: tyk-ee-unstable
               description: >-
                 Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                 Built with boringssl
@@ -248,7 +249,8 @@ policy:
               description: >-
                 Dashboard for the Tyk API Gateway.
                 This version is compiled with boringssl.
-              buildpackagename: tyk-pump-fips
+              buildpackagename: tyk-dashboard-fips
+              pcrepo: tyk-ee-unstable
               archs:
                 - go: amd64
                   deb: amd64
@@ -351,30 +353,11 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
-            ee:
-              description: >-
-                Tyk Analytics Pump Enterprise Edition.
-                To move analytics data from Redis to any supported back end (multiple back ends can be written to at once).
-              imagetitle: Tyk Analytics Pump Enterprise Edition
-              buildpackagename: tyk-pump-ee
-              upgraderepo: tyk-ee
-              pcrepo: tyk-ee-unstable
-              dhrepo: tykio/tyk-pump-ee
-              cirepo: tyk-pump-ee
-              archs:
-                - go: amd64
-                  deb: amd64
-                  docker: linux/amd64
-                - go: arm64
-                  deb: aarch64
-                  docker: linux/arm64
-                - go: s390x
-                  deb: s390x
-                  docker: linux/s390x
             fips:
               flags:
                 - -tags=fips,boringcrypto
               buildpackagename: tyk-pump-fips
+              pcrepo: tyk-ee-unstable
               description: >-
                 Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once).
                 This version is compiled with boringssl.
@@ -433,7 +416,7 @@ policy:
             std:
               description: >-
                 Tyk RPC server backend (bridge)
-              imagetitle: Tyk Dashboard
+              imagetitle: Multi Data Centre Bridge for Tyk Gateway and Dashboard
               buildpackagename: tyk-sink
               pcrepo: tyk-mdcb-unstable
               upgraderepo: tyk-mdcb-stable
@@ -449,6 +432,21 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
+            fips:
+              flags:
+                - -tags=fips,boringcrypto
+              buildpackagename: tyk-sink-fips
+              pcrepo: tyk-ee-unstable
+              description: >-
+                Tyk RPC server backend (bridge)
+                This version is compiled with boringssl.
+              imagetitle: Multi Data Centre Bridge for Tyk Gateway and Dashboard (boringssl)
+              archs:
+                - go: amd64
+                  deb: amd64
+                  docker: linux/amd64
+              env:
+                - GOEXPERIMENT=boringcrypto
           branches:
             master:
 
