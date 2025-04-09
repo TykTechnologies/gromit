@@ -5,9 +5,7 @@
 # - arm64
 # - amd64
 
-{{- if ne .Branchvals.Buildenv "1.16" }}
 version: 2
-{{- end }}
 
 {{- if eq .Name "portal"}}
 before:
