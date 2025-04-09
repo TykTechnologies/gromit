@@ -5,9 +5,7 @@
 # - arm64
 # - amd64
 
-{{- if ne .Branchvals.Buildenv "1.16" }}
 version: 2
-{{- end }}
 
 {{- if eq .Name "portal"}}
 before:
@@ -20,7 +18,7 @@ before:
 
 # This disables archives
 archives:
-  - format: binary
+  - formats: [ 'binary' ]
     allow_different_binary_count: true
 
 checksum:

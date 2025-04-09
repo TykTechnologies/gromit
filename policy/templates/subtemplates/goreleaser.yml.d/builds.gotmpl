@@ -41,7 +41,7 @@ nfpms:
       description: {{ $bv.Description }}
       package_name: {{ $bv.BuildPackageName }}
       file_name_template: "{{`{{ .ConventionalFileName }}`}}"
-      builds:
+      ids:
       {{- range $a := $bv.Archs }}
         - {{ printf "%s-%s" $b $a.Go }}
       {{- end }}
