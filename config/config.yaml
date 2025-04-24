@@ -286,7 +286,7 @@ policy:
           packagename: portal
           binary: dev-portal
           buildpackagename: portal
-          buildenv: 1.22-bullseye
+          buildenv: 1.23-bullseye
           cgo: true
           upgradefromver: 1.0.0
           configfile: portal.conf
