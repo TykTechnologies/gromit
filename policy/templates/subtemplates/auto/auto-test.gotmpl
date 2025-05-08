@@ -193,6 +193,7 @@
       - name: Run API tests
         id: test_execution
         working-directory: tyk-analytics/tests/{{ .test }}
+        timeout-minutes: 40
         run: |
           pytest="pytest --ci --random-order --force-flaky --no-success-flaky-report --maxfail=3 --junitxml=${XUNIT_REPORT_PATH} --cache-clear --ignore=./tests/mdcb -v --log-cli-level=ERROR"
           pip install -r requirements.txt
@@ -231,6 +232,7 @@
       - name: Execute UI tests
         working-directory: tyk-analytics/tests/{{ .test }}
         id: test_execution
+        timeout-minutes: 30
         env:
           GW_URL: 'https://localhost:8080/'
           NODE_TLS_REJECT_UNAUTHORIZED: 0
