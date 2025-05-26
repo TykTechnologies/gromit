@@ -15,8 +15,8 @@
         uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@main
         id: params
         with:
-          variation: $VARIATION
-          base_ref: $BASE_REF
+          variation: {{`${{ env.VARIATION }}`}}
+          base_ref: {{`${{ env.BASE_REF }}`}}
           test_type: {{ .test }}
 
   {{ .test }}-tests:
@@ -84,15 +84,8 @@
         uses: TykTechnologies/github-actions/.github/actions/tests/env-up@main
         id: env_up
         with:
-          base_ref: ${{ env.BASE_REF }}
-          tags: >-
-            {{- if .dot.HasBuild "ee" -}}
-              {{`${{ needs.goreleaser.outputs.ee_tags }}`}}
-            {{- else if .dot.HasBuild "std" -}}
-              {{`${{ needs.goreleaser.outputs.std_tags }}`}}
-            {{- else -}}
-              {{`${{ steps.ecr.outputs.registry }}`}}/tyk-ee:master
-            {{- end -}}
+          base_ref: {{`${{ env.BASE_REF }}`}}
+          tags: {{`${{ needs.goreleaser.outputs.ee_tags || needs.goreleaser.outputs.std_tags || format('{0}/tyk-ee:master', steps.ecr.outputs.registry) }}`}}
           github_token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
