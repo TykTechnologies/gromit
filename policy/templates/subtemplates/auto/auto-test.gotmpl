@@ -82,6 +82,7 @@
 {{- end }}
       - name: Set up test environment
         uses: TykTechnologies/github-actions/.github/actions/tests/env-up@main
+        timeout-minutes: 5
         id: env_up
         with:
           base_ref: {{`${{ env.BASE_REF }}`}}
@@ -102,6 +103,7 @@
       {{ if eq .test "api" }}
       - name: Run API tests
         uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@main
+        timeout-minutes: 30
         id: test_execution
         with:
           user_api_secret: {{`${{ steps.env_up.outputs.USER_API_SECRET }}`}}
@@ -112,6 +114,7 @@
         run: >
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
       - name: Execute UI tests
+        timeout-minutes: 30
         uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests@main
         id: test_execution
 
