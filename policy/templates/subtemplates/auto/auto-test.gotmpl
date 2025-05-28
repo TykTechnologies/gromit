@@ -11,16 +11,13 @@
       pump: {{`${{ steps.params.outputs.pump }}`}}
       sink: {{`${{ steps.params.outputs.sink }}`}}
     steps:
-      - name: set params
+      - name: Set test parameters
+        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@main
         id: params
-        shell: bash
-        run: |
-          set -eo pipefail
-          curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .dot.Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/{{ .test }}.gho" | tee -a "$GITHUB_OUTPUT"
-          if ! [[ $VARIATION =~ prod ]] ;then
-              echo "::warning file=.github/workflows/release.yml,line=24,col=1,endColumn=8::Using non-prod variation"
-              echo "### :warning: You are using VARIATION=${VARIATION} in test-controller-{{ .test }}" >> $GITHUB_STEP_SUMMARY
-          fi
+        with:
+          variation: {{`${{ env.VARIATION }}`}}
+          base_ref: {{`${{ env.BASE_REF }}`}}
+          test_type: {{ .test }}
 
   {{ .test }}-tests:
     needs:
@@ -78,237 +75,61 @@
           path: auto
           fetch-depth: 1
 {{- else }}
-      - name: fetch env from tyk-pro
-        env:
-          GH_TOKEN: {{`${{ github.token }}`}}
-        run: |
-          gh release download --repo github.com/TykTechnologies/tyk-pro --archive tar.gz -O env.tgz
-          mkdir auto && tar --strip-components=1 -C auto -xzvf env.tgz
+      - name: Fetch environment from tyk-pro
+        uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@main
+        with:
+          org_gh_token: {{`${{ github.token }}`}}
 {{- end }}
-      - name: env up
-        shell: bash
-        working-directory: auto
+      - name: Set up test environment
+        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@main
+        timeout-minutes: 5
         id: env_up
-        env:
-          pull_policy: 'if_not_present'
-          GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+        with:
+          base_ref: {{`${{ env.BASE_REF }}`}}
+          tags: {{`${{ needs.goreleaser.outputs.ee_tags || needs.goreleaser.outputs.std_tags || format('{0}/tyk-ee:master', steps.ecr.outputs.registry) }}`}}
+          github_token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
-        run: |
-        {{- if ne .flow "nightly" }}
-          match_tag={{`${{steps.ecr.outputs.registry}}`}}/{{ .dot.Name }}:$BASE_REF
-          {{- if eq .dot.Name "tyk-pro" }}
-          tags=($match_tag)
-          {{ else if .dot.HasBuild "ee" }}
-          tags=({{`${{ needs.goreleaser.outputs.ee_tags }}`}})
-          {{ else }}
-          tags=({{`${{ needs.goreleaser.outputs.std_tags }}`}})
-          {{ end -}}
-          set -eaxo pipefail
-          docker run -q --rm -v ~/.docker/config.json:/root/.docker/config.json tykio/gromit policy match ${tags[0]} ${match_tag} 2>versions.env
-        {{- end}}
-          echo '# alfa and beta have to come after the override
-          {{- if eq .flow "nightly" }}
-          tyk_ee_image={{`${{steps.ecr.outputs.registry}}`}}/tyk-ee:{{`${{ matrix.envfiles.gwdash }}`}}
-          tyk_analytics_image={{`${{steps.ecr.outputs.registry}}`}}/tyk-analytics:{{`${{ matrix.envfiles.gwdash }}`}}
-          {{- end}}
-          {{ if ne .dot.Name "tyk" }}
-          tyk_image="$ECR/tyk-ee"
-          {{- end }}
-          tyk_alfa_image=$tyk_image
-          tyk_beta_image=$tyk_image
-          ECR={{`${{steps.ecr.outputs.registry}}`}}
-          {{- if ne .dot.Name "tyk-pump" }}
-          tyk_pump_image={{`${{matrix.pump}}`}}
-          {{ end }}
-          {{- if ne .dot.Name "tyk-sink" }}
-          tyk_sink_image={{`${{matrix.sink}}`}}
-          {{ end -}}
-          confs_dir=./pro-ha
-          env_file=local.env' >> versions.env
-          cat ./confs/{{`${{ matrix.envfiles.config }}`}}.env local-{{`${{ matrix.envfiles.db }}`}}.env > local.env
-          echo "::group::versions"
-          cat versions.env local.env
-          echo "::endgroup::"
-          # bring up env, the project name is important
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile master-datacenter up --quiet-pull -d
-          ./dash-bootstrap.sh http://localhost:3000
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile slave-datacenter up --quiet-pull -d
-          echo "$(cat pytest.env | grep USER_API_SECRET)" >> $GITHUB_OUTPUT
-          echo "ts=$(date +%s%N)" >> $GITHUB_OUTPUT
 
-      - uses: actions/checkout@v4
+      - name: Choose test code branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@main
         with:
-          repository: TykTechnologies/tyk-analytics
-          path: tyk-analytics
-          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          {{- if ne .dot.Name "tyk-analytics" }}
-          fetch-depth: 0
-          {{- end }}
+          test_folder: {{ .test }}
+          org_gh_token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           {{- if eq .flow "nightly" }}
-          ref: {{`${{ matrix.envfiles.gwdash }}`}}
+          branch: {{`${{ matrix.envfiles.gwdash }}`}}
           {{- end }}
-          sparse-checkout: tests/{{ .test }}
-
-      {{- if ne .dot.Name "tyk-analytics" }}
-      - name: Choosing test code branch
-        working-directory: tyk-analytics/tests/{{ .test }}
-        run: |
-            {{- if eq .dot.Name "tyk" }}
-            if [[ {{`${{ github.event_name }}`}} == "release" ]]; then
-              echo "Checking out release tag..."
-              TAG_NAME={{`${{ github.event.release.tag_name }}`}}
-              git checkout "$TAG_NAME"
-            fi
-            {{- end }}
-            if [[ {{`${{ github.event_name }}`}} == "pull_request" ]]; then
-              PR_BRANCH={{`${{ github.event.pull_request.head.ref }}`}}
-              TARGET_BRANCH={{`${{ github.event.pull_request.base.ref }}`}}
-              echo "Looking for PR_BRANCH:$PR_BRANCH or TARGET_BRANCH:$TARGET_BRANCH..."
-              if git rev-parse --verify "origin/$PR_BRANCH" >/dev/null 2>&1; then
-                echo "PR branch $PR_BRANCH exists. Checking out..."
-                git checkout "$PR_BRANCH"
-              elif git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
-                echo "Target branch $TARGET_BRANCH exists. Checking out..."
-                git checkout "$TARGET_BRANCH"
-              fi
-            fi
-            if [[ {{`${{ github.event_name }}`}} == "push" ]]; then
-              PUSH_BRANCH={{`${{ github.ref_name }}`}}
-              echo "Looking for PUSH_BRANCH:$PUSH_BRANCH..."
-              if git rev-parse --verify "origin/$PUSH_BRANCH" >/dev/null 2>&1; then
-                echo "Push branch $PUSH_BRANCH exists. Checking out..."
-                git checkout "$PUSH_BRANCH"
-              fi
-            fi
-            echo "Current commit: $(git rev-parse HEAD)"
-      {{- end }}
           
       {{ if eq .test "api" }}
-
-      - uses: actions/setup-python@v5
-        with:
-          cache: 'pip'
-          python-version: '3.10'
       - name: Run API tests
+        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@main
+        timeout-minutes: 30
         id: test_execution
-        working-directory: tyk-analytics/tests/{{ .test }}
-        timeout-minutes: 40
-        run: |
-          pytest="pytest --ci --random-order --force-flaky --no-success-flaky-report --maxfail=3 --junitxml=${XUNIT_REPORT_PATH} --cache-clear --ignore=./tests/mdcb -v --log-cli-level=ERROR"
-          pip install -r requirements.txt
-          cat >pytest.env <<-EOF
-          TYK_TEST_BASE_URL=http://localhost:3000/
-          TYK_TEST_GW_URL=https://localhost:8080/
-          TYK_TEST_GW_1_ALFA_URL=https://localhost:8181/
-          TYK_TEST_GW_1_BETA_URL=https://localhost:8182/
-          TYK_TEST_GW_2_ALFA_URL=https://localhost:8281/
-          TYK_TEST_GW_2_BETA_URL=https://localhost:8282/
-          TYK_TEST_MONGODB=localhost:27017
-          TYK_TEST_REDIS=localhost
-          TYK_TEST_DB_ADMIN=12345
-          TYK_TEST_GW_SECRET=352d20ee67be67f6340b4c0605b044b7
-          TYK_TEST_DB_NAME=tyk_analytics
-          TYK_TEST_FEDERATION_HOST=federation
-          TYK_TEST_GRAPHQL_FAKER_HOST=graphql-faker
-          GATEWAY_CONTAINER_NAME=tyk
-          USER_API_SECRET={{`${{ steps.env_up.outputs.USER_API_SECRET }}`}}
-          EOF
-          env $(cat pytest.env | xargs) $pytest -m "{{`${{ matrix.envfiles.apimarkers }}`}}"
-
-      {{ else if eq .test "ui" }}
-
-      - name: Install Node.js 18.16
-        uses: actions/setup-node@v4
         with:
-          node-version: "18.16"
-          cache-dependency-path: tyk-analytics/tests/{{ .test }}
-          cache: 'npm'
+          user_api_secret: {{`${{ steps.env_up.outputs.USER_API_SECRET }}`}}
+      {{ else if eq .test "ui" }}
       - name: Fix private module deps
         env:
           TOKEN: '{{`${{ secrets.ORG_GH_TOKEN }}`}}'
         run: >
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
       - name: Execute UI tests
-        working-directory: tyk-analytics/tests/{{ .test }}
-        id: test_execution
         timeout-minutes: 30
-        env:
-          GW_URL: 'https://localhost:8080/'
-          NODE_TLS_REJECT_UNAUTHORIZED: 0
-          UI_MARKERS: {{`${{ matrix.envfiles.uimarkers && format('--grep {0}', matrix.envfiles.uimarkers ) || '' }}`}}
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
-          PLAYWRIGHT_JUNIT_OUTPUT_NAME=${XUNIT_REPORT_PATH} npx playwright test --project=chromium --reporter=junit,html $UI_MARKERS
+        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests@main
+        id: test_execution
 
+      - name: Upload UI test report to S3
+        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests-report@main
+        if: failure() && steps.test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
+        with:
+          aws_acces_key_id: {{`${{ secrets.UI_AWS_ACCESS_KEY_ID }}`}}
+          aws_secret_access_key: {{`${{ secrets.UI_AWS_SECRET_ACCESS_KEY }}`}}
       {{- end }} {{/* end of if .test */}}
 
-      {{- if eq .test "ui" }}
-      - name: Upload Playwright Test Report to S3
-        if: failure() && steps.test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
-        run:
-          npm run upload_report_to_s3
-        env:
-          AWS_ACCESS_KEY_ID: {{`${{ secrets.UI_AWS_ACCESS_KEY_ID }}`}}
-          AWS_SECRET_ACCESS_KEY: {{`${{ secrets.UI_AWS_SECRET_ACCESS_KEY }}`}}
-          RUN_ID: 'tyk-analytics/{{`${{ github.run_id }}`}}'
-        working-directory: tyk-analytics/tests/ui
-
-      - name: Share S3 report link into summary
-        if: failure() && steps.test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
-        run: |
-          echo "# :clipboard: S3 UI Test REPORT: {{`${{ matrix.envfiles.db }}`}}-{{`${{ matrix.envfiles.conf }}`}}" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: {{`${{ steps.test_execution.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}" >> $GITHUB_STEP_SUMMARY
-          echo "- [Link to report](https://tyk-qa-reports.s3.eu-central-1.amazonaws.com/tyk-analytics/{{`${{ github.run_id }}`}}/index.html)" >> $GITHUB_STEP_SUMMARY
-      {{- end }}
-
-      - name: Generate metadata and upload test reports
-        id: metadata_report
+      - name: Generate test reports and collect logs
+        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@main
         if: always() && (steps.test_execution.conclusion != 'skipped')
-        env:
-          REPORT_NAME: {{`${{ github.repository }}`}}_{{`${{ github.run_id }}`}}_{{`${{ github.run_attempt }}`}}-{{`${{steps.env_up.outputs.ts}}`}}
-          METADATA_REPORT_PATH: metadata.toml
-        run: |
-          # Generate metadata report
-          set -eo pipefail
-          echo "[metadata]
-          repo = {{`${{ github.repository }}`}}
-          branch = {{`${{ github.ref }}`}}
-          commit = {{`${{ github.sha }}`}}
-          test_suite_version = $BASE_REF
-          test_suite_name = {{`${{ github.job }}`}}
-          test_suite_run = {{`${{ github.run_id }}`}}-{{`${{ github.run_attempt }}`}}
-          db = {{`${{ matrix.envfiles.db }}`}}
-          conf = {{`${{ matrix.envfiles.config }}`}}
-          cache = {{`${{ matrix.envfiles.cache }}`}}
-          pump_compatibility = {{`${{ matrix.pump }}`}}
-          sink_compatibility = {{`${{ matrix.sink }}`}}
-          " | tee ${METADATA_REPORT_PATH}
-          aws s3 cp ${XUNIT_REPORT_PATH}  s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.xml
-          aws s3 cp ${METADATA_REPORT_PATH} s3://assets.dev.tyk.technology/testreports/${REPORT_NAME#*/}.metadata.toml
-
-      - name: Docker logs for all components
-        if: failure() && (steps.test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
-        working-directory: auto
-        env:
-          pull_policy: 'if_not_present'
-          GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
-          TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
-          TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
-          ECR: {{`${{ steps.ecr.outputs.registry }}`}}
-        run: |
-          docker compose -p auto -f pro-ha.yml -f deps_pro-ha.yml -f {{`${{ matrix.envfiles.db }}`}}.yml -f {{`${{ matrix.envfiles.cache }}`}}.yml --env-file versions.env --profile all logs | sort > {{`${{ github.workspace }}`}}/docker-compose.log
-          echo "::group::DockerLogs"
-          cat {{`${{ github.workspace }}`}}/docker-compose.log
-          echo "::endgroup::"
-
-      - name: Upload compose logs
-        uses: actions/upload-artifact@v4
-        if: failure() && (steps.test_execution.outcome != 'success' || steps.env_up.outcome != 'success')
         with:
-          name: docker-compose-logs-{{`${{ github.job }}`}}-{{`${{ matrix.envfiles.db }}`}}-{{`${{ matrix.envfiles.conf }}`}}-{{`${{ github.run_id }}`}}
-          path: {{`${{ github.workspace }}`}}/docker-compose.log
-          retention-days: 3
-          overwrite: true
+          report_xml: 'true'
+          execution_status: {{`${{ steps.test_execution.outcome }}`}}
 {{ end }} {{/* End of auto-test */}}
