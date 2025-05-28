@@ -56,6 +56,20 @@ jobs:
       DEPDASH_URL: ${{`{{ secrets.DEPDASH_URL }}`}}
       DEPDASH_KEY: ${{`{{ secrets.DEPDASH_KEY }}`}}
       ORG_GH_TOKEN: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
+  report_logs:
+    runs-on: ubuntu-latest
+    needs: [test-controller-ui, test-controller-api, test-controller-distros, upgrade-deb, upgrade-rpm, release-tests]
+    if: always()
+    name: Report GH Logs on Failure
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Upload failed job logs
+        uses: TykTechnologies/github-actions/.github/actions/gh-logs-analyser
+        with:
+          github_token: ${{`{{ secrets.GITHUB_TOKEN }}`}}
+          gh_logs_analyser_token: ${{`{{ secrets.GH_LOGS_ANALYSER }}`}}
 {{/*
 Local Variables:
 mode: go-template

@@ -13,14 +13,112 @@ on:
   schedule:
     - cron: "0 0 * * 1-5"
   workflow_dispatch:
-    
+    inputs:
+      gateway_image_tag:
+        description: 'ECR Gateway image tag to use (defaults to master if not specified)'
+        required: false
+        default: 'master'
+        type: string
+      dashboard_image_tag:
+        description: 'ECR Dashboard image tag to use (defaults to master if not specified)'
+        required: false
+        default: 'master'
+        type: string
+      mdcb_image_tag:
+        description: 'ECR MDCB image tag to use (defaults to master if not specified)'
+        required: false
+        default: 'master'
+        type: string
 
 env:
   VARIATION: prod
   BASE_REF: master
 
 jobs:
+  security-check:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # This is required for requesting the Github JWT
+      contents: read # This is required for actions/checkout
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: cipush
+          aws-region: eu-central-1
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+      - name: Run Trivy vulnerability scanner for dashboard
+        id: trivy_dashboard
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-analytics:{{`${{ github.event.inputs.dashboard_image_tag || 'master' }}`}}"
+          format: 'table'
+          scan-type: 'image'
+          exit-code: '1'
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+        env:
+          skip-update: false
+      - name: Run Trivy vulnerability scanner for gateway
+        if: always()
+        id: trivy_gateway
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-ee:{{`${{ github.event.inputs.gateway_image_tag || 'master' }}`}}"
+          format: 'table'
+          scan-type: 'image'
+          exit-code: '1'
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+        env:
+          skip-update: false
+      - name: Run Trivy vulnerability scanner for MDCB
+        if: always()
+        id: trivy_mdcb
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-sink:{{`${{ github.event.inputs.mdcb_image_tag || 'master' }}`}}"
+          format: 'table'
+          scan-type: 'image'
+          exit-code: '1'
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+        env:
+          skip-update: false
+      - name: Send Slack notification
+        if: failure() && (steps.trivy_dashboard.outcome != 'success' || steps.trivy_gateway.outcome != 'success' || steps.trivy_mdcb.outcome != 'success')
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          channel-id: '#team-ext-engineering-pr-notifications'
+          slack-message: |
+            *CVEs nightly scan*
+            Nightly CVE scan status:
+            *Tyk Analytics*: {{`${{ steps.trivy_dashboard.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}
+            *Tyk Gateway*: {{`${{ steps.trivy_gateway.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}
+            *Tyk Sink*: {{`${{ steps.trivy_mdcb.outcome == 'success' && ':white_check_mark:' || ':no_entry_sign:' }}`}}
+
+            Workflow run: {{`${{ github.server_url }}`}}/{{`${{ github.repository }}`}}/actions/runs/{{`${{ github.run_id }}`}}
+        env:
+          SLACK_BOT_TOKEN: ${{`{{ secrets.UI_SLACK_AUTH_TOKEN }}`}}
+
 {{- $DOT := . }}
 {{- range $test := .Branchvals.Tests }}
   {{- template "auto-test" (dict "dot" $DOT "test" $test "flow" "nightly") }}
 {{- end }}
+  report_logs:
+    runs-on: ubuntu-latest
+    needs: [test-controller-ui, test-controller-api, test-controller-distros, upgrade-deb, upgrade-rpm, release-tests]
+    if: always()
+    name: Report GH Logs on Failure
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Upload failed job logs
+        uses: TykTechnologies/github-actions/.github/actions/gh-logs-analyser
+        with:
+          github_token: ${{`{{ secrets.GITHUB_TOKEN }}`}}
+          gh_logs_analyser_token: ${{`{{ secrets.GH_LOGS_ANALYSER }}`}}
