@@ -148,6 +148,7 @@ policy:
                 ee:
                   flags:
                     - -tags=goplugin,ee
+                    - -trimpath
                   description: >-
                     Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                   imagetitle: Tyk Gateway Enterprise Edition
@@ -184,6 +185,7 @@ policy:
                 ee:
                   flags:
                     - -tags=goplugin,ee
+                    - -trimpath
                   description: >-
                     Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                   imagetitle: Tyk Gateway Enterprise Edition
