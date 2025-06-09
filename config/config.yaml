@@ -154,6 +154,7 @@ policy:
                   buildpackagename: tyk-gateway-ee
                   pcrepo: tyk-ee-unstable
                   dhrepo: tykio/tyk-gateway-ee
+                  csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee
                   cirepo: tyk-ee
                   archs:
                     - go: amd64
@@ -189,6 +190,7 @@ policy:
                   buildpackagename: tyk-gateway-ee
                   pcrepo: tyk-ee-unstable
                   dhrepo: tykio/tyk-gateway-ee
+                  csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee
                   cirepo: tyk-ee
                   archs:
                     - go: amd64
