@@ -148,12 +148,14 @@ policy:
                 ee:
                   flags:
                     - -tags=goplugin,ee
+                    - -trimpath
                   description: >-
                     Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                   imagetitle: Tyk Gateway Enterprise Edition
                   buildpackagename: tyk-gateway-ee
                   pcrepo: tyk-ee-unstable
                   dhrepo: tykio/tyk-gateway-ee
+                  csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee
                   cirepo: tyk-ee
                   archs:
                     - go: amd64
@@ -183,12 +185,14 @@ policy:
                 ee:
                   flags:
                     - -tags=goplugin,ee
+                    - -trimpath
                   description: >-
                     Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                   imagetitle: Tyk Gateway Enterprise Edition
                   buildpackagename: tyk-gateway-ee
                   pcrepo: tyk-ee-unstable
                   dhrepo: tykio/tyk-gateway-ee
+                  csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee
                   cirepo: tyk-ee
                   archs:
                     - go: amd64

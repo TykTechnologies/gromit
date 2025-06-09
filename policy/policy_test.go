@@ -61,6 +61,7 @@ func TestPolicyConfig(t *testing.T) {
 			{"doc1", "deb1", "go1"},
 			{"doc2", "deb2", "go2"}},
 	}, *repo1.Branchvals.Builds["std"], "testing full merge")
-	assert.EqualValues(t, []string{"repo1-doc-right"}, repo1.GetImages("DHRepo"), "testing getImages()")
-	assert.EqualValues(t, []string{"doc1", "doc2"}, repo1.GetDockerPlatforms(), "testing getDockerPlatforms()")
+	build := repo1.Branchvals.Builds["std"]
+	assert.EqualValues(t, []string{"repo1-doc-right"}, build.GetImages("DHRepo"), "testing getImages()")
+	assert.EqualValues(t, []string{"doc1", "doc2"}, build.GetDockerPlatforms(), "testing getDockerPlatforms()")
 }

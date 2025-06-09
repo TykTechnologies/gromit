@@ -183,7 +183,7 @@
         uses: docker/build-push-action@v6
         with:
           context: "dist"
-          platforms: {{ $r.GetDockerPlatforms | join "," }}
+          platforms: {{ $bv.GetDockerPlatforms | join "," }}
           {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
           {{- else }}
@@ -199,14 +199,14 @@
           build-args: |
             BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
 
-      - name: Docker metadata for tag push
+      - name: Docker metadata for {{ $b }} tag push
         id: tag_metadata_{{ $b }}
         uses: docker/metadata-action@v5
         with:
           images: |
-          {{- range $image :=  $r.GetImages "DHRepo" "CSRepo" }}
+          {{- range $image :=  $bv.GetImages "DHRepo" "CSRepo" }}
             {{ $image }}
-          {{end}}
+          {{- end}}
           flavor: |
             latest=false
             prefix=v
@@ -224,12 +224,12 @@
         uses: docker/build-push-action@v6
         with:
           context: "dist"
-          platforms: {{ $r.GetDockerPlatforms | join "," }}
+          platforms: {{ $bv.GetDockerPlatforms | join "," }}
           {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
           {{- else }}
           file: ci/Dockerfile.std
-          {{ end }}
+          {{- end }}
           provenance: mode=max
           sbom: true
           cache-from: type=gha

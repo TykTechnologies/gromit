@@ -17,27 +17,23 @@ func (rp RepoPolicy) GetCC(target, host string) string {
 }
 
 // getImages returns the list of container manifests
-func (rp RepoPolicy) GetImages(repos ...string) []string {
+func (b *build) GetImages(repos ...string) []string {
 	images := make(util.Set[string])
-	for _, bv := range rp.Branchvals.Builds {
-		for _, repo := range repos {
-			image := getBuildField(bv, repo)
-			if len(image) > 0 {
-				images.Add(image)
-			}
+	for _, repo := range repos {
+		image := getBuildField(b, repo)
+		if len(image) > 0 {
+			images.Add(image)
 		}
 	}
 	return images.Members()
 }
 
 // getDockerPlatforms returns the list of docker platforms that are to be supported
-func (rp RepoPolicy) GetDockerPlatforms() []string {
+func (b *build) GetDockerPlatforms() []string {
 	platforms := make(util.Set[string])
-	for _, bv := range rp.Branchvals.Builds {
-		for _, a := range bv.Archs {
-			if len(a.Docker) > 0 {
-				platforms.Add(a.Docker)
-			}
+	for _, a := range b.Archs {
+		if len(a.Docker) > 0 {
+			platforms.Add(a.Docker)
 		}
 	}
 	return platforms.Members()
