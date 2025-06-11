@@ -63,8 +63,6 @@ jobs:
         repo: [tyk, tyk-analytics, tyk-pump, tyk-identity-broker, tyk-sink, portal, tyk-pro]
         include:
           - owner: TykTechnologies
-          - repo: tyk-pro
-            owner: tyklabs
 
     steps:
       - name: checkout ${{matrix.repo}}/${{matrix.branch}}
@@ -91,7 +89,7 @@ jobs:
       - name: update ${{ matrix.repo }}
         if: ${{ (github.event_name == 'push' && github.ref_name == 'master') || endsWith(github.head_ref, 'releng') }}
         env:
-          GITHUB_TOKEN: ${{ matrix.repo == 'tyk-pro' && secrets.TYKLABS_TOKEN || secrets.ORG_GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
         run: |
           set -eo pipefail
           ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }}
