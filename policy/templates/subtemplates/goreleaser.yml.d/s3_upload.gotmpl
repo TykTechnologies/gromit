@@ -1,0 +1,10 @@
+{{ define "s3_upload" }}
+blobs:
+  - provider: s3
+    bucket: mac.assets.tyk
+    region: us-east-1
+    folder: "tyk-sink/{{`{{ .Tag }}`}}"
+    ids:
+      - std-darwin-amd64
+      - std-darwin-arm64
+{{ end }}

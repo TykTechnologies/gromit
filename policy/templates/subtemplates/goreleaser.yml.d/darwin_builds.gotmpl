@@ -1,0 +1,28 @@
+{{ define "darwin_builds" }}
+  - id: std-darwin-amd64
+    env:
+      - NOP=nop
+    ldflags:
+      - -X github.com/TykTechnologies/tyk-sink/main.Version={{`{{.Version}}`}}
+      - -X github.com/TykTechnologies/tyk-sink/main.Commit={{`{{.FullCommit}}`}}
+      - -X github.com/TykTechnologies/tyk-sink/main.BuildDate={{`{{.Date}}`}}
+      - -X github.com/TykTechnologies/tyk-sink/main.BuiltBy=goreleaser
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    binary: tyk-sink
+  - id: std-darwin-arm64
+    env:
+      - NOP=nop
+    ldflags:
+      - -X github.com/TykTechnologies/tyk-sink/main.Version={{`{{.Version}}`}}
+      - -X github.com/TykTechnologies/tyk-sink/main.Commit={{`{{.FullCommit}}`}}
+      - -X github.com/TykTechnologies/tyk-sink/main.BuildDate={{`{{.Date}}`}}
+      - -X github.com/TykTechnologies/tyk-sink/main.BuiltBy=goreleaser
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    binary: tyk-sink
+{{ end }}

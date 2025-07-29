@@ -42,4 +42,17 @@ archives:
       - "bootstrap/views/*"
       - "app/views/*"
     {{- end }}
+
+  - id: darwin
+    name_template: "tyk-sink_{{`{{ .Version }}`}}_{{`{{ .Os }}`}}_{{`{{ .Arch }}`}}"
+    format: zip
+    builds:
+      - std-darwin-amd64
+      - std-darwin-arm64
+    files:
+      - README.md
+      - EULA.md
+      {{- if eq .Name "tyk-sink" }}
+      - tyk_sink_sample.conf
+      {{- end }}
   {{- end}}
