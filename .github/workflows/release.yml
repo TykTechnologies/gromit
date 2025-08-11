@@ -18,7 +18,7 @@ jobs:
       
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
             
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -66,7 +66,7 @@ jobs:
 
     steps:
       - name: checkout ${{matrix.repo}}/${{matrix.branch}}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ matrix.owner }}/${{ matrix.repo }}
           ref: ${{ matrix.branch }}
