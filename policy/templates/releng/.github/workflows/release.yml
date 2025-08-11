@@ -59,7 +59,7 @@ jobs:
 {{- if eq .Name "tyk-analytics" }}
   report_logs:
     runs-on: ubuntu-latest
-    needs: [test-controller-ui, test-controller-api, test-controller-distros, upgrade-deb, upgrade-rpm, release-tests]
+    needs: [test-controller-ui, test-controller-api, test-controller-distros, upgrade-deb, upgrade-rpm, release-tests, ui-tests, api-tests]
     if: always()
     name: Report GH Logs on Failure
     permissions:
@@ -71,6 +71,22 @@ jobs:
         with:
           github_token: ${{`{{ secrets.GITHUB_TOKEN }}`}}
           gh_logs_analyser_token: ${{`{{ secrets.GH_LOGS_ANALYSER }}`}}
+{{- end }}
+{{- if ne .Name "portal" }}
+  gather_test_results:
+    runs-on: ubuntu-latest
+    {{- if eq .Name "tyk-analytics" }}
+    needs: [ui-tests, api-tests]
+    {{- else }}
+    needs: [api-tests]
+    {{- end }}
+    name: Gather Test Results
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Check test results
+        uses: TykTechnologies/github-actions/.github/actions/tests/gather-test-results/action.yaml@main
 {{- end }}
 {{/*
 Local Variables:
