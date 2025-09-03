@@ -1,27 +1,66 @@
 {{ define "docker_manifests" }}
 docker_manifests:
-  - name_template: {{ .DHRepo }}:{{`{{ .Tag }}`}}
+  {{- $r := . }}
+  {{- range $b, $bv := .Branchvals.Builds }}
+  {{- $amd64_exists := false }}
+  {{- $arm64_exists := false }}
+  {{- range $a := $bv.Archs }}
+    {{- if eq $a.Go "amd64" }}{{ $amd64_exists = true }}{{ end }}
+    {{- if eq $a.Go "arm64" }}{{ $arm64_exists = true }}{{ end }}
+  {{- end }}
+  {{- if and $amd64_exists $arm64_exists }}
+  - name_template: {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
     image_templates:
-      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-amd64
-      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-arm64
-  - name_template: {{ .DHRepo }}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}
+      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
+      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}arm64
+  - name_template: {{ $bv.DHRepo }}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
     image_templates:
-      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-amd64
-      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-arm64
-  - name_template: {{ .DHRepo }}:v{{`{{ .Major }}{{.Prerelease}}`}}
+      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
+      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}arm64
+  - name_template: {{ $bv.DHRepo }}:v{{`{{ .Major }}{{.Prerelease}}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
     image_templates:
-      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-amd64
-      - {{ .DHRepo }}:{{`{{ .Tag }}`}}-arm64
-  {{- if eq .Name "tyk" }}
+      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
+      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}arm64
+  {{- if $bv.CSRepo }}
+  - name_template: {{ $bv.CSRepo }}:{{`{{ .Tag }}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
+    image_templates:
+      - {{ $bv.CSRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
+      - {{ $bv.CSRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}arm64
+  {{- end}}
+  {{- else if $amd64_exists }}
+  - name_template: {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
+    image_templates:
+      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
+  - name_template: {{ $bv.DHRepo }}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
+    image_templates:
+      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
+  - name_template: {{ $bv.DHRepo }}:v{{`{{ .Major }}{{.Prerelease}}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
+    image_templates:
+      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
+  {{- if $bv.CSRepo }}
+  - name_template: {{ $bv.CSRepo }}:{{`{{ .Tag }}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
+    image_templates:
+      - {{ $bv.CSRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
+  {{- end}}
+  {{- end }}
+  {{- end }}
+  {{- if eq $r.Name "tyk" }}
+  {{- $std_build := index .Branchvals.Builds "std" }}
+  {{- $amd64_exists := false }}
+  {{- $arm64_exists := false }}
+  {{- range $a := $std_build.Archs }}
+    {{- if eq $a.Go "amd64" }}{{ $amd64_exists = true }}{{ end }}
+    {{- if eq $a.Go "arm64" }}{{ $arm64_exists = true }}{{ end }}
+  {{- end }}
+  {{- if and $amd64_exists $arm64_exists }}
   - name_template: tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}
     image_templates:
       - tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-amd64
       - tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-arm64
-  {{- end }}
-  {{- if .CSRepo }}
-  - name_template: {{ .CSRepo }}:{{`{{ .Tag }}`}}
+  {{- else if $amd64_exists }}
+  - name_template: tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}
     image_templates:
-      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-amd64
-      - {{ .CSRepo }}:{{`{{ .Tag }}`}}-arm64
-  {{- end}}
+      - tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-amd64
+  {{- end }}
+  {{- end }}
 {{ end }}

@@ -1,26 +1,26 @@
 {{define "dockers"}}
 dockers:
   {{- $r := . }}
-  {{- range $arch := list "amd64" "arm64" }}
-  {{- /* range over all the supported archs.
-    Except for the archs, everything else stays the same for docker templates */}}
-  # Build {{$r.DHRepo}}{{ if $r.CSRepo }}, {{ $r.CSRepo }}{{ end }} ({{ $arch }})
+  {{- range $b, $bv := .Branchvals.Builds }}
+  {{- range $a := $bv.Archs }}
+  {{- if or (eq $a.Docker "linux/amd64") (eq $a.Docker "linux/arm64") }}
+  # Build {{$bv.DHRepo}}{{ if $bv.CSRepo }}, {{ $bv.CSRepo }}{{ end }} {{ $b }} ({{ $a.Go }})
   - ids:
-      - std
+      - {{ printf "%s-%s" $b $a.Go }}
     image_templates:
-      - "{{$r.DHRepo}}:{{`{{.Tag}}`}}-{{ $arch }}"
-    {{- if $r.CSRepo }}
-      - "{{$r.CSRepo}}:{{`{{.Tag}}`}}-{{ $arch }}"
+      - "{{$bv.DHRepo}}:{{`{{.Tag}}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}{{ $a.Go }}"
+    {{- if $bv.CSRepo }}
+      - "{{$bv.CSRepo}}:{{`{{.Tag}}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}{{ $a.Go }}"
     {{- end}}
     build_flag_templates:
       - "--build-arg=PORTS={{ $r.ExposePorts }}"
-      - "--platform=linux/{{ $arch }}"
+      - "--platform={{ $a.Docker }}"
       - "--label=org.opencontainers.image.created={{`{{.Date}}`}}"
-      - "--label=org.opencontainers.image.title={{`{{.ProjectName}}`}}"
+      - "--label=org.opencontainers.image.title={{`{{.ProjectName}}`}}{{ if ne $b "std" }} {{ upper $b }}{{ end }}"
       - "--label=org.opencontainers.image.revision={{`{{.FullCommit}}`}}"
       - "--label=org.opencontainers.image.version={{`{{.Version}}`}}"
     use: buildx
-    goarch: {{ $arch }}
+    goarch: {{ $a.Go }}
     goos: linux
     dockerfile: ci/Dockerfile.std
     extra_files:
@@ -50,29 +50,33 @@ dockers:
       - "LICENSE.md"
       - "pump.example.conf"
       {{- end}}
+  {{- end}}
+  {{- end}}
+  {{- end}}
 
-      {{- if (eq $r.Name "tyk") }}
-
-  # Build gateway hybrid container {{ $arch }}
+  {{- if (eq $r.Name "tyk") }}
+  {{- range $a := .Branchvals.Builds.std.Archs }}
+  {{- if or (eq $a.Docker "linux/amd64") (eq $a.Docker "linux/arm64") }}
+  # Build gateway hybrid container ({{ $a.Go }})
   - ids:
-      - std
+      - std-{{ $a.Go }}
     image_templates:
-      - "tykio/tyk-hybrid-docker:{{`{{.Tag}}`}}-{{ $arch }}"
+      - "tykio/tyk-hybrid-docker:{{`{{.Tag}}`}}-{{ $a.Go }}"
     build_flag_templates:
-      - "--platform=linux/{{ $arch }}"
+      - "--platform={{ $a.Docker }}"
       - "--label=org.opencontainers.image.created={{`{{.Date}}`}}"
       - "--label=org.opencontainers.image.title={{`{{.ProjectName}}`}}-hybrid"
       - "--label=org.opencontainers.image.revision={{`{{.FullCommit}}`}}"
       - "--label=org.opencontainers.image.version={{`{{.Version}}`}}"
     use: buildx
-    goarch: {{ $arch }}
+    goarch: {{ $a.Go }}
     goos: linux
     dockerfile: ci/images/hybrid/Dockerfile
     extra_files:
       - "ci/images/hybrid/"
-
+  {{- end}}
+  {{- end}}
   # The plugin compiler image is built outside of goreleaser in a
   # plugin-compiler-build workflow.
-      {{- end}}{{/* hybrid definition end */}}
-    {{- end}}{{/* range end */}}
-  {{end}}{{/* end of definition */}}
+  {{- end}}{{/* hybrid definition end */}}
+{{end}}{{/* end of definition */}}
