@@ -16,6 +16,10 @@ before:
 
 {{- template "builds" . }}
 
+{{- template "dockers" . }}
+
+{{- template "docker_manifests" . }}
+
 # This disables archives
 archives:
   - formats: [ 'binary' ]
