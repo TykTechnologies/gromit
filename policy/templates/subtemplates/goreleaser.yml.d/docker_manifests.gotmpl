@@ -1,66 +1,60 @@
 {{ define "docker_manifests" }}
+{{- $hasDockers := false }}
+{{- range $b, $bv := .Branchvals.Builds }}
+  {{- if $bv.DHRepo }}
+    {{- $hasDockers = true }}
+  {{- end }}
+{{- end }}
+{{- if $hasDockers }}
 docker_manifests:
-  {{- $r := . }}
-  {{- range $b, $bv := .Branchvals.Builds }}
-  {{- $amd64_exists := false }}
-  {{- $arm64_exists := false }}
-  {{- range $a := $bv.Archs }}
-    {{- if eq $a.Go "amd64" }}{{ $amd64_exists = true }}{{ end }}
-    {{- if eq $a.Go "arm64" }}{{ $arm64_exists = true }}{{ end }}
+{{- range $b, $bv := .Branchvals.Builds }}
+  {{- if $bv.DHRepo }}
+    {{- $hasMultiArch := false }}
+    {{- $imageTemplates := list }}
+    {{- range $a := $bv.Archs }}
+      {{- if or (eq $a.Go "amd64") (eq $a.Go "arm64") }}
+        {{- $imageTemplates = append $imageTemplates (printf "%s:{{`{{ .Tag }}`}}-%s-%s" $bv.DHRepo $b $a.Go) }}
+        {{- if gt (len $imageTemplates) 1 }}
+          {{- $hasMultiArch = true }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if $hasMultiArch }}
+  # Multi-arch manifest for {{$bv.DHRepo}} {{$b}}
+  - name_template: {{$bv.DHRepo}}:{{`{{ .Tag }}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+    image_templates:
+    {{- range $imageTemplates }}
+      - {{.}}
+    {{- end }}
+  - name_template: {{$bv.DHRepo}}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+    image_templates:
+    {{- range $imageTemplates }}
+      - {{.}}
+    {{- end }}
+  - name_template: {{$bv.DHRepo}}:v{{`{{ .Major }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+    image_templates:
+    {{- range $imageTemplates }}
+      - {{.}}
+    {{- end }}
+    {{- else if eq (len $imageTemplates) 1 }}
+  # Single-arch manifest for {{$bv.DHRepo}} {{$b}}
+  - name_template: {{$bv.DHRepo}}:{{`{{ .Tag }}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+    image_templates:
+    {{- range $imageTemplates }}
+      - {{.}}
+    {{- end }}
+  - name_template: {{$bv.DHRepo}}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+    image_templates:
+    {{- range $imageTemplates }}
+      - {{.}}
+    {{- end }}
+  - name_template: {{$bv.DHRepo}}:v{{`{{ .Major }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+    image_templates:
+    {{- range $imageTemplates }}
+      - {{.}}
+    {{- end }}
+    {{- end }}
   {{- end }}
-  {{- if and $amd64_exists $arm64_exists }}
-  - name_template: {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
-    image_templates:
-      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
-      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}arm64
-  - name_template: {{ $bv.DHRepo }}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
-    image_templates:
-      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
-      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}arm64
-  - name_template: {{ $bv.DHRepo }}:v{{`{{ .Major }}{{.Prerelease}}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
-    image_templates:
-      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
-      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}arm64
-  {{- if $bv.CSRepo }}
-  - name_template: {{ $bv.CSRepo }}:{{`{{ .Tag }}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
-    image_templates:
-      - {{ $bv.CSRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
-      - {{ $bv.CSRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}arm64
-  {{- end}}
-  {{- else if $amd64_exists }}
-  - name_template: {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
-    image_templates:
-      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
-  - name_template: {{ $bv.DHRepo }}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
-    image_templates:
-      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
-  - name_template: {{ $bv.DHRepo }}:v{{`{{ .Major }}{{.Prerelease}}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
-    image_templates:
-      - {{ $bv.DHRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
-  {{- if $bv.CSRepo }}
-  - name_template: {{ $bv.CSRepo }}:{{`{{ .Tag }}`}}{{ if ne $b "std" }}-{{ $b }}{{ end }}
-    image_templates:
-      - {{ $bv.CSRepo }}:{{`{{ .Tag }}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}amd64
-  {{- end}}
-  {{- end }}
-  {{- end }}
-  {{- if eq $r.Name "tyk" }}
-  {{- $std_build := index .Branchvals.Builds "std" }}
-  {{- $amd64_exists := false }}
-  {{- $arm64_exists := false }}
-  {{- range $a := $std_build.Archs }}
-    {{- if eq $a.Go "amd64" }}{{ $amd64_exists = true }}{{ end }}
-    {{- if eq $a.Go "arm64" }}{{ $arm64_exists = true }}{{ end }}
-  {{- end }}
-  {{- if and $amd64_exists $arm64_exists }}
-  - name_template: tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}
-    image_templates:
-      - tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-amd64
-      - tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-arm64
-  {{- else if $amd64_exists }}
-  - name_template: tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}
-    image_templates:
-      - tykio/tyk-hybrid-docker:{{`{{ .Tag }}`}}-amd64
-  {{- end }}
-  {{- end }}
+{{- end }}
+{{- end }}
 {{ end }}
