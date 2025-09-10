@@ -1,41 +1,36 @@
 {{define "dockers"}}
+{{- $hasDockers := false }}
+{{- range $b, $bv := .Branchvals.Builds }}
+  {{- if $bv.DHRepo }}
+    {{- $hasDockers = true }}
+  {{- end }}
+{{- end }}
+{{- if $hasDockers }}
 dockers:
-  {{- $r := . }}
-  {{- range $b, $bv := .Branchvals.Builds }}
-  {{- range $a := $bv.Archs }}
-  {{- if or (eq $a.Docker "linux/amd64") (eq $a.Docker "linux/arm64") }}
-  # Build {{$bv.DHRepo}}{{ if $bv.CSRepo }}, {{ $bv.CSRepo }}{{ end }} {{ $b }} ({{ $a.Go }})
+{{- range $b, $bv := .Branchvals.Builds }}
+  {{- if $bv.DHRepo }}
+    {{- range $a := $bv.Archs }}
+      {{- if or (eq $a.Go "amd64") (eq $a.Go "arm64") }}
+  # Build {{$bv.DHRepo}} {{$b}} ({{$a.Go}})
   - ids:
-      - {{ printf "%s-%s" $b $a.Go }}
+      - {{$b}}-{{$a.Go}}
     image_templates:
-      - "{{$bv.DHRepo}}:{{`{{.Tag}}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}{{ $a.Go }}"
-    {{- if $bv.CSRepo }}
-      - "{{$bv.CSRepo}}:{{`{{.Tag}}`}}-{{ if ne $b "std" }}{{ $b }}-{{ end }}{{ $a.Go }}"
-    {{- end}}
+      - "{{$bv.DHRepo}}:{{`{{.Tag}}`}}-{{$b}}-{{$a.Go}}"
     build_flag_templates:
-      - "--build-arg=PORTS={{ $r.ExposePorts }}"
-      - "--platform={{ $a.Docker }}"
+      - "--build-arg=PORTS={{$.ExposePorts}}"
+      - "--platform=linux/{{$a.Go}}"
       - "--label=org.opencontainers.image.created={{`{{.Date}}`}}"
-      - "--label=org.opencontainers.image.title={{`{{.ProjectName}}`}}{{ if ne $b "std" }} {{ upper $b }}{{ end }}"
+      - "--label=org.opencontainers.image.title={{`{{.ProjectName}}`}}{{if eq $b "fips"}} FIPS{{else if eq $b "ee"}} Enterprise Edition{{end}}"
       - "--label=org.opencontainers.image.revision={{`{{.FullCommit}}`}}"
       - "--label=org.opencontainers.image.version={{`{{.Version}}`}}"
     use: buildx
-    goarch: {{ $a.Go }}
+    goarch: {{$a.Go}}
     goos: linux
     dockerfile: ci/Dockerfile.std
     extra_files:
       - "ci/install/"
       - "README.md"
-
-      {{- if (eq $r.Name "tyk-analytics") }}
-      - "EULA.md"
-      - "portal"
-      - "schemas"
-      - "webclient/lang"
-      - "tyk_config_sample.config"
-      {{- end}}
-
-      {{- if (eq $r.Name "tyk") }}
+      {{- if (eq $.Name "tyk") }}
       - "LICENSE.md"
       - "apps/app_sample.json"
       - "templates"
@@ -45,38 +40,23 @@ dockers:
       - "coprocess"
       - "tyk.conf.example"
       {{- end}}
-
-      {{- if (eq $r.Name "tyk-pump") }}
+      {{- if (eq $.Name "tyk-pump") }}
       - "LICENSE.md"
       - "pump.example.conf"
       {{- end}}
-  {{- end}}
-  {{- end}}
-  {{- end}}
-
-  {{- if (eq $r.Name "tyk") }}
-  {{- range $a := .Branchvals.Builds.std.Archs }}
-  {{- if or (eq $a.Docker "linux/amd64") (eq $a.Docker "linux/arm64") }}
-  # Build gateway hybrid container ({{ $a.Go }})
-  - ids:
-      - std-{{ $a.Go }}
-    image_templates:
-      - "tykio/tyk-hybrid-docker:{{`{{.Tag}}`}}-{{ $a.Go }}"
-    build_flag_templates:
-      - "--platform={{ $a.Docker }}"
-      - "--label=org.opencontainers.image.created={{`{{.Date}}`}}"
-      - "--label=org.opencontainers.image.title={{`{{.ProjectName}}`}}-hybrid"
-      - "--label=org.opencontainers.image.revision={{`{{.FullCommit}}`}}"
-      - "--label=org.opencontainers.image.version={{`{{.Version}}`}}"
-    use: buildx
-    goarch: {{ $a.Go }}
-    goos: linux
-    dockerfile: ci/images/hybrid/Dockerfile
-    extra_files:
-      - "ci/images/hybrid/"
-  {{- end}}
-  {{- end}}
-  # The plugin compiler image is built outside of goreleaser in a
-  # plugin-compiler-build workflow.
-  {{- end}}{{/* hybrid definition end */}}
-{{end}}{{/* end of definition */}}
+      {{- if (eq $.Name "tyk-analytics") }}
+      - "EULA.md"
+      - "portal"
+      - "schemas"
+      - "webclient/lang"
+      - "tyk_config_sample.config"
+      {{- end}}
+      {{- if (eq $.Name "tyk-sink") }}
+      - "LICENSE.md"
+      {{- end}}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{end}}
