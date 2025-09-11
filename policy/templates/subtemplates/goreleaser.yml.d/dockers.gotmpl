@@ -18,6 +18,7 @@ dockers:
       - "{{$bv.DHRepo}}:{{`{{.Tag}}`}}-{{$b}}-{{$a.Go}}"
     build_flag_templates:
       - "--build-arg=PORTS={{$.ExposePorts}}"
+      - "--build-arg=BUILD_PACKAGE_NAME={{$bv.BuildPackageName}}"
       - "--platform=linux/{{$a.Go}}"
       - "--label=org.opencontainers.image.created={{`{{.Date}}`}}"
       - "--label=org.opencontainers.image.title={{`{{.ProjectName}}`}}{{if eq $b "fips"}} FIPS{{else if eq $b "ee"}} Enterprise Edition{{end}}"
@@ -30,6 +31,7 @@ dockers:
     extra_files:
       - "ci/install/"
       - "README.md"
+      - "dist/"
       {{- if (eq $.Name "tyk") }}
       - "LICENSE.md"
       - "apps/app_sample.json"
