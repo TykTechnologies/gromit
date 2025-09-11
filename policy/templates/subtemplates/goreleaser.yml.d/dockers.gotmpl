@@ -1,21 +1,21 @@
 {{define "dockers"}}
 {{- $hasDockers := false }}
 {{- range $b, $bv := .Branchvals.Builds }}
-  {{- if $bv.DhRepo }}
+  {{- if $bv.Dhrepo }}
     {{- $hasDockers = true }}
   {{- end }}
 {{- end }}
 {{- if $hasDockers }}
 dockers:
 {{- range $b, $bv := .Branchvals.Builds }}
-  {{- if $bv.DhRepo }}
+  {{- if $bv.Dhrepo }}
     {{- range $a := $bv.Archs }}
       {{- if or (eq $a.Go "amd64") (eq $a.Go "arm64") }}
-  # Build {{$bv.DhRepo}} {{$b}} ({{$a.Go}})
+  # Build {{$bv.Dhrepo}} {{$b}} ({{$a.Go}})
   - ids:
       - {{$b}}-{{$a.Go}}
     image_templates:
-      - "{{$bv.DhRepo}}:{{`{{.Tag}}`}}-{{$b}}-{{$a.Go}}"
+      - "{{$bv.Dhrepo}}:{{`{{.Tag}}`}}-{{$b}}-{{$a.Go}}"
     build_flag_templates:
       - "--build-arg=PORTS={{$.ExposePorts}}"
       - "--build-arg=BUILD_PACKAGE_NAME={{$bv.BuildPackageName}}"
