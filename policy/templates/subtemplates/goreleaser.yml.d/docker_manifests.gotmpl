@@ -1,54 +1,54 @@
 {{ define "docker_manifests" }}
 {{- $hasDockers := false }}
 {{- range $b, $bv := .Branchvals.Builds }}
-  {{- if $bv.DhRepo }}
+  {{- if $bv.DHRepo }}
     {{- $hasDockers = true }}
   {{- end }}
 {{- end }}
 {{- if $hasDockers }}
 docker_manifests:
 {{- range $b, $bv := .Branchvals.Builds }}
-  {{- if $bv.DhRepo }}
+  {{- if $bv.DHRepo }}
     {{- $hasMultiArch := false }}
     {{- $imageTemplates := list }}
     {{- range $a := $bv.Archs }}
       {{- if or (eq $a.Go "amd64") (eq $a.Go "arm64") }}
-        {{- $imageTemplates = append $imageTemplates (printf "%s:{{`{{ .Tag }}`}}-%s-%s" $bv.DhRepo $b $a.Go) }}
+        {{- $imageTemplates = append $imageTemplates (printf "%s:{{`{{ .Tag }}`}}-%s-%s" $bv.DHRepo $b $a.Go) }}
         {{- if gt (len $imageTemplates) 1 }}
           {{- $hasMultiArch = true }}
         {{- end }}
       {{- end }}
     {{- end }}
     {{- if $hasMultiArch }}
-  # Multi-arch manifest for {{$bv.DhRepo}} {{$b}}
-  - name_template: {{$bv.DhRepo}}:{{`{{ .Tag }}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+  # Multi-arch manifest for {{$bv.DHRepo}} {{$b}}
+  - name_template: {{$bv.DHRepo}}:{{`{{ .Tag }}`}}{{if ne $b "std"}}-{{$b}}{{end}}
     image_templates:
     {{- range $imageTemplates }}
       - {{.}}
     {{- end }}
-  - name_template: {{$bv.DhRepo}}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+  - name_template: {{$bv.DHRepo}}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
     image_templates:
     {{- range $imageTemplates }}
       - {{.}}
     {{- end }}
-  - name_template: {{$bv.DhRepo}}:v{{`{{ .Major }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+  - name_template: {{$bv.DHRepo}}:v{{`{{ .Major }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
     image_templates:
     {{- range $imageTemplates }}
       - {{.}}
     {{- end }}
     {{- else if eq (len $imageTemplates) 1 }}
-  # Single-arch manifest for {{$bv.DhRepo}} {{$b}}
-  - name_template: {{$bv.DhRepo}}:{{`{{ .Tag }}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+  # Single-arch manifest for {{$bv.DHRepo}} {{$b}}
+  - name_template: {{$bv.DHRepo}}:{{`{{ .Tag }}`}}{{if ne $b "std"}}-{{$b}}{{end}}
     image_templates:
     {{- range $imageTemplates }}
       - {{.}}
     {{- end }}
-  - name_template: {{$bv.DhRepo}}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+  - name_template: {{$bv.DHRepo}}:v{{`{{ .Major }}.{{ .Minor }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
     image_templates:
     {{- range $imageTemplates }}
       - {{.}}
     {{- end }}
-  - name_template: {{$bv.DhRepo}}:v{{`{{ .Major }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
+  - name_template: {{$bv.DHRepo}}:v{{`{{ .Major }}{{.Prerelease}}`}}{{if ne $b "std"}}-{{$b}}{{end}}
     image_templates:
     {{- range $imageTemplates }}
       - {{.}}
