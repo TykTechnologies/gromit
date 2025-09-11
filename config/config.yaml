@@ -329,7 +329,7 @@ policy:
       features:
         - releng
         - distroless
-      buildenv: 1.24-bullseye
+      buildenv: 1.24-bookworm
       baseimage: debian:trixie-slim
       distrolessbaseimage: static-debian12:nonroot
       repos:
