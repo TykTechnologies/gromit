@@ -329,7 +329,7 @@ policy:
       features:
         - releng
         - distroless
-      buildenv: 1.22-bookworm
+      buildenv: 1.24-bullseye
       baseimage: debian:trixie-slim
       distrolessbaseimage: static-debian12:nonroot
       repos:
@@ -416,7 +416,7 @@ policy:
             master:
 
         tyk-sink:
-          buildenv: 1.23-bullseye
+          buildenv: 1.24-bullseye
           exposeports: 80
           binary: tyk-sink
           cgo: false
