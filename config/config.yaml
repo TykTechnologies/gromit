@@ -102,7 +102,7 @@ policy:
               buildpackagename: tyk-gateway-fips
               pcrepo: tyk-ee-unstable
               dhrepo: tykio/tyk-gateway-fips
-              cirepo: tyk-fips
+              cirepo: tyk
               description: >-
                 Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                 Built with boringssl
@@ -315,7 +315,7 @@ policy:
               buildpackagename: tyk-dashboard-fips
               pcrepo: tyk-ee-unstable
               dhrepo: tykio/tyk-dashboard-fips
-              cirepo: tyk-analytics-fips
+              cirepo: tyk-analytics
               archs:
                 - go: amd64
                   deb: amd64
@@ -455,7 +455,7 @@ policy:
               buildpackagename: tyk-pump-fips
               pcrepo: tyk-ee-unstable
               dhrepo: tykio/tyk-pump-fips
-              cirepo: tyk-pump-fips
+              cirepo: tyk-pump
               description: >-
                 Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once).
                 This version is compiled with boringssl.
@@ -539,8 +539,8 @@ policy:
                 - -tags=fips,boringcrypto
               buildpackagename: tyk-sink-fips
               pcrepo: tyk-ee-unstable
-              dhrepo: tykio/tyk-mdcb-fips
-              cirepo: tyk-sink-fips
+              dhrepo: tykio/tyk-mdcb-docker-fips
+              cirepo: tyk-sink
               description: >-
                 Tyk RPC server backend (bridge)
                 This version is compiled with boringssl.
