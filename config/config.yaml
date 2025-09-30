@@ -111,6 +111,9 @@ policy:
                 - go: amd64
                   deb: amd64
                   docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
               env:
                 - GOEXPERIMENT=boringcrypto
           # The name of the binary generated after the build.
@@ -210,6 +213,58 @@ policy:
               features:
                 - release-test
                 - distroless
+            release-5.8.6:
+              buildenv: 1.24-bullseye
+              builds:
+                std:
+                  flags:
+                    - -trimpath
+                # ee builds are enterprise 
+                ee:
+                  flags:
+                    - -tags=goplugin,ee
+                    - -trimpath
+                  description: >-
+                    Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
+                  imagetitle: Tyk Gateway Enterprise Edition
+                  buildpackagename: tyk-gateway-ee
+                  pcrepo: tyk-ee-unstable
+                  dhrepo: tykio/tyk-gateway-ee
+                  csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee
+                  cirepo: tyk-ee
+                  archs:
+                    - go: amd64
+                      deb: amd64
+                      docker: linux/amd64
+                    - go: arm64
+                      deb: aarch64
+                      docker: linux/arm64
+                    - go: s390x
+                      deb: s390x
+                      docker: linux/s390x
+                fips:
+                  flags:
+                    - -tags=goplugin,fips,boringcrypto
+                  buildpackagename: tyk-gateway-fips
+                  pcrepo: tyk-ee-unstable
+                  dhrepo: tykio/tyk-gateway
+                  cirepo: tyk-fips
+                  description: >-
+                    Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols
+                    Built with boringssl
+                  imagetitle: Tyk Gateway FIPS
+                  archs:
+                    - go: amd64
+                      deb: amd64
+                      docker: linux/amd64
+                    - go: arm64
+                      deb: aarch64
+                      docker: linux/arm64
+                  env:
+                    - GOEXPERIMENT=boringcrypto
+              features:
+                - release-test
+                - distroless
 
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
@@ -265,6 +320,9 @@ policy:
                 - go: amd64
                   deb: amd64
                   docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
               env:
                 - GOEXPERIMENT=boringcrypto
           branches:
@@ -284,8 +342,36 @@ policy:
               features:
                 - el7-pgo-build
             release-5.8:
-              buildenv: 1.23-bullseye
+              buildenv: 1.24-bullseye
               cgo: false
+              features:
+                - nightly-e2e
+                - distroless
+                - release-test
+            release-5.8.6:
+              buildenv: 1.24-bullseye
+              cgo: false
+              builds:
+                fips:
+                  flags:
+                    - -tags=fips,boringcrypto
+                  description: >-
+                    Dashboard for the Tyk API Gateway.
+                    This version is compiled with boringssl.
+                  imagetitle: Tyk Dashboard FIPS
+                  buildpackagename: tyk-dashboard-fips
+                  pcrepo: tyk-ee-unstable
+                  dhrepo: tykio/tyk-dashboard
+                  cirepo: tyk-analytics
+                  archs:
+                    - go: amd64
+                      deb: amd64
+                      docker: linux/amd64
+                    - go: arm64
+                      deb: aarch64
+                      docker: linux/arm64
+                  env:
+                    - GOEXPERIMENT=boringcrypto
               features:
                 - nightly-e2e
                 - distroless
@@ -378,6 +464,9 @@ policy:
                 - go: amd64
                   deb: amd64
                   docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
               env:
                 - GOEXPERIMENT=boringcrypto
           branches:
@@ -460,6 +549,9 @@ policy:
                 - go: amd64
                   deb: amd64
                   docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
               env:
                 - GOEXPERIMENT=boringcrypto
           branches:
