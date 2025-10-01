@@ -479,6 +479,9 @@ policy:
                 - go: arm64
                   deb: aarch64
                   docker: linux/arm64
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
               env:
                 - GOEXPERIMENT=boringcrypto
           branches:
@@ -564,6 +567,9 @@ policy:
                 - go: arm64
                   deb: aarch64
                   docker: linux/arm64
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
               env:
                 - GOEXPERIMENT=boringcrypto
           branches:
