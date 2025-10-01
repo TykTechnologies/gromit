@@ -12,7 +12,7 @@ docker_manifests:
     {{- $hasMultiArch := false }}
     {{- $imageTemplates := list }}
     {{- range $a := $bv.Archs }}
-      {{- if or (eq $a.Go "amd64") (eq $a.Go "arm64") }}
+      {{- if or (eq $a.Go "amd64") (eq $a.Go "arm64") (eq $a.Go "s390x") }}
         {{- $imageTemplates = append $imageTemplates (printf "%s:{{`{{ .Tag }}`}}-%s-%s" $bv.DHRepo $b $a.Go) }}
         {{- if gt (len $imageTemplates) 1 }}
           {{- $hasMultiArch = true }}
