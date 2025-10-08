@@ -17,7 +17,7 @@ builds:
       - CC={{ $r.GetCC $a.Deb "amd64" }}
     {{- end }}
     {{- range $env := $bv.Env }}
-      - $env
+      - {{ $env }}
     {{- end }}
     ldflags:
       - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
