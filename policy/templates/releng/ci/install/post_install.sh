@@ -18,9 +18,9 @@ fi
 cleanup() {
     # After installing, remove files that were not needed on this platform / system
     if [ "${use_systemctl}" = "True" ]; then
-        rm -f /lib/systemd/system/{{ .PackageName }}.service
-    else
         rm -f /etc/init.d/{{ .PackageName }}
+    else
+        rm -f /lib/systemd/system/{{ .PackageName }}.service
     fi
 }
 
@@ -39,7 +39,7 @@ restoreServices() {
 setupOwnership() {
     printf "\033[32m Post Install of the install directory ownership and permissions\033[0m\n"
     [ "${change_ownership}" = "True" ] && chown -R tyk:tyk /opt/{{ .PackageName }}
-    # Config file should never be world-readable
+    # Config file should never be world-readable (only if it exists)
     [ -f /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }} ] && chmod 660 /opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}
 }
 
