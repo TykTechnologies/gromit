@@ -433,7 +433,7 @@ policy:
           versionpackage: github.com/TykTechnologies/tyk-ai-studio/main
           features:
             - releng
-            - frontend-build
+            - ai-studio-frontend-build
           builds:
             microgateway:
               dir: microgateway

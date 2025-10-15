@@ -15,7 +15,7 @@ before:
 {{- end}}
 
 {{- if eq .Name "ai-studio"}}
-{{- if not (has "frontend-build" .Branchvals.Features) }}
+{{- if not (has "ai-studio-frontend-build" .Branchvals.Features) }}
 before:
   hooks:
     - |

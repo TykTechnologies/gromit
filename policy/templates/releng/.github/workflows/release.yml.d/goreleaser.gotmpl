@@ -1,7 +1,7 @@
 {{ define "goreleaser" }}
   goreleaser:
-{{- if has "frontend-build" .Branchvals.Features }}
-    needs: frontend-build
+{{- if has "ai-studio-frontend-build" .Branchvals.Features }}
+    needs: ai-studio-frontend-build
 {{- end }}
     if: github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
@@ -61,7 +61,7 @@
           submodules: true
   {{- end }}
 
-{{- if has "frontend-build" .Branchvals.Features }}
+{{- if has "ai-studio-frontend-build" .Branchvals.Features }}
       - name: Download frontend build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -163,6 +163,7 @@
           -w /go/src/github.com/TykTechnologies/{{ .Name }}                      \
           tykio/golang-cross:{{`${{ matrix.golang_cross }}`}} /tmp/build.sh
       
+{{- if has "ai-studio-frontend-build" .Branchvals.Features }}
       - name: Verify GoReleaser output
         id: verify_dist
         run: |
@@ -183,6 +184,7 @@
             exit 1
           fi
           echo "dist_ready=true" >> $GITHUB_OUTPUT
+{{- end }}
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -220,7 +222,7 @@
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
         uses: docker/build-push-action@v6
         with:
-          context: "."
+          context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
           platforms: {{ $bv.GetDockerPlatforms | join "," }}
           {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
@@ -261,7 +263,7 @@
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
         uses: docker/build-push-action@v6
         with:
-          context: "."
+          context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
           platforms: {{ $bv.GetDockerPlatforms | join "," }}
           {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
