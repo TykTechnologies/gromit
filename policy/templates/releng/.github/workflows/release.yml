@@ -38,6 +38,10 @@ env:
   BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
   
 jobs:
+{{- if has "frontend-build" .Branchvals.Features }}
+{{- template "frontend-build" . }}
+{{- end }}
+
 {{- template "goreleaser" . }}
 
 {{- if not (empty .Branchvals.Tests) }}
