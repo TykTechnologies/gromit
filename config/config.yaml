@@ -423,6 +423,66 @@ policy:
           branches:
             master:
 
+        ai-studio:
+          packagename: tyk-ai-studio
+          exposeports: "8080"
+          binary: tyk-ai-studio
+          cgo: true
+          upgradefromver: 1.0.1
+          configfile: tyk-ai-studio.conf
+          versionpackage: github.com/TykTechnologies/tyk-ai-studio/main
+          features:
+            - releng
+            - frontend-build
+          builds:
+            microgateway:
+              dir: microgateway
+              main: ./cmd/microgateway
+              binary: tyk-ai-microgateway
+              versionpackage: main
+              description: >-
+                Tyk AI Microgateway
+              imagetitle: Tyk AI Microgateway
+              buildpackagename: tyk-ai-microgateway
+              pcrepo: tyk-ee-unstable
+              dhrepo: tykio/tyk-ai-microgateway
+              cirepo: ai-microgateway
+              archs:
+                - go: amd64
+                  deb: amd64
+                  docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
+            std:
+              description: >-
+                Tyk AI Studio
+              imagetitle: Tyk AI Studio
+              buildpackagename: tyk-ai-studio
+              pcrepo: tyk-ee-unstable
+              upgraderepo: tyk-ai-studio
+              dhrepo: tykio/tyk-ai-studio
+              csrepo: docker.tyk.io/tyk-ai-studio/tyk-ai-studio
+              cirepo: ai-studio
+              archs:
+                - go: amd64
+                  deb: amd64
+                  docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
+          branches:
+            main:
+              buildenv: 1.24-bullseye
+            TT-15920/gromit-packaging-and-distribution:
+              buildenv: 1.24-bullseye
+
     pgo-services:
       features:
         - releng

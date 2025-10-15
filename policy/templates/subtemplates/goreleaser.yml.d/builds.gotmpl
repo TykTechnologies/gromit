@@ -5,6 +5,12 @@ builds:
 {{- range $b, $bv := .Branchvals.Builds }}
 {{- range $a := $bv.Archs }}
   - id: {{ printf "%s-%s" $b $a.Go }}
+    {{- if $bv.Dir }}
+    dir: {{ $bv.Dir }}
+    {{- end }}
+    {{- if $bv.Main }}
+    main: {{ $bv.Main }}
+    {{- end }}
     {{- if $bv.Flags }}
     flags:
     {{- range $flag := $bv.Flags }}
@@ -20,15 +26,26 @@ builds:
       - {{ $env }}
     {{- end }}
     ldflags:
+    {{- if $bv.VersionPackage }}
+      - -X {{ $bv.VersionPackage }}.Version={{`{{.Version}}`}}
+      - -X {{ $bv.VersionPackage }}.Commit={{`{{.FullCommit}}`}}
+      - -X {{ $bv.VersionPackage }}.BuildDate={{`{{.Date}}`}}
+      - -X {{ $bv.VersionPackage }}.BuiltBy=goreleaser
+    {{- else }}
       - -X {{$r.Branchvals.VersionPackage}}.Version={{`{{.Version}}`}}
       - -X {{$r.Branchvals.VersionPackage}}.Commit={{`{{.FullCommit}}`}}
       - -X {{$r.Branchvals.VersionPackage}}.BuildDate={{`{{.Date}}`}}
       - -X {{$r.Branchvals.VersionPackage}}.BuiltBy=goreleaser
+    {{- end }}
     goos:
       - linux
     goarch:
       - {{ $a.Go }}
+    {{- if $bv.Binary }}
+    binary: {{ $bv.Binary }}
+    {{- else }}
     binary: {{$r.Binary}}
+    {{- end }}
   {{ end }} {{/* range $bv.Archs */}}
 {{ end }} {{/* range builds .Branchvals.Builds */}}
 

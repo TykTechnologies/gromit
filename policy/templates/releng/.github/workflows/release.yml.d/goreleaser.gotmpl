@@ -1,5 +1,8 @@
 {{ define "goreleaser" }}
   goreleaser:
+{{- if has "frontend-build" .Branchvals.Features }}
+    needs: frontend-build
+{{- end }}
     if: github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
     runs-on: ubuntu-latest-m
@@ -57,6 +60,20 @@
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           submodules: true
   {{- end }}
+
+{{- if has "frontend-build" .Branchvals.Features }}
+      - name: Download frontend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: ui/admin-frontend/build
+      
+      - name: Verify frontend artifacts
+        run: |
+          echo "Checking frontend build artifacts..."
+          ls -la ui/admin-frontend/build || echo "Build directory not found"
+          find ui/admin-frontend/build -type f | head -20 || echo "No files found"
+{{- end }}
 
       - name: Set some outputs for later
         id: set_outputs
@@ -145,6 +162,27 @@
           -v /tmp/build.sh:/tmp/build.sh                                         \
           -w /go/src/github.com/TykTechnologies/{{ .Name }}                      \
           tykio/golang-cross:{{`${{ matrix.golang_cross }}`}} /tmp/build.sh
+      
+      - name: Verify GoReleaser output
+        id: verify_dist
+        run: |
+          echo "Checking if dist directory was created..."
+          if [ ! -d "dist" ]; then
+            echo "ERROR: dist directory not found!"
+            echo "GoReleaser failed to create dist directory"
+            echo "Listing workspace contents:"
+            ls -la
+            exit 1
+          fi
+          echo "Dist directory exists, checking contents:"
+          ls -la dist/
+          echo "Package files:"
+          find dist -type f -name "*.deb" -o -name "*.rpm" | head -20
+          if [ -z "$(find dist -type f -name "*.deb" -o -name "*.rpm")" ]; then
+            echo "ERROR: No packages found in dist directory!"
+            exit 1
+          fi
+          echo "dist_ready=true" >> $GITHUB_OUTPUT
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -182,7 +220,7 @@
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
         uses: docker/build-push-action@v6
         with:
-          context: "dist"
+          context: "."
           platforms: {{ $bv.GetDockerPlatforms | join "," }}
           {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
@@ -223,7 +261,7 @@
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
         uses: docker/build-push-action@v6
         with:
-          context: "dist"
+          context: "."
           platforms: {{ $bv.GetDockerPlatforms | join "," }}
           {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
