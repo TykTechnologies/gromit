@@ -5,10 +5,12 @@ builds:
 {{- range $b, $bv := .Branchvals.Builds }}
 {{- range $a := $bv.Archs }}
   - id: {{ printf "%s-%s" $b $a.Go }}
-    {{- if $bv.Dir }} # Build from a specific subdirectory (e.g., for multi-module repos like ai-studio's microgateway)
+    {{- if $bv.Dir }}
+    # Build from a specific subdirectory (e.g., for multi-module repos like ai-studio's microgateway)
     dir: {{ $bv.Dir }}
     {{- end }}
-    {{- if $bv.Main }} # Specify the main package path (e.g., ./cmd/microgateway for non-standard entry points)
+    {{- if $bv.Main }}
+    # Specify the main package path (e.g., ./cmd/microgateway for non-standard entry points)
     main: {{ $bv.Main }}
     {{- end }}
     {{- if $bv.Flags }}
