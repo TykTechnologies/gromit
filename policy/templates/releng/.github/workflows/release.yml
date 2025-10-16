@@ -47,6 +47,8 @@ jobs:
   {{ end }}
 {{- end }} {{/* empty tests */}}
 
+{{- template "aggregator" . }}
+
 {{- template "smoke-tests" . }}
 
   sbom:
