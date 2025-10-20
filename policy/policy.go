@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"maps"
@@ -44,6 +45,10 @@ type repoConfig struct {
 
 // build models the variations in build and their corresponding packages
 type build struct {
+	Dir              string `yaml:"dir,omitempty"`
+	Main             string `yaml:"main,omitempty"`
+	Binary           string `yaml:"binary,omitempty"`
+	VersionPackage   string `yaml:"versionpackage,omitempty"`
 	Flags            []string
 	BuildPackageName string
 	Description      string
@@ -144,7 +149,20 @@ func (rp *RepoPolicy) GetTimeStamp() (time.Time, error) {
 
 // SetBranch sets the Branch and Branchvals properties so that templates can simply access them instead of looking them up in the Branches map. This must be called before calling Render()
 func (rp *RepoPolicy) SetBranch(branch string) error {
+	// First try exact match
 	bv, found := rp.Branches[branch]
+	if !found {
+		// Try case-insensitive match
+		lowerBranch := strings.ToLower(branch)
+		for k, v := range rp.Branches {
+			if strings.ToLower(k) == lowerBranch {
+				bv = v
+				found = true
+				branch = k // Use the actual branch name from config
+				break
+			}
+		}
+	}
 	if !found {
 		return fmt.Errorf("branch %s unknown among %v", branch, rp.Branches)
 	}

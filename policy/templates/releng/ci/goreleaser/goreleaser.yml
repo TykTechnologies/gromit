@@ -14,11 +14,29 @@ before:
     - ./ci/copy-framework-files.sh
 {{- end}}
 
+{{- if eq .Name "ai-studio"}}
+{{- if not (has "ai-studio-frontend-build" .Branchvals.Features) }}
+before:
+  hooks:
+    - |
+      apt-get update && \
+      apt-get install -y nodejs npm && \
+      which node || echo "node not found" && \
+      which npm || echo "npm not found" && \
+      echo "PATH=$PATH" && \
+      cd ui/admin-frontend && \
+      npm ci && \
+      npm run build
+{{- end}}
+{{- end}}
+
 {{- template "builds" . }}
 
+{{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") (eq .Name "tyk-sync") (eq .Name "tyk-pump") }}
 {{- template "dockers" . }}
 
 {{- template "docker_manifests" . }}
+{{- end }}
 
 # This disables archives
 archives:
