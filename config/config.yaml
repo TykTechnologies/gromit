@@ -521,13 +521,14 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
+                  skipdocker: true
             fips:
               flags:
                 - -tags=fips,boringcrypto
               buildpackagename: tyk-pump-fips
               pcrepo: tyk-ee-unstable
               dhrepo: tykio/tyk-pump-fips
-              cirepo: tyk-pump
+              cirepo: tyk-pump-fips
               description: >-
                 Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once).
                 This version is compiled with boringssl.
@@ -536,16 +537,17 @@ policy:
                 - go: amd64
                   deb: amd64
                   docker: linux/amd64
-                - go: arm64
-                  deb: aarch64
-                  docker: linux/arm64
-                - go: s390x
-                  deb: s390x
-                  docker: linux/s390x
+                # - go: arm64
+                #   deb: aarch64
+                #   docker: linux/arm64
+                # - go: s390x
+                #   deb: s390x
+                #   docker: linux/s390x
               env:
                 - GOEXPERIMENT=boringcrypto
           branches:
             master:
+            release-1.13:
 
         tyk-identity-broker:
           exposeports: 80
