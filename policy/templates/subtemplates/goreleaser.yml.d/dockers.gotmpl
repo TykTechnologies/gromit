@@ -10,7 +10,7 @@ dockers:
 {{- range $b, $bv := .Branchvals.Builds }}
   {{- if $bv.DHRepo }}
     {{- range $a := $bv.Archs }}
-      {{- if or (eq $a.Go "amd64") (eq $a.Go "arm64") (eq $a.Go "s390x") }}
+      {{- if not $a.SkipDocker }}
   # Build {{$bv.DHRepo}} {{$b}} ({{$a.Go}})
   - ids:
       - {{$b}}-{{$a.Go}}
