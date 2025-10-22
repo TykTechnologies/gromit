@@ -430,7 +430,7 @@ policy:
           cgo: true
           upgradefromver: 1.0.1
           configfile: tyk-ai-studio.conf
-          versionpackage: github.com/TykTechnologies/tyk-ai-studio/main
+          versionpackage: github.com/TykTechnologies/ai-studio
           features:
             - releng
             - ai-studio-frontend-build
@@ -439,7 +439,7 @@ policy:
               dir: microgateway
               main: ./cmd/microgateway
               binary: tyk-ai-microgateway
-              versionpackage: main
+              versionpackage: github.com/TykTechnologies/ai-studio/microgateway/cmd/microgateway/main
               description: >-
                 Tyk AI Microgateway
               imagetitle: Tyk AI Microgateway
