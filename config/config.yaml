@@ -434,6 +434,7 @@ policy:
           features:
             - releng
             - ai-studio-frontend-build
+            - default-distroless
           builds:
             microgateway:
               dir: microgateway

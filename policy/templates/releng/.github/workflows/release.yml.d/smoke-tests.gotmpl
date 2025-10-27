@@ -40,7 +40,11 @@
         arch:
           - amd64
           - arm64
+        {{- if has "default-distros" $.Branchvals.Features }}
+        distro: {{`${{ fromJson(needs.test-controller-distros.outputs.`}}{{ $distro }}{{` || '`}}{{- if eq $distro "deb" }}{{`["ubuntu:jammy", "ubuntu:focal", "debian:bullseye"]`}}{{- else }}{{`["amazonlinux:2", "el/8", "el/9"]`}}{{- end }}{{`') }}`}}
+        {{- else }}
         distro: {{`${{ fromJson(needs.test-controller-distros.outputs.`}}{{ $distro }}{{`) }}`}}
+        {{- end }}
 
     steps:
       - uses: actions/checkout@v4
