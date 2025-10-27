@@ -48,7 +48,7 @@ jobs:
           path=$(jq -rc '.[] | select((.type=="Binary") and (.goos=="linux") and .goarch=="amd64") | .path' dist/artifacts.json)
           echo "path=${path}" >> $GITHUB_OUTPUT
         
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: binary-amd64
           path: ${{ steps.binary.outputs.path }}
