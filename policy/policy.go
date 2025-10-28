@@ -60,9 +60,10 @@ type build struct {
 	CIRepo           string
 	Env              []string
 	Archs            []struct {
-		Docker string
-		Deb    string
-		Go     string
+		Docker     string
+		Deb        string
+		Go         string
+		SkipDocker bool
 	}
 }
 
