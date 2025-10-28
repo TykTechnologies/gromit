@@ -480,8 +480,6 @@ policy:
           branches:
             main:
               buildenv: 1.24-bullseye
-            TT-15920/gromit-packaging-and-distribution:
-              buildenv: 1.24-bullseye
 
     pgo-services:
       features:
