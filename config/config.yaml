@@ -434,6 +434,7 @@ policy:
           features:
             - releng
             - ai-studio-frontend-build
+            - default-distros
           builds:
             microgateway:
               dir: microgateway

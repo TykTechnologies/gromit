@@ -14,23 +14,18 @@
         env:
           # startsWith covers pull_request_target too
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
+{{- if has "default-distros" .Branchvals.Features }}
+        run: |
+          # Using default distros (TUI service bypassed)
+          echo "deb=[\"ubuntu:jammy\", \"ubuntu:focal\", \"debian:bullseye\"]\nrpm=[\"amazonlinux:2\", \"el/8\", \"el/9\"]" >> $GITHUB_OUTPUT
+{{- else }}
         run: |
           set -eo pipefail
-          RESPONSE=$(curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/api/Distros.gho" || echo "")
-          
-          if [[ "$RESPONSE" == *"deb"* && "$RESPONSE" == *"rpm"* ]]; then
-            # TUI returned valid data, use it
-            echo "$RESPONSE" >> $GITHUB_OUTPUT
-          else
-            # TUI returned empty or invalid data, use defaults
-            echo "::warning::TUI returned empty or invalid response, using default values"
-            echo "deb=[\"ubuntu:jammy\", \"ubuntu:focal\", \"debian:bullseye\"]" >> $GITHUB_OUTPUT
-            echo "rpm=[\"amazonlinux:2\", \"el/8\", \"el/9\"]" >> $GITHUB_OUTPUT
-          fi
-          
-          if ! [[ $VARIATION =~ prod ]]; then
+          curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/api/Distros.gho" | tee -a "$GITHUB_OUTPUT"
+          if ! [[ $VARIATION =~ prod ]];then
             echo "::warning file=.github/workflows/release.yml,line=24,col=1,endColumn=8::Using test variation"
           fi
+{{- end }}
 
 {{- $uprepo :=  .Branchvals.Builds.std.UpgradeRepo }}
 
