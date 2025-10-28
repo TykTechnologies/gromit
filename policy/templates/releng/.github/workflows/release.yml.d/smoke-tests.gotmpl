@@ -16,8 +16,19 @@
           BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
         run: |
           set -eo pipefail
-          curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/api/Distros.gho" | tee -a "$GITHUB_OUTPUT"
-          if ! [[ $VARIATION =~ prod ]];then
+          RESPONSE=$(curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/api/Distros.gho" || echo "")
+          
+          if [[ "$RESPONSE" == *"deb"* && "$RESPONSE" == *"rpm"* ]]; then
+            # TUI returned valid data, use it
+            echo "$RESPONSE" >> $GITHUB_OUTPUT
+          else
+            # TUI returned empty or invalid data, use defaults
+            echo "::warning::TUI returned empty or invalid response, using default values"
+            echo "deb=[\"ubuntu:jammy\", \"ubuntu:focal\", \"debian:bullseye\"]" >> $GITHUB_OUTPUT
+            echo "rpm=[\"amazonlinux:2\", \"el/8\", \"el/9\"]" >> $GITHUB_OUTPUT
+          fi
+          
+          if ! [[ $VARIATION =~ prod ]]; then
             echo "::warning file=.github/workflows/release.yml,line=24,col=1,endColumn=8::Using test variation"
           fi
 
@@ -40,11 +51,7 @@
         arch:
           - amd64
           - arm64
-        {{- if has "default-distros" $.Branchvals.Features }}
-        distro: {{`${{ fromJson(needs.test-controller-distros.outputs.`}}{{ $distro }}{{` || '`}}{{- if eq $distro "deb" }}{{`["ubuntu:jammy", "ubuntu:focal", "debian:bullseye"]`}}{{- else }}{{`["amazonlinux:2", "el/8", "el/9"]`}}{{- end }}{{`') }}`}}
-        {{- else }}
         distro: {{`${{ fromJson(needs.test-controller-distros.outputs.`}}{{ $distro }}{{`) }}`}}
-        {{- end }}
 
     steps:
       - uses: actions/checkout@v4
