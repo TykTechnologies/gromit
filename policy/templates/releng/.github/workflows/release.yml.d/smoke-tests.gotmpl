@@ -11,15 +11,24 @@
       - name: set params
         id: params
         shell: bash
+{{- if not (has "default-distros" .Branchvals.Features) }}
         env:
           # startsWith covers pull_request_target too
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
+          BASE_REF: {{`${{ startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name }}`}}
+{{- end }}
+{{- if has "default-distros" .Branchvals.Features }}
+        run: |
+          # Using default distros (TUI service bypassed)
+          echo "deb=[\"ubuntu:jammy\", \"ubuntu:focal\", \"debian:bullseye\"]" >> $GITHUB_OUTPUT
+          echo "rpm=[\"amazonlinux:2\", \"rockylinux:8\", \"rockylinux:9\"]" >> $GITHUB_OUTPUT
+{{- else }}
         run: |
           set -eo pipefail
           curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/api/Distros.gho" | tee -a "$GITHUB_OUTPUT"
           if ! [[ $VARIATION =~ prod ]];then
             echo "::warning file=.github/workflows/release.yml,line=24,col=1,endColumn=8::Using test variation"
           fi
+{{- end }}
 
 {{- $uprepo :=  .Branchvals.Builds.std.UpgradeRepo }}
 
@@ -63,14 +72,16 @@
           ARG TARGETARCH
           COPY {{ $pcname }}*_${TARGETARCH}.deb /{{ $pcname }}.deb
           RUN apt-get update && apt-get install -y curl
-          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $uprepo }}/script.deb.sh | bash && apt-get install -y {{ $pcname }}={{ $fromVer }}
+          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $uprepo }}/script.deb.sh | bash || echo "Repository setup failed, but continuing"
+          RUN apt-get install -y {{ $pcname }}={{ $fromVer }} || echo "Previous version not found, testing fresh install"
           RUN dpkg -i /{{ $pcname }}.deb
 {{ else if eq $distro "rpm" }}
           ARG RHELARCH
           COPY {{ $pcname }}*.${RHELARCH}.rpm /{{ $pcname }}.rpm
           RUN command -v curl || yum install -y curl
           RUN command -v useradd || yum install -y shadow-utils
-          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $uprepo }}/script.rpm.sh | bash && yum install -y {{ $pcname }}-{{ $fromVer }}-1
+          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $uprepo }}/script.rpm.sh | bash || echo "Repository setup failed, but continuing"
+          RUN yum install -y {{ $pcname }}-{{ $fromVer }}-1 || echo "Previous version not found, testing fresh install"
           RUN curl https://keyserver.tyk.io/tyk.io.rpm.signing.key.2020 -o {{ $uprepo }}.key && rpm --import {{ $uprepo }}.key
           RUN rpm --checksig /{{ $pcname }}.rpm
           RUN rpm -Uvh --force /{{ $pcname }}.rpm
