@@ -32,12 +32,6 @@ before:
 
 {{- template "builds" . }}
 
-{{- if or (eq .Name "tyk") (eq .Name "tyk-analytics") (eq .Name "tyk-sync") (eq .Name "tyk-pump") }}
-{{- template "dockers" . }}
-
-{{- template "docker_manifests" . }}
-{{- end }}
-
 # This disables archives
 archives:
   - formats: [ 'binary' ]
