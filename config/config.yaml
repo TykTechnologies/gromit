@@ -175,16 +175,6 @@ policy:
               features:
                 - release-test
                 - distroless
-            release-5.3:
-              buildenv: 1.23-bullseye
-              features:
-                - distroless
-                - release-test
-            release-5-lts:
-              buildenv: 1.24-bullseye
-              features:
-                - plugin-compiler-fix-vendor
-                - python-support
             release-5.8:
               buildenv: 1.24-bullseye
               builds:
@@ -359,38 +349,12 @@ policy:
                 - nightly-e2e
                 - distroless
                 - release-test
-            release-5.3:
-              buildenv: 1.23-bullseye
-              features:
-                - distroless
-                - release-test
-            release-5-lts:
-              buildenv: 1.24-bookworm
-              features:
-                - el7-pgo-build
             release-5.8:
               buildenv: 1.24-bookworm
               cgo: false
               builds:
                 std:
                 fips:
-              features:
-                - nightly-e2e
-                - distroless
-                - release-test
-            release-5.8-TT-16060:
-              buildenv: 1.24-bookworm
-              cgo: false
-              features:
-                - nightly-e2e
-                - distroless
-                - release-test
-            release-5.8.6:
-              buildenv: 1.24-bullseye
-              cgo: false
-              builds:
-                fips:
-                  dhrepo: tykio/tyk-dashboard
               features:
                 - nightly-e2e
                 - distroless
