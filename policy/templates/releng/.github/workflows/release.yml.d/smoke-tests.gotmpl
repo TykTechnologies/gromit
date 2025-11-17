@@ -14,7 +14,7 @@
 {{- if not (has "default-distros" .Branchvals.Features) }}
         env:
           # startsWith covers pull_request_target too
-          BASE_REF: {{`${{ startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name }}`}}
+          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
 {{- end }}
 {{- if has "default-distros" .Branchvals.Features }}
         run: |
