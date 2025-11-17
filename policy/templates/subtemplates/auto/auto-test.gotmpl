@@ -25,6 +25,19 @@
     {{- if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
       - goreleaser
     {{- end }}
+    {{- if and (eq .dot.Name "tyk") (eq .test "api") }}
+      - resolve-dashboard-image
+      - build-dashboard-image
+    {{- end }}
+    {{- if and (eq .dot.Name "tyk") (eq .test "api") }}
+    # build-dashboard-image may be skipped, so use if: always() to run regardless
+    if: |
+      always() &&
+      needs.test-controller-{{ .test }}.result == 'success' &&
+      needs.goreleaser.result == 'success' &&
+      needs.resolve-dashboard-image.result == 'success' &&
+      (needs.build-dashboard-image.result == 'success' || needs.build-dashboard-image.result == 'skipped')
+    {{- end }}
     runs-on: ubuntu-latest-m-2
     env:
       XUNIT_REPORT_PATH: {{`${{ github.workspace}}`}}/test-results.xml
@@ -87,6 +100,9 @@
         with:
           base_ref: {{`${{ env.BASE_REF }}`}}
           tags: {{`${{ needs.goreleaser.outputs.ee_tags || needs.goreleaser.outputs.std_tags || format('{0}/tyk-ee:master', steps.ecr.outputs.registry) }}`}}
+          {{- if and (eq .dot.Name "tyk") (eq .test "api") }}
+          dashboard_image: {{`${{ needs.resolve-dashboard-image.outputs.dashboard_image }}`}}
+          {{- end }}
           github_token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}

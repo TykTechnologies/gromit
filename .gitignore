@@ -41,3 +41,5 @@ __pycache__
 /prod-variations.yml
 /tyk-pro/
 /backup
+
+.idea/
