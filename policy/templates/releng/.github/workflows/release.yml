@@ -44,6 +44,10 @@ jobs:
 
 {{- template "goreleaser" . }}
 
+{{- if eq .Name "tyk" }}
+{{- template "tyk-dashboard-resolver" . }}
+{{- end }}
+
 {{- if not (empty .Branchvals.Tests) }}
 {{- $dot := . }}
   {{ range $test := .Branchvals.Tests }}
