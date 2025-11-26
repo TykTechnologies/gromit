@@ -36,6 +36,7 @@ type repoConfig struct {
 	ConfigFile          string
 	VersionPackage      string
 	UpgradeFromVer      string
+	FipsReleaseBranch   string `yaml:"fips_release_branch" mapstructure:"fips_release_branch"`
 	Tests               []string
 	Features            []string
 	DeletedFiles        []string
@@ -91,6 +92,7 @@ type branchVals struct {
 	ConfigFile          string
 	VersionPackage      string
 	UpgradeFromVer      string
+	FipsReleaseBranch   string `yaml:"fips_release_branch" mapstructure:"fips_release_branch"`
 	Tests               []string
 	Features            []string
 	Builds              buildMap

@@ -126,6 +126,9 @@ policy:
           # Branch specific policy for different branches starts here.->
           branches:
             master:
+              # fips_release_branch controls which branch FIPS images will be released on
+              # Change this value to match your LTS branch naming (e.g., "release-5.8", "release-5-lts", etc.)
+              fips_release_branch: "release-5.8"
               builds:
                 std:
                 # ee builds are enterprise 
@@ -151,14 +154,14 @@ policy:
                     - go: s390x
                       deb: s390x
                       docker: linux/s390x
-                # fips builds
+                # fips builds - will only be released on fips_release_branch, ee flag only needs to be included on gateway
                 fips:
                   flags:
-                    - -tags=goplugin,fips,boringcrypto
+                    - -tags=goplugin,ee,fips,boringcrypto
                   description: >-
-                    Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols
+                    Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                     Built with boringssl
-                  imagetitle: Tyk Gateway FIPS
+                  imagetitle: Tyk Gateway Enterprise Edition FIPS
                   buildpackagename: tyk-gateway-fips
                   pcrepo: tyk-ee-unstable
                   dhrepo: tykio/tyk-gateway-fips
@@ -181,15 +184,15 @@ policy:
                 std:
                 fips:
                   flags:
-                    - -tags=goplugin,fips,boringcrypto
+                    - -tags=goplugin,ee,fips,boringcrypto
                   buildpackagename: tyk-gateway-fips
                   pcrepo: tyk-ee-unstable
                   dhrepo: tykio/tyk-gateway
                   cirepo: tyk
                   description: >-
-                    Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols
+                    Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                     Built with boringssl
-                  imagetitle: Tyk Gateway FIPS
+                  imagetitle: Tyk Gateway Enterprise Edition FIPS
                   archs:
                     - go: amd64
                       deb: amd64
@@ -256,26 +259,6 @@ policy:
                     - go: s390x
                       deb: s390x
                       docker: linux/s390x
-                fips:
-                  flags:
-                    - -tags=goplugin,fips,boringcrypto
-                  buildpackagename: tyk-gateway-fips
-                  pcrepo: tyk-ee-unstable
-                  dhrepo: tykio/tyk-gateway-fips
-                  cirepo: tyk-fips
-                  description: >-
-                    Tyk Open Source API Gateway written in Go, supporting REST, GraphQL, TCP and gRPC protocols
-                    Built with boringssl
-                  imagetitle: Tyk Gateway FIPS
-                  archs:
-                    - go: amd64
-                      deb: amd64
-                      docker: linux/amd64
-                    # - go: arm64
-                    #   deb: aarch64
-                    #   docker: linux/arm64
-                  env:
-                    - GOEXPERIMENT=boringcrypto
               features:
                 - release-test
                 - distroless
@@ -319,43 +302,65 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
-            fips:
-              flags:
-                - -tags=fips,boringcrypto
-              description: >-
-                Dashboard for the Tyk API Gateway.
-                This version is compiled with boringssl.
-              imagetitle: Tyk Dashboard FIPS
-              buildpackagename: tyk-dashboard-fips
-              pcrepo: tyk-dashboard-unstable
-              dhrepo: tykio/tyk-dashboard-fips
-              cirepo: tyk-analytics
-              archs:
-                - go: amd64
-                  deb: amd64
-                  docker: linux/amd64
-                # - go: arm64
-                #   deb: aarch64
-                #   docker: linux/arm64
-                # - go: s390x
-                #   deb: s390x
-                #   docker: linux/s390x
-              env:
-                - GOEXPERIMENT=boringcrypto
           branches:
             master:
-              buildenv: 1.24-bookworm
+              # fips_release_branch controls which branch FIPS images will be released on
+              # Change this value to match your LTS branch naming (e.g., "release-5.8", "release-5-lts", etc.)
+              fips_release_branch: "release-5.8"
+              buildenv: 1.24-bullseye
               cgo: false
+              builds:
+                std:
+                # fips builds - will only be released on fips_release_branch
+                fips:
+                  flags:
+                    - -tags=fips,boringcrypto
+                  description: >-
+                    Dashboard for the Tyk API Gateway.
+                    This version is compiled with boringssl.
+                  imagetitle: Tyk Dashboard FIPS
+                  buildpackagename: tyk-dashboard-fips
+                  pcrepo: tyk-dashboard-unstable
+                  dhrepo: tykio/tyk-dashboard-fips
+                  cirepo: tyk-analytics
+                  archs:
+                    - go: amd64
+                      deb: amd64
+                      docker: linux/amd64
+                    # - go: arm64
+                    #   deb: aarch64
+                    #   docker: linux/arm64
+                    # - go: s390x
+                    #   deb: s390x
+                    #   docker: linux/s390x
+                  env:
+                    - GOEXPERIMENT=boringcrypto
               features:
                 - nightly-e2e
                 - distroless
                 - release-test
             release-5.8:
-              buildenv: 1.24-bookworm
+              buildenv: 1.24-bullseye
               cgo: false
               builds:
                 std:
                 fips:
+                  flags:
+                    - -tags=fips,boringcrypto
+                  description: >-
+                    Dashboard for the Tyk API Gateway.
+                    This version is compiled with boringssl.
+                  imagetitle: Tyk Dashboard FIPS
+                  buildpackagename: tyk-dashboard-fips
+                  pcrepo: tyk-dashboard-unstable
+                  dhrepo: tykio/tyk-dashboard-fips
+                  cirepo: tyk-analytics
+                  archs:
+                    - go: amd64
+                      deb: amd64
+                      docker: linux/amd64
+                  env:
+                    - GOEXPERIMENT=boringcrypto
               features:
                 - nightly-e2e
                 - distroless

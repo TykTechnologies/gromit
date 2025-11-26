@@ -203,7 +203,11 @@
 {{- range $b, $bv := $r.GetDockerBuilds }}
       - name: Docker metadata for {{ $b }} CI
         id: ci_metadata_{{ $b }}
+        {{- if and (contains $b "fips") $r.Branchvals.FipsReleaseBranch }}
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref_name, '`}}{{$r.Branchvals.FipsReleaseBranch}}{{`') }}`}}
+        {{- else}}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
+        {{ end }}
         uses: docker/metadata-action@v5
         with:
           images: |
@@ -219,7 +223,11 @@
             type=semver,pattern={{`{{version}}`}},prefix=v
 
       - name: push {{ $b }} image to CI
+        {{- if and (contains $b "fips") $r.Branchvals.FipsReleaseBranch }}
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref_name, '`}}{{$r.Branchvals.FipsReleaseBranch}}{{`') }}`}}
+        {{- else}}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
+        {{ end }}
         uses: docker/build-push-action@v6
         with:
           context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
@@ -241,6 +249,10 @@
 
       - name: Docker metadata for {{ $b }} tag push
         id: tag_metadata_{{ $b }}
+        {{- if and (contains $b "fips") $r.Branchvals.FipsReleaseBranch }}
+        if: {{`${{ startsWith(github.ref_name, '`}}{{$r.Branchvals.FipsReleaseBranch}}{{`') }}`}}
+        {{- else}}
+        {{ end }}
         uses: docker/metadata-action@v5
         with:
           images: |
@@ -260,7 +272,11 @@
             org.opencontainers.image.version={{`${{ github.ref_name }}`}}
 
       - name: push {{ $b }} image to prod
+        {{- if and (contains $b "fips") $r.Branchvals.FipsReleaseBranch }}
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref_name, '`}}{{$r.Branchvals.FipsReleaseBranch}}{{`') }}`}}
+        {{- else}}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
+        {{ end }}
         uses: docker/build-push-action@v6
         with:
           context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
