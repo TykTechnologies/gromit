@@ -163,7 +163,7 @@ policy:
                     - -tags=goplugin,ee,fips,boringcrypto
                   buildpackagename: tyk-gateway-fips
                   pcrepo: tyk-ee-unstable
-                  dhrepo: tykio/tyk-gateway
+                  dhrepo: tykio/tyk-gateway-fips
                   cirepo: tyk
                   description: >-
                     Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
