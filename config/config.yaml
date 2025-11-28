@@ -173,9 +173,9 @@ policy:
                     - go: amd64
                       deb: amd64
                       docker: linux/amd64
-                    # - go: arm64
-                    #   deb: aarch64
-                    #   docker: linux/arm64
+                    - go: arm64
+                      deb: aarch64
+                      docker: linux/arm64
                     # - go: s390x
                     #   deb: s390x
                     #   docker: linux/s390x
@@ -308,6 +308,9 @@ policy:
                     - go: amd64
                       deb: amd64
                       docker: linux/amd64
+                    - go: arm64
+                      deb: arm64
+                      docker: linux/arm64
                   env:
                     - GOEXPERIMENT=boringcrypto
               features:
@@ -468,9 +471,9 @@ policy:
                 - go: amd64
                   deb: amd64
                   docker: linux/amd64
-                # - go: arm64
-                #   deb: aarch64
-                #   docker: linux/arm64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
                 # - go: s390x
                 #   deb: s390x
                 #   docker: linux/s390x
@@ -557,9 +560,9 @@ policy:
                 - go: amd64
                   deb: amd64
                   docker: linux/amd64
-                # - go: arm64
-                #   deb: aarch64
-                #   docker: linux/arm64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
                 # - go: s390x
                 #   deb: s390x
                 #   docker: linux/s390x
