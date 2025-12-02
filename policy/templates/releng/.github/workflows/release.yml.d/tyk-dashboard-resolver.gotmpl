@@ -2,7 +2,7 @@
   resolve-dashboard-image:
     if: github.event.pull_request.draft == false
     needs: goreleaser
-    runs-on: ubuntu-latest
+    runs-on: warp-ubuntu-latest-x64-2x
     permissions:
       id-token: write
       contents: read
@@ -200,7 +200,7 @@
   build-dashboard-image:
     if: needs.resolve-dashboard-image.outputs.needs_build == 'true'
     needs: resolve-dashboard-image
-    runs-on: ubuntu-latest-m
+    runs-on: warp-ubuntu-latest-x64-2x
     permissions:
       id-token: write
       contents: read

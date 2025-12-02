@@ -36,7 +36,7 @@ env:
 
 jobs:
   security-check:
-    runs-on: ubuntu-latest
+    runs-on: warp-ubuntu-latest-x64-2x
     permissions:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
@@ -109,7 +109,7 @@ jobs:
   {{- template "auto-test" (dict "dot" $DOT "test" $test "flow" "nightly") }}
 {{- end }}
   report_logs:
-    runs-on: ubuntu-latest
+    runs-on: warp-ubuntu-latest-x64-2x
     needs: [test-controller-ui, test-controller-api]
     if: always()
     name: Report GH Logs on Failure

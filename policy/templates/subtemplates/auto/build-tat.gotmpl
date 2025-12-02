@@ -1,6 +1,6 @@
 {{ define "build-tat" }}
   build-tat:
-    runs-on: ubuntu-latest
+    runs-on: warp-ubuntu-latest-x64-2x
     outputs:
       tags: {{`${{ steps.metadata.outputs.tags }}`}}
     steps:
