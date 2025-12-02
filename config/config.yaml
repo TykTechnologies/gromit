@@ -161,6 +161,7 @@ policy:
                 fips:
                   flags:
                     - -tags=goplugin,ee,fips,boringcrypto
+                    - -trimpath
                   buildpackagename: tyk-gateway-fips
                   pcrepo: tyk-ee-unstable
                   dhrepo: tykio/tyk-gateway-fips
