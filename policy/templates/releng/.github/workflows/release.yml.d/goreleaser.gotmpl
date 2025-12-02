@@ -61,6 +61,40 @@
           submodules: true
   {{- end }}
 
+{{- if eq .Name "tyk-analytics" }}
+
+      - name: Configure AWS credentials for asset fetch
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: {{`${{ secrets.AWS_BINDATA_ACCESS_KEY_ID }}`}}
+          aws-secret-access-key: {{`${{ secrets.AWS_BINDATA_SECRET_ACCESS_KEY }}`}}
+          aws-region: eu-central-1
+
+      - name: Fetch pre-built UI assets from S3
+        run: |
+          # Read the vendored commit SHA
+          ASSETS_COMMIT=$(cat .assets_vendor | head -n 1 | tr -d '\n')
+
+          echo "Fetching assets for commit ${ASSETS_COMMIT} from s3://tyk-dashboard-assets-ci/commits/"
+          mkdir -p webclient/dist
+          aws s3 sync s3://tyk-dashboard-assets-ci/commits/${ASSETS_COMMIT}/ webclient/dist/
+
+          if [ ! -f webclient/dist/_index.html ]; then
+            echo "❌ Assets not found in S3"
+            echo ""
+            echo "Expected location: s3://tyk-dashboard-assets-ci/commits/${ASSETS_COMMIT}/"
+            echo ""
+            echo "Make sure the assets are built and uploaded to S3 from the build-assets workflow:"
+            echo "  .github/workflows/build-assets.yml"
+            echo ""
+            echo "The build-assets workflow should have been triggered when the webclient submodule was updated."
+            echo "Check if the workflow ran successfully and uploaded assets for commit ${ASSETS_COMMIT}"
+            exit 1
+          fi
+
+          echo "✓ Assets fetched successfully from S3"
+{{- end }}
+
 {{- if has "ai-studio-frontend-build" .Branchvals.Features }}
       - name: Download frontend build artifacts
         uses: actions/download-artifact@v4
@@ -162,7 +196,24 @@
           -v /tmp/build.sh:/tmp/build.sh                                         \
           -w /go/src/github.com/TykTechnologies/{{ .Name }}                      \
           tykio/golang-cross:{{`${{ matrix.golang_cross }}`}} /tmp/build.sh
-      
+
+{{- if eq .Name "tyk-analytics" }}
+
+      - name: Copy assets to S3 for tags
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          # Extract tag name (e.g., v5.8.0 from refs/tags/v5.8.0)
+          TAG_NAME={{`${GITHUB_REF#refs/tags/}`}}
+
+          # Get the current commit SHA
+          COMMIT_SHA=$(git rev-parse HEAD)
+
+          # Copy assets from commits/ to tags/ prefix
+          echo "Copying assets from s3://tyk-dashboard-assets-ci/commits/{{`${COMMIT_SHA}`}}/ to s3://tyk-dashboard-assets-ci/tags/{{`${TAG_NAME}`}}/"
+          aws s3 sync s3://tyk-dashboard-assets-ci/commits/{{`${COMMIT_SHA}`}}/ s3://tyk-dashboard-assets-ci/tags/{{`${TAG_NAME}`}}/
+          echo "Assets copied successfully for tag {{`${TAG_NAME}`}}"
+{{- end }}
+
 {{- if has "ai-studio-frontend-build" .Branchvals.Features }}
       - name: Verify GoReleaser output
         id: verify_dist
