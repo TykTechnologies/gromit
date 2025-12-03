@@ -205,12 +205,12 @@
           # Extract tag name (e.g., v5.8.0 from refs/tags/v5.8.0)
           TAG_NAME={{`${GITHUB_REF#refs/tags/}`}}
 
-          # Get the current commit SHA
-          COMMIT_SHA=$(git rev-parse HEAD)
+          # Get the vendored commit SHA
+          ASSETS_COMMIT=$(cat .assets_vendor | head -n 1 | tr -d '\n')
 
           # Copy assets from commits/ to tags/ prefix
-          echo "Copying assets from s3://tyk-dashboard-assets-ci/commits/{{`${COMMIT_SHA}`}}/ to s3://tyk-dashboard-assets-ci/tags/{{`${TAG_NAME}`}}/"
-          aws s3 sync s3://tyk-dashboard-assets-ci/commits/{{`${COMMIT_SHA}`}}/ s3://tyk-dashboard-assets-ci/tags/{{`${TAG_NAME}`}}/
+          echo "Copying assets from s3://tyk-dashboard-assets-ci/commits/{{`${ASSETS_COMMIT}`}}/ to s3://tyk-dashboard-assets-ci/tags/{{`${TAG_NAME}`}}/"
+          aws s3 sync s3://tyk-dashboard-assets-ci/commits/{{`${ASSETS_COMMIT}`}}/ s3://tyk-dashboard-assets-ci/tags/{{`${TAG_NAME}`}}/
           echo "Assets copied successfully for tag {{`${TAG_NAME}`}}"
 {{- end }}
 
