@@ -102,6 +102,14 @@
           registry: docker.tyk.io
           username: {{`${{ secrets.CLOUDSMITH_USERNAME }}`}}
           password: {{`${{ secrets.CLOUDSMITH_API_KEY }}`}}
+    
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: cipush
+          aws-region: eu-central-1
+          # Don't mask to pass it across job boundaries
+          mask-aws-account-id: false
 
       - uses: WarpBuilds/cache@v1
         with:
@@ -185,14 +193,6 @@
           fi
           echo "dist_ready=true" >> $GITHUB_OUTPUT
 {{- end }}
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
-          role-session-name: cipush
-          aws-region: eu-central-1
-          # Don't mask to pass it across job boundaries
-          mask-aws-account-id: false
 
       - uses: aws-actions/amazon-ecr-login@v2
         id: ecr
