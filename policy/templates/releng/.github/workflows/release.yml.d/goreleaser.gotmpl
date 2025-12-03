@@ -111,6 +111,12 @@
           # Don't mask to pass it across job boundaries
           mask-aws-account-id: false
 
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
+        with:
+          mask-password: 'true'
+
       - uses: WarpBuilds/cache@v1
         with:
           path: |
@@ -193,12 +199,6 @@
           fi
           echo "dist_ready=true" >> $GITHUB_OUTPUT
 {{- end }}
-
-      - uses: aws-actions/amazon-ecr-login@v2
-        id: ecr
-        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
-        with:
-          mask-password: 'true'
 
 {{- range $b, $bv := $r.GetDockerBuilds }}
       - name: Docker metadata for {{ $b }} CI

@@ -1,3 +1,4 @@
+s|\(uses: WarpBuilds/cache\)@v.|\1@v2|g
 s|\(uses: actions/checkout\)@v.|\1@v4|g
 s|\(uses: actions/download-artifact\)@v.|\1@v4|g
 s|\(uses: actions/setup-node\)@v.*|\1@v4|g
