@@ -1,4 +1,3 @@
-s|\(uses: actions/cache\)@v.|\1@v4|g
 s|\(uses: actions/checkout\)@v.|\1@v4|g
 s|\(uses: actions/download-artifact\)@v.|\1@v4|g
 s|\(uses: actions/setup-node\)@v.*|\1@v4|g

@@ -5,7 +5,7 @@
 {{- end }}
     if: github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
-    runs-on: warp-ubuntu-latest-x64-2x
+    runs-on: warp-ubuntu-latest-x64-4x
     permissions:
       id-token: write   # AWS OIDC JWT
       contents: read    # actions/checkout
@@ -103,7 +103,7 @@
           username: {{`${{ secrets.CLOUDSMITH_USERNAME }}`}}
           password: {{`${{ secrets.CLOUDSMITH_API_KEY }}`}}
 
-      - uses: actions/cache@v4
+      - uses: WarpBuilds/cache@v1
         with:
           path: |
             ~/.cache/go-build

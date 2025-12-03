@@ -3,7 +3,7 @@
     if: github.event.pull_request.draft == false
     needs:
       - goreleaser
-    runs-on: warp-ubuntu-latest-x64-2x
+    runs-on: warp-ubuntu-latest-x64-4x
     outputs:
       deb: {{`${{ steps.params.outputs.deb }}`}}
       rpm: {{`${{ steps.params.outputs.rpm }}`}}
@@ -40,7 +40,7 @@
     services:
       httpbin.org:
         image: kennethreitz/httpbin
-    runs-on: warp-ubuntu-latest-x64-2x
+    runs-on: warp-ubuntu-latest-x64-4x
     needs:
       - test-controller-distros
     strategy:

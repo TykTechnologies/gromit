@@ -12,7 +12,7 @@ on:
 
 jobs:
   goreleaser:
-    runs-on: warp-ubuntu-latest-x64-2x
+    runs-on: warp-ubuntu-latest-x64-4x
     permissions:
       id-token: write
 
@@ -56,7 +56,7 @@ jobs:
 
   doctor:
     needs: goreleaser
-    runs-on: warp-ubuntu-latest-x64-2x
+    runs-on: warp-ubuntu-latest-x64-4x
     strategy:
       fail-fast: false
       matrix:
