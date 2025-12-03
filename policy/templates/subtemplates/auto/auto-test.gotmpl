@@ -5,7 +5,7 @@
     needs:
       - goreleaser
   {{- end }}
-    runs-on: warp-ubuntu-latest-x64-4x
+    runs-on: ${{ vars.DEFAULT_RUNNER }}
     outputs:
       envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
       pump: {{`${{ steps.params.outputs.pump }}`}}
@@ -38,7 +38,7 @@
       needs.resolve-dashboard-image.result == 'success' &&
       (needs.build-dashboard-image.result == 'success' || needs.build-dashboard-image.result == 'skipped')
     {{- end }}
-    runs-on: warp-ubuntu-latest-x64-4x
+    runs-on: ${{ vars.DEFAULT_RUNNER }}
     env:
       XUNIT_REPORT_PATH: {{`${{ github.workspace}}`}}/test-results.xml
 {{- if eq .dot.Name "tyk-pro" }}

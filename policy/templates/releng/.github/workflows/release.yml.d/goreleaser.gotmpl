@@ -5,7 +5,7 @@
 {{- end }}
     if: github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
-    runs-on: warp-ubuntu-latest-x64-4x
+    runs-on: ${{ vars.DEFAULT_RUNNER }}
     permissions:
       id-token: write   # AWS OIDC JWT
       contents: read    # actions/checkout
