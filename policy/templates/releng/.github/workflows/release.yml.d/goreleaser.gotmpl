@@ -5,7 +5,7 @@
 {{- end }}
     if: github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
-    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     permissions:
       id-token: write   # AWS OIDC JWT
       contents: read    # actions/checkout

@@ -1,7 +1,7 @@
 {{ define "ai-studio-frontend-build" }}
   ai-studio-frontend-build:
     if: github.event.pull_request.draft == false
-    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     outputs:
       frontend_built: {{`${{ steps.build.outputs.frontend_built }}`}}
     steps:

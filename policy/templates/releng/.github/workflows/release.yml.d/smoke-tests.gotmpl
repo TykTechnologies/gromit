@@ -3,7 +3,7 @@
     if: github.event.pull_request.draft == false
     needs:
       - goreleaser
-    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     outputs:
       deb: {{`${{ steps.params.outputs.deb }}`}}
       rpm: {{`${{ steps.params.outputs.rpm }}`}}
@@ -40,7 +40,7 @@
     services:
       httpbin.org:
         image: kennethreitz/httpbin
-    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     needs:
       - test-controller-distros
     strategy:

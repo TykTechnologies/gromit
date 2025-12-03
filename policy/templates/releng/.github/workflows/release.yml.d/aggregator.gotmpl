@@ -1,7 +1,7 @@
 {{ define "aggregator" }}
   aggregator-ci-test:
     name: Aggregated CI Status
-    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     # Dynamically determine which jobs to depend on based on repository configuration
     needs: [
           {{- /* Include goreleaser if the repo has the releng feature */ -}}
