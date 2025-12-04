@@ -75,24 +75,15 @@
           # Read the vendored commit SHA
           ASSETS_COMMIT=$(cat .assets_vendor | head -n 1 | tr -d '\n')
 
-          echo "Fetching assets for commit ${ASSETS_COMMIT} from s3://tyk-dashboard-assets-ci/commits/"
-          mkdir -p webclient/dist
-          aws s3 sync s3://tyk-dashboard-assets-ci/commits/${ASSETS_COMMIT}/ webclient/dist/
+          echo "Fetching UI assets for commit: ${ASSETS_COMMIT}"
+          aws s3 sync s3://tyk-dashboard-assets-ci/commits/${ASSETS_COMMIT}/ internal/uiassets/dist/
 
-          if [ ! -f webclient/dist/_index.html ]; then
-            echo "❌ Assets not found in S3"
-            echo ""
-            echo "Expected location: s3://tyk-dashboard-assets-ci/commits/${ASSETS_COMMIT}/"
-            echo ""
-            echo "Make sure the assets are built and uploaded to S3 from the build-assets workflow:"
-            echo "  .github/workflows/build-assets.yml"
-            echo ""
-            echo "The build-assets workflow should have been triggered when the webclient submodule was updated."
-            echo "Check if the workflow ran successfully and uploaded assets for commit ${ASSETS_COMMIT}"
+          if [ ! -f internal/uiassets/dist/_index.html ]; then
+            echo "❌ Failed to fetch assets: _index.html not found"
             exit 1
           fi
 
-          echo "✓ Assets fetched successfully from S3"
+          echo "✓ Assets fetched successfully to internal/uiassets/dist/"
 {{- end }}
 
 {{- if has "ai-studio-frontend-build" .Branchvals.Features }}
