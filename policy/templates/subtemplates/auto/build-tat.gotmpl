@@ -1,6 +1,6 @@
 {{ define "build-tat" }}
   build-tat:
-    runs-on: ubuntu-latest
+    runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     outputs:
       tags: {{`${{ steps.metadata.outputs.tags }}`}}
     steps:

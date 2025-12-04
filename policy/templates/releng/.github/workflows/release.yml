@@ -68,7 +68,7 @@ jobs:
       ORG_GH_TOKEN: ${{`{{ secrets.ORG_GH_TOKEN }}`}}
 {{- if eq .Name "tyk-analytics" }}
   report_logs:
-    runs-on: ubuntu-latest
+    runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     needs: [test-controller-ui, test-controller-api, test-controller-distros, upgrade-deb, upgrade-rpm, release-tests]
     if: always()
     name: Report GH Logs on Failure

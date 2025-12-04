@@ -5,7 +5,7 @@
 {{- end }}
     if: github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
-    runs-on: ubuntu-latest-m
+    runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     permissions:
       id-token: write   # AWS OIDC JWT
       contents: read    # actions/checkout
@@ -136,8 +136,22 @@
           registry: docker.tyk.io
           username: {{`${{ secrets.CLOUDSMITH_USERNAME }}`}}
           password: {{`${{ secrets.CLOUDSMITH_API_KEY }}`}}
+    
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: cipush
+          aws-region: eu-central-1
+          # Don't mask to pass it across job boundaries
+          mask-aws-account-id: false
 
-      - uses: actions/cache@v4
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
+        with:
+          mask-password: 'true'
+
+      - uses: WarpBuilds/cache@v1
         with:
           path: |
             ~/.cache/go-build
@@ -236,20 +250,6 @@
           fi
           echo "dist_ready=true" >> $GITHUB_OUTPUT
 {{- end }}
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
-          role-session-name: cipush
-          aws-region: eu-central-1
-          # Don't mask to pass it across job boundaries
-          mask-aws-account-id: false
-
-      - uses: aws-actions/amazon-ecr-login@v2
-        id: ecr
-        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
-        with:
-          mask-password: 'true'
 
 {{- range $b, $bv := $r.GetDockerBuilds }}
       - name: Docker metadata for {{ $b }} CI
