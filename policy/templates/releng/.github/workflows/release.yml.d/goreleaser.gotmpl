@@ -62,15 +62,12 @@
   {{- end }}
 
 {{- if eq .Name "tyk-analytics" }}
-
-      - name: Configure AWS credentials for asset fetch
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: {{`${{ secrets.AWS_BINDATA_ACCESS_KEY_ID }}`}}
-          aws-secret-access-key: {{`${{ secrets.AWS_BINDATA_SECRET_ACCESS_KEY }}`}}
-          aws-region: eu-central-1
-
       - name: Fetch pre-built UI assets from S3
+        env:
+          AWS_ACCESS_KEY_ID: {{`${{ secrets.AWS_BINDATA_ACCESS_KEY_ID }}`}}
+          AWS_SECRET_ACCESS_KEY: {{`${{ secrets.AWS_BINDATA_SECRET_ACCESS_KEY }}`}}
+          AWS_REGION: eu-central-1
+          AWS_SESSION_TOKEN: ""
         run: |
           # Read the vendored commit SHA
           ASSETS_COMMIT=$(cat .assets_vendor | head -n 1 | tr -d '\n')
@@ -206,6 +203,11 @@
 
       - name: Copy assets to S3 for tags
         if: startsWith(github.ref, 'refs/tags/')
+        env:
+          AWS_ACCESS_KEY_ID: {{`${{ secrets.AWS_BINDATA_ACCESS_KEY_ID }}`}}
+          AWS_SECRET_ACCESS_KEY: {{`${{ secrets.AWS_BINDATA_SECRET_ACCESS_KEY }}`}}
+          AWS_REGION: eu-central-1
+          AWS_SESSION_TOKEN: ""
         run: |
           # Extract tag name (e.g., v5.8.0 from refs/tags/v5.8.0)
           TAG_NAME={{`${GITHUB_REF#refs/tags/}`}}
