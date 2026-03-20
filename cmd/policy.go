@@ -246,18 +246,13 @@ var matchSubCmd = &cobra.Command{
 	},
 }
 
-var serveSubCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Start the test controller backend",
-	Long: `The test controller backend stores the test that are to be run for a specific combination of,
-- trigger
-- repo
-- branch.
-This an laternate implementation to the controller which does not embed a server.`,
+var generateTuiCmd = &cobra.Command{
+	Use:   "generate-tui",
+	Short: "Generate static TUI files",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		tvDir, _ := cmd.Flags().GetString("save")
-		port, _ := cmd.Flags().GetString("port")
-		return policy.Serve(port, tvDir)
+		configDir, _ := cmd.Flags().GetString("config-dir")
+		outDir, _ := cmd.Flags().GetString("out-dir")
+		return policy.GenerateStatic(configDir, outDir)
 	},
 }
 
@@ -273,8 +268,8 @@ func init() {
 
 	genSubCmd.Flags().String("repo", "", "Repository name to use from config file")
 
-	serveSubCmd.Flags().String("port", ":3000", "Port that the backend will bind to")
-	serveSubCmd.Flags().String("save", "testdata/tui", "Test variations are loaded from and saved to this directory")
+	generateTuiCmd.Flags().String("config-dir", "config/tui", "Directory containing TUI configuration files")
+	generateTuiCmd.Flags().String("out-dir", "public", "Output directory for static files")
 
 	matchSubCmd.Flags().String("config", "$HOME/.docker/config.json", "Config file to read authentication token from")
 	matchSubCmd.Flags().String("repos", "tyk-ee,tyk-analytics,tyk-pump,tyk-sink", "Config file to read authentication token from")
@@ -284,7 +279,7 @@ func init() {
 	policyCmd.AddCommand(controllerSubCmd)
 	policyCmd.AddCommand(diffSubCmd)
 	policyCmd.AddCommand(genSubCmd)
-	policyCmd.AddCommand(serveSubCmd)
+	policyCmd.AddCommand(generateTuiCmd)
 
 	policyCmd.PersistentFlags().StringVar(&polBranch, "branch", "", "Restrict operations to this branch, if not set all branches defined int he config will be processed.")
 	policyCmd.PersistentFlags().Bool("auto", true, "Will automerge if all requirements are meet")

@@ -1,0 +1,248 @@
+envfiles:
+  - cache: "redis7"
+    config: "sha256"
+    db: "mongo7"
+    apimarkers: "not local and not dind and not nightly"
+    gwdash: master
+distros:
+  rpm:
+    - "amazonlinux:2"
+    - "registry.access.redhat.com/ubi8/ubi"
+    - "amazonlinux:2023"
+    - "registry.access.redhat.com/ubi9/ubi"
+  deb:
+    - "ubuntu:xenial"
+    - "debian:bullseye"
+    - "ubuntu:bionic"
+    - "ubuntu:focal"
+    - "ubuntu:jammy"
+    - "debian:bookworm"
+pump:
+  - "$ECR/tyk-pump:master"
+sink:
+  - "$ECR/tyk-sink:master"
+level: # testsuites
+  api:
+    envfiles:
+      - cache: "redis6"
+        config: "murmur128"
+        db: "postgres15"
+        apimarkers: "not local and not dind and not sql and not nightly"
+        gwdash: master
+    level: # branches
+      master:
+        level: # trigger
+          schedule:
+            level: # repo
+              tyk-analytics:
+                envfiles:
+                  - cache: "valkey8"
+                    config: "sha256"
+                    db: "postgres15"
+                    apimarkers: "not local and not dind and not sql"
+                    gwdash: master
+                  - cache: "valkey8"
+                    config: "murmur128"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    gwdash: master
+                  - cache: "redis7"
+                    config: "murmur128"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    gwdash: release-5.12.0
+                    sink: "$ECR/tyk-sink:release-2.8"
+                  - cache: "redis7"
+                    config: "murmur128"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    gwdash: release-5.8
+                    sink: "$ECR/tyk-sink:release-2.8.6"
+              tyk:
+          workflow_dispatch:
+            level: # repo
+              tyk-analytics:
+                envfiles:
+                  - cache: "valkey8"
+                    config: "sha256"
+                    db: "postgres15"
+                    apimarkers: "not local and not dind and not sql"
+                    gwdash: master
+                  - cache: "valkey8"
+                    config: "murmur128"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    gwdash: master
+          pull_request:
+            level: # repo
+              tyk:
+              tyk-analytics:
+              tyk-pump:
+              tyk-sink:
+              tyk-pro:
+                envfiles:
+                  - cache: "valkey8"
+                    config: "sha256"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                  - cache: "redis7"
+                    config: "murmur128"
+                    db: "postgres15"
+                    apimarkers: "not local and not dind and not sql"
+          push:
+            pump:
+                - "tykio/tyk-pump-docker-pub:v1.14"
+            level: # repos
+              tyk:
+              tyk-analytics:
+              tyk-pump:
+              tyk-sink:
+              tyk-pro:
+      release-5.3:   
+        pump:
+          - "tykio/tyk-pump-docker-pub:v1.14"
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+          push:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+      release-5.6:   
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+      release-5.12.0:   
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+                envfiles:
+                  - cache: "valkey8"
+                    config: "murmur128"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    sink: "$ECR/tyk-sink:master"
+      release-5.13:   
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+                envfiles:
+                  - cache: "valkey8"
+                    config: "murmur128"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    sink: "$ECR/tyk-sink:master"
+      release-6.0:   
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+                envfiles:
+                  - cache: "valkey8"
+                    config: "murmur128"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    sink: "$ECR/tyk-sink:master"
+          push:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+      release-5-lts:
+        pump:
+          - "tykio/tyk-pump-docker-pub:v1.14"
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+          push:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+  ui:
+    level: # branches
+      master:
+        level: # trigger
+          schedule:
+            level: # repo
+              tyk-analytics:
+                envfiles:
+                  - cache: "valkey8"
+                    config: "sha256"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    gwdash: master
+                  - cache: "redis7"
+                    config: "murmur128"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    gwdash: release-5.12.0
+                  - cache: "redis7"
+                    config: "murmur128"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    gwdash: release-5.8
+          workflow_dispatch:
+            level: # repo
+              tyk-analytics:
+                envfiles:
+                  - cache: "valkey8"
+                    config: "sha256"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+          pull_request:
+            level: # repo
+              tyk-analytics:
+              tyk-pro:
+                envfiles:
+                  - cache: "redis7"
+                    config: "sha256"
+                    db: "mongo7"
+                    apimarkers: "not local and not dind"
+                  - cache: "redis7"
+                    config: "murmur128"
+                    db: "postgres15"
+                    apimarkers: "not local and not dind and not sql"
+          push:
+            pump:
+                - "tykio/tyk-pump-docker-pub:v1.14"
+            level: # repos
+              tyk-analytics:
+              tyk-pro:
+      release-5.3:  
+        pump:
+          - "tykio/tyk-pump-docker-pub:v1.14"
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-analytics:
+          push:
+            level: # testsuite
+              tyk-analytics:
+      release-5.6:    
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-analytics:
+          push:
+            level: # testsuite
+              tyk-analytics:
+      release-5-lts:
+        pump:
+          - "tykio/tyk-pump-docker-pub:v1.14"
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-analytics:
+          push:
+            level: # testsuite
+              tyk-analytics:
