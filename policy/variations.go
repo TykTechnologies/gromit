@@ -157,7 +157,7 @@ func loadAllVariations(tvDir string) (AllTestsuiteVariations, error) {
 		pathName := filepath.Join(tvDir, fname)
 		tv, err := loadVariation(pathName)
 		if err != nil {
-			log.Warn().Err(err).Msgf("could not load test variation from %s", pathName)
+			return nil, fmt.Errorf("could not load test variation from %s: %w", pathName, err)
 		}
 		av[fname] = *tv
 		numVariations++
