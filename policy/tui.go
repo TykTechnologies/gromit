@@ -117,6 +117,9 @@ func writeGHO(path string, obj any) error {
 		fieldValue := val.Field(i)
 
 		fieldName := field.Tag.Get("json")
+		if fieldName == "" || fieldName == "-" {
+			continue
+		}
 		fjson, err := json.Marshal(fieldValue.Interface())
 		if err != nil {
 			return err
