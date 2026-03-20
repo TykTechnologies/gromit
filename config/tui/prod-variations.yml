@@ -50,7 +50,7 @@ level: # testsuites
                     config: "murmur128"
                     db: "mongo8"
                     apimarkers: "not local and not dind"
-                    gwdash: release-5.12.0
+                    gwdash: release-5.12
                     sink: "$ECR/tyk-sink:release-2.8"
                   - cache: "redis7"
                     config: "murmur128"
@@ -116,7 +116,7 @@ level: # testsuites
             level: # testsuite
               tyk:
               tyk-analytics:
-      release-5.12.0:   
+      release-5.12:   
         level: # trigger
           pull_request:
             level: # testsuite
@@ -185,7 +185,7 @@ level: # testsuites
                     config: "murmur128"
                     db: "mongo8"
                     apimarkers: "not local and not dind"
-                    gwdash: release-5.12.0
+                    gwdash: release-5.12
                   - cache: "redis7"
                     config: "murmur128"
                     db: "mongo8"
