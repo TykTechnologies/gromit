@@ -57,17 +57,22 @@ func GenerateStatic(configDir, outDir string) error {
 				if jsonTag == "" || jsonTag == "-" {
 					continue
 				}
-				if isEmpty(fieldValue) {
-					continue
-				}
 				fieldJSONPath := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, jsonTag+".json")
 				if err := writeJSON(fieldJSONPath, fieldValue.Interface()); err != nil {
+					return err
+				}
+				fieldJSONPathStruct := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, field.Name+".json")
+				if err := writeJSON(fieldJSONPathStruct, fieldValue.Interface()); err != nil {
 					return err
 				}
 
 				// Generate v2/{tsv}/{repo}/{branch}/{trigger}/{ts}/{field}.gho
 				fieldGHOPath := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, jsonTag+".gho")
 				if err := writeFieldGHO(fieldGHOPath, jsonTag, fieldValue.Interface()); err != nil {
+					return err
+				}
+				fieldGHOPathStruct := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, field.Name+".gho")
+				if err := writeFieldGHO(fieldGHOPathStruct, jsonTag, fieldValue.Interface()); err != nil {
 					return err
 				}
 
@@ -112,12 +117,6 @@ func writeGHO(path string, obj any) error {
 		fieldValue := val.Field(i)
 
 		fieldName := field.Tag.Get("json")
-		if fieldName == "" || fieldName == "-" {
-			continue
-		}
-		if isEmpty(fieldValue) {
-			continue
-		}
 		fjson, err := json.Marshal(fieldValue.Interface())
 		if err != nil {
 			return err
@@ -149,9 +148,6 @@ func writeFieldGHO(path string, fieldName string, obj any) error {
 			if fn == "" || fn == "-" {
 				continue
 			}
-			if isEmpty(fv) {
-				continue
-			}
 			fj, err := json.Marshal(fv.Interface())
 			if err != nil {
 				return err
@@ -167,25 +163,4 @@ func writeFieldGHO(path string, fieldName string, obj any) error {
 	}
 
 	return os.WriteFile(path, buf.Bytes(), 0644)
-}
-
-func isEmpty(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Slice, reflect.Map, reflect.String, reflect.Array:
-		return v.Len() == 0
-	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
-			if !isEmpty(v.Field(i)) {
-				return false
-			}
-		}
-		return true
-	case reflect.Ptr, reflect.Interface:
-		if v.IsNil() {
-			return true
-		}
-		return isEmpty(v.Elem())
-	default:
-		return v.IsZero()
-	}
 }
