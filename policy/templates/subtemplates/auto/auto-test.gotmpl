@@ -5,7 +5,11 @@
     needs:
       - goreleaser
   {{- end }}
+  {{- if eq .flow "nightly" }}
+    runs-on: ubuntu-latest
+  {{- else }}
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
+  {{- end }}
     outputs:
       envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
       pump: {{`${{ steps.params.outputs.pump }}`}}
@@ -38,7 +42,11 @@
       needs.resolve-dashboard-image.result == 'success' &&
       (needs.build-dashboard-image.result == 'success' || needs.build-dashboard-image.result == 'skipped')
     {{- end }}
+  {{- if eq .flow "nightly" }}
+    runs-on: ubuntu-latest-m-2
+  {{- else }}
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
+  {{- end }}
     env:
       XUNIT_REPORT_PATH: {{`${{ github.workspace}}`}}/test-results.xml
 {{- if eq .dot.Name "tyk-pro" }}
