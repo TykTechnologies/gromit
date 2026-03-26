@@ -274,7 +274,6 @@
           file: ci/Dockerfile.std
           {{ end }}
           provenance: mode=max
-          sbom: true
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -315,7 +314,6 @@
           file: ci/Dockerfile.std
           {{- end }}
           provenance: mode=max
-          sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: {{`${{ startsWith(github.ref, 'refs/tags') }}`}}
