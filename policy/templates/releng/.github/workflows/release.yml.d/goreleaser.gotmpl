@@ -45,8 +45,14 @@
   {{- end }} {{/* el7-pgo-build */}}
     outputs:
 {{ $r := . }}
+{{- if not (has "decoupled-docker" $r.Branchvals.Features) }}
 {{- range $b, $bv := $r.GetDockerBuilds }}
       {{ $b }}_tags: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.tags }}`}}
+{{- end }}
+{{- else }}
+{{- range $b, $bv := $r.GetDockerBuilds }}
+      {{ $b }}_tags: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.tags }}`}}
+{{- end }}
 {{- end }}
       commit_author: {{`${{ steps.set_outputs.outputs.commit_author}}`}}
 
@@ -60,6 +66,15 @@
           token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
           submodules: true
   {{- end }}
+
+{{- if has "langchaingo-checkout" .Branchvals.Features }}
+      - name: Checkout langchaingo repository
+        uses: actions/checkout@v4
+        with:
+          repository: lonelycode/langchaingo
+          path: langchaingo
+          fetch-depth: 2
+{{- end }}
 
 {{- if eq .Name "tyk-analytics" }}
       - name: Fetch pre-built UI assets from S3
@@ -117,6 +132,7 @@
           username: {{`${{ secrets.DOCKER_USERNAME }}`}}
           password: {{`${{ secrets.DOCKER_PASSWORD }}`}}
 
+{{- if not (has "decoupled-docker" .Branchvals.Features) }}
       - name: Login to Cloudsmith
         if: startsWith(github.ref, 'refs/tags')
         uses: docker/login-action@v3
@@ -124,7 +140,7 @@
           registry: docker.tyk.io
           username: {{`${{ secrets.CLOUDSMITH_USERNAME }}`}}
           password: {{`${{ secrets.CLOUDSMITH_API_KEY }}`}}
-    
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
@@ -138,6 +154,7 @@
         if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
         with:
           mask-password: 'true'
+{{- end }}
 
       - uses: WarpBuilds/cache@v1
         with:
@@ -245,6 +262,7 @@
 {{- end }}
 
 {{- range $b, $bv := $r.GetDockerBuilds }}
+{{- if not (has "decoupled-docker" $r.Branchvals.Features) }}
       - name: Docker metadata for {{ $b }} CI
         id: ci_metadata_{{ $b }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
@@ -282,15 +300,22 @@
           labels: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.labels }}`}}
           build-args: |
             BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
+{{- end }} {{/* decoupled-docker */}}
 
       - name: Docker metadata for {{ $b }} tag push
         id: tag_metadata_{{ $b }}
         uses: docker/metadata-action@v5
         with:
           images: |
+          {{- if has "decoupled-docker" $r.Branchvals.Features }}
+          {{- range $image :=  $bv.GetImages "DHRepo" }}
+            {{ $image }}
+          {{- end}}
+          {{- else }}
           {{- range $image :=  $bv.GetImages "DHRepo" "CSRepo" }}
             {{ $image }}
           {{- end}}
+          {{- end }}
           flavor: |
             latest=false
             prefix=v

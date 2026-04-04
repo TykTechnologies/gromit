@@ -372,6 +372,9 @@ policy:
             - releng
             - ai-studio-frontend-build
             - default-distros
+            - decoupled-docker
+            - distroless
+            - langchaingo-checkout
           builds:
             microgateway:
               dir: microgateway
