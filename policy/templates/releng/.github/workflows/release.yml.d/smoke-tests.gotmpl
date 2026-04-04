@@ -73,7 +73,7 @@
           COPY {{ $pcname }}*_${TARGETARCH}.deb /{{ $pcname }}.deb
           RUN apt-get update && apt-get install -y curl
           # TODO(security): curl|bash - consider fetching script and verifying checksum before execution
-          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $uprepo }}/script.deb.sh | bash || echo "Repository setup failed, but continuing"
+          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $uprepo }}/script.deb.sh | bash || echo "Repository setup failed, but continuing" # SECURITY: accepted risk, see TODO above
           RUN apt-get install -y {{ $pcname }}={{ $fromVer }} || echo "Previous version not found, testing fresh install"
           RUN dpkg -i /{{ $pcname }}.deb
 {{ else if eq $distro "rpm" }}
@@ -82,7 +82,7 @@
           RUN command -v curl || yum install -y curl
           RUN command -v useradd || yum install -y shadow-utils
           # TODO(security): curl|bash - consider fetching script and verifying checksum before execution
-          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $uprepo }}/script.rpm.sh | bash || echo "Repository setup failed, but continuing"
+          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/{{ $uprepo }}/script.rpm.sh | bash || echo "Repository setup failed, but continuing" # SECURITY: accepted risk, see TODO above
           RUN yum install -y {{ $pcname }}-{{ $fromVer }}-1 || echo "Previous version not found, testing fresh install"
           RUN curl https://keyserver.tyk.io/tyk.io.rpm.signing.key.2020 -o {{ $uprepo }}.key && rpm --import {{ $uprepo }}.key
           RUN rpm --checksig /{{ $pcname }}.rpm
