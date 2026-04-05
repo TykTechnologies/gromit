@@ -12,7 +12,7 @@
       sink: {{`${{ steps.params.outputs.sink }}`}}
     steps:
       - name: Set test parameters
-        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@main
+        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@42304edda365365e0a887cf018d8edc34b960b82  # main
         id: params
         with:
           variation: {{`${{ env.VARIATION }}`}}
@@ -65,17 +65,17 @@
             sink: tykio/tyk-mdcb-docker:v2.4
         {{- end }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c  # v4
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
           role-session-name: cipush
           aws-region: eu-central-1
       - id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@f2e9fc6c2b355c1890b65e6f6f0e2ac3e6e22f78  # v2
         with:
           mask-password: 'true'
       - name: Setup tmate session only in debug mode
-        uses: mxschmitt/action-tmate@v3
+        uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101  # v3
         if: runner.debug == '1'
         with:
           detached: true
@@ -83,18 +83,18 @@
           # Only {{`${{ github.actor }}`}} has access
           # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
 {{- if eq .dot.Name "tyk-pro" }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           path: auto
           fetch-depth: 1
 {{- else }}
       - name: Fetch environment from tyk-pro
-        uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@main
+        uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@42304edda365365e0a887cf018d8edc34b960b82  # main
         with:
           org_gh_token: {{`${{ github.token }}`}}
 {{- end }}
       - name: Set up test environment
-        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@main
+        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@42304edda365365e0a887cf018d8edc34b960b82  # main
         timeout-minutes: 5
         id: env_up
         with:
@@ -108,7 +108,7 @@
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
 
       - name: Choose test code branch
-        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@main
+        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@42304edda365365e0a887cf018d8edc34b960b82  # main
         with:
           test_folder: {{ .test }}
           org_gh_token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
@@ -118,7 +118,7 @@
           
       {{ if eq .test "api" }}
       - name: Run API tests
-        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@main
+        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@42304edda365365e0a887cf018d8edc34b960b82  # main
         timeout-minutes: 30
         id: test_execution
         with:
@@ -131,11 +131,11 @@
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
       - name: Execute UI tests
         timeout-minutes: 30
-        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests@main
+        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests@42304edda365365e0a887cf018d8edc34b960b82  # main
         id: test_execution
 
       - name: Upload UI test report to S3
-        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests-report@main
+        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests-report@42304edda365365e0a887cf018d8edc34b960b82  # main
         if: failure() && steps.test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
         with:
           aws_acces_key_id: {{`${{ secrets.UI_AWS_ACCESS_KEY_ID }}`}}
@@ -143,7 +143,7 @@
       {{- end }} {{/* end of if .test */}}
 
       - name: Generate test reports and collect logs
-        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@main
+        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@42304edda365365e0a887cf018d8edc34b960b82  # main
         if: always() && (steps.test_execution.conclusion != 'skipped')
         with:
           report_xml: 'true'

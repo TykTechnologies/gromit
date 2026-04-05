@@ -11,31 +11,37 @@ on:
       - master
 
 jobs:
+  dep-guard:
+    if: github.event_name == 'pull_request'
+    uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@42304edda365365e0a887cf018d8edc34b960b82  # main
+
   goreleaser:
+    needs: [dep-guard]
+    if: always() && (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped')
     runs-on: ${{ vars.DEFAULT_RUNNER }}
     permissions:
       id-token: write
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff  # v5
         with:
           go-version: "1.22"
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
       - run: make test
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a  # v6
         with:
           version: "~> v2"
           args: release --clean ${{ !startsWith(github.ref, 'refs/tags/') && '--snapshot' || '' }}
@@ -48,7 +54,7 @@ jobs:
           path=$(jq -rc '.[] | select((.type=="Binary") and (.goos=="linux") and .goarch=="amd64") | .path' dist/artifacts.json)
           echo "path=${path}" >> $GITHUB_OUTPUT
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: binary-amd64
           path: ${{ steps.binary.outputs.path }}
@@ -75,7 +81,7 @@ jobs:
 
     steps:
       - name: checkout ${{matrix.repo}}/${{matrix.branch}}
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           repository: ${{ matrix.owner }}/${{ matrix.repo }}
           ref: ${{ matrix.branch }}
@@ -83,7 +89,7 @@ jobs:
           path: ${{ matrix.repo }}
           fetch-depth: 1
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         id: download
         with:
           name: binary-amd64
