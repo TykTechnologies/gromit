@@ -41,18 +41,18 @@ jobs:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c  # v4
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
           role-session-name: cipush
           aws-region: eu-central-1
       - id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@f2e9fc6c2b355c1890b65e6f6f0e2ac3e6e22f78  # v2
         with:
           mask-password: 'true'
       - name: Run Trivy vulnerability scanner for dashboard
         id: trivy_dashboard
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # master
         with:
           image-ref: "754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-analytics:{{`${{ github.event.inputs.dashboard_image_tag || 'master' }}`}}"
           format: 'table'
@@ -65,7 +65,7 @@ jobs:
       - name: Run Trivy vulnerability scanner for gateway
         if: always()
         id: trivy_gateway
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # master
         with:
           image-ref: "754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-ee:{{`${{ github.event.inputs.gateway_image_tag || 'master' }}`}}"
           format: 'table'
@@ -78,7 +78,7 @@ jobs:
       - name: Run Trivy vulnerability scanner for MDCB
         if: always()
         id: trivy_mdcb
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # master
         with:
           image-ref: "754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-sink:{{`${{ github.event.inputs.mdcb_image_tag || 'master' }}`}}"
           format: 'table'
@@ -90,7 +90,7 @@ jobs:
           skip-update: false
       - name: Send Slack notification
         if: failure() && (steps.trivy_dashboard.outcome != 'success' || steps.trivy_gateway.outcome != 'success' || steps.trivy_mdcb.outcome != 'success')
-        uses: slackapi/slack-github-action@v1.25.0
+        uses: slackapi/slack-github-action@6c661ce58804a1a20f6dc5fbee7f0381b469e001  # v1.25.0
         with:
           channel-id: '#team-ext-engineering-pr-notifications'
           slack-message: |
@@ -118,7 +118,7 @@ jobs:
       contents: read
     steps:
       - name: Upload failed job logs
-        uses: TykTechnologies/github-actions/.github/actions/gh-logs-analyser@main
+        uses: TykTechnologies/github-actions/.github/actions/gh-logs-analyser@42304edda365365e0a887cf018d8edc34b960b82  # main
         with:
           github_token: ${{`{{ secrets.GITHUB_TOKEN }}`}}
           gh_logs_analyser_token: ${{`{{ secrets.GH_LOGS_ANALYSER }}`}}

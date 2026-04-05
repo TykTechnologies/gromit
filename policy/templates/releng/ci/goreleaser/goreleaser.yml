@@ -25,7 +25,7 @@ before:
       which npm || echo "npm not found" && \
       echo "PATH=$PATH" && \
       cd ui/admin-frontend && \
-      npm ci && \
+      npm install --ignore-scripts && \
       npm run build
 {{- end}}
 {{- end}}
