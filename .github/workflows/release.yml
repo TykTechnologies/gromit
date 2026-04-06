@@ -13,7 +13,7 @@ on:
 jobs:
   dep-guard:
     if: github.event_name == 'pull_request'
-    uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@42304edda365365e0a887cf018d8edc34b960b82  # main
+    uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@f867e501af8d103dd4b2a43a53f15c72d7de180f  # main
 
   goreleaser:
     needs: [dep-guard]
