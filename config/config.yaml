@@ -121,6 +121,7 @@ policy:
                   deb: s390x
                   docker: linux/s390x
             fips:
+              feature: fips
               flags:
                 - -tags=goplugin,ee,fips,boringcrypto
                 - -trimpath
@@ -179,26 +180,31 @@ policy:
               features:
                 - release-test
                 - distroless
+                - fips
             release-5.8:
               buildenv: 1.24-bullseye
               features:
                 - release-test
                 - distroless
+                - fips
             release-5.10:
               buildenv: 1.24-bullseye
               features:
                 - release-test
                 - distroless
+                - fips
             release-5.11:
               buildenv: 1.24-bullseye
               features:
                 - release-test
                 - distroless
+                - fips
             release-5.12:
               buildenv: 1.24-bullseye
               features:
                 - release-test
                 - distroless
+                - fips
 
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
@@ -240,6 +246,7 @@ policy:
                   deb: s390x
                   docker: linux/s390x
             fips:
+              feature: fips
               flags:
                 - -tags=fips,boringcrypto
               description: >-
@@ -272,6 +279,7 @@ policy:
                 - nightly-e2e
                 - distroless
                 - release-test
+                - fips
             release-5.8:
               buildenv: 1.24-bullseye
               cgo: false
@@ -279,6 +287,7 @@ policy:
                 - nightly-e2e
                 - distroless
                 - release-test
+                - fips
             release-5.10:
               buildenv: 1.24-bullseye
               cgo: false
@@ -286,6 +295,7 @@ policy:
                 - nightly-e2e
                 - distroless
                 - release-test
+                - fips
             release-5.11:
               buildenv: 1.24-bullseye
               cgo: false
@@ -293,6 +303,7 @@ policy:
                 - nightly-e2e
                 - distroless
                 - release-test
+                - fips
             release-5.12:
               buildenv: 1.24-bullseye
               cgo: false
@@ -300,6 +311,7 @@ policy:
                 - nightly-e2e
                 - distroless
                 - release-test
+                - fips
 
         portal:
           exposeports: 80
@@ -433,6 +445,7 @@ policy:
                   docker: linux/s390x
                   skipdocker: true
             fips:
+              feature: fips
               flags:
                 - -tags=fips,boringcrypto
               buildpackagename: tyk-pump-fips
@@ -459,7 +472,8 @@ policy:
                 - GOEXPERIMENT=boringcrypto
           branches:
             master:
-            
+              features:
+                - fips
 
         tyk-identity-broker:
           exposeports: 80
@@ -524,6 +538,7 @@ policy:
                   deb: s390x
                   docker: linux/s390x
             fips:
+              feature: fips
               flags:
                 - -tags=fips,boringcrypto
               buildpackagename: tyk-sink-fips
@@ -550,6 +565,8 @@ policy:
                 - GOEXPERIMENT=boringcrypto
           branches:
             master:
+              features:
+                - fips
 
         midsommar:
           buildenv: 1.22-bullseye
