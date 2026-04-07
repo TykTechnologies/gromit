@@ -316,6 +316,31 @@ policy:
               cgo: false
               builds:
                 std:
+                fips:
+                  flags:
+                    - -tags=fips,boringcrypto
+                  description: >-
+                    Dashboard for the Tyk API Gateway.
+                    This version is compiled with boringssl.
+                  imagetitle: Tyk Dashboard FIPS
+                  buildpackagename: tyk-dashboard-fips
+                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
+                  pcrepo: tyk-dashboard-unstable
+                  dhrepo: tykio/tyk-dashboard-fips
+                  cirepo: tyk-analytics
+                  archs:
+                    - go: amd64
+                      deb: amd64
+                      docker: linux/amd64
+                    - go: arm64
+                      deb: arm64
+                      docker: linux/arm64
+                    - go: s390x
+                      deb: s390x
+                      docker: linux/s390x
+                      skipdocker: true
+                  env:
+                    - GOEXPERIMENT=boringcrypto
               features:
                 - nightly-e2e
                 - distroless
@@ -333,6 +358,7 @@ policy:
                     This version is compiled with boringssl.
                   imagetitle: Tyk Dashboard FIPS
                   buildpackagename: tyk-dashboard-fips
+                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
                   pcrepo: tyk-dashboard-unstable
                   dhrepo: tykio/tyk-dashboard-fips
                   cirepo: tyk-analytics
@@ -343,6 +369,10 @@ policy:
                     - go: arm64
                       deb: arm64
                       docker: linux/arm64
+                    - go: s390x
+                      deb: s390x
+                      docker: linux/s390x
+                      skipdocker: true
                   env:
                     - GOEXPERIMENT=boringcrypto
               features:
@@ -492,6 +522,7 @@ policy:
               flags:
                 - -tags=fips,boringcrypto
               buildpackagename: tyk-pump-fips
+              dockerbaseimage: tykio/dhi-busybox:1.37-fips
               pcrepo: tyk-pump-unstable
               dhrepo: tykio/tyk-pump-fips
               cirepo: tyk-pump-fips
@@ -506,9 +537,10 @@ policy:
                 - go: arm64
                   deb: aarch64
                   docker: linux/arm64
-                # - go: s390x
-                #   deb: s390x
-                #   docker: linux/s390x
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
+                  skipdocker: true
               env:
                 - GOEXPERIMENT=boringcrypto
           branches:
@@ -581,6 +613,7 @@ policy:
               flags:
                 - -tags=fips,boringcrypto
               buildpackagename: tyk-sink-fips
+              dockerbaseimage: tykio/dhi-busybox:1.37-fips
               pcrepo: tyk-mdcb-unstable
               dhrepo: tykio/tyk-mdcb-docker-fips
               cirepo: tyk-sink-fips
@@ -595,9 +628,10 @@ policy:
                 - go: arm64
                   deb: aarch64
                   docker: linux/arm64
-                # - go: s390x
-                #   deb: s390x
-                #   docker: linux/s390x
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
+                  skipdocker: true
               env:
                 - GOEXPERIMENT=boringcrypto
           branches:
