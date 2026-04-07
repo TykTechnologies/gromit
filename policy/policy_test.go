@@ -54,13 +54,14 @@ func TestPolicyConfig(t *testing.T) {
 		BuildPackageName: "repo1-pkg",
 		DHRepo:           "repo1-doc-right",
 		Archs: []struct {
-			Docker     string
-			Deb        string
-			Go         string
-			SkipDocker bool
+			Docker        string
+			Deb           string
+			Go            string
+			SkipDocker    bool
+			SkipBaseImage bool
 		}{
-			{"doc1", "deb1", "go1", false},
-			{"doc2", "deb2", "go2", false}},
+			{"doc1", "deb1", "go1", false, false},
+			{"doc2", "deb2", "go2", false, false}},
 	}, *repo1.Branchvals.Builds["std"], "testing full merge")
 	build := repo1.Branchvals.Builds["std"]
 	assert.EqualValues(t, []string{"repo1-doc-right"}, build.GetImages("DHRepo"), "testing getImages()")

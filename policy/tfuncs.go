@@ -39,6 +39,35 @@ func (b *build) GetDockerPlatforms() []string {
 	return platforms.Members()
 }
 
+// GetBaseImagePlatforms returns docker platforms where the custom base image should be used.
+// These are platforms that do NOT have SkipBaseImage set.
+func (b *build) GetBaseImagePlatforms() []string {
+	platforms := make(util.Set[string])
+	for _, a := range b.Archs {
+		if len(a.Docker) > 0 && !a.SkipDocker && !a.SkipBaseImage {
+			platforms.Add(a.Docker)
+		}
+	}
+	return platforms.Members()
+}
+
+// GetFallbackPlatforms returns docker platforms that need the default base image
+// because the custom base image is not available for them (SkipBaseImage is set).
+func (b *build) GetFallbackPlatforms() []string {
+	platforms := make(util.Set[string])
+	for _, a := range b.Archs {
+		if len(a.Docker) > 0 && !a.SkipDocker && a.SkipBaseImage {
+			platforms.Add(a.Docker)
+		}
+	}
+	return platforms.Members()
+}
+
+// HasFallbackPlatforms returns true if there are platforms that need a fallback base image
+func (b *build) HasFallbackPlatforms() bool {
+	return len(b.GetFallbackPlatforms()) > 0
+}
+
 // getDockerBuilds returns a map of builds that have at least one container build
 func (rp RepoPolicy) GetDockerBuilds() buildMap {
 	dBuilds := make(buildMap)

@@ -275,7 +275,7 @@
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
           context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
-          platforms: {{ $bv.GetDockerPlatforms | join "," }}
+          platforms: {{ if and $bv.DockerBaseImage ($bv.HasFallbackPlatforms) }}{{ $bv.GetBaseImagePlatforms | join "," }}{{ else }}{{ $bv.GetDockerPlatforms | join "," }}{{ end }}
           {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
           {{- else }}
@@ -292,6 +292,29 @@
             {{- if $bv.DockerBaseImage }}
             BASE_IMAGE={{ $bv.DockerBaseImage }}
             {{- end }}
+{{- if and $bv.DockerBaseImage ($bv.HasFallbackPlatforms) }}
+
+      - name: push {{ $b }} image to CI ({{ $bv.GetFallbackPlatforms | join "," }})
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
+        with:
+          context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
+          platforms: {{ $bv.GetFallbackPlatforms | join "," }}
+          {{- if has "distroless" $r.Branchvals.Features }}
+          file: ci/Dockerfile.distroless
+          {{- else }}
+          file: ci/Dockerfile.std
+          {{ end }}
+          provenance: mode=max
+          sbom: true
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.tags }}`}}
+          labels: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.labels }}`}}
+          build-args: |
+            BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
+{{- end }}
 
       - name: Docker metadata for {{ $b }} tag push
         id: tag_metadata_{{ $b }}
@@ -318,7 +341,7 @@
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
           context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
-          platforms: {{ $bv.GetDockerPlatforms | join "," }}
+          platforms: {{ if and $bv.DockerBaseImage ($bv.HasFallbackPlatforms) }}{{ $bv.GetBaseImagePlatforms | join "," }}{{ else }}{{ $bv.GetDockerPlatforms | join "," }}{{ end }}
           {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
           {{- else }}
@@ -335,6 +358,29 @@
             {{- if $bv.DockerBaseImage }}
             BASE_IMAGE={{ $bv.DockerBaseImage }}
             {{- end }}
+{{- if and $bv.DockerBaseImage ($bv.HasFallbackPlatforms) }}
+
+      - name: push {{ $b }} image to prod ({{ $bv.GetFallbackPlatforms | join "," }})
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
+        with:
+          context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
+          platforms: {{ $bv.GetFallbackPlatforms | join "," }}
+          {{- if has "distroless" $r.Branchvals.Features }}
+          file: ci/Dockerfile.distroless
+          {{- else }}
+          file: ci/Dockerfile.std
+          {{- end }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          push: {{`${{ startsWith(github.ref, 'refs/tags') }}`}}
+          tags: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.tags }}`}}
+          labels: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.labels }}`}}
+          build-args: |
+            BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
+{{- end }}
 {{ end }} {{/* range getDockerBuilds */}}
 
       - name: save deb

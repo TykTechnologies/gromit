@@ -120,6 +120,7 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
+                  skipbaseimage: true
             fips:
               feature: fips
               flags:
