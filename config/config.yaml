@@ -96,6 +96,56 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
+            # ee builds are enterprise
+            ee:
+              flags:
+                - -tags=goplugin,ee
+                - -trimpath
+              description: >-
+                Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
+              imagetitle: Tyk Gateway Enterprise Edition
+              buildpackagename: tyk-gateway-ee
+              dockerbaseimage: tykio/dhi-busybox:1.37-fips
+              pcrepo: tyk-ee-unstable
+              dhrepo: tykio/tyk-gateway-ee
+              csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee
+              cirepo: tyk-ee
+              archs:
+                - go: amd64
+                  deb: amd64
+                  docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
+            fips:
+              flags:
+                - -tags=goplugin,ee,fips,boringcrypto
+                - -trimpath
+              buildpackagename: tyk-gateway-fips
+              dockerbaseimage: tykio/dhi-busybox:1.37-fips
+              pcrepo: tyk-ee-unstable
+              dhrepo: tykio/tyk-gateway-fips
+              cirepo: tyk
+              description: >-
+                Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
+                Built with boringssl
+              imagetitle: Tyk Gateway Enterprise Edition FIPS
+              archs:
+                - go: amd64
+                  deb: amd64
+                  docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
+                  skipdocker: true
+              env:
+                - GOEXPERIMENT=boringcrypto
           # The name of the binary generated after the build.
           binary: tyk
           # `protected` specifies repo specific protected branches - this gets
@@ -126,147 +176,26 @@ policy:
           # Branch specific policy for different branches starts here.->
           branches:
             master:
-              builds:
-                std:
-                # ee builds are enterprise
-                ee:
-                  flags:
-                    - -tags=goplugin,ee
-                    - -trimpath
-                  description: >-
-                    Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
-                  imagetitle: Tyk Gateway Enterprise Edition
-                  buildpackagename: tyk-gateway-ee
-                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
-                  pcrepo: tyk-ee-unstable
-                  dhrepo: tykio/tyk-gateway-ee
-                  csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee
-                  cirepo: tyk-ee
-                  archs:
-                    - go: amd64
-                      deb: amd64
-                      docker: linux/amd64
-                    - go: arm64
-                      deb: aarch64
-                      docker: linux/arm64
-                    - go: s390x
-                      deb: s390x
-                      docker: linux/s390x
-                fips:
-                  flags:
-                    - -tags=goplugin,ee,fips,boringcrypto
-                    - -trimpath
-                  buildpackagename: tyk-gateway-fips
-                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
-                  pcrepo: tyk-ee-unstable
-                  dhrepo: tykio/tyk-gateway-fips
-                  cirepo: tyk
-                  description: >-
-                    Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
-                    Built with boringssl
-                  imagetitle: Tyk Gateway Enterprise Edition FIPS
-                  archs:
-                    - go: amd64
-                      deb: amd64
-                      docker: linux/amd64
-                    - go: arm64
-                      deb: aarch64
-                      docker: linux/arm64
-                    - go: s390x
-                      deb: s390x
-                      docker: linux/s390x
-                      skipdocker: true
-                  env:
-                    - GOEXPERIMENT=boringcrypto
               features:
                 - release-test
                 - distroless
             release-5.8:
               buildenv: 1.24-bullseye
-              builds:
-                std:
-                fips:
-                  flags:
-                    - -tags=goplugin,ee,fips,boringcrypto
-                    - -trimpath
-                  buildpackagename: tyk-gateway-fips
-                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
-                  pcrepo: tyk-ee-unstable
-                  dhrepo: tykio/tyk-gateway-fips
-                  cirepo: tyk
-                  description: >-
-                    Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
-                    Built with boringssl
-                  imagetitle: Tyk Gateway Enterprise Edition FIPS
-                  archs:
-                    - go: amd64
-                      deb: amd64
-                      docker: linux/amd64
-                    - go: arm64
-                      deb: aarch64
-                      docker: linux/arm64
-                    - go: s390x
-                      deb: s390x
-                      docker: linux/s390x
-                      skipdocker: true
-                  env:
-                    - GOEXPERIMENT=boringcrypto
-                ee:
-                  flags:
-                    - -tags=goplugin,ee
-                    - -trimpath
-                  description: >-
-                    Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
-                  imagetitle: Tyk Gateway Enterprise Edition
-                  buildpackagename: tyk-gateway-ee
-                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
-                  pcrepo: tyk-ee-unstable
-                  dhrepo: tykio/tyk-gateway-ee
-                  csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee
-                  cirepo: tyk-ee
-                  archs:
-                    - go: amd64
-                      deb: amd64
-                      docker: linux/amd64
-                    - go: arm64
-                      deb: aarch64
-                      docker: linux/arm64
-                    - go: s390x
-                      deb: s390x
-                      docker: linux/s390x
               features:
                 - release-test
                 - distroless
             release-5.10:
               buildenv: 1.24-bullseye
-              builds:
-                std:
-                  flags:
-                    - -trimpath
-                # ee builds are enterprise
-                ee:
-                  flags:
-                    - -tags=goplugin,ee
-                    - -trimpath
-                  description: >-
-                    Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
-                  imagetitle: Tyk Gateway Enterprise Edition
-                  buildpackagename: tyk-gateway-ee
-                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
-                  pcrepo: tyk-ee-unstable
-                  dhrepo: tykio/tyk-gateway-ee
-                  csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee
-                  cirepo: tyk-ee
-                  archs:
-                    - go: amd64
-                      deb: amd64
-                      docker: linux/amd64
-                    - go: arm64
-                      deb: aarch64
-                      docker: linux/arm64
-                    - go: s390x
-                      deb: s390x
-                      docker: linux/s390x
+              features:
+                - release-test
+                - distroless
+            release-5.11:
+              buildenv: 1.24-bullseye
+              features:
+                - release-test
+                - distroless
+            release-5.12:
+              buildenv: 1.24-bullseye
               features:
                 - release-test
                 - distroless
@@ -310,37 +239,35 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
+            fips:
+              flags:
+                - -tags=fips,boringcrypto
+              description: >-
+                Dashboard for the Tyk API Gateway.
+                This version is compiled with boringssl.
+              imagetitle: Tyk Dashboard FIPS
+              buildpackagename: tyk-dashboard-fips
+              dockerbaseimage: tykio/dhi-busybox:1.37-fips
+              pcrepo: tyk-dashboard-unstable
+              dhrepo: tykio/tyk-dashboard-fips
+              cirepo: tyk-analytics
+              archs:
+                - go: amd64
+                  deb: amd64
+                  docker: linux/amd64
+                - go: arm64
+                  deb: arm64
+                  docker: linux/arm64
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
+                  skipdocker: true
+              env:
+                - GOEXPERIMENT=boringcrypto
           branches:
             master:
               buildenv: 1.24-bullseye
               cgo: false
-              builds:
-                std:
-                fips:
-                  flags:
-                    - -tags=fips,boringcrypto
-                  description: >-
-                    Dashboard for the Tyk API Gateway.
-                    This version is compiled with boringssl.
-                  imagetitle: Tyk Dashboard FIPS
-                  buildpackagename: tyk-dashboard-fips
-                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
-                  pcrepo: tyk-dashboard-unstable
-                  dhrepo: tykio/tyk-dashboard-fips
-                  cirepo: tyk-analytics
-                  archs:
-                    - go: amd64
-                      deb: amd64
-                      docker: linux/amd64
-                    - go: arm64
-                      deb: arm64
-                      docker: linux/arm64
-                    - go: s390x
-                      deb: s390x
-                      docker: linux/s390x
-                      skipdocker: true
-                  env:
-                    - GOEXPERIMENT=boringcrypto
               features:
                 - nightly-e2e
                 - distroless
@@ -348,38 +275,25 @@ policy:
             release-5.8:
               buildenv: 1.24-bullseye
               cgo: false
-              builds:
-                std:
-                fips:
-                  flags:
-                    - -tags=fips,boringcrypto
-                  description: >-
-                    Dashboard for the Tyk API Gateway.
-                    This version is compiled with boringssl.
-                  imagetitle: Tyk Dashboard FIPS
-                  buildpackagename: tyk-dashboard-fips
-                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
-                  pcrepo: tyk-dashboard-unstable
-                  dhrepo: tykio/tyk-dashboard-fips
-                  cirepo: tyk-analytics
-                  archs:
-                    - go: amd64
-                      deb: amd64
-                      docker: linux/amd64
-                    - go: arm64
-                      deb: arm64
-                      docker: linux/arm64
-                    - go: s390x
-                      deb: s390x
-                      docker: linux/s390x
-                      skipdocker: true
-                  env:
-                    - GOEXPERIMENT=boringcrypto
               features:
                 - nightly-e2e
                 - distroless
                 - release-test
             release-5.10:
+              buildenv: 1.24-bullseye
+              cgo: false
+              features:
+                - nightly-e2e
+                - distroless
+                - release-test
+            release-5.11:
+              buildenv: 1.24-bullseye
+              cgo: false
+              features:
+                - nightly-e2e
+                - distroless
+                - release-test
+            release-5.12:
               buildenv: 1.24-bullseye
               cgo: false
               features:
