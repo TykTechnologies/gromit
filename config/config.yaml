@@ -137,6 +137,7 @@ policy:
                     Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                   imagetitle: Tyk Gateway Enterprise Edition
                   buildpackagename: tyk-gateway-ee
+                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
                   pcrepo: tyk-ee-unstable
                   dhrepo: tykio/tyk-gateway-ee
                   csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee
@@ -163,6 +164,7 @@ policy:
                     - -tags=goplugin,ee,fips,boringcrypto
                     - -trimpath
                   buildpackagename: tyk-gateway-fips
+                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
                   pcrepo: tyk-ee-unstable
                   dhrepo: tykio/tyk-gateway-fips
                   cirepo: tyk
@@ -190,6 +192,7 @@ policy:
                     Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                   imagetitle: Tyk Gateway Enterprise Edition
                   buildpackagename: tyk-gateway-ee
+                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
                   pcrepo: tyk-ee-unstable
                   dhrepo: tykio/tyk-gateway-ee
                   csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee
@@ -213,7 +216,7 @@ policy:
                 std:
                   flags:
                     - -trimpath
-                # ee builds are enterprise 
+                # ee builds are enterprise
                 ee:
                   flags:
                     - -tags=goplugin,ee
@@ -222,6 +225,7 @@ policy:
                     Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                   imagetitle: Tyk Gateway Enterprise Edition
                   buildpackagename: tyk-gateway-ee
+                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
                   pcrepo: tyk-ee-unstable
                   dhrepo: tykio/tyk-gateway-ee
                   csrepo: docker.tyk.io/tyk-gateway/tyk-gateway-ee

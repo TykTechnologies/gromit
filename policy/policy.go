@@ -58,6 +58,7 @@ type build struct {
 	DHRepo           string
 	CSRepo           string
 	CIRepo           string
+	DockerBaseImage  string
 	Env              []string
 	Archs            []struct {
 		Docker     string

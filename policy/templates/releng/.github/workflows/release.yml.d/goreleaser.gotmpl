@@ -289,6 +289,9 @@
           labels: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.labels }}`}}
           build-args: |
             BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
+            {{- if $bv.DockerBaseImage }}
+            BASE_IMAGE={{ $bv.DockerBaseImage }}
+            {{- end }}
 
       - name: Docker metadata for {{ $b }} tag push
         id: tag_metadata_{{ $b }}
@@ -329,6 +332,9 @@
           labels: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.labels }}`}}
           build-args: |
             BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
+            {{- if $bv.DockerBaseImage }}
+            BASE_IMAGE={{ $bv.DockerBaseImage }}
+            {{- end }}
 {{ end }} {{/* range getDockerBuilds */}}
 
       - name: save deb
