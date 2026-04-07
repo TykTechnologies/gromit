@@ -40,7 +40,7 @@ policy:
       # The build environment used for this repo. Right now, this value
       # is used for selecting the appropriate golang-cross image
       # used for building the binary, packages and docker images.
-      buildenv: 1.24-bullseye
+      buildenv: 1.25-bullseye
       # baseimage what the container images are based on. It needs to be a
       # debian compatible distro as the Dockerfile assumes apt-get
       baseimage: debian:trixie-slim
@@ -182,25 +182,25 @@ policy:
                 - distroless
                 - fips
             release-5.8:
-              buildenv: 1.24-bullseye
+              buildenv: 1.25-bullseye
               features:
                 - release-test
                 - distroless
                 - fips
             release-5.10:
-              buildenv: 1.24-bullseye
+              buildenv: 1.25-bullseye
               features:
                 - release-test
                 - distroless
                 - fips
             release-5.11:
-              buildenv: 1.24-bullseye
+              buildenv: 1.25-bullseye
               features:
                 - release-test
                 - distroless
                 - fips
             release-5.12:
-              buildenv: 1.24-bullseye
+              buildenv: 1.25-bullseye
               features:
                 - release-test
                 - distroless
@@ -273,7 +273,7 @@ policy:
                 - GOFIPS140=v1.0.0
           branches:
             master:
-              buildenv: 1.24-bullseye
+              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
@@ -281,7 +281,7 @@ policy:
                 - release-test
                 - fips
             release-5.8:
-              buildenv: 1.24-bullseye
+              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
@@ -289,7 +289,7 @@ policy:
                 - release-test
                 - fips
             release-5.10:
-              buildenv: 1.24-bullseye
+              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
@@ -297,7 +297,7 @@ policy:
                 - release-test
                 - fips
             release-5.11:
-              buildenv: 1.24-bullseye
+              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
@@ -305,7 +305,7 @@ policy:
                 - release-test
                 - fips
             release-5.12:
-              buildenv: 1.24-bullseye
+              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
@@ -318,7 +318,7 @@ policy:
           packagename: portal
           binary: dev-portal
           buildpackagename: portal
-          buildenv: 1.24-bookworm
+          buildenv: 1.25-bookworm
           cgo: true
           upgradefromver: 1.0.0
           configfile: portal.conf
@@ -403,13 +403,13 @@ policy:
                   docker: linux/s390x
           branches:
             main:
-              buildenv: 1.24-bullseye
+              buildenv: 1.25-bullseye
 
     pgo-services:
       features:
         - releng
         - distroless
-      buildenv: 1.24-bookworm
+      buildenv: 1.25-bookworm
       baseimage: debian:trixie-slim
       distrolessbaseimage: static-debian12:nonroot
       repos:
@@ -508,7 +508,7 @@ policy:
             master:
             TT-16374-fix-artifact-name-collision:
         tyk-sink:
-          buildenv: 1.24-bookworm
+          buildenv: 1.25-bookworm
           exposeports: 80
           binary: tyk-sink
           cgo: false
