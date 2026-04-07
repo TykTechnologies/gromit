@@ -144,6 +144,7 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
+                  skipdocker: true
               env:
                 - GOFIPS140=v1.0.0
           # The name of the binary generated after the build.
@@ -267,6 +268,7 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
+                  skipdocker: true
               env:
                 - GOFIPS140=v1.0.0
           branches:
@@ -465,6 +467,7 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
+                  skipdocker: true
               env:
                 - GOFIPS140=v1.0.0
           branches:
@@ -557,6 +560,7 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
+                  skipdocker: true
               env:
                 - GOFIPS140=v1.0.0
           branches:
