@@ -128,7 +128,7 @@ policy:
             master:
               builds:
                 std:
-                # ee builds are enterprise 
+                # ee builds are enterprise
                 ee:
                   flags:
                     - -tags=goplugin,ee
@@ -152,6 +152,32 @@ policy:
                     - go: s390x
                       deb: s390x
                       docker: linux/s390x
+                fips:
+                  flags:
+                    - -tags=goplugin,ee,fips,boringcrypto
+                    - -trimpath
+                  buildpackagename: tyk-gateway-fips
+                  dockerbaseimage: tykio/dhi-busybox:1.37-fips
+                  pcrepo: tyk-ee-unstable
+                  dhrepo: tykio/tyk-gateway-fips
+                  cirepo: tyk
+                  description: >-
+                    Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
+                    Built with boringssl
+                  imagetitle: Tyk Gateway Enterprise Edition FIPS
+                  archs:
+                    - go: amd64
+                      deb: amd64
+                      docker: linux/amd64
+                    - go: arm64
+                      deb: aarch64
+                      docker: linux/arm64
+                    - go: s390x
+                      deb: s390x
+                      docker: linux/s390x
+                      skipdocker: true
+                  env:
+                    - GOEXPERIMENT=boringcrypto
               features:
                 - release-test
                 - distroless
@@ -179,9 +205,10 @@ policy:
                     - go: arm64
                       deb: aarch64
                       docker: linux/arm64
-                    # - go: s390x
-                    #   deb: s390x
-                    #   docker: linux/s390x
+                    - go: s390x
+                      deb: s390x
+                      docker: linux/s390x
+                      skipdocker: true
                   env:
                     - GOEXPERIMENT=boringcrypto
                 ee:
