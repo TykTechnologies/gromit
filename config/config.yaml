@@ -123,7 +123,7 @@ policy:
             fips:
               feature: fips
               flags:
-                - -tags=goplugin,ee,fips,boringcrypto
+                - -tags=goplugin,ee,fips
                 - -trimpath
               buildpackagename: tyk-gateway-fips
               dockerbaseimage: tykio/dhi-busybox:1.37-fips
@@ -132,7 +132,7 @@ policy:
               cirepo: tyk
               description: >-
                 Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
-                Built with boringssl
+                Built with FIPS 140-3 compliant cryptography
               imagetitle: Tyk Gateway Enterprise Edition FIPS
               archs:
                 - go: amd64
@@ -144,9 +144,8 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
-                  skipdocker: true
               env:
-                - GOEXPERIMENT=boringcrypto
+                - GOFIPS140=v1.0.0
           # The name of the binary generated after the build.
           binary: tyk
           # `protected` specifies repo specific protected branches - this gets
@@ -248,10 +247,10 @@ policy:
             fips:
               feature: fips
               flags:
-                - -tags=fips,boringcrypto
+                - -tags=fips
               description: >-
                 Dashboard for the Tyk API Gateway.
-                This version is compiled with boringssl.
+                Built with FIPS 140-3 compliant cryptography.
               imagetitle: Tyk Dashboard FIPS
               buildpackagename: tyk-dashboard-fips
               dockerbaseimage: tykio/dhi-busybox:1.37-fips
@@ -268,9 +267,8 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
-                  skipdocker: true
               env:
-                - GOEXPERIMENT=boringcrypto
+                - GOFIPS140=v1.0.0
           branches:
             master:
               buildenv: 1.24-bullseye
@@ -447,7 +445,7 @@ policy:
             fips:
               feature: fips
               flags:
-                - -tags=fips,boringcrypto
+                - -tags=fips
               buildpackagename: tyk-pump-fips
               dockerbaseimage: tykio/dhi-busybox:1.37-fips
               pcrepo: tyk-pump-unstable
@@ -455,7 +453,7 @@ policy:
               cirepo: tyk-pump-fips
               description: >-
                 Tyk Analytics Pump to move analytics data from Redis to any supported back end (multiple back ends can be written to at once).
-                This version is compiled with boringssl.
+                Built with FIPS 140-3 compliant cryptography.
               imagetitle: Tyk Analytics Pump FIPS
               archs:
                 - go: amd64
@@ -467,9 +465,8 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
-                  skipdocker: true
               env:
-                - GOEXPERIMENT=boringcrypto
+                - GOFIPS140=v1.0.0
           branches:
             master:
               features:
@@ -540,7 +537,7 @@ policy:
             fips:
               feature: fips
               flags:
-                - -tags=fips,boringcrypto
+                - -tags=fips
               buildpackagename: tyk-sink-fips
               dockerbaseimage: tykio/dhi-busybox:1.37-fips
               pcrepo: tyk-mdcb-unstable
@@ -548,8 +545,8 @@ policy:
               cirepo: tyk-sink-fips
               description: >-
                 Tyk RPC server backend (bridge)
-                This version is compiled with boringssl.
-              imagetitle: Multi Data Centre Bridge for Tyk Gateway and Dashboard (boringssl)
+                Built with FIPS 140-3 compliant cryptography.
+              imagetitle: Multi Data Centre Bridge for Tyk Gateway and Dashboard FIPS
               archs:
                 - go: amd64
                   deb: amd64
@@ -560,9 +557,8 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
-                  skipdocker: true
               env:
-                - GOEXPERIMENT=boringcrypto
+                - GOFIPS140=v1.0.0
           branches:
             master:
               features:
