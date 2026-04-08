@@ -71,6 +71,8 @@
 
 {{- if eq .Name "tyk-analytics" }}
       - name: Fetch pre-built UI assets from S3
+        id: fetch_s3_assets
+        continue-on-error: true
         env:
           AWS_ACCESS_KEY_ID: {{`${{ secrets.AWS_BINDATA_ACCESS_KEY_ID }}`}}
           AWS_SECRET_ACCESS_KEY: {{`${{ secrets.AWS_BINDATA_SECRET_ACCESS_KEY }}`}}
@@ -84,11 +86,33 @@
           aws s3 sync s3://tyk-dashboard-assets-ci/commits/${ASSETS_COMMIT}/ internal/uiassets/dist/
 
           if [ ! -f internal/uiassets/dist/_index.html ]; then
-            echo "❌ Failed to fetch assets: _index.html not found"
+            echo "::warning::S3 assets not found for commit ${ASSETS_COMMIT}, will fall back to building from source"
             exit 1
           fi
 
-          echo "✓ Assets fetched successfully to internal/uiassets/dist/"
+          echo "Assets fetched successfully from S3"
+      - name: Build UI assets (fallback)
+        if: steps.fetch_s3_assets.outcome == 'failure'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '20'
+      - name: Install and build UI assets (fallback)
+        if: steps.fetch_s3_assets.outcome == 'failure'
+        run: |
+          echo "::warning::Building UI assets from source as S3 fetch failed"
+          cd webclient
+          npm ci --ignore-scripts
+          npm install esbuild@0.25.12
+          npm run build
+          cd ..
+          cp -r webclient/dist/* internal/uiassets/dist/
+
+          if [ ! -f internal/uiassets/dist/_index.html ]; then
+            echo "::error::Failed to build UI assets: _index.html not found after build"
+            exit 1
+          fi
+
+          echo "UI assets built successfully from source"
 {{- end }}
 
 {{- if has "ai-studio-frontend-build" .Branchvals.Features }}
