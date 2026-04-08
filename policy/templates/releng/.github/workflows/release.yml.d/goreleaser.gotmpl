@@ -359,6 +359,60 @@
             {{- if $bv.DockerBaseImage }}
             BASE_IMAGE={{ $bv.DockerBaseImage }}
             {{- end }}
+{{- if $bv.DockerBaseImage }}
+
+      - name: Fetch and attach VEX for {{ $b }}
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
+        env:
+          DOCKER_USERNAME: {{`${{ secrets.DOCKER_USERNAME }}`}}
+          DOCKER_PASSWORD: {{`${{ secrets.DOCKER_PASSWORD }}`}}
+        run: |
+          # Install docker scout CLI
+          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh | sh -s -- 2>/dev/null
+          # Install trivy for VEX repo access
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin latest 2>/dev/null
+          # Initialize trivy VEX repos with DHI advisories
+          trivy vex repo init
+          cat > ~/.trivy/vex/repository.yaml << 'EOF'
+          repositories:
+            - name: default
+              url: https://github.com/aquasecurity/vexhub
+              enabled: true
+            - name: docker-hardened-images
+              url: https://github.com/docker-hardened-images/advisories
+              enabled: true
+          EOF
+          trivy vex repo download
+          # Extract VEX for the base image and rewrite product references
+          BASE_VEX=$(find ~/.trivy -path "*vex/busybox/dhi-busybox.vex.json" -type f | head -1)
+          if [ -n "$BASE_VEX" ]; then
+            # Rewrite DHI product references to tykio image references
+            jq --arg img "pkg:docker/{{ range $image := $bv.GetImages "DHRepo" }}{{ $image }}{{ end }}" '{
+              "@context": ."@context",
+              "@id": "https://tyk.io/vex/{{ $b }}-base-image",
+              "author": "Tyk Technologies <info@tyk.io>",
+              "role": "Document Creator",
+              "timestamp": (now | todate),
+              "version": 1,
+              "tooling": "Derived from Docker Hardened Images VEX for {{ $bv.DockerBaseImage }}",
+              "statements": [.statements[] | {
+                vulnerability, timestamp, status, status_notes, justification,
+                products: [{
+                  "@id": $img,
+                  subcomponents: [.products[]? | select(.subcomponents) | .subcomponents[]? | select(."@id" | startswith("pkg:deb"))] | unique
+                }]
+              }]
+            }' "$BASE_VEX" > /tmp/{{ $b }}-vex.json
+            # Attach VEX to each image
+            {{- range $image := $bv.GetImages "DHRepo" "CSRepo" }}
+            docker scout attestation add \
+              --file /tmp/{{ $b }}-vex.json \
+              --predicate-type "https://openvex.dev/ns/v0.2.0" \
+              --org tykio \
+              {{ $image }}:{{`${{ github.ref_name }}`}} || true
+            {{- end }}
+          fi
+{{- end }}
 {{ end }} {{/* range getDockerBuilds */}}
 
       - name: save deb
