@@ -62,11 +62,10 @@ type build struct {
 	Feature          string
 	Env              []string
 	Archs            []struct {
-		Docker        string
-		Deb           string
-		Go            string
-		SkipDocker    bool
-		SkipBaseImage bool
+		Docker     string
+		Deb        string
+		Go         string
+		SkipDocker bool
 	}
 }
 
