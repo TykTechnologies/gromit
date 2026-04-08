@@ -22,7 +22,6 @@ on:
     - cron: "0 0 * * 1"
 {{- end }}
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, labeled]
   push:
     branches:
       - master
