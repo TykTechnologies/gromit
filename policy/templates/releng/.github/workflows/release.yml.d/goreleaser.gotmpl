@@ -142,6 +142,8 @@
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
+      - uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a  # v3
+
       - name: Login to DockerHub
         if: startsWith(github.ref, 'refs/tags')
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
@@ -363,17 +365,12 @@
 
       - name: Fetch and attach VEX for {{ $b }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
-        env:
-          DOCKER_USERNAME: {{`${{ secrets.DOCKER_USERNAME }}`}}
-          DOCKER_PASSWORD: {{`${{ secrets.DOCKER_PASSWORD }}`}}
         run: |
-          # Install docker scout CLI
-          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh | sh -s -- 2>/dev/null
-          # Install trivy for VEX repo access
+          # Install tools
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin latest 2>/dev/null
           # Initialize trivy VEX repos with DHI advisories
           trivy vex repo init
-          cat > ~/.trivy/vex/repository.yaml << 'EOF'
+          cat > ~/.trivy/vex/repository.yaml << 'VEXCFG'
           repositories:
             - name: default
               url: https://github.com/aquasecurity/vexhub
@@ -381,13 +378,13 @@
             - name: docker-hardened-images
               url: https://github.com/docker-hardened-images/advisories
               enabled: true
-          EOF
+          VEXCFG
           trivy vex repo download
           # Extract VEX for the base image and rewrite product references
           BASE_VEX=$(find ~/.trivy -path "*vex/busybox/dhi-busybox.vex.json" -type f | head -1)
           if [ -n "$BASE_VEX" ]; then
-            # Rewrite DHI product references to tykio image references
-            jq --arg img "pkg:docker/{{ range $image := $bv.GetImages "DHRepo" }}{{ $image }}{{ end }}" '{
+            {{- range $image := $bv.GetImages "DHRepo" "CSRepo" }}
+            jq --arg img "pkg:docker/{{ $image }}" '{
               "@context": ."@context",
               "@id": "https://tyk.io/vex/{{ $b }}-base-image",
               "author": "Tyk Technologies <info@tyk.io>",
@@ -403,12 +400,9 @@
                 }]
               }]
             }' "$BASE_VEX" > /tmp/{{ $b }}-vex.json
-            # Attach VEX to each image
-            {{- range $image := $bv.GetImages "DHRepo" "CSRepo" }}
-            docker scout attestation add \
-              --file /tmp/{{ $b }}-vex.json \
-              --predicate-type "https://openvex.dev/ns/v0.2.0" \
-              --org tykio \
+            # Attach VEX as OCI referrer using cosign (discoverable by trivy --vex oci)
+            cosign attest --yes --type openvex \
+              --predicate /tmp/{{ $b }}-vex.json \
               {{ $image }}:{{`${{ github.ref_name }}`}} || true
             {{- end }}
           fi
