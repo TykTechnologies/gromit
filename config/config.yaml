@@ -526,7 +526,7 @@ policy:
           upgradefromver: 1.1.0
           configfile: tib.conf
           versionpackage: github.com/TykTechnologies/tyk-identity-broker/main
-          builds: 
+          builds:
             std:
               description: >-
                 Tyk Authentication Proxy for third-party login
@@ -547,8 +547,36 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
+            fips:
+              feature: fips
+              flags:
+                - -tags=fips
+              buildpackagename: tyk-identity-broker-fips
+              dockerbaseimage: tykio/dhi-busybox:1.37-fips
+              pcrepo: tyk-identity-broker-unstable
+              dhrepo: tykio/tyk-identity-broker-fips
+              cirepo: tyk-identity-broker-fips
+              description: >-
+                Tyk Authentication Proxy for third-party login.
+                Built with FIPS 140-3 compliant cryptography.
+              imagetitle: Tyk Identity Broker FIPS
+              archs:
+                - go: amd64
+                  deb: amd64
+                  docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
+                  skipdocker: true
+              env:
+                - GOFIPS140=v1.0.0
           branches:
             master:
+              features:
+                - fips
             TT-16374-fix-artifact-name-collision:
         tyk-sink:
           buildenv: 1.25-bookworm
