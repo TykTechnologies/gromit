@@ -17,6 +17,7 @@ distros:
     - "ubuntu:focal"
     - "ubuntu:jammy"
     - "debian:bookworm"
+    - "debian:trixie"
 pump:
   - "$ECR/tyk-pump:master"
 sink:
