@@ -142,6 +142,8 @@
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
+      - uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a  # v3
+
       - name: Login to DockerHub
         if: startsWith(github.ref, 'refs/tags')
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
@@ -359,6 +361,23 @@
             {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
             BASE_IMAGE={{ $bv.DockerBaseImage }}
             {{- end }}
+{{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
+
+      - name: Attach base image VEX to {{ $b }}
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
+        run: |
+          # Install Docker Scout CLI
+          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh | sh -s -- 2>/dev/null
+          # Extract VEX from the DHI base image
+          docker scout vex get --org tykio -o /tmp/{{ $b }}-vex.json {{ $bv.DockerBaseImage }} || true
+          if [ -f /tmp/{{ $b }}-vex.json ]; then
+            {{- range $image := $bv.GetImages "DHRepo" "CSRepo" }}
+            cosign attest --yes --type openvex \
+              --predicate /tmp/{{ $b }}-vex.json \
+              {{ $image }}:{{`${{ github.ref_name }}`}} || true
+            {{- end }}
+          fi
+{{- end }}
 {{ end }} {{/* range getDockerBuilds */}}
 
       - name: save deb
