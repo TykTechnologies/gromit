@@ -142,8 +142,6 @@
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
-      - uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a  # v3
-
       - name: Login to DockerHub
         if: startsWith(github.ref, 'refs/tags')
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
@@ -361,52 +359,6 @@
             {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
             BASE_IMAGE={{ $bv.DockerBaseImage }}
             {{- end }}
-{{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
-
-      - name: Fetch and attach VEX for {{ $b }}
-        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
-        run: |
-          # Install tools
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin latest 2>/dev/null
-          # Initialize trivy VEX repos with DHI advisories
-          trivy vex repo init
-          cat > ~/.trivy/vex/repository.yaml << 'VEXCFG'
-          repositories:
-            - name: default
-              url: https://github.com/aquasecurity/vexhub
-              enabled: true
-            - name: docker-hardened-images
-              url: https://github.com/docker-hardened-images/advisories
-              enabled: true
-          VEXCFG
-          trivy vex repo download
-          # Extract VEX for the base image and rewrite product references
-          BASE_VEX=$(find ~/.trivy -path "*vex/busybox/dhi-busybox.vex.json" -type f | head -1)
-          if [ -n "$BASE_VEX" ]; then
-            {{- range $image := $bv.GetImages "DHRepo" "CSRepo" }}
-            jq --arg img "pkg:docker/{{ $image }}" '{
-              "@context": ."@context",
-              "@id": "https://tyk.io/vex/{{ $b }}-base-image",
-              "author": "Tyk Technologies <info@tyk.io>",
-              "role": "Document Creator",
-              "timestamp": (now | todate),
-              "version": 1,
-              "tooling": "Derived from Docker Hardened Images VEX for {{ $bv.DockerBaseImage }}",
-              "statements": [.statements[] | {
-                vulnerability, timestamp, status, status_notes, justification,
-                products: [{
-                  "@id": $img,
-                  subcomponents: [.products[]? | select(.subcomponents) | .subcomponents[]? | select(."@id" | startswith("pkg:deb"))] | unique
-                }]
-              }]
-            }' "$BASE_VEX" > /tmp/{{ $b }}-vex.json
-            # Attach VEX as OCI referrer using cosign (discoverable by trivy --vex oci)
-            cosign attest --yes --type openvex \
-              --predicate /tmp/{{ $b }}-vex.json \
-              {{ $image }}:{{`${{ github.ref_name }}`}} || true
-            {{- end }}
-          fi
-{{- end }}
 {{ end }} {{/* range getDockerBuilds */}}
 
       - name: save deb
