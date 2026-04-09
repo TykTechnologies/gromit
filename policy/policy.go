@@ -263,11 +263,22 @@ func filterBuildsByFeature(builds buildMap, features []string) buildMap {
 
 // mergeBuilds returns a merged build map from _r_epo and _b_ranch level.
 // Deep copies repo builds to avoid mutation across branches.
+// When a branch defines Archs for a build, they replace the repo-level Archs
+// (not append) to prevent duplicate goreleaser build IDs.
 func mergeBuilds(r, b buildMap) buildMap {
 	merged := make(buildMap)
 	for k, v := range r {
 		cp := *v
 		merged[k] = &cp
+	}
+	// Clear Archs in merged builds when branch provides its own,
+	// so mergo doesn't append to the existing list.
+	for k, bv := range b {
+		if bv != nil && len(bv.Archs) > 0 {
+			if m, ok := merged[k]; ok {
+				m.Archs = nil
+			}
+		}
 	}
 	if err := mergo.Merge(&merged, b, mergo.WithOverride, mergo.WithAppendSlice); err != nil {
 		log.Fatal().Interface("dst", merged).Interface("src", b).Msgf("could not merge branch-level build definitions for: %v", err)
