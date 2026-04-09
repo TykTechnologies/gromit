@@ -340,7 +340,7 @@ policy:
           versionpackage: github.com/TykTechnologies/portal/model/version
           features:
             - distroless
-          builds: 
+          builds:
             std:
               buildpackagename: portal
               description: >-
@@ -359,8 +359,36 @@ policy:
                 - go: s390x
                   deb: s390x
                   docker: linux/s390x
+            fips:
+              feature: fips
+              flags:
+                - -tags=fips
+              buildpackagename: portal-fips
+              dockerbaseimage: tykio/dhi-busybox:1.37-fips
+              pcrepo: portal-unstable
+              dhrepo: tykio/portal-fips
+              cirepo: portal
+              description: >-
+                Developer portal for the Tyk API Gateway.
+                Built with FIPS 140-3 compliant cryptography.
+              imagetitle: Tyk Developer Portal FIPS
+              archs:
+                - go: amd64
+                  deb: amd64
+                  docker: linux/amd64
+                - go: arm64
+                  deb: aarch64
+                  docker: linux/arm64
+                - go: s390x
+                  deb: s390x
+                  docker: linux/s390x
+                  skipdocker: true
+              env:
+                - GOFIPS140=v1.0.0
           branches:
             master:
+              features:
+                - fips
 
         ai-studio:
           packagename: tyk-ai-studio
