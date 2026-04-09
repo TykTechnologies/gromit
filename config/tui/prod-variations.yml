@@ -116,6 +116,22 @@ level: # testsuites
             level: # testsuite
               tyk:
               tyk-analytics:
+      release-5.8:   
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+                envfiles:
+                  - cache: "valkey8"
+                    config: "murmur128"
+                    db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    sink: "$ECR/tyk-sink:master"
+          push:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
       release-5.12:   
         level: # trigger
           pull_request:
@@ -229,6 +245,14 @@ level: # testsuites
             level: # testsuite
               tyk-analytics:
       release-5.6:    
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-analytics:
+          push:
+            level: # testsuite
+              tyk-analytics:
+      release-5.8:    
         level: # trigger
           pull_request:
             level: # testsuite

@@ -70,7 +70,7 @@ jobs:
       contents: read
     steps:
       - name: Upload failed job logs
-        uses: TykTechnologies/github-actions/.github/actions/gh-logs-analyser@main
+        uses: TykTechnologies/github-actions/.github/actions/gh-logs-analyser@42304edda365365e0a887cf018d8edc34b960b82  # main
         with:
           github_token: ${{`{{ secrets.GITHUB_TOKEN }}`}}
           gh_logs_analyser_token: ${{`{{ secrets.GH_LOGS_ANALYSER }}`}}
