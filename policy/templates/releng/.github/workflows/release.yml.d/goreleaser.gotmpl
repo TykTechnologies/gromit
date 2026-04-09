@@ -315,7 +315,7 @@
           labels: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.labels }}`}}
           build-args: |
             BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
-            {{- if $bv.DockerBaseImage }}
+            {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
             BASE_IMAGE={{ $bv.DockerBaseImage }}
             {{- end }}
 
@@ -358,10 +358,10 @@
           labels: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.labels }}`}}
           build-args: |
             BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
-            {{- if $bv.DockerBaseImage }}
+            {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
             BASE_IMAGE={{ $bv.DockerBaseImage }}
             {{- end }}
-{{- if $bv.DockerBaseImage }}
+{{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
 
       - name: Fetch and attach VEX for {{ $b }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}

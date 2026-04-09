@@ -261,10 +261,14 @@ func filterBuildsByFeature(builds buildMap, features []string) buildMap {
 	return filtered
 }
 
-// mergeBuilds returns a merged build map from _r_epo and _b_ranch level
+// mergeBuilds returns a merged build map from _r_epo and _b_ranch level.
+// Deep copies repo builds to avoid mutation across branches.
 func mergeBuilds(r, b buildMap) buildMap {
 	merged := make(buildMap)
-	maps.Copy(merged, r)
+	for k, v := range r {
+		cp := *v
+		merged[k] = &cp
+	}
 	if err := mergo.Merge(&merged, b, mergo.WithOverride, mergo.WithAppendSlice); err != nil {
 		log.Fatal().Interface("dst", merged).Interface("src", b).Msgf("could not merge branch-level build definitions for: %v", err)
 	}

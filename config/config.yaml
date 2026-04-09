@@ -202,6 +202,20 @@ policy:
                 - fips
             release-5.12:
               buildenv: 1.25-bullseye
+              builds:
+                # EE on 5.12 uses distroless (no DHI) to preserve current behavior for patch releases
+                ee:
+                  dockerbaseimage: distroless
+                  archs:
+                    - go: amd64
+                      deb: amd64
+                      docker: linux/amd64
+                    - go: arm64
+                      deb: aarch64
+                      docker: linux/arm64
+                    - go: s390x
+                      deb: s390x
+                      docker: linux/s390x
               features:
                 - release-test
                 - distroless
