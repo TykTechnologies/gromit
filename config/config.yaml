@@ -67,6 +67,7 @@ policy:
               # passed to go build -flags
               flags:
                 - -tags=goplugin
+                - -trimpath
               # Description for the repo - this will be used as description for
               # deb/rpm packages, docker images etc.
               description: >-
