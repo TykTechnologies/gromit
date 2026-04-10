@@ -369,7 +369,7 @@
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
         run: |
           # Install Docker Scout CLI
-          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh | sh -s -- 2>/dev/null
+          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/v1.20.4/install.sh -o /tmp/scout-install.sh && sh /tmp/scout-install.sh 2>/dev/null
           # Extract VEX from the DHI base image
           docker scout vex get --org tykio -o /tmp/{{ $b }}-vex.json {{ $bv.DockerBaseImage }} || true
           if [ -f /tmp/{{ $b }}-vex.json ]; then

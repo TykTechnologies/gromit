@@ -52,7 +52,7 @@ policy:
       repos:
         # Repo specific policy for `tyk` starts here->
         tyk:
-          distrolessbaseimage: base-debian13:latest
+          distrolessbaseimage: base-debian13:nonroot
           # packagename is the historical name of the package. Builds
           # may produce artifacts named differently but the
           # directories and contents of the package use this name.
