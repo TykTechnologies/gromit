@@ -1,7 +1,9 @@
 {{ define "goreleaser" }}
   goreleaser:
+    needs:
+      - dep-guard
 {{- if has "ai-studio-frontend-build" .Branchvals.Features }}
-    needs: ai-studio-frontend-build
+      - ai-studio-frontend-build
 {{- end }}
     if: github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
