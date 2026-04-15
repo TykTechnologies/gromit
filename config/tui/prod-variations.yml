@@ -79,6 +79,7 @@ level: # testsuites
               tyk-analytics:
               tyk-pump:
               tyk-sink:
+              tyk-identity-broker:
               tyk-pro:
                 envfiles:
                   - cache: "valkey8"
@@ -96,8 +97,41 @@ level: # testsuites
               tyk:
               tyk-analytics:
               tyk-pump:
+              tyk-identity-broker:
               tyk-sink:
               tyk-pro:
+      release-1.14:
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-pump:
+          push:
+            level: # testsuite
+              tyk-pump:
+      release-1.14.1:
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-pump:
+          push:
+            level: # testsuite
+              tyk-pump:
+      release-1.7:
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-identity-broker:
+          push:
+            level: # testsuite
+              tyk-identity-broker:
+      release-1.7.1:
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-identity-broker:
+          push:
+            level: # testsuite
+              tyk-identity-broker:
       release-5.3:   
         pump:
           - "tykio/tyk-pump-docker-pub:v1.14"
