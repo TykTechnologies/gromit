@@ -131,7 +131,7 @@ policy:
               dockerbaseimage: tykio/dhi-busybox:1.37-fips
               pcrepo: tyk-ee-unstable
               dhrepo: tykio/tyk-gateway-fips
-              cirepo: tyk
+              cirepo: tyk-fips
               description: >-
                 Tyk API Gateway Enterprise Edition written in Go, supporting REST, GraphQL, TCP and gRPC protocols
                 Built with FIPS 140-3 compliant cryptography
@@ -273,7 +273,7 @@ policy:
               dockerbaseimage: tykio/dhi-busybox:1.37-fips
               pcrepo: tyk-dashboard-unstable
               dhrepo: tykio/tyk-dashboard-fips
-              cirepo: tyk-analytics
+              cirepo: tyk-analytics-fips
               archs:
                 - go: amd64
                   deb: amd64
@@ -368,7 +368,7 @@ policy:
               dockerbaseimage: tykio/dhi-busybox:1.37-fips
               pcrepo: portal-unstable
               dhrepo: tykio/portal-fips
-              cirepo: portal
+              cirepo: portal-fips
               description: >-
                 Developer portal for the Tyk API Gateway.
                 Built with FIPS 140-3 compliant cryptography.
