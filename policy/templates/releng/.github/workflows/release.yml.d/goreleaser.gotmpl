@@ -285,7 +285,11 @@
 {{- range $b, $bv := $r.GetDockerBuilds }}
       - name: Docker metadata for {{ $b }} CI
         id: ci_metadata_{{ $b }}
+{{- if eq $b "ee" }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
+{{- else }}
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && github.event_name != 'pull_request' }}`}}
+{{- end }}
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051  # v5
         with:
           images: |
@@ -301,11 +305,15 @@
             type=semver,pattern={{`{{version}}`}},prefix=v
 
       - name: push {{ $b }} image to CI
-        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}} {{/* push only main build variation */}}
+{{- if eq $b "ee" }}
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
+{{- else }}
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && github.event_name != 'pull_request' }}`}}
+{{- end }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
           context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
-          platforms: {{ $bv.GetDockerPlatforms | join "," }}
+          platforms: {{`${{ github.event_name == 'pull_request' && 'linux/amd64' || '`}}{{ $bv.GetDockerPlatforms | join "," }}{{`' }}`}}
           {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
           {{- else }}
