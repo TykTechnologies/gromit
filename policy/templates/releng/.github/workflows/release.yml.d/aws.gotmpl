@@ -31,11 +31,15 @@
 
   {{- if eq .Name "tyk-analytics" }}
   aws-mktplace-payg:
-    if: startsWith(github.ref, 'refs/tags/v3.0')
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     needs:
       - goreleaser
       - upgrade-rpm
+    if: |
+      !cancelled() &&
+      needs.goreleaser.result == 'success' &&
+      needs.upgrade-rpm.result == 'success' &&
+      startsWith(github.ref, 'refs/tags/v3.0')
     strategy:
       matrix:
         flavour:

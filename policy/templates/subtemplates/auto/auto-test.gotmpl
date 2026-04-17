@@ -1,9 +1,14 @@
 {{ define "auto-test" }}
   test-controller-{{ .test }}:
-    if: github.event.pull_request.draft == false
   {{- if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
     needs:
       - goreleaser
+    if: |
+      !cancelled() &&
+      needs.goreleaser.result == 'success' &&
+      github.event.pull_request.draft == false
+  {{- else }}
+    if: github.event.pull_request.draft == false
   {{- end }}
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     outputs:
@@ -30,13 +35,17 @@
       - build-dashboard-image
     {{- end }}
     {{- if and (eq .dot.Name "tyk") (eq .test "api") }}
-    # build-dashboard-image may be skipped, so use if: always() to run regardless
+    # build-dashboard-image may be skipped, so use !cancelled() to run regardless
     if: |
-      always() &&
+      !cancelled() &&
       needs.test-controller-{{ .test }}.result == 'success' &&
       needs.goreleaser.result == 'success' &&
       needs.resolve-dashboard-image.result == 'success' &&
       (needs.build-dashboard-image.result == 'success' || needs.build-dashboard-image.result == 'skipped')
+    {{- else if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
+    if: |
+      !cancelled() &&
+      needs.goreleaser.result == 'success'
     {{- end }}
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     env:

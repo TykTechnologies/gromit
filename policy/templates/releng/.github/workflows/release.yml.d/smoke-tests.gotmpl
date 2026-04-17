@@ -1,8 +1,11 @@
 {{ define "smoke-tests" }}
   test-controller-distros:
-    if: github.event.pull_request.draft == false
     needs:
       - goreleaser
+    if: |
+      !cancelled() &&
+      needs.goreleaser.result == 'success' &&
+      github.event.pull_request.draft == false
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     outputs:
       deb: {{`${{ steps.params.outputs.deb }}`}}
@@ -124,6 +127,9 @@
   release-tests:
     needs:
       - goreleaser
+    if: |
+      !cancelled() &&
+      needs.goreleaser.result == 'success'
     permissions:
       id-token: write   # This is required for requesting the JWT
       contents: read    # This is required for actions/checkout

@@ -1,7 +1,10 @@
 {{ define "tyk-dashboard-resolver" }}
   resolve-dashboard-image:
-    if: github.event.pull_request.draft == false
     needs: goreleaser
+    if: |
+      !cancelled() &&
+      needs.goreleaser.result == 'success' &&
+      github.event.pull_request.draft == false
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     permissions:
       id-token: write
