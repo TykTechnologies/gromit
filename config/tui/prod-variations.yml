@@ -152,9 +152,13 @@ level: # testsuites
             level: # testsuite
               tyk:
               tyk-analytics:
-      release-5.6:   
+      release-5.6:
         level: # trigger
           pull_request:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+          push:
             level: # testsuite
               tyk:
               tyk-analytics:
@@ -190,7 +194,7 @@ level: # testsuites
             level: # testsuite
               tyk:
               tyk-analytics:
-      release-5.12:   
+      release-5.12:
         level: # trigger
           pull_request:
             level: # testsuite
@@ -202,7 +206,11 @@ level: # testsuites
                     db: "mongo8"
                     apimarkers: "not local and not dind"
                     sink: "$ECR/tyk-sink:master"
-      release-5.12.1:   
+          push:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+      release-5.12.1:
         level: # trigger
           pull_request:
             level: # testsuite
@@ -214,7 +222,11 @@ level: # testsuites
                     db: "mongo8"
                     apimarkers: "not local and not dind"
                     sink: "$ECR/tyk-sink:master"
-      release-5.13:   
+          push:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
+      release-5.13:
         level: # trigger
           pull_request:
             level: # testsuite
@@ -226,6 +238,10 @@ level: # testsuites
                     db: "mongo8"
                     apimarkers: "not local and not dind"
                     sink: "$ECR/tyk-sink:master"
+          push:
+            level: # testsuite
+              tyk:
+              tyk-analytics:
       release-6.0:   
         level: # trigger
           pull_request:
@@ -338,7 +354,23 @@ level: # testsuites
           push:
             level: # testsuite
               tyk-analytics:
-      release-5.12.1:    
+      release-5.12:
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-analytics:
+          push:
+            level: # testsuite
+              tyk-analytics:
+      release-5.12.1:
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-analytics:
+          push:
+            level: # testsuite
+              tyk-analytics:
+      release-5.13:
         level: # trigger
           pull_request:
             level: # testsuite
