@@ -100,6 +100,14 @@ level: # testsuites
               tyk-identity-broker:
               tyk-sink:
               tyk-pro:
+      TT-16374-fix-artifact-name-collision:
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-identity-broker:
+          push:
+            level: # testsuite
+              tyk-identity-broker:
       release-1.14:
         level: # trigger
           pull_request:
