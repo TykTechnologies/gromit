@@ -4,14 +4,10 @@
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     # Dynamically determine which jobs to depend on based on repository configuration
     needs: [
+          dep-guard,
           {{- /* Include goreleaser if the repo has the releng feature */ -}}
           {{- if has "releng" .Branchvals.Features -}}
-          goreleaser
-          {{- end -}}
-
-          {{- /* Add comma if we have both goreleaser and tests */ -}}
-          {{- if and (has "releng" .Branchvals.Features) (not (empty .Branchvals.Tests)) -}}
-          ,
+          goreleaser,
           {{- end -}}
 
           {{- /* Add test jobs */ -}}
