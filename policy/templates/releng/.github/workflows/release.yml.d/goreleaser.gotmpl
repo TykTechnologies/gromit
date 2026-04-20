@@ -321,6 +321,7 @@
             BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
             {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
             BASE_IMAGE={{ $bv.DockerBaseImage }}
+            NONROOT_CHOWN=true
             {{- end }}
 
       - name: Docker metadata for {{ $b }} tag push
@@ -364,6 +365,7 @@
             BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
             {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
             BASE_IMAGE={{ $bv.DockerBaseImage }}
+            NONROOT_CHOWN=true
             {{- end }}
 {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
 

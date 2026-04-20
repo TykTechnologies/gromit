@@ -10,11 +10,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # The _ after the pkg name is to match tyk-gateway strictly and not tyk-gateway-fips (for example)
 COPY ${BUILD_PACKAGE_NAME}_*${TARGETARCH}.deb /
-RUN dpkg -i /${BUILD_PACKAGE_NAME}_*${TARGETARCH}.deb && rm /*.deb
+ARG NONROOT_CHOWN=false
+RUN dpkg -i /${BUILD_PACKAGE_NAME}_*${TARGETARCH}.deb && rm /*.deb \
+    && chmod -R a+rX /opt/{{ .PackageName }}/ \
+    && if [ "$NONROOT_CHOWN" = "true" ]; then chown -R 65532:65532 /opt/{{ .PackageName }}/; fi
 
 FROM ${BASE_IMAGE}
 
-COPY --chown=65532:65532 --from=deb /opt/{{ .PackageName }} /opt/{{ .PackageName }}
+COPY --from=deb /opt/{{ .PackageName }} /opt/{{ .PackageName }}
 
 ARG PORTS
 EXPOSE $PORTS
