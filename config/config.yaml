@@ -220,7 +220,6 @@ policy:
               features:
                 - release-test
                 - distroless
-                - fips
 
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
@@ -327,7 +326,6 @@ policy:
                 - nightly-e2e
                 - distroless
                 - release-test
-                - fips
 
         portal:
           exposeports: 80
