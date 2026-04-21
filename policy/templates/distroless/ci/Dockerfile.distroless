@@ -13,6 +13,8 @@ COPY ${BUILD_PACKAGE_NAME}_*${TARGETARCH}.deb /
 ARG NONROOT_CHOWN=false
 RUN dpkg -i /${BUILD_PACKAGE_NAME}_*${TARGETARCH}.deb && rm /*.deb \
     && chmod -R a+rX /opt/{{ .PackageName }}/ \
+    && mkdir -p /opt/{{ .PackageName }}/middleware/bundles \
+    && chmod a+rwX /opt/{{ .PackageName }}/middleware /opt/{{ .PackageName }}/middleware/bundles \
     && if [ "$NONROOT_CHOWN" = "true" ]; then chown -R 65532:65532 /opt/{{ .PackageName }}/; fi
 
 FROM ${BASE_IMAGE}
