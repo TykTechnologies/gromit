@@ -609,6 +609,9 @@ policy:
             master:
               features:
                 - fips
+            release-2.9:
+              features:
+                - fips
 
         midsommar:
           buildenv: 1.22-bullseye
