@@ -65,6 +65,14 @@
             sink: tykio/tyk-mdcb-docker:v2.4
         {{- end }}
     steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547  # v1
+        with:
+          app-id: {{`${{ secrets.PROBE_APP_ID }}`}}
+          private-key: {{`${{ secrets.PROBE_APP_PRIVATE_KEY }}`}}
+          owner: TykTechnologies
+
       - uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c  # v4
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
@@ -103,7 +111,7 @@
           {{- if and (eq .dot.Name "tyk") (eq .test "api") }}
           dashboard_image: {{`${{ needs.resolve-dashboard-image.outputs.dashboard_image }}`}}
           {{- end }}
-          github_token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+          github_token: {{`${{ steps.app-token.outputs.token }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
 
@@ -111,7 +119,7 @@
         uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@42304edda365365e0a887cf018d8edc34b960b82  # main
         with:
           test_folder: {{ .test }}
-          org_gh_token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+          org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
           {{- if eq .flow "nightly" }}
           branch: {{`${{ matrix.envfiles.gwdash }}`}}
           {{- end }}
@@ -126,7 +134,7 @@
       {{ else if eq .test "ui" }}
       - name: Fix private module deps
         env:
-          TOKEN: '{{`${{ secrets.ORG_GH_TOKEN }}`}}'
+          TOKEN: '{{`${{ steps.app-token.outputs.token }}`}}'
         run: >
           git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
       - name: Execute UI tests
