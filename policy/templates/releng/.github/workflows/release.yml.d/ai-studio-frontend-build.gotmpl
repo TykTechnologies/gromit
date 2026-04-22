@@ -5,13 +5,21 @@
     outputs:
       frontend_built: {{`${{ steps.build.outputs.frontend_built }}`}}
     steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547  # v1
+        with:
+          app-id: {{`${{ secrets.PROBE_APP_ID }}`}}
+          private-key: {{`${{ secrets.PROBE_APP_PRIVATE_KEY }}`}}
+          owner: TykTechnologies
+
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 0
   {{- if eq .Name "tyk-analytics" }}
           ref: {{`${{ github.event.pull_request.head.sha }}`}}
-          token: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+          token: {{`${{ steps.app-token.outputs.token }}`}}
           submodules: true
   {{- end }}
       
