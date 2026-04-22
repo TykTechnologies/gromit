@@ -23,6 +23,13 @@ jobs:
       id-token: write
 
     steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        with:
+          app-id: ${{ secrets.PROBE_APP_ID }}
+          private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
+          owner: TykTechnologies
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
@@ -46,7 +53,7 @@ jobs:
           version: "~> v2"
           args: release --clean ${{ !startsWith(github.ref, 'refs/tags/') && '--snapshot' || '' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: find amd64 linux binary
         id: binary
@@ -80,12 +87,19 @@ jobs:
           - owner: TykTechnologies
 
     steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        with:
+          app-id: ${{ secrets.PROBE_APP_ID }}
+          private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
+          owner: TykTechnologies
       - name: checkout ${{matrix.repo}}/${{matrix.branch}}
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           repository: ${{ matrix.owner }}/${{ matrix.repo }}
           ref: ${{ matrix.branch }}
-          token: ${{ secrets.ORG_GH_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           path: ${{ matrix.repo }}
           fetch-depth: 1
 
@@ -104,7 +118,7 @@ jobs:
       - name: update ${{ matrix.repo }}
         if: ${{ (github.event_name == 'push' && github.ref_name == 'master') || endsWith(github.head_ref, 'releng') }}
         env:
-          GITHUB_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -eo pipefail
           ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }}
