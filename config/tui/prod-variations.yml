@@ -80,6 +80,7 @@ level: # testsuites
               tyk-pump:
               tyk-sink:
               tyk-identity-broker:
+              portal:
               tyk-pro:
                 envfiles:
                   - cache: "valkey8"
@@ -99,6 +100,7 @@ level: # testsuites
               tyk-pump:
               tyk-identity-broker:
               tyk-sink:
+              portal:
               tyk-pro:
       TT-16374-fix-artifact-name-collision:
         level: # trigger
