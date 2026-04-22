@@ -50,6 +50,8 @@ func TestPolicyConfig(t *testing.T) {
 	assert.EqualValues(t, []string{"flagstd1", "flagstd2"}, repo1.Branchvals.Builds["std"].Flags, "testing explicit merge")
 	assert.EqualValues(t, "repo1-std2", repo1.Branchvals.Builds["std2"].BuildPackageName, "testing implicit merges at branch")
 	assert.EqualValues(t, []string{"flag2"}, repo1.Branchvals.Builds["std2"].Flags, "testing implicit merge from repo")
+	// When branch defines Archs, they replace repo-level Archs (not append)
+	// to prevent duplicate goreleaser build IDs
 	assert.EqualValues(t, build{Flags: []string{"flagstd1", "flagstd2"},
 		BuildPackageName: "repo1-pkg",
 		DHRepo:           "repo1-doc-right",
@@ -59,10 +61,9 @@ func TestPolicyConfig(t *testing.T) {
 			Go         string
 			SkipDocker bool
 		}{
-			{"doc1", "deb1", "go1", false},
 			{"doc2", "deb2", "go2", false}},
 	}, *repo1.Branchvals.Builds["std"], "testing full merge")
 	build := repo1.Branchvals.Builds["std"]
 	assert.EqualValues(t, []string{"repo1-doc-right"}, build.GetImages("DHRepo"), "testing getImages()")
-	assert.EqualValues(t, []string{"doc1", "doc2"}, build.GetDockerPlatforms(), "testing getDockerPlatforms()")
+	assert.EqualValues(t, []string{"doc2"}, build.GetDockerPlatforms(), "testing getDockerPlatforms()")
 }

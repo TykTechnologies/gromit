@@ -22,6 +22,7 @@ on:
     - cron: "0 0 * * 1"
 {{- end }}
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches:
       - master
@@ -38,6 +39,12 @@ env:
   BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
   
 jobs:
+  dep-guard:
+    if: github.event_name == 'pull_request'
+    uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@d3fa20888fa2878e877e22bb7702141217290e7c  # main
+    permissions:
+      contents: read
+
 {{- if has "ai-studio-frontend-build" .Branchvals.Features }}
 {{- template "ai-studio-frontend-build" . }}
 {{- end }}

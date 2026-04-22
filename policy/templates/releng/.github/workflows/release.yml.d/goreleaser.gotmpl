@@ -1,9 +1,14 @@
 {{ define "goreleaser" }}
   goreleaser:
+    needs:
+      - dep-guard
 {{- if has "ai-studio-frontend-build" .Branchvals.Features }}
-    needs: ai-studio-frontend-build
+      - ai-studio-frontend-build
 {{- end }}
-    if: github.event.pull_request.draft == false
+    if: |
+      !cancelled() &&
+      (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') &&
+      github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     permissions:
@@ -71,6 +76,8 @@
 
 {{- if eq .Name "tyk-analytics" }}
       - name: Fetch pre-built UI assets from S3
+        id: fetch_s3_assets
+        continue-on-error: true
         env:
           AWS_ACCESS_KEY_ID: {{`${{ secrets.AWS_BINDATA_ACCESS_KEY_ID }}`}}
           AWS_SECRET_ACCESS_KEY: {{`${{ secrets.AWS_BINDATA_SECRET_ACCESS_KEY }}`}}
@@ -84,11 +91,33 @@
           aws s3 sync s3://tyk-dashboard-assets-ci/commits/${ASSETS_COMMIT}/ internal/uiassets/dist/
 
           if [ ! -f internal/uiassets/dist/_index.html ]; then
-            echo "❌ Failed to fetch assets: _index.html not found"
+            echo "::warning::S3 assets not found for commit ${ASSETS_COMMIT}, will fall back to building from source"
             exit 1
           fi
 
-          echo "✓ Assets fetched successfully to internal/uiassets/dist/"
+          echo "Assets fetched successfully from S3"
+      - name: Build UI assets (fallback)
+        if: steps.fetch_s3_assets.outcome == 'failure'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '20'
+      - name: Install and build UI assets (fallback)
+        if: steps.fetch_s3_assets.outcome == 'failure'
+        run: |
+          echo "::warning::Building UI assets from source as S3 fetch failed"
+          cd webclient
+          npm ci --ignore-scripts
+          npm install esbuild@0.25.12
+          npm run build
+          cd ..
+          cp -r webclient/dist/* internal/uiassets/dist/
+
+          if [ ! -f internal/uiassets/dist/_index.html ]; then
+            echo "::error::Failed to build UI assets: _index.html not found after build"
+            exit 1
+          fi
+
+          echo "UI assets built successfully from source"
 {{- end }}
 
 {{- if has "ai-studio-frontend-build" .Branchvals.Features }}
@@ -97,7 +126,7 @@
         with:
           name: frontend-build
           path: ui/admin-frontend/build
-      
+
       - name: Verify frontend artifacts
         run: |
           echo "Checking frontend build artifacts..."
@@ -118,8 +147,9 @@
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
+      - uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a  # v3
+
       - name: Login to DockerHub
-        if: startsWith(github.ref, 'refs/tags')
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
         with:
           username: {{`${{ secrets.DOCKER_USERNAME }}`}}
@@ -132,7 +162,7 @@
           registry: docker.tyk.io
           username: {{`${{ secrets.CLOUDSMITH_USERNAME }}`}}
           password: {{`${{ secrets.CLOUDSMITH_API_KEY }}`}}
-    
+
       - uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c  # v4
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
@@ -289,6 +319,10 @@
           labels: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.labels }}`}}
           build-args: |
             BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
+            {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
+            BASE_IMAGE={{ $bv.DockerBaseImage }}
+            NONROOT_CHOWN=true
+            {{- end }}
 
       - name: Docker metadata for {{ $b }} tag push
         id: tag_metadata_{{ $b }}
@@ -329,6 +363,27 @@
           labels: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.labels }}`}}
           build-args: |
             BUILD_PACKAGE_NAME={{ $bv.BuildPackageName }}
+            {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
+            BASE_IMAGE={{ $bv.DockerBaseImage }}
+            NONROOT_CHOWN=true
+            {{- end }}
+{{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
+
+      - name: Attach base image VEX to {{ $b }}
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
+        run: |
+          # Install Docker Scout CLI
+          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/v1.20.4/install.sh -o /tmp/scout-install.sh && sh /tmp/scout-install.sh 2>/dev/null
+          # Extract VEX from the DHI base image
+          docker scout vex get --org tykio -o /tmp/{{ $b }}-vex.json {{ $bv.DockerBaseImage }} || true
+          if [ -f /tmp/{{ $b }}-vex.json ]; then
+            {{- range $image := $bv.GetImages "DHRepo" "CSRepo" }}
+            cosign attest --yes --type openvex \
+              --predicate /tmp/{{ $b }}-vex.json \
+              {{ $image }}:{{`${{ github.ref_name }}`}} || true
+            {{- end }}
+          fi
+{{- end }}
 {{ end }} {{/* range getDockerBuilds */}}
 
       - name: save deb

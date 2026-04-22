@@ -1,7 +1,10 @@
 {{ define "tyk-dashboard-resolver" }}
   resolve-dashboard-image:
-    if: github.event.pull_request.draft == false
     needs: goreleaser
+    if: |
+      !cancelled() &&
+      needs.goreleaser.result == 'success' &&
+      github.event.pull_request.draft == false
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     permissions:
       id-token: write
@@ -24,6 +27,7 @@
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
           ref: {{`${{ github.event.pull_request.head.sha }}`}}
 
       - name: Check for relevant package changes in PR
@@ -139,6 +143,7 @@
           COMMIT_SHA: {{`${{ github.sha }}`}}
           PR_NUMBER: {{`${{ github.event.pull_request.number }}`}}
           HAS_RELEVANT_CHANGES: {{`${{ steps.check_changes.outputs.has_relevant_changes }}`}}
+          ORG_GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
         run: |
           echo "=================================="
           echo "📊 Dashboard Image Resolution"
@@ -153,14 +158,23 @@
           echo "Has relevant changes in PR: $HAS_RELEVANT_CHANGES"
           echo "=================================="
 
-          # Only use custom build strategies for PRs targeting master
+          # For non-master base branches, check if the same branch exists in tyk-analytics
           if [ "$BASE_REF" != "master" ]; then
-            echo "ℹ️ Strategy: Use gromit default (base branch is not master)"
-            echo "    → Custom builds only for master branch PRs"
-            echo "dashboard_image=" >> $GITHUB_OUTPUT
-            echo "needs_build=false" >> $GITHUB_OUTPUT
-            echo "dashboard_branch=" >> $GITHUB_OUTPUT
-            echo "strategy=gromit-default" >> $GITHUB_OUTPUT
+            if git ls-remote --exit-code --heads "https://x-access-token:${ORG_GH_TOKEN}@github.com/TykTechnologies/tyk-analytics.git" "refs/heads/$BASE_REF" > /dev/null 2>&1; then
+              echo "📋 Strategy: Use release branch '$BASE_REF' from tyk-analytics"
+              echo "    → Base branch exists in tyk-analytics, using it directly"
+              echo "dashboard_image=${REGISTRY}/tyk-analytics:${BASE_REF}" >> $GITHUB_OUTPUT
+              echo "needs_build=false" >> $GITHUB_OUTPUT
+              echo "dashboard_branch=$BASE_REF" >> $GITHUB_OUTPUT
+              echo "strategy=release-branch-match" >> $GITHUB_OUTPUT
+            else
+              echo "ℹ️ Strategy: Use gromit default (base branch '$BASE_REF' not found in tyk-analytics)"
+              echo "    → Falling back to gromit default"
+              echo "dashboard_image=" >> $GITHUB_OUTPUT
+              echo "needs_build=false" >> $GITHUB_OUTPUT
+              echo "dashboard_branch=" >> $GITHUB_OUTPUT
+              echo "strategy=gromit-default" >> $GITHUB_OUTPUT
+            fi
 
           # Strategy 1: Matching branch exists in tyk-analytics → use gromit
           elif [ "$BRANCH_EXISTS" = "true" ]; then
@@ -350,7 +364,7 @@
             -e GOMODCACHE=/go/pkg/mod \
             -v /tmp/build-dashboard.sh:/tmp/build-dashboard.sh \
             -w /go/src/github.com/TykTechnologies/tyk-analytics \
-            tykio/golang-cross:1.24-bookworm /tmp/build-dashboard.sh
+            tykio/golang-cross:{{ .Branchvals.Buildenv }} /tmp/build-dashboard.sh
 
           echo "✅ Packages built successfully for $GOARCH"
 

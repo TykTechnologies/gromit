@@ -32,7 +32,7 @@ func (b *build) GetImages(repos ...string) []string {
 func (b *build) GetDockerPlatforms() []string {
 	platforms := make(util.Set[string])
 	for _, a := range b.Archs {
-		if len(a.Docker) > 0 {
+		if len(a.Docker) > 0 && !a.SkipDocker {
 			platforms.Add(a.Docker)
 		}
 	}

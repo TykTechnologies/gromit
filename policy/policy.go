@@ -58,6 +58,8 @@ type build struct {
 	DHRepo           string
 	CSRepo           string
 	CIRepo           string
+	DockerBaseImage  string
+	Feature          string
 	Env              []string
 	Archs            []struct {
 		Docker     string
@@ -234,6 +236,8 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 		// attributes that are unions
 		rbv.Features = util.NewSetFromSlices(group.Features, r.Features, bbv.Features).Members()
 		rbv.DeletedFiles = util.NewSetFromSlices(p.DeletedFiles, group.DeletedFiles, r.DeletedFiles, bbv.DeletedFiles).Members()
+		// filter out builds that require a feature not present in this branch
+		rbv.Builds = filterBuildsByFeature(rbv.Builds, rbv.Features)
 
 		log.Trace().Interface("bv", rbv).Str("branch", b).Msg("computed branch vals")
 		allBranches[b] = rbv
@@ -242,10 +246,40 @@ func (p *Policies) GetRepoPolicy(repo string) (RepoPolicy, error) {
 	return rp, nil
 }
 
-// mergeBuilds returns a merged build map from _r_epo and _b_ranch level
+// filterBuildsByFeature removes builds that require a feature not present in the branch.
+// If a build has a Feature field set, it is only included when that feature is in the features list.
+func filterBuildsByFeature(builds buildMap, features []string) buildMap {
+	featureSet := util.NewSetFromSlices(features)
+	filtered := make(buildMap)
+	for name, b := range builds {
+		if b != nil && b.Feature != "" && !featureSet.Has(b.Feature) {
+			log.Debug().Str("build", name).Str("feature", b.Feature).Msg("skipping build, required feature not present")
+			continue
+		}
+		filtered[name] = b
+	}
+	return filtered
+}
+
+// mergeBuilds returns a merged build map from _r_epo and _b_ranch level.
+// Deep copies repo builds to avoid mutation across branches.
+// When a branch defines Archs for a build, they replace the repo-level Archs
+// (not append) to prevent duplicate goreleaser build IDs.
 func mergeBuilds(r, b buildMap) buildMap {
 	merged := make(buildMap)
-	maps.Copy(merged, r)
+	for k, v := range r {
+		cp := *v
+		merged[k] = &cp
+	}
+	// Clear Archs in merged builds when branch provides its own,
+	// so mergo doesn't append to the existing list.
+	for k, bv := range b {
+		if bv != nil && len(bv.Archs) > 0 {
+			if m, ok := merged[k]; ok {
+				m.Archs = nil
+			}
+		}
+	}
 	if err := mergo.Merge(&merged, b, mergo.WithOverride, mergo.WithAppendSlice); err != nil {
 		log.Fatal().Interface("dst", merged).Interface("src", b).Msgf("could not merge branch-level build definitions for: %v", err)
 	}
