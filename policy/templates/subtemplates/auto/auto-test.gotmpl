@@ -145,7 +145,7 @@
         env:
           TOKEN: '{{`${{ steps.app-token.outputs.token }}`}}'
         run: >
-          git config --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
       - name: Execute UI tests
         timeout-minutes: 30
         uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests@42304edda365365e0a887cf018d8edc34b960b82  # main
