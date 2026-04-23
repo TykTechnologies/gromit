@@ -126,8 +126,15 @@ level: # testsuites
               tyk-pump:
           push:
             level: # testsuite
-              tyk-pump:
-      release-1.7:
+      release-1.7.1:
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-identity-broker:
+          push:
+            level: # testsuite
+              tyk-identity-broker:
+      TT-16374-fix-artifact-name-collision:
         level: # trigger
           pull_request:
             level: # testsuite
