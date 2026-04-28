@@ -47,12 +47,14 @@ func TestPolicyConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not set main branch: %v", err)
 	}
-	assert.EqualValues(t, []string{"flagstd1", "flagstd2"}, repo1.Branchvals.Builds["std"].Flags, "testing explicit merge")
+	// When branch defines Flags, they replace repo-level Flags (not append)
+	// to allow branch overrides to remove unwanted build tags (e.g. stripping ee from fips builds)
+	assert.EqualValues(t, []string{"flagstd2"}, repo1.Branchvals.Builds["std"].Flags, "testing branch flags replace repo flags")
 	assert.EqualValues(t, "repo1-std2", repo1.Branchvals.Builds["std2"].BuildPackageName, "testing implicit merges at branch")
 	assert.EqualValues(t, []string{"flag2"}, repo1.Branchvals.Builds["std2"].Flags, "testing implicit merge from repo")
 	// When branch defines Archs, they replace repo-level Archs (not append)
 	// to prevent duplicate goreleaser build IDs
-	assert.EqualValues(t, build{Flags: []string{"flagstd1", "flagstd2"},
+	assert.EqualValues(t, build{Flags: []string{"flagstd2"},
 		BuildPackageName: "repo1-pkg",
 		DHRepo:           "repo1-doc-right",
 		Archs: []struct {
