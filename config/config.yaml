@@ -99,6 +99,7 @@ policy:
                   docker: linux/s390x
             # ee builds are enterprise
             ee:
+              feature: ee
               flags:
                 - -tags=goplugin,ee
                 - -trimpath
@@ -183,24 +184,43 @@ policy:
                 - release-test
                 - distroless
                 - fips
+                - ee
+                - resolve-dashboard
+            release-5.3:
+              buildenv: 1.24-bullseye
+              features:
+                - release-test
+                - distroless
+                - fips
+              builds:
+                fips:
+                  flags:
+                    - -tags=goplugin,fips
+                    - -trimpath
             release-5.8:
               buildenv: 1.25-bullseye
               features:
                 - release-test
                 - distroless
                 - fips
+                - ee
+                - resolve-dashboard
             release-5.10:
               buildenv: 1.25-bullseye
               features:
                 - release-test
                 - distroless
                 - fips
+                - ee
+                - resolve-dashboard
             release-5.11:
               buildenv: 1.25-bullseye
               features:
                 - release-test
                 - distroless
                 - fips
+                - ee
+                - resolve-dashboard
             release-5.12:
               buildenv: 1.25-bullseye
               builds:
@@ -220,6 +240,8 @@ policy:
               features:
                 - release-test
                 - distroless
+                - ee
+                - resolve-dashboard
 
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
@@ -292,6 +314,13 @@ policy:
               cgo: false
               features:
                 - nightly-e2e
+                - distroless
+                - release-test
+                - fips
+            release-5.3:
+              buildenv: 1.24-bullseye
+              cgo: false
+              features:
                 - distroless
                 - release-test
                 - fips
