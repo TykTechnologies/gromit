@@ -93,8 +93,6 @@ level: # testsuites
                     db: "postgres15"
                     apimarkers: "not local and not dind and not sql"
           push:
-            pump:
-                - "tykio/tyk-pump-docker-pub:v1.14"
             level: # repos
               tyk:
               tyk-analytics:
@@ -318,8 +316,6 @@ level: # testsuites
                     db: "postgres15"
                     apimarkers: "not local and not dind and not sql"
           push:
-            pump:
-                - "tykio/tyk-pump-docker-pub:v1.14"
             level: # repos
               tyk-analytics:
               tyk-pro:
