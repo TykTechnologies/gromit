@@ -191,12 +191,6 @@ policy:
               features:
                 - release-test
                 - distroless
-                - fips
-              builds:
-                fips:
-                  flags:
-                    - -tags=goplugin,fips
-                    - -trimpath
             release-5.8:
               buildenv: 1.25-bullseye
               features:
@@ -323,7 +317,6 @@ policy:
               features:
                 - distroless
                 - release-test
-                - fips
             release-5.8:
               buildenv: 1.25-bullseye
               cgo: false
