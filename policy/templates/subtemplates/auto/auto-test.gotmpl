@@ -108,7 +108,7 @@
       - name: Fetch environment from tyk-pro
         uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@42304edda365365e0a887cf018d8edc34b960b82  # main
         with:
-          org_gh_token: {{`${{ github.token }}`}}
+          org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
 {{- end }}
       - name: Set up test environment
         uses: TykTechnologies/github-actions/.github/actions/tests/env-up@42304edda365365e0a887cf018d8edc34b960b82  # main
