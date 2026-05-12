@@ -14,6 +14,18 @@ on:
     - cron: "0 0 * * 1-5"
   workflow_dispatch:
     inputs:
+      image_source:
+        description: 'Image source to use (ecr or official)'
+        required: false
+        default: 'ecr'
+        type: choice
+        options:
+          - ecr
+          - official
+      test_branch:
+        description: 'Branch name for test code (if not specified, will use master)'
+        required: false
+        type: string
       gateway_image_tag:
         description: 'ECR Gateway image tag to use (defaults to master if not specified)'
         required: false
@@ -21,6 +33,11 @@ on:
         type: string
       dashboard_image_tag:
         description: 'ECR Dashboard image tag to use (defaults to master if not specified)'
+        required: false
+        default: 'master'
+        type: string
+      pump_image_tag:
+        description: 'ECR Pump image tag to use (defaults to master if not specified)'
         required: false
         default: 'master'
         type: string
@@ -33,6 +50,7 @@ on:
 env:
   VARIATION: prod
   BASE_REF: master
+  IMAGE_SOURCE: {{`${{ github.event.inputs.image_source || 'ecr' }}`}}
 
 jobs:
   security-check:
@@ -50,11 +68,22 @@ jobs:
         uses: aws-actions/amazon-ecr-login@f2e9fc6c2b355c1890b65e6f6f0e2ac3e6e22f78  # v2
         with:
           mask-password: 'true'
+      - name: Set image tags for security check
+        id: security_tags
+        run: |
+          DASHBOARD_TAG="{{`${{ github.event.inputs.dashboard_image_tag || 'master' }}`}}"
+          GATEWAY_TAG="{{`${{ github.event.inputs.gateway_image_tag || 'master' }}`}}"
+          MDCB_TAG="{{`${{ github.event.inputs.mdcb_image_tag || 'master' }}`}}"
+          
+          echo "dashboard_image=754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-analytics:${DASHBOARD_TAG}" >> $GITHUB_OUTPUT
+          echo "gateway_image=754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
+          echo "mdcb_image=754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-sink:${MDCB_TAG}" >> $GITHUB_OUTPUT
+
       - name: Run Trivy vulnerability scanner for dashboard
         id: trivy_dashboard
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # master
         with:
-          image-ref: "754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-analytics:{{`${{ github.event.inputs.dashboard_image_tag || 'master' }}`}}"
+          image-ref: {{`${{ steps.security_tags.outputs.dashboard_image }}`}}
           format: 'table'
           scan-type: 'image'
           exit-code: '1'
@@ -67,7 +96,7 @@ jobs:
         id: trivy_gateway
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # master
         with:
-          image-ref: "754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-ee:{{`${{ github.event.inputs.gateway_image_tag || 'master' }}`}}"
+          image-ref: {{`${{ steps.security_tags.outputs.gateway_image }}`}}
           format: 'table'
           scan-type: 'image'
           exit-code: '1'
@@ -80,7 +109,7 @@ jobs:
         id: trivy_mdcb
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # master
         with:
-          image-ref: "754489498669.dkr.ecr.eu-central-1.amazonaws.com/tyk-sink:{{`${{ github.event.inputs.mdcb_image_tag || 'master' }}`}}"
+          image-ref: {{`${{ steps.security_tags.outputs.mdcb_image }}`}}
           format: 'table'
           scan-type: 'image'
           exit-code: '1'
