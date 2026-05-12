@@ -174,7 +174,13 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 				break
 			}
 			if pr {
+				title, _ := cmd.Flags().GetString("title")
 				prOpts := &policy.PullRequest{
+					Jira: &policy.JiraIssue{
+						Id:    "RELENG",
+						Title: title,
+						Body:  "Automated PR by gromit",
+					},
 					BaseBranch: repo.Branch(),
 					PrBranch:   pushOpts.RemoteBranch,
 					Owner:      owner,
