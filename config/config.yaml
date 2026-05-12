@@ -236,6 +236,12 @@ policy:
                 - distroless
                 - ee
                 - resolve-dashboard
+            release-5.13.0:
+              buildenv: 1.25-bullseye
+              # FIPS disabled for 5.13.0 release
+              features:
+                - release-test
+                - distroless
 
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
@@ -344,6 +350,14 @@ policy:
             release-5.12:
               buildenv: 1.25-bullseye
               cgo: false
+              features:
+                - nightly-e2e
+                - distroless
+                - release-test
+            release-5.13.0:
+              buildenv: 1.25-bullseye
+              cgo: false
+              # FIPS disabled for 5.13.0 release
               features:
                 - nightly-e2e
                 - distroless
