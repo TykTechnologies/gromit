@@ -174,12 +174,19 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 				break
 			}
 			if pr {
+				prTitle, _ := cmd.Flags().GetString("title")
+				jiraID, _ := cmd.Flags().GetString("jira")
 				prOpts := &policy.PullRequest{
 					BaseBranch: repo.Branch(),
 					PrBranch:   pushOpts.RemoteBranch,
 					Owner:      owner,
 					Repo:       repoName,
 					AutoMerge:  autoMerge,
+					Jira: &policy.JiraIssue{
+						Id:    jiraID,
+						Title: prTitle,
+						Body:  "Auto-generated from gromit templates by policy sync.",
+					},
 				}
 				pr, err := gh.CreatePR(rp, prOpts)
 				if err != nil {
@@ -259,6 +266,7 @@ var generateTuiCmd = &cobra.Command{
 func init() {
 	syncSubCmd.Flags().Bool("pr", false, "Create PR")
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
+	syncSubCmd.Flags().String("jira", "releng", "Jira ticket ID to use in the PR title, e.g. TT-12345")
 	syncSubCmd.Flags().String("msg", "Auto generated from templates by gromit", "Commit message for the automated commit by gromit.")
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
 	syncSubCmd.Flags().StringVar(&owner, "owner", "TykTechnologies", "Github org")

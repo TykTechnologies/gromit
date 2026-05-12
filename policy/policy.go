@@ -271,12 +271,17 @@ func mergeBuilds(r, b buildMap) buildMap {
 		cp := *v
 		merged[k] = &cp
 	}
-	// Clear Archs in merged builds when branch provides its own,
+	// Clear Archs and Flags in merged builds when branch provides its own,
 	// so mergo doesn't append to the existing list.
 	for k, bv := range b {
-		if bv != nil && len(bv.Archs) > 0 {
+		if bv != nil {
 			if m, ok := merged[k]; ok {
-				m.Archs = nil
+				if len(bv.Archs) > 0 {
+					m.Archs = nil
+				}
+				if len(bv.Flags) > 0 {
+					m.Flags = nil
+				}
 			}
 		}
 	}

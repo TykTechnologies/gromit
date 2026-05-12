@@ -99,6 +99,7 @@ policy:
                   docker: linux/s390x
             # ee builds are enterprise
             ee:
+              feature: ee
               flags:
                 - -tags=goplugin,ee
                 - -trimpath
@@ -183,24 +184,37 @@ policy:
                 - release-test
                 - distroless
                 - fips
+                - ee
+                - resolve-dashboard
+            release-5.3:
+              buildenv: 1.24-bullseye
+              features:
+                - release-test
+                - distroless
             release-5.8:
               buildenv: 1.25-bullseye
               features:
                 - release-test
                 - distroless
                 - fips
+                - ee
+                - resolve-dashboard
             release-5.10:
               buildenv: 1.25-bullseye
               features:
                 - release-test
                 - distroless
                 - fips
+                - ee
+                - resolve-dashboard
             release-5.11:
               buildenv: 1.25-bullseye
               features:
                 - release-test
                 - distroless
                 - fips
+                - ee
+                - resolve-dashboard
             release-5.12:
               buildenv: 1.25-bullseye
               builds:
@@ -220,6 +234,8 @@ policy:
               features:
                 - release-test
                 - distroless
+                - ee
+                - resolve-dashboard
             release-5.13.0:
               buildenv: 1.25-bullseye
               # FIPS disabled for 5.13.0 release
@@ -301,6 +317,12 @@ policy:
                 - distroless
                 - release-test
                 - fips
+            release-5.3:
+              buildenv: 1.24-bullseye
+              cgo: false
+              features:
+                - distroless
+                - release-test
             release-5.8:
               buildenv: 1.25-bullseye
               cgo: false
