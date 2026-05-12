@@ -110,28 +110,80 @@
         with:
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
 {{- end }}
+{{- if eq .flow "nightly" }}
+      - name: Set image tags
+        id: set_tags
+        run: |
+          GATEWAY_TAG="{{`${{ github.event.inputs.gateway_image_tag || matrix.envfiles.gwdash || 'master' }}`}}"
+          DASHBOARD_TAG="{{`${{ github.event.inputs.dashboard_image_tag || matrix.envfiles.gwdash || 'master' }}`}}"
+          PUMP_TAG="{{`${{ github.event.inputs.pump_image_tag || matrix.envfiles.gwdash || 'master' }}`}}"
+          MDCB_TAG="{{`${{ github.event.inputs.mdcb_image_tag || matrix.envfiles.gwdash || 'master' }}`}}"
+          
+          if [ "{{`${{ env.IMAGE_SOURCE }}`}}" == "official" ]; then
+            echo "tyk_ee_image=tykio/tyk-gateway-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
+            echo "tyk_analytics_image=tykio/tyk-dashboard:${DASHBOARD_TAG}" >> $GITHUB_OUTPUT
+            echo "tyk_pump_image=tykio/tyk-pump-docker-pub:${PUMP_TAG}" >> $GITHUB_OUTPUT
+            echo "tyk_sink_image=tykio/tyk-mdcb-docker:${MDCB_TAG}" >> $GITHUB_OUTPUT
+            echo "tyk_alfa_image=tykio/tyk-gateway-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
+            echo "tyk_beta_image=tykio/tyk-gateway-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
+          else
+            echo "tyk_ee_image={{`${{ steps.ecr.outputs.registry }}`}}/tyk-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
+            echo "tyk_analytics_image={{`${{ steps.ecr.outputs.registry }}`}}/tyk-analytics:${DASHBOARD_TAG}" >> $GITHUB_OUTPUT
+            echo "tyk_pump_image={{`${{ steps.ecr.outputs.registry }}`}}/tyk-pump:${PUMP_TAG}" >> $GITHUB_OUTPUT
+            echo "tyk_sink_image={{`${{ steps.ecr.outputs.registry }}`}}/tyk-sink:${MDCB_TAG}" >> $GITHUB_OUTPUT
+            echo "tyk_alfa_image={{`${{ steps.ecr.outputs.registry }}`}}/tyk-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
+            echo "tyk_beta_image={{`${{ steps.ecr.outputs.registry }}`}}/tyk-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "tags={{`${{ steps.ecr.outputs.registry }}`}}/tyk-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
+{{- end }}
       - name: Set up test environment
         uses: TykTechnologies/github-actions/.github/actions/tests/env-up@42304edda365365e0a887cf018d8edc34b960b82  # main
         timeout-minutes: 5
         id: env_up
         with:
+{{- if eq .flow "nightly" }}
+          base_ref: {{`${{ matrix.envfiles.gwdash || env.BASE_REF }}`}}
+          tags: {{`${{ steps.set_tags.outputs.tags }}`}}
+{{- else }}
           base_ref: {{`${{ env.BASE_REF }}`}}
           tags: {{`${{ needs.goreleaser.outputs.ee_tags || needs.goreleaser.outputs.std_tags || format('{0}/tyk-ee:master', steps.ecr.outputs.registry) }}`}}
+{{- end }}
           {{- if and (eq .dot.Name "tyk") (eq .test "api") (has "resolve-dashboard" .dot.Branchvals.Features) }}
           dashboard_image: {{`${{ needs.resolve-dashboard-image.outputs.dashboard_image }}`}}
           {{- end }}
           github_token: {{`${{ steps.app-token.outputs.token }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
+{{- if eq .flow "nightly" }}
+        env:
+          tyk_ee_image: {{`${{ steps.set_tags.outputs.tyk_ee_image }}`}}
+          tyk_analytics_image: {{`${{ steps.set_tags.outputs.tyk_analytics_image }}`}}
+          tyk_pump_image: {{`${{ steps.set_tags.outputs.tyk_pump_image }}`}}
+          tyk_sink_image: {{`${{ steps.set_tags.outputs.tyk_sink_image }}`}}
+          tyk_alfa_image: {{`${{ steps.set_tags.outputs.tyk_alfa_image }}`}}
+          tyk_beta_image: {{`${{ steps.set_tags.outputs.tyk_beta_image }}`}}
+{{- end }}
 
+{{- if eq .flow "nightly" }}
+      - name: Checkout {{ .test }} test code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        env:
+          TEST_BRANCH: {{`${{ github.event.inputs.test_branch || matrix.envfiles.gwdash }}`}}
+        with:
+          repository: TykTechnologies/tyk-analytics
+          path: tyk-analytics
+          token: {{`${{ steps.app-token.outputs.token }}`}}
+          ref: {{`${{ env.TEST_BRANCH }}`}}
+          fetch-depth: 1
+          sparse-checkout: tests/{{ .test }}
+{{- else }}
       - name: Choose test code branch
         uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@42304edda365365e0a887cf018d8edc34b960b82  # main
         with:
           test_folder: {{ .test }}
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
-          {{- if eq .flow "nightly" }}
-          branch: {{`${{ matrix.envfiles.gwdash }}`}}
-          {{- end }}
+{{- end }}
           
       {{ if eq .test "api" }}
       - name: Run API tests
