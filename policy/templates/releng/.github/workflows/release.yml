@@ -51,7 +51,7 @@ jobs:
 
 {{- template "goreleaser" . }}
 
-{{- if eq .Name "tyk" }}
+{{- if and (eq .Name "tyk") (has "resolve-dashboard" .Branchvals.Features) }}
 {{- template "tyk-dashboard-resolver" . }}
 {{- end }}
 
