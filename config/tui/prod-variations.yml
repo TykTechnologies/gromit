@@ -323,12 +323,7 @@ level: # testsuites
             level: # repo
               tyk-analytics:
                 envfiles:
-                  - gwdash: release-5.3
-                  - gwdash: release-5.8
-          workflow_dispatch:
-            level: # repo
-              tyk-analytics:
-                envfiles:
+                  - gwdash: master
                   - gwdash: release-5.3
                   - gwdash: release-5.8
   ui:
