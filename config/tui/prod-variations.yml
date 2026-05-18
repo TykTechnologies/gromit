@@ -323,30 +323,14 @@ level: # testsuites
             level: # repo
               tyk-analytics:
                 envfiles:
-                  - cache: "valkey8"
-                    config: "sha256"
-                    db: "mongo8"
-                    apimarkers: "not local and not dind"
-                    gwdash: release-5.3
-                  - cache: "valkey8"
-                    config: "sha256"
-                    db: "mongo8"
-                    apimarkers: "not local and not dind"
-                    gwdash: release-5.8
+                  - gwdash: release-5.3
+                  - gwdash: release-5.8
           workflow_dispatch:
             level: # repo
               tyk-analytics:
                 envfiles:
-                  - cache: "valkey8"
-                    config: "sha256"
-                    db: "mongo8"
-                    apimarkers: "not local and not dind"
-                    gwdash: release-5.3
-                  - cache: "valkey8"
-                    config: "sha256"
-                    db: "mongo8"
-                    apimarkers: "not local and not dind"
-                    gwdash: release-5.8
+                  - gwdash: release-5.3
+                  - gwdash: release-5.8
   ui:
     level: # branches
       master:
