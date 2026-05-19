@@ -238,10 +238,10 @@ policy:
                 - resolve-dashboard
             release-5.13.0:
               buildenv: 1.25-bullseye
-              # FIPS disabled for 5.13.0 release
               features:
                 - release-test
                 - distroless
+                - fips
 
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
@@ -357,11 +357,11 @@ policy:
             release-5.13.0:
               buildenv: 1.25-bullseye
               cgo: false
-              # FIPS disabled for 5.13.0 release
               features:
                 - nightly-e2e
                 - distroless
                 - release-test
+                - fips
             release-5.13:
               buildenv: 1.25-bullseye
               cgo: false
