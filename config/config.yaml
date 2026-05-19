@@ -242,6 +242,8 @@ policy:
                 - release-test
                 - distroless
                 - fips
+                - ee
+                - resolve-dashboard
 
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
