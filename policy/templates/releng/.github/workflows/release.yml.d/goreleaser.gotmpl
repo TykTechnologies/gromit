@@ -106,7 +106,7 @@
         run: |
           echo "::warning::Building UI assets from source as S3 fetch failed"
           cd webclient
-          npm ci --ignore-scripts
+          npm ci --ignore-scripts --legacy-peer-deps
           npm install esbuild@0.25.12
           npm run build
           cd ..
@@ -285,13 +285,7 @@
 {{- range $b, $bv := $r.GetDockerBuilds }}
       - name: Docker metadata for {{ $b }} CI
         id: ci_metadata_{{ $b }}
-{{- if eq $b "ee" }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
-{{- else if $r.HasBuild "ee" }}
-        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && github.event_name != 'pull_request' }}`}}
-{{- else }}
-        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
-{{- end }}
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051  # v5
         with:
           images: |
@@ -307,13 +301,7 @@
             type=semver,pattern={{`{{version}}`}},prefix=v
 
       - name: push {{ $b }} image to CI
-{{- if eq $b "ee" }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
-{{- else if $r.HasBuild "ee" }}
-        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && github.event_name != 'pull_request' }}`}}
-{{- else }}
-        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
-{{- end }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
           context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
