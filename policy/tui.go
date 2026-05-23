@@ -18,72 +18,75 @@ func GenerateStatic(configDir, outDir string) error {
 	}
 
 	for filename, v := range av {
-		// Determine tsv name: strip .yml/.yaml and trailing s
-		tsv := strings.TrimSuffix(filename, ".yaml")
-		tsv = strings.TrimSuffix(tsv, ".yml")
-		tsv = strings.TrimSuffix(tsv, "s")
+		baseName := strings.TrimSuffix(filename, ".yaml")
+		baseName = strings.TrimSuffix(baseName, ".yml")
+		singular := strings.TrimSuffix(baseName, "s")
+		plural := singular + "s"
 
-		// Dump the entire variation
-		dumpPath := filepath.Join(outDir, "v2", "dump", tsv)
-		if err := writeJSON(dumpPath, v); err != nil {
-			return err
-		}
+		for _, tsv := range []string{singular, plural} {
 
-		for _, path := range v.Paths {
-			repo := path.Repo
-			branch := path.Branch
-			trigger := path.Trigger
-			ts := path.Testsuite
-
-			m := v.Lookup(repo, branch, trigger, ts)
-			if m == nil {
-				continue
-			}
-
-			// Generate v2/{tsv}/{repo}/{branch}/{trigger}/{ts}.gho
-			ghoPath := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts+".gho")
-			if err := writeGHO(ghoPath, *m); err != nil {
+			// Dump the entire variation
+			dumpPath := filepath.Join(outDir, "v2", "dump", tsv)
+			if err := writeJSON(dumpPath, v); err != nil {
 				return err
 			}
 
-			// Iterate over fields of ghMatrix
-			val := reflect.ValueOf(*m)
-			typ := val.Type()
+			for _, path := range v.Paths {
+				repo := path.Repo
+				branch := path.Branch
+				trigger := path.Trigger
+				ts := path.Testsuite
 
-			for i := 0; i < typ.NumField(); i++ {
-				field := typ.Field(i)
-				fieldValue := val.Field(i)
-				jsonTag := field.Tag.Get("json")
-				if jsonTag == "" || jsonTag == "-" {
+				m := v.Lookup(repo, branch, trigger, ts)
+				if m == nil {
 					continue
 				}
-				fieldJSONPath := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, jsonTag+".json")
-				if err := writeJSON(fieldJSONPath, fieldValue.Interface()); err != nil {
-					return err
-				}
-				fieldJSONPathStruct := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, field.Name+".json")
-				if err := writeJSON(fieldJSONPathStruct, fieldValue.Interface()); err != nil {
+
+				// Generate v2/{tsv}/{repo}/{branch}/{trigger}/{ts}.gho
+				ghoPath := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts+".gho")
+				if err := writeGHO(ghoPath, *m); err != nil {
 					return err
 				}
 
-				// Generate v2/{tsv}/{repo}/{branch}/{trigger}/{ts}/{field}.gho
-				fieldGHOPath := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, jsonTag+".gho")
-				if err := writeFieldGHO(fieldGHOPath, jsonTag, fieldValue.Interface()); err != nil {
-					return err
-				}
-				fieldGHOPathStruct := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, field.Name+".gho")
-				if err := writeFieldGHO(fieldGHOPathStruct, jsonTag, fieldValue.Interface()); err != nil {
-					return err
-				}
+				// Iterate over fields of ghMatrix
+				val := reflect.ValueOf(*m)
+				typ := val.Type()
 
-				// Legacy v1 endpoint, only for prod-variation
-				if tsv == "prod-variation" {
-					// The legacy endpoint uses capitalized field names in the URL in some cases, but the instructions say {field}.
-					// Wait, the test says: /api/repo1/br0/tr0/ts0/EnvFiles
-					// Let's use the struct field name for legacy v1
-					legacyPath := filepath.Join(outDir, "api", repo, branch, trigger, ts, field.Name)
-					if err := writeJSON(legacyPath, fieldValue.Interface()); err != nil {
+				for i := 0; i < typ.NumField(); i++ {
+					field := typ.Field(i)
+					fieldValue := val.Field(i)
+					jsonTag := field.Tag.Get("json")
+					if jsonTag == "" || jsonTag == "-" {
+						continue
+					}
+					fieldJSONPath := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, jsonTag+".json")
+					if err := writeJSON(fieldJSONPath, fieldValue.Interface()); err != nil {
 						return err
+					}
+					fieldJSONPathStruct := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, field.Name+".json")
+					if err := writeJSON(fieldJSONPathStruct, fieldValue.Interface()); err != nil {
+						return err
+					}
+
+					// Generate v2/{tsv}/{repo}/{branch}/{trigger}/{ts}/{field}.gho
+					fieldGHOPath := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, jsonTag+".gho")
+					if err := writeFieldGHO(fieldGHOPath, jsonTag, fieldValue.Interface()); err != nil {
+						return err
+					}
+					fieldGHOPathStruct := filepath.Join(outDir, "v2", tsv, repo, branch, trigger, ts, field.Name+".gho")
+					if err := writeFieldGHO(fieldGHOPathStruct, jsonTag, fieldValue.Interface()); err != nil {
+						return err
+					}
+
+					// Legacy v1 endpoint, only for prod-variation
+					if tsv == "prod-variation" {
+						// The legacy endpoint uses capitalized field names in the URL in some cases, but the instructions say {field}.
+						// Wait, the test says: /api/repo1/br0/tr0/ts0/EnvFiles
+						// Let's use the struct field name for legacy v1
+						legacyPath := filepath.Join(outDir, "api", repo, branch, trigger, ts, field.Name)
+						if err := writeJSON(legacyPath, fieldValue.Interface()); err != nil {
+							return err
+						}
 					}
 				}
 			}
