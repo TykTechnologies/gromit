@@ -332,7 +332,7 @@ level: # testsuites
                     config: "murmur128"
                     db: "mongo8"
                     apimarkers: "not local and not dind"
-                    gwdash: release-5.12
+                    gwdash: release-5.13
                   - cache: "redis7"
                     config: "murmur128"
                     db: "mongo8"
