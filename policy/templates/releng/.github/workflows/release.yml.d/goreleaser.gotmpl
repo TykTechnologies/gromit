@@ -312,7 +312,7 @@
           file: ci/Dockerfile.std
           {{ end }}
           provenance: mode=max
-          push: true
+          outputs: type=image,push=true,compression=gzip,force-compression=true,oci-mediatypes=true
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.tags }}`}}
@@ -358,7 +358,7 @@
           {{- end }}
           provenance: mode=max
           cache-from: type=gha
-          push: true
+          outputs: type=image,push=true,compression=gzip,force-compression=true,oci-mediatypes=true
           tags: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.tags }}`}}
           labels: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.labels }}`}}
           build-args: |
