@@ -41,7 +41,7 @@ env:
 jobs:
   dep-guard:
     if: github.event_name == 'pull_request'
-    uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@production_branch
+    uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@production
     permissions:
       contents: read
 
@@ -77,7 +77,7 @@ jobs:
       contents: read
     steps:
       - name: Upload failed job logs
-        uses: TykTechnologies/github-actions/.github/actions/gh-logs-analyser@production_branch
+        uses: TykTechnologies/github-actions/.github/actions/gh-logs-analyser@production
         with:
           github_token: ${{`{{ secrets.GITHUB_TOKEN }}`}}
           gh_logs_analyser_token: ${{`{{ secrets.GH_LOGS_ANALYSER }}`}}

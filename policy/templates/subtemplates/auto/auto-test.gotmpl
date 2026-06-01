@@ -17,7 +17,7 @@
       sink: {{`${{ steps.params.outputs.sink }}`}}
     steps:
       - name: Set test parameters
-        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@production_branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@production
         id: params
         with:
           variation: {{`${{ env.VARIATION }}`}}
@@ -106,7 +106,7 @@
           fetch-depth: 1
 {{- else }}
       - name: Fetch environment from tyk-pro
-        uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@production_branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@production
         with:
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
 {{- end }}
@@ -138,7 +138,7 @@
           echo "tags={{`${{ steps.ecr.outputs.registry }}`}}/tyk-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
 {{- end }}
       - name: Set up test environment
-        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@production_branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@production
         timeout-minutes: 5
         id: env_up
         with:
@@ -179,7 +179,7 @@
           sparse-checkout: tests/{{ .test }}
 {{- else }}
       - name: Choose test code branch
-        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@production_branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@production
         with:
           test_folder: {{ .test }}
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
@@ -187,7 +187,7 @@
           
       {{ if eq .test "api" }}
       - name: Run API tests
-        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@production_branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@production
         timeout-minutes: 30
         id: test_execution
         with:
@@ -200,11 +200,11 @@
           git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
       - name: Execute UI tests
         timeout-minutes: 30
-        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests@production_branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests@production
         id: test_execution
 
       - name: Upload UI test report to S3
-        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests-report@production_branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests-report@production
         if: failure() && steps.test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
         with:
           aws_acces_key_id: {{`${{ secrets.UI_AWS_ACCESS_KEY_ID }}`}}
@@ -212,7 +212,7 @@
       {{- end }} {{/* end of if .test */}}
 
       - name: Generate test reports and collect logs
-        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@production_branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@production
         if: always() && (steps.test_execution.conclusion != 'skipped')
         with:
           report_xml: 'true'
