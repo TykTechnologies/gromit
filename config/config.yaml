@@ -199,23 +199,7 @@ policy:
                 - fips
                 - ee
                 - resolve-dashboard
-            release-5.10:
-              buildenv: 1.25-bullseye
-              features:
-                - release-test
-                - distroless
-                - fips
-                - ee
-                - resolve-dashboard
-            release-5.11:
-              buildenv: 1.25-bullseye
-              features:
-                - release-test
-                - distroless
-                - fips
-                - ee
-                - resolve-dashboard
-            release-5.12:
+            release-5.13:
               buildenv: 1.25-bullseye
               builds:
                 # EE on 5.12 uses distroless (no DHI) to preserve current behavior for patch releases
@@ -236,15 +220,6 @@ policy:
                 - distroless
                 - ee
                 - resolve-dashboard
-            release-5.13.0:
-              buildenv: 1.25-bullseye
-              features:
-                - release-test
-                - distroless
-                - fips
-                - ee
-                - resolve-dashboard
-
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
           dhrepo: tykio/tyk-dashboard
@@ -326,37 +301,6 @@ policy:
                 - distroless
                 - release-test
             release-5.8:
-              buildenv: 1.25-bullseye
-              cgo: false
-              features:
-                - nightly-e2e
-                - distroless
-                - release-test
-                - fips
-            release-5.10:
-              buildenv: 1.25-bullseye
-              cgo: false
-              features:
-                - nightly-e2e
-                - distroless
-                - release-test
-                - fips
-            release-5.11:
-              buildenv: 1.25-bullseye
-              cgo: false
-              features:
-                - nightly-e2e
-                - distroless
-                - release-test
-                - fips
-            release-5.12:
-              buildenv: 1.25-bullseye
-              cgo: false
-              features:
-                - nightly-e2e
-                - distroless
-                - release-test
-            release-5.13.0:
               buildenv: 1.25-bullseye
               cgo: false
               features:
@@ -593,7 +537,6 @@ policy:
                   docker: linux/s390x
           branches:
             master: {}
-            TT-16374-fix-artifact-name-collision:
         tyk-sink:
           buildenv: 1.25-bookworm
           exposeports: 80
@@ -652,9 +595,6 @@ policy:
                 - GOFIPS140=v1.0.0
           branches:
             master:
-              features:
-                - fips
-            release-2.9:
               features:
                 - fips
 
