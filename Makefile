@@ -1,4 +1,10 @@
 SHELL 	:= bash
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+	SED_I := sed -i ''
+else
+	SED_I := sed -i
+endif
 VERSION := $(shell git describe --tags)
 COMMIT 	:= $(shell git rev-list -1 HEAD)
 BUILD_DATE := $(shell date +%FT%T%z)
@@ -35,10 +41,10 @@ update-test-cases:
 	go test ./cmd/ -update
 
 update-actions-versions: bin/update-actions-versions.sed
-	echo $(TEMPLATES) | xargs sed -i -f $<
+	echo $(TEMPLATES) | xargs $(SED_I) -f $<
 
 update-variation: policy/templates/test-square/.github/workflows/test-square.yml policy/templates/releng/.github/workflows/release.yml
-	sed -i 's/VARIATION: .*/VARIATION: $(VARIATION)/' $^
+	$(SED_I) 's/VARIATION: .*/VARIATION: $(VARIATION)/' $^
 
 push: dist/gromit_linux_amd64_v1/gromit
 	goreleaser --clean --snapshot
