@@ -48,7 +48,7 @@ on:
         type: string
 
 env:
-  VARIATION: prod
+  VARIATION: prod-variation
   BASE_REF: master
   IMAGE_SOURCE: {{`${{ github.event.inputs.image_source || 'ecr' }}`}}
 
