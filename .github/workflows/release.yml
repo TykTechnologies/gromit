@@ -30,6 +30,26 @@ on:
         type: string
         required: false
         default: ''
+      pr:
+        description: 'Create Pull Request (PR) in the downstream repository'
+        type: boolean
+        required: false
+        default: true
+      title:
+        description: 'Title of the PR (required if "Create Pull Request" is checked), e.g. "gromit: update golangci-lint version"'
+        type: string
+        required: false
+        default: 'gromit: sync templates'
+      jira:
+        description: 'Jira issue key to use in the PR title, e.g. "TT-12345"'
+        type: string
+        required: false
+        default: 'releng'
+      prefix:
+        description: 'Branch prefix for template changes, e.g. "releng/" or "update/"'
+        type: string
+        required: false
+        default: 'releng/'
 
 jobs:
   dep-guard:
@@ -147,15 +167,28 @@ jobs:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -eo pipefail
-          BRANCH_ARG=""
+          BRANCH_ARGS=()
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.branch }}" ]; then
-            BRANCH_ARG="--branch ${{ inputs.branch }}"
+            BRANCH_ARGS=(--branch "${{ inputs.branch }}")
           fi
-          ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }} $BRANCH_ARG
+          
+          PREFIX_ARGS=()
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.prefix }}" ]; then
+            PREFIX_ARGS=(--prefix "${{ inputs.prefix }}")
+          fi
+          
+          PR_ARGS=()
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "master" ]; then
+            PR_ARGS=(--pr --title "gromit: sync templates" --jira "releng")
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.pr }}" = "true" ]; then
+            PR_ARGS=(--pr --title "${{ inputs.title }}" --jira "${{ inputs.jira }}")
+          fi
+          
+          ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }} "${BRANCH_ARGS[@]}" "${PREFIX_ARGS[@]}" "${PR_ARGS[@]}"
+          
           echo "## :hospital: ℞ ${{ matrix.repo }}" >> $GITHUB_STEP_SUMMARY
           cd ${{ matrix.repo }} && for b in $(git for-each-ref --format '%(refname:short)' refs/heads); do
              echo -e "<details>\n <summary> ${{ matrix.repo }} $b </summary>\n"
-             echo '```diff'
-             git diff origin/${b} $b
-             echo -e '```\n</details>'
-          done | tee -a $GITHUB_STEP_SUMMARY
+             git log --oneline origin/$b..$b
+             echo -e "</details>\n"
+          done >> $GITHUB_STEP_SUMMARY
