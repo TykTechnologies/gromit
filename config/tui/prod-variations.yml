@@ -125,6 +125,22 @@ level: # testsuites
           push:
             level: # testsuite
               tyk-pump:
+      release-1.15.0:
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-pump:
+          push:
+            level: # testsuite
+              tyk-pump:
+      v2.11.0:
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-sink:
+          push:
+            level: # testsuite
+              tyk-sink:
       release-1.7:
         level: # trigger
           pull_request:
