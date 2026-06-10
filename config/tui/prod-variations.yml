@@ -101,6 +101,14 @@ level: # testsuites
               tyk-sink:
               portal:
               tyk-pro:
+      TT-17319-rest-as-mcp-catalogue-and-configuration-foundation:
+        level: # trigger
+          pull_request:
+            level: # repo
+              tyk:
+          push:
+            level: # repo
+              tyk:
       TT-16374-fix-artifact-name-collision:
         level: # trigger
           pull_request:
