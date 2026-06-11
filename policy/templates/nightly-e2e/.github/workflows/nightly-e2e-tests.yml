@@ -48,7 +48,7 @@ on:
         type: string
 
 env:
-  VARIATION: prod
+  VARIATION: prod-variation
   BASE_REF: master
   IMAGE_SOURCE: {{`${{ github.event.inputs.image_source || 'ecr' }}`}}
 
@@ -147,7 +147,7 @@ jobs:
       contents: read
     steps:
       - name: Upload failed job logs
-        uses: TykTechnologies/github-actions/.github/actions/gh-logs-analyser@42304edda365365e0a887cf018d8edc34b960b82  # main
+        uses: TykTechnologies/github-actions/.github/actions/gh-logs-analyser@production
         with:
           github_token: ${{`{{ secrets.GITHUB_TOKEN }}`}}
           gh_logs_analyser_token: ${{`{{ secrets.GH_LOGS_ANALYSER }}`}}

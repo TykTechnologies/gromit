@@ -9,11 +9,52 @@ on:
       - v*
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: 'Repository name to sync, e.g. "tyk" (equivalent to running `gromit policy sync tyk` locally). Use "all" to sync all repositories.'
+        type: choice
+        required: true
+        default: 'all'
+        options:
+          - all
+          - tyk
+          - tyk-analytics
+          - tyk-pump
+          - tyk-identity-broker
+          - tyk-sink
+          - portal
+          - tyk-pro
+      branch:
+        description: 'Branch name to sync, e.g. "release-5.13.0" (equivalent to running `gromit policy sync <repo> --branch release-5.13.0` locally). Leave empty to sync all configured branches.'
+        type: string
+        required: false
+        default: ''
+      pr:
+        description: 'Create Pull Request (PR) in the downstream repository'
+        type: boolean
+        required: false
+        default: true
+      title:
+        description: 'Title of the PR (required if "Create Pull Request" is checked), e.g. "gromit: update golangci-lint version"'
+        type: string
+        required: false
+        default: 'gromit: sync templates'
+      jira:
+        description: 'Jira issue key to use in the PR title, e.g. "TT-12345"'
+        type: string
+        required: false
+        default: 'releng'
+      prefix:
+        description: 'Branch prefix for template changes, e.g. "releng/" or "update/"'
+        type: string
+        required: false
+        default: 'releng/'
 
 jobs:
   dep-guard:
     if: github.event_name == 'pull_request'
-    uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@d3fa20888fa2878e877e22bb7702141217290e7c  # main
+    uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@production
 
   goreleaser:
     needs: [dep-guard]
@@ -69,6 +110,7 @@ jobs:
 
   doctor:
     needs: goreleaser
+    if: always() && needs.goreleaser.result == 'success'
     runs-on: ${{ vars.DEFAULT_RUNNER }}
     strategy:
       fail-fast: false
@@ -88,6 +130,7 @@ jobs:
 
     steps:
       - name: Generate GitHub App token
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.repo == 'all' || inputs.repo == matrix.repo }}
         id: app-token
         uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
         with:
@@ -95,6 +138,7 @@ jobs:
           private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
           owner: TykTechnologies
       - name: checkout ${{matrix.repo}}/${{matrix.branch}}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.repo == 'all' || inputs.repo == matrix.repo }}
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           repository: ${{ matrix.owner }}/${{ matrix.repo }}
@@ -104,11 +148,13 @@ jobs:
           fetch-depth: 1
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.repo == 'all' || inputs.repo == matrix.repo }}
         id: download
         with:
           name: binary-amd64
 
       - name: prepare gromit
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.repo == 'all' || inputs.repo == matrix.repo }}
         id: gromit
         run: |
           gromit="${{ steps.download.outputs.download-path }}/gromit"
@@ -116,16 +162,33 @@ jobs:
           echo "bin=${gromit}" >> "$GITHUB_OUTPUT"
 
       - name: update ${{ matrix.repo }}
-        if: ${{ (github.event_name == 'push' && github.ref_name == 'master') || endsWith(github.head_ref, 'releng') }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.repo == 'all' || inputs.repo == matrix.repo)) || (github.event_name == 'push' && github.ref_name == 'master') || endsWith(github.head_ref, 'releng') }}
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -eo pipefail
-          ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }}
+          BRANCH_ARGS=()
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.branch }}" ]; then
+            BRANCH_ARGS=(--branch "${{ inputs.branch }}")
+          fi
+          
+          PREFIX_ARGS=()
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.prefix }}" ]; then
+            PREFIX_ARGS=(--prefix "${{ inputs.prefix }}")
+          fi
+          
+          PR_ARGS=()
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "master" ]; then
+            PR_ARGS=(--pr --title "gromit: sync templates" --jira "releng")
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.pr }}" = "true" ]; then
+            PR_ARGS=(--pr --title "${{ inputs.title }}" --jira "${{ inputs.jira }}")
+          fi
+          
+          ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }} "${BRANCH_ARGS[@]}" "${PREFIX_ARGS[@]}" "${PR_ARGS[@]}"
+          
           echo "## :hospital: ℞ ${{ matrix.repo }}" >> $GITHUB_STEP_SUMMARY
           cd ${{ matrix.repo }} && for b in $(git for-each-ref --format '%(refname:short)' refs/heads); do
              echo -e "<details>\n <summary> ${{ matrix.repo }} $b </summary>\n"
-             echo '```diff'
-             git diff origin/${b} $b
-             echo -e '```\n</details>'
-          done | tee -a $GITHUB_STEP_SUMMARY
+             git log --oneline origin/$b..$b
+             echo -e "</details>\n"
+          done >> $GITHUB_STEP_SUMMARY
