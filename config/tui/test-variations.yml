@@ -1,10 +1,10 @@
 # Define a default block with an anchor
 defaults: &defaults
-  - cache: "redis8_4"
-    config: "sha256"
-    db: "postgres17"
-    apimarkers: "not local and not dind and not nightly"
-    gwdash: master
+  cache: "redis8_4"
+  config: "sha256"
+  db: "postgres17"
+  apimarkers: "not local and not dind and not nightly"
+  gwdash: master
 
 envfiles:
   - cache: "redis7"
