@@ -6,16 +6,13 @@ envfiles:
     gwdash: master
 distros:
   rpm:
-    - "amazonlinux:2"
     - "registry.access.redhat.com/ubi8/ubi"
     - "amazonlinux:2023"
     - "registry.access.redhat.com/ubi9/ubi"
   deb:
-    - "ubuntu:xenial"
     - "debian:bullseye"
-    - "ubuntu:bionic"
-    - "ubuntu:focal"
     - "ubuntu:jammy"
+    - "ubuntu:noble"
     - "debian:bookworm"
     - "debian:trixie"
 pump:
