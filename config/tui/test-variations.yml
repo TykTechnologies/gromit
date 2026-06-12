@@ -95,12 +95,12 @@ level: # testsuites
                   - cache: "valkey8"
                     config: "sha256"
                     db: "mongo8"
-                    apimarkers: "not local and not dind"
+                    apimarkers: "not local and not dind and not nightly"
                     gwdash: master
                   - cache: "redis7"
                     config: "murmur128"
                     db: "postgres15"
-                    apimarkers: "not local and not dind and not sql"
+                    apimarkers: "not local and not dind and not sql and not nightly"
                     gwdash: master
                   - <<: *defaults
           push:
