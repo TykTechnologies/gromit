@@ -22,6 +22,7 @@ type ghMatrix struct {
 		APIMarkers string `json:"apimarkers"`
 		UIMarkers  string `json:"uimarkers"`
 		GwDash     string `json:"gwdash"`
+		Sink       string `json:"sink"`
 	} `json:"envfiles"`
 	Pump    []string `json:"pump"`
 	Sink    []string `json:"sink"`
