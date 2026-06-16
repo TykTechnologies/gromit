@@ -188,7 +188,7 @@
       {{ if eq .test "api" }}
       - name: Run API tests
         uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@production
-        timeout-minutes: 45
+        timeout-minutes: {{ if eq .flow "nightly" }}65{{ else }}45{{ end }}
         id: test_execution
         with:
           user_api_secret: {{`${{ steps.env_up.outputs.USER_API_SECRET }}`}}
