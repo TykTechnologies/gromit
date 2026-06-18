@@ -7,9 +7,9 @@ envfiles: # this set up will be used in all executions below.
     sink: "$ECR/tyk-sink:master"
     gwdash: master # this is used only for on-schedule triggers, for others it is ignored
 pump:
-  - "none"
+  - "$ECR/tyk-pump:master"
 sink:
-  - "none"
+  - "$ECR/tyk-sink:master"
 level: # testsuites
   api:
     level: # branches
