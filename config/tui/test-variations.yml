@@ -20,6 +20,8 @@ level: # testsuites
           db: "postgres15"
           apimarkers: "not local and not dind and not nightly"
           gwdash: master
+          pump: "$ECR/tyk-pump:master"
+          sink: "$ECR/tyk-sink:master"
       master:
         envfiles:
         - cache: "valkey9_1"
@@ -27,6 +29,8 @@ level: # testsuites
           db: "postgres15"
           apimarkers: "not local and not dind and not sql and not nightly"
           gwdash: master
+          pump: "tykio/tyk-pump-docker-pub:v1.14.1"
+          sink: "tykio/tyk-mdcb-docker:v2.11.0"
         level: # trigger
           schedule:
             level: # repo
