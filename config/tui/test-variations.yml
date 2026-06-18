@@ -45,7 +45,7 @@ level: # testsuites
               tyk-pro:
       master:
         envfiles:
-        - cache: "redis7" #### tobe changed valkey9_1
+        - cache: "valkey9_1"
           config: "murmur128"
           db: "postgres15"
           apimarkers: "not local and not dind and not sql and not nightly"
@@ -56,10 +56,6 @@ level: # testsuites
           schedule:
             level: # repo
               tyk-analytics:
-                # pump: 
-                #   - "tykio/tyk-pump-docker-pub:v1.14.1"
-                # sink: 
-                #   - "tykio/tyk-mdcb-docker:v2.11.0"
                 envfiles:
                   - cache: "redis8"
                     config: "sha256"

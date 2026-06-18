@@ -4,8 +4,8 @@
     <title>Automated Test Variations</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/carousel.css" type="text/css" media="screen" />
-    <script type="text/javascript" src="/static/carousel.js"></script>
+    <link rel="stylesheet" href="static/carousel.css" type="text/css" media="screen" />
+    <script type="text/javascript" src="static/carousel.js"></script>
   </head>
   <body>
     <h1>Available variations</h2>
@@ -72,7 +72,7 @@
 <h1>Files in {{ .SaveDir }} </h1>
 <ul class="saved-grid">
   {{ range $file := .AllVariations.Files }}
-  <li><a href="/show/{{ $file }}" target="_blank" rel="noopener noreferrer">{{ $file }}</a></li>
+  <li><a href="v2/dump/{{ trimSuffix (trimSuffix $file ".yml") "s" }}" target="_blank" rel="noopener noreferrer">{{ $file }}</a></li>
   {{end}}
 </ul>
 </body>
