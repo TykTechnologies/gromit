@@ -3,19 +3,21 @@ envfiles: # this set up will be used in all executions below.
     config: "sha256"
     db: "mongo7"
     apimarkers: "not local and not dind and not nightly"
+    pump: "$ECR/tyk-pump:master"
+    sink: "$ECR/tyk-sink:master"
     gwdash: master # this is used only for on-schedule triggers, for others it is ignored
-pump:
-  - "$ECR/tyk-pump:master"
-sink:
-  - "$ECR/tyk-sink:master"
+# pump:
+#   - "$ECR/tyk-pump:master"
+# sink:
+#   - "$ECR/tyk-sink:master"
 level: # testsuites
   api:
     level: # branches
-      default: # used as defult for all branches that are not listed below. Needs to use old versions to be compatible with the old pump/sink versions.
+      default: # used as defult for all branches that are not listed below. Needs to use old versions to be compatible with the old tyk versions.
         envfiles:
         - cache: "valkey8_1"
           config: "murmur128"
-          db: "postgres17"
+          db: "postgres15"
           apimarkers: "not local and not dind and not nightly"
           gwdash: master
       master:
@@ -29,16 +31,18 @@ level: # testsuites
           schedule:
             level: # repo
               tyk-analytics:
-                pump: 
-                  - "tykio/tyk-pump-docker-pub:v1.14.1"
-                sink: 
-                  - "tykio/tyk-mdcb-docker:v2.11.0"
+                # pump: 
+                #   - "tykio/tyk-pump-docker-pub:v1.14.1"
+                # sink: 
+                #   - "tykio/tyk-mdcb-docker:v2.11.0"
                 envfiles:
                   - cache: "redis8"
                     config: "sha256"
                     db: "postgres15"
                     apimarkers: "not local and not dind and not sql"
                     gwdash: master
+                    pump: "tykio/tyk-pump-docker-pub:v1.14.1"
+                    sink: "tykio/tyk-mdcb-docker:v2.11.0"
                   - cache: "redis8_2"
                     config: "murmur128"
                     db: "mongo8"
