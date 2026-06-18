@@ -6,10 +6,10 @@ envfiles: # this set up will be used in all executions below.
     pump: "$ECR/tyk-pump:master"
     sink: "$ECR/tyk-sink:master"
     gwdash: master # this is used only for on-schedule triggers, for others it is ignored
-# pump:
-#   - "$ECR/tyk-pump:master"
-# sink:
-#   - "$ECR/tyk-sink:master"
+pump:
+  - "none"
+sink:
+  - "none"
 level: # testsuites
   api:
     level: # branches
@@ -22,6 +22,27 @@ level: # testsuites
           gwdash: master
           pump: "$ECR/tyk-pump:master"
           sink: "$ECR/tyk-sink:master"
+        level: # trigger
+          workflow_dispatch:
+            level: # repo
+          pull_request:
+            level: # repo
+              tyk:
+              tyk-analytics:
+              tyk-pump:
+              tyk-sink:
+              tyk-identity-broker:
+              portal:
+              tyk-pro:
+          push:
+            level: # repos
+              tyk:
+              tyk-analytics:
+              tyk-pump:
+              tyk-identity-broker:
+              tyk-sink:
+              portal:
+              tyk-pro:
       master:
         envfiles:
         - cache: "valkey9_1"
@@ -106,6 +127,19 @@ level: # testsuites
               tyk-pro:
   ui:
     level: # branches
+      default:
+        level: # trigger
+          workflow_dispatch:
+            level: # repo
+              tyk-analytics:
+          pull_request:
+            level: # repo
+              tyk-analytics:
+              tyk-pro:
+          push:
+            level: # repos
+              tyk-analytics:
+              tyk-pro:
       master:
         level: # trigger
           schedule:
