@@ -68,8 +68,9 @@ level: # testsuites
                     config: "murmur128"
                     db: "mongo8"
                     apimarkers: "not local and not dind"
+                    sink: "tykio/tyk-mdcb-docker:v2.11.0"
+                    pump: "tykio/tyk-pump-docker-pub:v1.14.1"
                     gwdash: release-5.13
-                    sink: "$ECR/tyk-sink:release-2.8"
                   - cache: "redis8_4"
                     config: "murmur128"
                     db: "postgres14"
@@ -146,7 +147,7 @@ level: # testsuites
                     config: "murmur128"
                     db: "postgres15"
                     gwdash: release-5.13
-                  - cache: "redis8_1"
+                  - cache: "redis7"
                     config: "murmur128"
                     db: "mongo8"
                     gwdash: release-5.8
