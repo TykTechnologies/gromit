@@ -220,6 +220,29 @@ policy:
                 - distroless
                 - ee
                 - resolve-dashboard
+                - fips
+            release-5.13.1:
+              buildenv: 1.25-bullseye
+              builds:
+                # EE on 5.12 uses distroless (no DHI) to preserve current behavior for patch releases
+                ee:
+                  dockerbaseimage: distroless
+                  archs:
+                    - go: amd64
+                      deb: amd64
+                      docker: linux/amd64
+                    - go: arm64
+                      deb: aarch64
+                      docker: linux/arm64
+                    - go: s390x
+                      deb: s390x
+                      docker: linux/s390x
+              features:
+                - release-test
+                - distroless
+                - ee
+                - resolve-dashboard
+                - fips
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
           dhrepo: tykio/tyk-dashboard
@@ -315,6 +338,15 @@ policy:
                 - nightly-e2e
                 - distroless
                 - release-test
+                - fips
+            release-5.13.1:
+              buildenv: 1.25-bullseye
+              cgo: false
+              features:
+                - nightly-e2e
+                - distroless
+                - release-test
+                - fips
 
         portal:
           exposeports: 80
