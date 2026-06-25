@@ -323,6 +323,17 @@ level: # testsuites
             level: # testsuite
               tyk:
               tyk-analytics:
+  lts-version:
+    level: # branches
+      master:
+        level: # trigger
+          schedule:
+            level: # repo
+              tyk-analytics:
+                envfiles:
+                  - gwdash: master
+                  - gwdash: release-5.3
+                  - gwdash: release-5.8
   ui:
     level: # branches
       master:
