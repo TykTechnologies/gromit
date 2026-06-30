@@ -498,7 +498,8 @@
           # Install Docker Scout CLI
           mkdir -p ~/.docker/cli-plugins
           curl --proto '=https' --tlsv1.2 -fsSL https://github.com/docker/scout-cli/releases/download/v1.22.0/docker-scout_1.22.0_linux_amd64.tar.gz -o /tmp/scout.tar.gz
-          echo "49a6b18768f0ba9cb90e6aafd76c887fddad34c0124ca7ee81e2b422cd860b07  /tmp/scout.tar.gz" | sha256sum -c -
+          curl --proto '=https' --tlsv1.2 -fsSL https://github.com/docker/scout-cli/releases/download/v1.22.0/docker-scout_1.22.0_checksums.txt -o /tmp/scout_checksums.txt
+          grep "docker-scout_1.22.0_linux_amd64.tar.gz" /tmp/scout_checksums.txt | awk '{print $1 "  /tmp/scout.tar.gz"}' | sha256sum -c -
           tar -xzf /tmp/scout.tar.gz -C ~/.docker/cli-plugins/ docker-scout
           chmod +x ~/.docker/cli-plugins/docker-scout
 
