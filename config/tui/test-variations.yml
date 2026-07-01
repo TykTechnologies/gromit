@@ -18,7 +18,7 @@ level: # testsuites
         - cache: "valkey8_1"
           config: "murmur128"
           db: "postgres15"
-          apimarkers: "not local and not dind and not sql and not nightly"
+          apimarkers: "not local and not dind and not nightly"
           gwdash: master
           pump: "$ECR/tyk-pump:master"
           sink: "$ECR/tyk-sink:master"
@@ -68,9 +68,8 @@ level: # testsuites
                     config: "murmur128"
                     db: "mongo8"
                     apimarkers: "not local and not dind"
-                    sink: "tykio/tyk-mdcb-docker:v2.11.0"
-                    pump: "tykio/tyk-pump-docker-pub:v1.14.1"
                     gwdash: release-5.13
+                    sink: "$ECR/tyk-sink:release-2.8"
                   - cache: "redis8_4"
                     config: "murmur128"
                     db: "postgres14"
@@ -145,18 +144,14 @@ level: # testsuites
                 envfiles:
                   - cache: "valkey8"
                     config: "murmur128"
-                    db: "postgres15"
-                    gwdash: release-5.13
+                    db: "mongo7"
+                    apimarkers: "not local and not dind"
+                    gwdash: release-5.12
                   - cache: "redis7"
                     config: "murmur128"
                     db: "mongo8"
+                    apimarkers: "not local and not dind"
                     gwdash: release-5.8
-                  - cache: "redis8_4"
-                    config: "sha256"
-                    db: "postgres17"
-                    pump: "tykio/tyk-pump-docker-pub:v1.14.1"
-                    sink: "tykio/tyk-mdcb-docker:v2.11.0"
-                    gwdash: master
           workflow_dispatch:
             level: # repo
               tyk-analytics:
@@ -168,10 +163,12 @@ level: # testsuites
                   - cache: "redis8_4"
                     config: "sha256"
                     db: "mongo8"
+                    apimarkers: "not local and not dind"
                     gwdash: release-5.12
                   - cache: "valkey7_2"
                     config: "murmur128"
                     db: "postgres17"
+                    apimarkers: "not local and not dind and not sql"
                     gwdash: release-5.8
           push:
             level: # repos
