@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # The _ after the pkg name is to match tyk-gateway strictly and not tyk-gateway-fips (for example)
 COPY ${BUILD_PACKAGE_NAME}_*${TARGETARCH}.deb /
 ARG NONROOT_CHOWN=false
-RUN dpkg -i /${BUILD_PACKAGE_NAME}_*${TARGETARCH}.deb && rm /*.deb \
+RUN dpkg -i /"${BUILD_PACKAGE_NAME}"_*"${TARGETARCH}".deb && rm /*.deb \
     && chmod -R a+rX /opt/{{ .PackageName }}/ \
     && mkdir -p /opt/{{ .PackageName }}/middleware/bundles \
     && chmod a+rwX /opt/{{ .PackageName }}/middleware /opt/{{ .PackageName }}/middleware/bundles \
@@ -31,7 +31,7 @@ ENTRYPOINT ["/opt/{{ .PackageName }}/{{ .Binary }}" ]
 ENV PROVIDER_NAME="Tyk Dashboard (Edit me)"
 ENV PROVIDER_DATA="{}"
 
-CMD [/opt/{{ .PackageName }}/{{ .Binary }}]
+CMD ["/opt/{{ .PackageName }}/{{ .Binary }}"]
 {{- else }}
 CMD [ "--conf=/opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}" ]
 {{- end }}
