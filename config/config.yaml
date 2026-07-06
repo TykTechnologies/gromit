@@ -199,22 +199,16 @@ policy:
                 - fips
                 - ee
                 - resolve-dashboard
+            release-5.8.15:
+              buildenv: 1.25-bullseye
+              features:
+                - release-test
+                - distroless
+                - fips
+                - ee
+                - resolve-dashboard
             release-5.13:
               buildenv: 1.25-bullseye
-              builds:
-                # EE on 5.12 uses distroless (no DHI) to preserve current behavior for patch releases
-                ee:
-                  dockerbaseimage: distroless
-                  archs:
-                    - go: amd64
-                      deb: amd64
-                      docker: linux/amd64
-                    - go: arm64
-                      deb: aarch64
-                      docker: linux/arm64
-                    - go: s390x
-                      deb: s390x
-                      docker: linux/s390x
               features:
                 - release-test
                 - distroless
@@ -223,20 +217,22 @@ policy:
                 - fips
             release-5.13.1:
               buildenv: 1.25-bullseye
-              builds:
-                # EE on 5.12 uses distroless (no DHI) to preserve current behavior for patch releases
-                ee:
-                  dockerbaseimage: distroless
-                  archs:
-                    - go: amd64
-                      deb: amd64
-                      docker: linux/amd64
-                    - go: arm64
-                      deb: aarch64
-                      docker: linux/arm64
-                    - go: s390x
-                      deb: s390x
-                      docker: linux/s390x
+              features:
+                - release-test
+                - distroless
+                - ee
+                - resolve-dashboard
+                - fips
+            release-5.14:
+              buildenv: 1.25-bullseye
+              features:
+                - release-test
+                - distroless
+                - ee
+                - resolve-dashboard
+                - fips
+            release-5.14.0:
+              buildenv: 1.25-bullseye
               features:
                 - release-test
                 - distroless
@@ -331,6 +327,14 @@ policy:
                 - distroless
                 - release-test
                 - fips
+            release-5.8.15:
+              buildenv: 1.25-bullseye
+              cgo: false
+              features:
+                - nightly-e2e
+                - distroless
+                - release-test
+                - fips
             release-5.13:
               buildenv: 1.25-bullseye
               cgo: false
@@ -340,6 +344,22 @@ policy:
                 - release-test
                 - fips
             release-5.13.1:
+              buildenv: 1.25-bullseye
+              cgo: false
+              features:
+                - nightly-e2e
+                - distroless
+                - release-test
+                - fips
+            release-5.14:
+              buildenv: 1.25-bullseye
+              cgo: false
+              features:
+                - nightly-e2e
+                - distroless
+                - release-test
+                - fips
+            release-5.14.0:
               buildenv: 1.25-bullseye
               cgo: false
               features:
