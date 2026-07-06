@@ -133,6 +133,14 @@ level: # testsuites
           push:
             level: # testsuite
               tyk-pump:
+      release-1.16.0:
+        level: # trigger
+          pull_request:
+            level: # testsuite
+              tyk-pump:
+          push:
+            level: # testsuite
+              tyk-pump:
       release-1.7:
         level: # trigger
           pull_request:
