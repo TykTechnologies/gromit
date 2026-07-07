@@ -50,8 +50,8 @@ level: # testsuites
           db: "postgres15"
           apimarkers: "not local and not dind and not sql and not nightly"
           gwdash: master
-          pump: "tykio/tyk-pump-docker-pub:v1.14.1"
-          sink: "tykio/tyk-mdcb-docker:v2.11.0"
+          pump: "$ECR/tyk-pump:master"
+          sink: "$ECR/tyk-sink:master"
         level: # trigger
           schedule:
             level: # repo
@@ -62,14 +62,14 @@ level: # testsuites
                     db: "postgres15"
                     apimarkers: "not local and not dind and not sql"
                     gwdash: master
-                    pump: "tykio/tyk-pump-docker-pub:v1.14.1"
-                    sink: "tykio/tyk-mdcb-docker:v2.11.0"
+                    pump: "$ECR/tyk-pump:master"
+                    sink: "$ECR/tyk-sink:master"
                   - cache: "redis8_2"
                     config: "murmur128"
                     db: "mongo8"
                     apimarkers: "not local and not dind"
-                    sink: "tykio/tyk-mdcb-docker:v2.11.0"
-                    pump: "tykio/tyk-pump-docker-pub:v1.14.1"
+                    sink: "$ECR/tyk-sink:master"
+                    pump: "$ECR/tyk-pump:master"
                     gwdash: release-5.13
                   - cache: "redis8_4"
                     config: "murmur128"
@@ -154,8 +154,8 @@ level: # testsuites
                   - cache: "redis8_4"
                     config: "sha256"
                     db: "postgres17"
-                    pump: "tykio/tyk-pump-docker-pub:v1.14.1"
-                    sink: "tykio/tyk-mdcb-docker:v2.11.0"
+                    pump: "$ECR/tyk-pump:master"
+                    sink: "$ECR/tyk-sink:master"
                     gwdash: master
           workflow_dispatch:
             level: # repo
