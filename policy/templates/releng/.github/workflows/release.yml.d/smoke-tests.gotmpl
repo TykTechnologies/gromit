@@ -1,7 +1,6 @@
 {{ define "smoke-tests" }}
 {{- $uprepo := .Branchvals.Builds.std.UpgradeRepo }}
 {{- $pcname := .PackageName }}
-{{- $fromVer := .Branchvals.UpgradeFromVer }}
   test-controller-distros:
     needs:
       - goreleaser
@@ -29,7 +28,6 @@
       rpm_amd64: {{`${{ needs.test-controller-distros.outputs.rpm_amd64 }}`}}
       package_name: {{ $pcname }}
       upgrade_repo: {{ $uprepo }}
-      from_ver: {{ $fromVer }}
       runs_on: {{`${{ vars.DEFAULT_RUNNER }}`}}
       run_gateway_tests: {{ eq .Name "tyk" }}
 
