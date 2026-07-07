@@ -73,7 +73,7 @@ level: # testsuites
                     gwdash: release-5.13
                   - cache: "redis8_4"
                     config: "murmur128"
-                    db: "postgres14"
+                    db: "postgres17"
                     apimarkers: "not local and not dind and not sql"
                     gwdash: master
                   - cache: "valkey7_2"
