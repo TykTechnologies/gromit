@@ -406,9 +406,29 @@ When changes are merged to gromit's main branch, the `policy sync` command runs 
 To run sync manually:
 
 ```bash
-go run . policy sync --repo tyk        # single repo
-go run . policy sync                    # all repos
+go run . policy sync tyk                 # single repo
+go run . policy sync all                 # all repos
 ```
+
+#### Syncing and Creating PRs manually (CLI)
+If you want to sync templates and automatically create/update a Pull Request in the target repository:
+```bash
+# Sync templates, push to a custom branch, and open/update a PR on GitHub
+go run . policy sync tyk \
+  --pr \
+  --title "gromit: update CI templates" \
+  --jira "TT-12345" \
+  --prefix "releng/"
+```
+
+#### Syncing and Creating PRs manually (GitHub UI)
+You can trigger the **Release** workflow manually via the GitHub Actions **`workflow_dispatch`** interface. It provides the following inputs:
+* **Repository name to sync (`repo`):** Choose a specific repo (e.g. `tyk`) or `all`.
+* **Branch name to sync (`branch`):** Choose a specific branch (e.g., `release-5.13`) or leave empty to sync all configured branches.
+* **Create Pull Request (`pr`):** Checkbox to control whether a PR is created/updated (defaults to `true`).
+* **Title of the PR (`title`):** E.g., `gromit: update golangci-lint version`.
+* **Jira issue key (`jira`):** E.g., `TT-12345` (default: `releng`).
+* **Branch prefix (`prefix`):** E.g., `releng/` or `update/` (default: `releng/`).
 
 ### Verifying changes reached target repos
 

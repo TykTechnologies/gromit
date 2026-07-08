@@ -11,27 +11,9 @@
       deb: {{`${{ steps.params.outputs.deb }}`}}
       rpm: {{`${{ steps.params.outputs.rpm }}`}}
     steps:
-      - name: set params
+      - name: Set distro matrix
+        uses: TykTechnologies/github-actions/.github/actions/tests/distro-matrix@production
         id: params
-        shell: bash
-{{- if not (has "default-distros" .Branchvals.Features) }}
-        env:
-          # startsWith covers pull_request_target too
-          BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
-{{- end }}
-{{- if has "default-distros" .Branchvals.Features }}
-        run: |
-          # Using default distros (TUI service bypassed)
-          echo "deb=[\"ubuntu:jammy\", \"ubuntu:focal\", \"debian:bullseye\"]" >> $GITHUB_OUTPUT
-          echo "rpm=[\"amazonlinux:2\", \"rockylinux:8\", \"rockylinux:9\"]" >> $GITHUB_OUTPUT
-{{- else }}
-        run: |
-          set -eo pipefail
-          curl -s --retry 5 --retry-delay 10 --fail-with-body "http://tui.internal.dev.tyk.technology/v2/$VARIATION/{{ .Name }}/$BASE_REF/{{`${{ github.event_name}}`}}/api/Distros.gho" | tee -a "$GITHUB_OUTPUT"
-          if ! [[ $VARIATION =~ prod ]];then
-            echo "::warning file=.github/workflows/release.yml,line=24,col=1,endColumn=8::Using test variation"
-          fi
-{{- end }}
 
 {{- $uprepo :=  .Branchvals.Builds.std.UpgradeRepo }}
 

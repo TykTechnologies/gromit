@@ -106,7 +106,7 @@
         run: |
           echo "::warning::Building UI assets from source as S3 fetch failed"
           cd webclient
-          npm ci --ignore-scripts
+          npm ci --ignore-scripts --legacy-peer-deps
           npm install esbuild@0.25.12
           npm run build
           cd ..
@@ -186,6 +186,41 @@
           restore-keys: |
             {{`${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}`}}
 
+      - name: Validate Go version
+        run: |
+          GO_VERSION_STR=$(docker run --rm tykio/golang-cross:{{`${{ matrix.golang_cross }}`}} go version 2>&1 || true)
+          if [[ ! "$GO_VERSION_STR" =~ go[0-9]+ ]]; then
+            echo "::warning::Could not determine Go version from container: $GO_VERSION_STR"
+            exit 1
+          fi
+          GO_VERSION=$(echo "$GO_VERSION_STR" | awk '{print $3}' | sed 's/^go//')
+          echo "Go version in container: $GO_VERSION"
+          MINOR_VERSION=$(echo "$GO_VERSION" | cut -d. -f1,2)
+          echo "Minor version: $MINOR_VERSION"
+          
+          # Fetch latest patches
+          LATEST_PATCH_STR=$(curl -s 'https://go.dev/dl/?mode=json&include=all' || true)
+          if [ -z "$LATEST_PATCH_STR" ]; then
+            echo "::warning::Could not fetch Go releases from API. Skipping validation."
+            exit 0
+          fi
+          LATEST_PATCH=$(echo "$LATEST_PATCH_STR" | jq -r --arg minor "go${MINOR_VERSION}" '.[] | select(.stable == true and (.version | startswith($minor + ".") or . == $minor)) | .version' | head -n 1 | sed 's/^go//')
+          
+          if [ -n "$LATEST_PATCH" ]; then
+            echo "Latest patch version for Go $MINOR_VERSION is $LATEST_PATCH"
+            if [ "$GO_VERSION" != "$LATEST_PATCH" ]; then
+              echo "::error::Go version validation failed!"
+              echo "Used version: $GO_VERSION (in tykio/golang-cross:{{`${{ matrix.golang_cross }}`}})"
+              echo "Latest patch: $LATEST_PATCH"
+              echo "Please update the buildenv Go version to the latest patch version."
+              exit 1
+            else
+              echo "Go version is up to date: $GO_VERSION"
+            fi
+          else
+            echo "::warning::Could not determine latest patch version for Go $MINOR_VERSION from API. Skipping validation."
+          fi
+
       - name: Build
         env:
           NFPM_PASSPHRASE: {{`${{ secrets.SIGNING_KEY_PASSPHRASE }}`}}
@@ -212,7 +247,7 @@
           {{ end -}}
           git config --global url."https://x-access-token:{{`${{ steps.app-token.outputs.token }}`}}@github.com/".insteadOf "https://github.com/"
           git config --global --add safe.directory /go/src/github.com/TykTechnologies/{{ .Name }}
-          goreleaser release --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker' }}`}}' | tee /tmp/build.sh
+          goreleaser release --timeout 120m --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker' }}`}}' | tee /tmp/build.sh
           chmod +x /tmp/build.sh
           docker run --rm --privileged -e GITHUB_TOKEN={{`${{ github.token }}`}} \
           -e GOPRIVATE=github.com/TykTechnologies                                \
@@ -282,16 +317,27 @@
           echo "dist_ready=true" >> $GITHUB_OUTPUT
 {{- end }}
 
+{{- $needsScout := false }}
+{{- range $b, $bv := $r.GetDockerBuilds }}
+  {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
+    {{- $needsScout = true }}
+  {{- end }}
+{{- end }}
+{{- if $needsScout }}
+      - name: Install Docker Scout CLI
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
+        run: |
+          mkdir -p ~/.docker/cli-plugins
+          curl --proto '=https' --tlsv1.2 -fsSL https://github.com/docker/scout-cli/releases/download/v1.22.0/docker-scout_1.22.0_linux_amd64.tar.gz -o /tmp/scout.tar.gz
+          curl --proto '=https' --tlsv1.2 -fsSL https://github.com/docker/scout-cli/releases/download/v1.22.0/docker-scout_1.22.0_checksums.txt -o /tmp/scout_checksums.txt
+          grep "docker-scout_1.22.0_linux_amd64.tar.gz" /tmp/scout_checksums.txt | awk '{print $1 "  /tmp/scout.tar.gz"}' | sha256sum -c -
+          tar -xzf /tmp/scout.tar.gz -C ~/.docker/cli-plugins/ docker-scout
+          chmod +x ~/.docker/cli-plugins/docker-scout
+{{- end }}
 {{- range $b, $bv := $r.GetDockerBuilds }}
       - name: Docker metadata for {{ $b }} CI
         id: ci_metadata_{{ $b }}
-{{- if eq $b "ee" }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
-{{- else if $r.HasBuild "ee" }}
-        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && github.event_name != 'pull_request' }}`}}
-{{- else }}
-        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
-{{- end }}
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051  # v5
         with:
           images: |
@@ -307,13 +353,7 @@
             type=semver,pattern={{`{{version}}`}},prefix=v
 
       - name: push {{ $b }} image to CI
-{{- if eq $b "ee" }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
-{{- else if $r.HasBuild "ee" }}
-        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && github.event_name != 'pull_request' }}`}}
-{{- else }}
-        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
-{{- end }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
           context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
@@ -324,7 +364,7 @@
           file: ci/Dockerfile.std
           {{ end }}
           provenance: mode=max
-          push: true
+          outputs: type=image,push=true,compression=gzip,force-compression=true,oci-mediatypes=true
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.tags }}`}}
@@ -335,6 +375,50 @@
             BASE_IMAGE={{ $bv.DockerBaseImage }}
             NONROOT_CHOWN=true
             {{- end }}
+
+      - name: Verify compression format for {{ $b }} CI image
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
+        run: |
+          # Resolve the first tag for verification
+          TAG=$(echo "{{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.tags }}`}}" | tr ',' '\n' | head -n1)
+          echo "Inspecting layer compression for tag: $TAG"
+          
+          docker buildx imagetools inspect --raw -- "$TAG" > manifest.json
+          
+          # Extract child digests (excluding attestation manifests) if it's a multi-arch manifest list / index
+          DIGESTS=$(jq -r '.manifests[] | select((.platform.architecture // "") != "unknown" and (.annotations["vnd.docker.reference.type"] // "") != "attestation-manifest") | .digest' manifest.json 2>/dev/null || true)
+          
+          verify_manifest() {
+            local file=$1
+            # Check if any layer does NOT end in gzip/tar+gzip/tar.gzip
+            local invalid_layers
+            invalid_layers=$(jq -r '.layers[].mediaType' "$file" | grep -v 'tar+gzip' | grep -v 'tar.gzip' || true)
+            if [ -n "$invalid_layers" ]; then
+              echo "::error::Found layers that are not gzip-compressed:"
+              echo "$invalid_layers"
+              exit 1
+            fi
+            # Also verify we found at least one layer
+            local layer_count
+            layer_count=$(jq '.layers | length' "$file" 2>/dev/null || echo 0)
+            if [ "$layer_count" -eq 0 ]; then
+              echo "::error::No layers found in manifest!"
+              exit 1
+            fi
+          }
+          
+          if [ -n "$DIGESTS" ]; then
+            echo "Multi-arch image list detected. Checking each platform manifest..."
+            for digest in $DIGESTS; do
+              echo "Inspecting child platform manifest: $digest"
+              docker buildx imagetools inspect --raw -- "$TAG@$digest" > child_manifest.json
+              verify_manifest child_manifest.json
+            done
+          else
+            echo "Single-arch manifest detected. Checking manifest..."
+            verify_manifest manifest.json
+          fi
+          echo "Success: All layers are uniformly compressed using gzip."
 
       - name: Docker metadata for {{ $b }} tag push
         id: tag_metadata_{{ $b }}
@@ -370,7 +454,7 @@
           {{- end }}
           provenance: mode=max
           cache-from: type=gha
-          push: true
+          outputs: type=image,push=true,compression=gzip,force-compression=true,oci-mediatypes=true
           tags: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.tags }}`}}
           labels: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.labels }}`}}
           build-args: |
@@ -379,14 +463,55 @@
             BASE_IMAGE={{ $bv.DockerBaseImage }}
             NONROOT_CHOWN=true
             {{- end }}
+
+      - name: Verify compression format for {{ $b }} prod image
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
+        run: |
+          # Resolve the first tag for verification
+          TAG=$(echo "{{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.tags }}`}}" | tr ',' '\n' | head -n1)
+          echo "Inspecting layer compression for tag: $TAG"
+          
+          docker buildx imagetools inspect --raw -- "$TAG" > manifest.json
+          
+          # Extract child digests (excluding attestation manifests) if it's a multi-arch manifest list / index
+          DIGESTS=$(jq -r '.manifests[] | select((.platform.architecture // "") != "unknown" and (.annotations["vnd.docker.reference.type"] // "") != "attestation-manifest") | .digest' manifest.json 2>/dev/null || true)
+          
+          verify_manifest() {
+            local file=$1
+            # Check if any layer does NOT end in gzip/tar+gzip/tar.gzip
+            local invalid_layers
+            invalid_layers=$(jq -r '.layers[].mediaType' "$file" | grep -v 'tar+gzip' | grep -v 'tar.gzip' || true)
+            if [ -n "$invalid_layers" ]; then
+              echo "::error::Found layers that are not gzip-compressed:"
+              echo "$invalid_layers"
+              exit 1
+            fi
+            # Also verify we found at least one layer
+            local layer_count
+            layer_count=$(jq '.layers | length' "$file" 2>/dev/null || echo 0)
+            if [ "$layer_count" -eq 0 ]; then
+              echo "::error::No layers found in manifest!"
+              exit 1
+            fi
+          }
+          
+          if [ -n "$DIGESTS" ]; then
+            echo "Multi-arch image list detected. Checking each platform manifest..."
+            for digest in $DIGESTS; do
+              echo "Inspecting child platform manifest: $digest"
+              docker buildx imagetools inspect --raw -- "$TAG@$digest" > child_manifest.json
+              verify_manifest child_manifest.json
+            done
+          else
+            echo "Single-arch manifest detected. Checking manifest..."
+            verify_manifest manifest.json
+          fi
+          echo "Success: All layers are uniformly compressed using gzip."
 {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
 
       - name: Attach base image VEX to {{ $b }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
         run: |
-          # Install Docker Scout CLI
-          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/v1.20.4/install.sh -o /tmp/scout-install.sh && sh /tmp/scout-install.sh 2>/dev/null
-          # Extract VEX from the DHI base image
           docker scout vex get --org tykio -o /tmp/{{ $b }}-vex.json {{ $bv.DockerBaseImage }} || true
           if [ -f /tmp/{{ $b }}-vex.json ]; then
             {{- range $image := $bv.GetImages "DHRepo" "CSRepo" }}
