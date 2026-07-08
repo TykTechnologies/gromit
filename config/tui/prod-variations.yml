@@ -122,6 +122,17 @@ level: # testsuites
               tyk-sink:
               portal:
               tyk-pro:
+  lts-version:
+    level: # branches
+      master:
+        level: # trigger
+          schedule:
+            level: # repo
+              tyk-analytics:
+                envfiles:
+                  - gwdash: master
+                  - gwdash: release-5.8
+                  - gwdash: release-5.13
   ui:
     level: # branches
       default:
