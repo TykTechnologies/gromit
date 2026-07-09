@@ -39,6 +39,22 @@ env:
   BASE_REF: {{`${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}`}}
   
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      src: {{`${{ steps.filter.outputs.src }}`}}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request'
+      - uses: dorny/paths-filter@v3
+        if: github.event_name == 'pull_request'
+        id: filter
+        with:
+          filters: |
+            src:
+              - '**'
+              - '!tests/**'
+
   dep-guard:
     if: github.event_name == 'pull_request'
     uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@production

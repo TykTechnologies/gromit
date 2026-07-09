@@ -5,7 +5,7 @@
       - goreleaser
     if: |
       !cancelled() &&
-      needs.goreleaser.result == 'success' &&
+      (needs.goreleaser.result == 'success' || needs.goreleaser.result == 'skipped') &&
       github.event.pull_request.draft == false
   {{- else }}
     if: github.event.pull_request.draft == false
@@ -39,13 +39,13 @@
     if: |
       !cancelled() &&
       needs.test-controller-{{ .test }}.result == 'success' &&
-      needs.goreleaser.result == 'success' &&
-      needs.resolve-dashboard-image.result == 'success' &&
+      (needs.goreleaser.result == 'success' || needs.goreleaser.result == 'skipped') &&
+      (needs.resolve-dashboard-image.result == 'success' || needs.resolve-dashboard-image.result == 'skipped') &&
       (needs.build-dashboard-image.result == 'success' || needs.build-dashboard-image.result == 'skipped')
     {{- else if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
     if: |
       !cancelled() &&
-      needs.goreleaser.result == 'success'
+      (needs.goreleaser.result == 'success' || needs.goreleaser.result == 'skipped')
     {{- end }}
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     env:
