@@ -34,11 +34,11 @@
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
     needs:
       - goreleaser
-      - upgrade-rpm
+      - upgrade-tests
     if: |
       !cancelled() &&
       needs.goreleaser.result == 'success' &&
-      needs.upgrade-rpm.result == 'success' &&
+      needs.upgrade-tests.result == 'success' &&
       startsWith(github.ref, 'refs/tags/v3.0')
     strategy:
       matrix:

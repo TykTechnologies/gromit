@@ -69,7 +69,7 @@ jobs:
 {{- if eq .Name "tyk-analytics" }}
   report_logs:
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
-    needs: [test-controller-ui, test-controller-api, test-controller-distros, upgrade-deb, upgrade-rpm, release-tests]
+    needs: [test-controller-ui, test-controller-api, test-controller-distros, upgrade-tests, release-tests]
     if: always()
     name: Report GH Logs on Failure
     permissions:
