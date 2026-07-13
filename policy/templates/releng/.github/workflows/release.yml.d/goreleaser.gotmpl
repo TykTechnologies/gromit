@@ -2,12 +2,14 @@
   goreleaser:
     needs:
       - dep-guard
+      - changes
 {{- if has "ai-studio-frontend-build" .Branchvals.Features }}
       - ai-studio-frontend-build
 {{- end }}
     if: |
       !cancelled() &&
       (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') &&
+      (github.event_name != 'pull_request' || needs.changes.outputs.src == 'true') &&
       github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
     runs-on: {{`${{ vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}

@@ -28,7 +28,7 @@
           for job in $(echo "$needs_json" | jq -r 'keys[]'); do
             job_result=$(echo "$needs_json" | jq -r --arg job "$job" '.[$job].result')
 
-            if [[ "$job_result" != "success" ]]; then
+            if [[ "$job_result" != "success" && "$job_result" != "skipped" ]]; then
               failed+=("$job")
             fi
           done
