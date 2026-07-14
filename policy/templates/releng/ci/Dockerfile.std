@@ -45,6 +45,6 @@ WORKDIR /opt/{{ .PackageName }}/
 {{- if eq .Name "portal" }}
 ENTRYPOINT ["/opt/{{ .PackageName }}/entrypoint.sh" ]
 {{- else }}
-ENTRYPOINT ["/opt/{{ .PackageName }}/{{ .Name }}" ]
+ENTRYPOINT ["/opt/{{ .PackageName }}/{{ .Binary }}" ]
 CMD [ "--conf=/opt/{{ .PackageName }}/{{ .Branchvals.ConfigFile }}" ]
 {{- end }}
