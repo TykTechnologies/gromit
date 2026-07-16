@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var origPATH = os.Getenv("PATH")
 
 func gitInTest(t *testing.T, dir string, args ...string) {
 	t.Helper()
@@ -25,6 +26,8 @@ func gitInTest(t *testing.T, dir string, args ...string) {
 
 
 func TestNonTrivialDiff(t *testing.T) {
+	t.Setenv("PATH", origPATH)
+
 	dir := t.TempDir()
 	gitInTest(t, dir, "init", "-q")
 
