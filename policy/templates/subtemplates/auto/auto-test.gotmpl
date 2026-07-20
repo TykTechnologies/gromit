@@ -23,6 +23,9 @@
           variation: {{`${{ env.VARIATION }}`}}
           base_ref: {{`${{ env.BASE_REF }}`}}
           test_type: {{ .test }}
+  {{- if has "test-fallback" .dot.Branchvals.Features }}
+          fallback_ref: master
+  {{- end }}
 
   {{ .test }}-tests:
     needs:
