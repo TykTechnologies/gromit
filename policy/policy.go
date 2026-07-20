@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -338,6 +339,10 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 		}
 	}
 	err = pushOpts.Repo.Commit(pushOpts.CommitMsg)
+	if errors.Is(err, ErrNoChanges) {
+		log.Info().Msgf("%s/%s is already in sync with the templates, nothing to push", rp.Name, pushOpts.Branch)
+		return ErrNoChanges
+	}
 	if err != nil {
 		return fmt.Errorf("git commit %s: %v", pushOpts.Repo.url, err)
 	}
