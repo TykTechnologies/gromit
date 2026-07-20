@@ -59,8 +59,10 @@ This command does not overlay the rendered output into a git tree. You will have
 		dir := args[0]
 		repoName, _ := cmd.Flags().GetString("repo")
 		rp, err := configPolicies.GetRepoPolicy(repoName)
-		rp.SetBranch(polBranch)
 		if err != nil {
+			return fmt.Errorf("repopolicy %s: %v", repoName, err)
+		}
+		if err := rp.SetBranch(polBranch); err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repoName, err)
 		}
 		b, err := policy.NewBundle(rp.Branchvals.Features)
