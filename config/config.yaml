@@ -231,6 +231,8 @@ policy:
                 - ee
                 - resolve-dashboard
                 - fips
+                # DX-2386 (tyk#8451): api tests fall back to master variations
+                - test-fallback
             release-5.14.0:
               buildenv: 1.25-bullseye
               features:
@@ -239,6 +241,8 @@ policy:
                 - ee
                 - resolve-dashboard
                 - fips
+                # DX-2386 (tyk#8451): api tests fall back to master variations
+                - test-fallback
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
           dhrepo: tykio/tyk-dashboard
@@ -599,7 +603,7 @@ policy:
           configfile: tyk_sink.conf
           versionpackage: github.com/TykTechnologies/tyk-sink/main
           tests: [api]
-          builds: 
+          builds:
             std:
               description: >-
                 Tyk RPC server backend (bridge)
@@ -659,7 +663,7 @@ policy:
           upgradefromver: 0.0.1
           configfile: midsommar.conf
           versionpackage: github.com/TykTechnologies/midsommar/main
-          builds: 
+          builds:
             std:
               buildpackagename: midsommar
               description: >-
@@ -712,7 +716,7 @@ pkgs:
     # It is inverted so that if it is omitted from some repo, it will failsafe to false
     notbackup: false
     # exceptions are those versions that should not be deleted from
-    # packagecloud. These don't have to be semver. 
+    # packagecloud. These don't have to be semver.
     exceptions:
       - v2.6.2
       - v2.9.3
