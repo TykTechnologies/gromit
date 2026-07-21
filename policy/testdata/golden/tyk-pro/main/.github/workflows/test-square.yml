@@ -1,0 +1,232 @@
+name: Test²
+on:
+  workflow_dispatch:
+  workflow_call:
+  pull_request:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - master
+      - release-*
+env:
+  VARIATION: prod-variation
+  BASE_REF: ${{startsWith(github.event_name, 'pull_request') && github.base_ref || github.ref_name}}
+jobs:
+  test-controller-api:
+    if: github.event.pull_request.draft == false
+    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    outputs:
+      envfiles: ${{ steps.params.outputs.envfiles }}
+      pump: ${{ steps.params.outputs.pump }}
+      sink: ${{ steps.params.outputs.sink }}
+    steps:
+      - name: Set test parameters
+        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@production
+        id: params
+        with:
+          variation: ${{ env.VARIATION }}
+          base_ref: ${{ env.BASE_REF }}
+          test_type: api
+  api-tests:
+    needs:
+      - test-controller-api
+    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    env:
+      XUNIT_REPORT_PATH: ${{ github.workspace}}/test-results.xml
+      BASE_REF: master
+    permissions:
+      id-token: write # This is required for requesting the Github JWT
+      contents: read # This is required for actions/checkout
+    strategy:
+      fail-fast: false
+      matrix:
+        envfiles: ${{ fromJson(needs.test-controller-api.outputs.envfiles) }}
+        pump: ${{ fromJson(needs.test-controller-api.outputs.pump) }}
+        sink: ${{ fromJson(needs.test-controller-api.outputs.sink) }}
+        exclude:
+          - pump: tykio/tyk-pump-docker-pub:v1.8
+            sink: $ECR/tyk-sink:master
+          - pump: $ECR/tyk-pump:master
+            sink: tykio/tyk-mdcb-docker:v2.4
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        with:
+          app-id: ${{ secrets.PROBE_APP_ID }}
+          private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
+          owner: TykTechnologies
+      - uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: cipush
+          aws-region: eu-central-1
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@f2e9fc6c2b355c1890b65e6f6f0e2ac3e6e22f78 # v2
+        with:
+          mask-password: 'true'
+      - name: Setup tmate session only in debug mode
+        uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101 # v3
+        if: runner.debug == '1'
+        with:
+          detached: true
+          limit-access-to-actor: true
+          # Only ${{ github.actor }} has access
+          # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          path: auto
+          fetch-depth: 1
+      - name: Set up test environment
+        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@production
+        timeout-minutes: 5
+        id: env_up
+        with:
+          base_ref: ${{ env.BASE_REF }}
+          tags: ${{ needs.goreleaser.outputs.ee_tags || needs.goreleaser.outputs.std_tags || format('{0}/tyk-ee:master', steps.ecr.outputs.registry) }}
+          github_token: ${{ steps.app-token.outputs.token }}
+          TYK_DB_LICENSEKEY: ${{ secrets.DASH_LICENSE }}
+          TYK_MDCB_LICENSE: ${{ secrets.MDCB_LICENSE }}
+      - name: Choose test code branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@production
+        with:
+          test_folder: api
+          org_gh_token: ${{ steps.app-token.outputs.token }}
+      - name: Run API tests
+        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@production
+        timeout-minutes: 45
+        id: test_execution
+        with:
+          user_api_secret: ${{ steps.env_up.outputs.USER_API_SECRET }}
+      - name: Generate test reports and collect logs
+        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@production
+        if: always() && (steps.test_execution.conclusion != 'skipped')
+        with:
+          report_xml: 'true'
+          execution_status: ${{ steps.test_execution.outcome }}
+  test-controller-ui:
+    if: github.event.pull_request.draft == false
+    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    outputs:
+      envfiles: ${{ steps.params.outputs.envfiles }}
+      pump: ${{ steps.params.outputs.pump }}
+      sink: ${{ steps.params.outputs.sink }}
+    steps:
+      - name: Set test parameters
+        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@production
+        id: params
+        with:
+          variation: ${{ env.VARIATION }}
+          base_ref: ${{ env.BASE_REF }}
+          test_type: ui
+  ui-tests:
+    needs:
+      - test-controller-ui
+    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    env:
+      XUNIT_REPORT_PATH: ${{ github.workspace}}/test-results.xml
+      BASE_REF: master
+    permissions:
+      id-token: write # This is required for requesting the Github JWT
+      contents: read # This is required for actions/checkout
+    strategy:
+      fail-fast: false
+      matrix:
+        envfiles: ${{ fromJson(needs.test-controller-ui.outputs.envfiles) }}
+        pump: ${{ fromJson(needs.test-controller-ui.outputs.pump) }}
+        sink: ${{ fromJson(needs.test-controller-ui.outputs.sink) }}
+        exclude:
+          - pump: tykio/tyk-pump-docker-pub:v1.8
+            sink: $ECR/tyk-sink:master
+          - pump: $ECR/tyk-pump:master
+            sink: tykio/tyk-mdcb-docker:v2.4
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        with:
+          app-id: ${{ secrets.PROBE_APP_ID }}
+          private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
+          owner: TykTechnologies
+      - uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: cipush
+          aws-region: eu-central-1
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@f2e9fc6c2b355c1890b65e6f6f0e2ac3e6e22f78 # v2
+        with:
+          mask-password: 'true'
+      - name: Setup tmate session only in debug mode
+        uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101 # v3
+        if: runner.debug == '1'
+        with:
+          detached: true
+          limit-access-to-actor: true
+          # Only ${{ github.actor }} has access
+          # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          path: auto
+          fetch-depth: 1
+      - name: Set up test environment
+        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@production
+        timeout-minutes: 5
+        id: env_up
+        with:
+          base_ref: ${{ env.BASE_REF }}
+          tags: ${{ needs.goreleaser.outputs.ee_tags || needs.goreleaser.outputs.std_tags || format('{0}/tyk-ee:master', steps.ecr.outputs.registry) }}
+          github_token: ${{ steps.app-token.outputs.token }}
+          TYK_DB_LICENSEKEY: ${{ secrets.DASH_LICENSE }}
+          TYK_MDCB_LICENSE: ${{ secrets.MDCB_LICENSE }}
+      - name: Choose test code branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@production
+        with:
+          test_folder: ui
+          org_gh_token: ${{ steps.app-token.outputs.token }}
+      - name: Fix private module deps
+        env:
+          TOKEN: '${{ steps.app-token.outputs.token }}'
+        run: >
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Execute UI tests
+        timeout-minutes: 30
+        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests@production
+        id: test_execution
+      - name: Upload UI test report to S3
+        uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests-report@production
+        if: failure() && steps.test_execution.outcome != 'success' && steps.env_up.outcome == 'success'
+        with:
+          aws_acces_key_id: ${{ secrets.UI_AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.UI_AWS_SECRET_ACCESS_KEY }}
+      - name: Generate test reports and collect logs
+        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@production
+        if: always() && (steps.test_execution.conclusion != 'skipped')
+        with:
+          report_xml: 'true'
+          execution_status: ${{ steps.test_execution.outcome }}
+  release:
+    if: ${{ startsWith(github.ref, 'refs/tags') }}
+    # Backticks escape GitHub Actions syntax from Go template parsing
+    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    needs:
+      - api-tests
+      - ui-tests
+    permissions:
+      contents: write
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        with:
+          app-id: ${{ secrets.PROBE_APP_ID }}
+          private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
+          owner: TykTechnologies
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: softprops/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77 # v1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body_path: release.md
