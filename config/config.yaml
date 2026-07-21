@@ -52,7 +52,6 @@ policy:
       repos:
         # Repo specific policy for `tyk` starts here->
         tyk:
-          distrolessbaseimage: base-debian13:nonroot
           # packagename is the historical name of the package. Builds
           # may produce artifacts named differently but the
           # directories and contents of the package use this name.
@@ -173,74 +172,58 @@ policy:
           # official images. These tests are usually required for PRs to
           # pass so be careful with names
           tests: [api]
+          # Features common to every tyk branch. Branch entries below only
+          # add their genuine extras (features are unioned across levels).
+          features:
+            - release-test
+            - distroless
           # Different branches could have different policy as older branches
           # could be on a different releaese workflow. To override any branch
           # policy for a specific branch, they could be specified here, under
           # the respective branches.
+          # buildenv is inherited from the cgo-services group default unless
+          # overridden here.
           # Branch specific policy for different branches starts here.->
           branches:
             master:
               features:
-                - release-test
-                - distroless
                 - fips
                 - ee
                 - resolve-dashboard
             release-5.3:
               buildenv: 1.24-bullseye
-              features:
-                - release-test
-                - distroless
             release-5.8:
-              buildenv: 1.25-bullseye
               features:
-                - release-test
-                - distroless
                 - fips
                 - ee
                 - resolve-dashboard
             release-5.8.15:
-              buildenv: 1.25-bullseye
               features:
-                - release-test
-                - distroless
                 - fips
                 - ee
                 - resolve-dashboard
             release-5.13:
-              buildenv: 1.25-bullseye
               features:
-                - release-test
-                - distroless
+                - fips
                 - ee
                 - resolve-dashboard
-                - fips
             release-5.13.1:
-              buildenv: 1.25-bullseye
               features:
-                - release-test
-                - distroless
+                - fips
                 - ee
                 - resolve-dashboard
-                - fips
             release-5.14:
-              buildenv: 1.25-bullseye
               features:
-                - release-test
-                - distroless
+                - fips
                 - ee
                 - resolve-dashboard
-                - fips
                 # DX-2386 (tyk#8451): api tests fall back to master variations
                 - test-fallback
             release-5.14.0:
-              buildenv: 1.25-bullseye
               features:
-                - release-test
-                - distroless
+                - fips
                 - ee
                 - resolve-dashboard
-                - fips
                 # DX-2386 (tyk#8451): api tests fall back to master variations
                 - test-fallback
         tyk-analytics:
@@ -308,68 +291,51 @@ policy:
                   skipdocker: true
               env:
                 - GOFIPS140=v1.0.0
+          # Features common to every tyk-analytics branch. Branch entries
+          # below only add their genuine extras (features are unioned).
+          features:
+            - distroless
+            - release-test
+          # buildenv is inherited from the cgo-services group default unless
+          # overridden here.
           branches:
             master:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
             release-5.3:
               buildenv: 1.24-bullseye
               cgo: false
-              features:
-                - distroless
-                - release-test
             release-5.8:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
             release-5.8.15:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
             release-5.13:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
             release-5.13.1:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
             release-5.14:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
             release-5.14.0:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
 
         portal:
@@ -443,7 +409,6 @@ policy:
           configfile: tyk-ai-studio.conf
           versionpackage: main
           features:
-            - releng
             - ai-studio-frontend-build
             - default-distros
           builds:
@@ -490,7 +455,6 @@ policy:
                   docker: linux/s390x
           branches:
             main:
-              buildenv: 1.25-bullseye
 
     pgo-services:
       features:
@@ -594,7 +558,6 @@ policy:
           branches:
             master: {}
         tyk-sink:
-          buildenv: 1.25-bookworm
           exposeports: 80
           binary: tyk-sink
           cgo: false
