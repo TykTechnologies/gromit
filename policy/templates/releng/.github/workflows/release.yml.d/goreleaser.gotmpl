@@ -11,6 +11,9 @@
       github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
     runs-on: {{`${{ vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
+    {{- if eq .Name "tyk-analytics" }}
+    timeout-minutes: 90
+    {{- end }}
     permissions:
       id-token: write   # AWS OIDC JWT
       contents: read    # actions/checkout
