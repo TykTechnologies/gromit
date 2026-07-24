@@ -45,6 +45,7 @@ jobs:
       github.event.pull_request.draft == false
     name: '${{ matrix.golang_cross }}'
     runs-on: ${{ vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}
+    timeout-minutes: 90
     permissions:
       id-token: write # AWS OIDC JWT
       contents: read # actions/checkout
@@ -844,6 +845,7 @@ jobs:
         uses: TykTechnologies/github-actions/.github/actions/tests/distro-matrix@production
         id: params
   upgrade-tests:
+    if: github.event_name != 'pull_request'
     needs:
       - test-controller-distros
     uses: TykTechnologies/github-actions/.github/workflows/upgrade-tests.yml@production
