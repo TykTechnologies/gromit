@@ -19,6 +19,9 @@
         id: params
 
   upgrade-tests:
+    {{- if eq .Name "tyk-analytics" }}
+    if: github.event_name != 'pull_request'
+    {{- end }}
     needs:
       - test-controller-distros
     uses: TykTechnologies/github-actions/.github/workflows/upgrade-tests.yml@production
