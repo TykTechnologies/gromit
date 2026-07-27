@@ -36,6 +36,7 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 	assert.Contains(t, buildWorkflow,
 		`base="${{ steps.login-ecr.outputs.registry }}/tyk-plugin-compiler@${{ steps.build-ng-base.outputs.digest }}"`)
 	assert.Contains(t, buildWorkflow, `BASE_IMAGE=${{ steps.source-base.outputs.ref }}`)
+	assert.Equal(t, 1, strings.Count(buildWorkflow, "docker/setup-buildx-action@"))
 	assert.Equal(t, 3, strings.Count(buildWorkflow, "latest=false"))
 	assert.Equal(t, 4, strings.Count(buildWorkflow, "sbom: true"))
 	assert.Equal(t, 4, strings.Count(buildWorkflow, "provenance: mode=max"))
@@ -43,6 +44,7 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 
 	baseWorkflow := readRenderedFile(t, outputDir, ".github/workflows/plugin-compiler-ng-base.yml")
 	assert.Contains(t, baseWorkflow, `BASE_IMAGE=${{ steps.source-base.outputs.ref }}`)
+	assert.Equal(t, 1, strings.Count(baseWorkflow, "docker/setup-buildx-action@"))
 	assert.Equal(t, 1, strings.Count(baseWorkflow, "sbom: true"))
 	assert.Equal(t, 1, strings.Count(baseWorkflow, "provenance: mode=max"))
 	assert.Equal(t, 1, strings.Count(baseWorkflow, "contents: read"))
