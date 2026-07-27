@@ -9,6 +9,7 @@ import (
 	"github.com/TykTechnologies/gromit/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
@@ -41,8 +42,11 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 	assert.Equal(t, 4, strings.Count(buildWorkflow, "sbom: true"))
 	assert.Equal(t, 4, strings.Count(buildWorkflow, "provenance: mode=max"))
 	assert.Equal(t, 2, strings.Count(buildWorkflow, "contents: read"))
-	assert.Equal(t, 3, strings.Count(buildWorkflow, "WITH_GATEWAY_SELFTEST=1"))
-	assert.Equal(t, 3, strings.Count(buildWorkflow, "WITH_GATEWAY_SELFTEST=0"))
+	assertPluginCompilerSelfTestBuilds(t, buildWorkflow, 3)
+
+	releaseDockerfile := readRenderedFile(t, outputDir, "ci/images/plugin-compiler-ng/Dockerfile.release")
+	assert.Equal(t, 1, strings.Count(releaseDockerfile, "ARG WITH_GATEWAY_SELFTEST=0"))
+	assert.Contains(t, releaseDockerfile, "test ! -e /usr/local/bin/tyk")
 
 	baseWorkflow := readRenderedFile(t, outputDir, ".github/workflows/plugin-compiler-ng-base.yml")
 	assert.Contains(t, baseWorkflow, `BASE_IMAGE=${{ steps.source-base.outputs.ref }}`)
@@ -108,8 +112,7 @@ func TestPluginCompilerNGReleaseBranchConfiguration(t *testing.T) {
 			workflow := readRenderedFile(t, outputDir, ".github/workflows/plugin-compiler-ng-build.yml")
 			assert.Contains(t, workflow, "GOLANG_CROSS: "+test.goImage)
 			assert.Equal(t, test.variantCount, strings.Count(workflow, "latest=false"))
-			assert.Equal(t, test.variantCount, strings.Count(workflow, "WITH_GATEWAY_SELFTEST=1"))
-			assert.Equal(t, test.variantCount, strings.Count(workflow, "WITH_GATEWAY_SELFTEST=0"))
+			assertPluginCompilerSelfTestBuilds(t, workflow, test.variantCount)
 			if test.usesBoringCrypto {
 				assert.Contains(t, workflow, "FIPS_GOEXPERIMENT=boringcrypto")
 				assert.Contains(t, workflow, "SELFTEST_GOEXPERIMENT=boringcrypto")
@@ -118,6 +121,44 @@ func TestPluginCompilerNGReleaseBranchConfiguration(t *testing.T) {
 			}
 		})
 	}
+}
+
+func assertPluginCompilerSelfTestBuilds(t *testing.T, workflow string, variantCount int) {
+	t.Helper()
+
+	var rendered struct {
+		Jobs map[string]struct {
+			Steps []struct {
+				Name string         `yaml:"name"`
+				With map[string]any `yaml:"with"`
+			} `yaml:"steps"`
+		} `yaml:"jobs"`
+	}
+	require.NoError(t, yaml.Unmarshal([]byte(workflow), &rendered))
+
+	job, ok := rendered.Jobs["docker-build"]
+	require.True(t, ok)
+
+	var gateBuilds, pushedBuilds int
+	for _, step := range job.Steps {
+		buildArgs, _ := step.With["build-args"].(string)
+		switch {
+		case strings.HasPrefix(step.Name, "Build local NG gate image"):
+			gateBuilds++
+			assert.Equal(t, false, step.With["push"])
+			assert.Equal(t, true, step.With["load"])
+			assert.Contains(t, buildArgs, "WITH_GATEWAY_SELFTEST=1")
+			assert.NotContains(t, buildArgs, "WITH_GATEWAY_SELFTEST=0")
+		case strings.HasPrefix(step.Name, "Build and push NG to dockerhub/ECR"):
+			pushedBuilds++
+			assert.Equal(t, true, step.With["push"])
+			assert.Contains(t, buildArgs, "WITH_GATEWAY_SELFTEST=0")
+			assert.NotContains(t, buildArgs, "WITH_GATEWAY_SELFTEST=1")
+		}
+	}
+
+	assert.Equal(t, variantCount, gateBuilds)
+	assert.Equal(t, variantCount, pushedBuilds)
 }
 
 func readRenderedFile(t *testing.T, outputDir, name string) string {
