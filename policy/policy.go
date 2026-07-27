@@ -38,6 +38,7 @@ type repoConfig struct {
 	UpgradeFromVer      string
 	Tests               []string
 	Features            []string
+	PluginCompiler      pluginCompilerConfig
 	DeletedFiles        []string
 	Branches            map[string]branchVals `copier:"-"`
 	Repos               map[string]repoConfig `copier:"-"`
@@ -71,6 +72,50 @@ type build struct {
 
 type buildMap map[string]*build
 
+type pluginCompilerConfig struct {
+	GoImage               string
+	DepGuardRef           string
+	DepGuardIf            string
+	DockerBuildIf         string
+	CheckoutDepth         int
+	PullRequestTypes      []string
+	PullRequestTypesStyle string
+	Variants              []pluginCompilerVariant
+	NextGen               pluginCompilerNextGenConfig
+}
+
+type pluginCompilerVariant struct {
+	Name         string
+	ImageSuffix  string
+	Title        string
+	Description  string
+	BuildTag     string
+	GoExperiment string
+	GoFips140    string
+	Edition      string
+}
+
+type pluginCompilerNextGenConfig struct {
+	TagSuffix             string
+	BaseImageName         string
+	BaseImageTag          string
+	BaseImageRef          string
+	WorkflowBaseImageName string
+	WorkflowBaseImageTag  string
+	BaseImage             string
+	BaseImageDigest       string
+	GlibcTarget           string
+	Cross                 string
+	Slim                  string
+	WithCxx               string
+	WithGit               string
+	GatewayTrimpath       string
+	CEArchs               string
+	EEArchs               string
+	FIPSArchs             string
+	Variants              []pluginCompilerVariant
+}
+
 // Policies models the config file structure. There are three levels
 // at which a particular value can be set: group-level, repo, branch.
 // The group level is applicable for all the repos in that group.
@@ -95,6 +140,7 @@ type branchVals struct {
 	UpgradeFromVer      string
 	Tests               []string
 	Features            []string
+	PluginCompiler      pluginCompilerConfig
 	Builds              buildMap
 	DeletedFiles        []string
 }

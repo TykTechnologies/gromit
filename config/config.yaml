@@ -173,6 +173,47 @@ policy:
           # official images. These tests are usually required for PRs to
           # pass so be careful with names
           tests: [api]
+          plugincompiler:
+            depguardref: d3fa20888fa2878e877e22bb7702141217290e7c
+            depguardif: github.event_name == 'pull_request'
+            dockerbuildif: |-
+              !cancelled() &&
+              (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') &&
+              !github.event.pull_request.draft
+            checkoutdepth: 0
+            pullrequesttypesstyle: inline
+            pullrequesttypes: [opened, synchronize, reopened, labeled]
+            variants:
+              - name: std
+                title: tyk-plugin-compiler
+                description: Plugin compiler for the Tyk API Gateway
+              - name: ee
+                imagesuffix: -ee
+                title: tyk-plugin-compiler-ee
+                description: Plugin compiler for the Tyk API Gateway Enterprise Edition
+                buildtag: ee
+              - name: fips
+                imagesuffix: -fips
+                title: tyk-plugin-compiler-fips
+                description: Plugin compiler for the Tyk API Gateway FIPS Edition
+                buildtag: ee,fips
+                gofips140: v1.0.0
+            nextgen:
+              tagsuffix: -ng
+              baseimagename: tyk-plugin-compiler-ng-base
+              baseimagetag: latest
+              workflowbaseimagename: tyk-plugin-compiler
+              workflowbaseimagetag: ng-base-${{ github.sha }}
+              baseimage: dhi.io/busybox:1-debian-dev
+              glibctarget: "2.17"
+              cross: "1"
+              slim: "1"
+              withcxx: "1"
+              withgit: "1"
+              gatewaytrimpath: "true"
+              cearchs: amd64,arm64,s390x
+              eearchs: amd64,arm64
+              fipsarchs: amd64,arm64
           # Different branches could have different policy as older branches
           # could be on a different releaese workflow. To override any branch
           # policy for a specific branch, they could be specified here, under
@@ -186,13 +227,49 @@ policy:
                 - fips
                 - ee
                 - resolve-dashboard
+                - plugin-compiler
+                - plugin-compiler-ng
             release-5.3:
               buildenv: 1.24-bullseye
+              plugincompiler:
+                goimage: 1.23-bullseye
+                depguardref: 2b35ab5dd4cfff21ced9d12446e9e27d10bf5785
+                depguardif: ${{ github.event_name == 'pull_request' }}
+                dockerbuildif: ${{ !github.event.pull_request.draft && always() && (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') }}
+                checkoutdepth: 1
+                pullrequesttypesstyle: list
+                pullrequesttypes: [opened, reopened, synchronize, labeled]
+                variants:
+                  - name: std
+                    title: tyk-plugin-compiler
+                    description: Plugin compiler for the Tyk API Gateway
               features:
                 - release-test
                 - distroless
             release-5.8:
               buildenv: 1.25-bullseye
+              plugincompiler:
+                depguardref: 2b35ab5dd4cfff21ced9d12446e9e27d10bf5785
+                depguardif: ${{ github.event_name == 'pull_request' }}
+                dockerbuildif: ${{ always() && !github.event.pull_request.draft && (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') }}
+                checkoutdepth: 1
+                pullrequesttypesstyle: inline
+                pullrequesttypes: [opened, reopened, synchronize, labeled]
+                variants:
+                  - name: std
+                    title: tyk-plugin-compiler
+                    description: Plugin compiler for the Tyk API Gateway
+                  - name: ee
+                    imagesuffix: -ee
+                    title: tyk-plugin-compiler-ee
+                    description: Plugin compiler for the Tyk API Gateway Enterprise Edition
+                    buildtag: ee
+                  - name: fips
+                    imagesuffix: -fips
+                    title: tyk-plugin-compiler-fips
+                    description: Plugin compiler for the Tyk API Gateway FIPS Edition
+                    buildtag: ee,fips,boringcrypto
+                    goexperiment: boringcrypto
               features:
                 - release-test
                 - distroless
@@ -201,6 +278,28 @@ policy:
                 - resolve-dashboard
             release-5.8.15:
               buildenv: 1.25-bullseye
+              plugincompiler:
+                depguardref: 2b35ab5dd4cfff21ced9d12446e9e27d10bf5785
+                depguardif: ${{ github.event_name == 'pull_request' }}
+                dockerbuildif: ${{ always() && !github.event.pull_request.draft && (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') }}
+                checkoutdepth: 1
+                pullrequesttypesstyle: inline
+                pullrequesttypes: [opened, reopened, synchronize, labeled]
+                variants:
+                  - name: std
+                    title: tyk-plugin-compiler
+                    description: Plugin compiler for the Tyk API Gateway
+                  - name: ee
+                    imagesuffix: -ee
+                    title: tyk-plugin-compiler-ee
+                    description: Plugin compiler for the Tyk API Gateway Enterprise Edition
+                    buildtag: ee
+                  - name: fips
+                    imagesuffix: -fips
+                    title: tyk-plugin-compiler-fips
+                    description: Plugin compiler for the Tyk API Gateway FIPS Edition
+                    buildtag: ee,fips,boringcrypto
+                    goexperiment: boringcrypto
               features:
                 - release-test
                 - distroless
