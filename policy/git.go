@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,6 +21,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/rs/zerolog/log"
 )
+
+var ErrNoChanges = errors.New("nothing to commit, templates produced no changes")
 
 // GitRepo models a local git worktree with the authentication and
 // enough metadata to allow it to be pushed it to github
@@ -127,6 +130,9 @@ func (r *GitRepo) Branch() string {
 // Note that this commit will be lost if it is not pushed to a remote.
 func (r *GitRepo) Commit(msg string) error {
 	newCommitHash, err := r.worktree.Commit(msg, r.commitOpts)
+	if errors.Is(err, git.ErrEmptyCommit) {
+		return ErrNoChanges
+	}
 	if err != nil {
 		return err
 	}

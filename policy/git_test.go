@@ -8,12 +8,38 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/TykTechnologies/gromit/config"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestCommitNoChanges(t *testing.T) {
+	dir := t.TempDir()
+	repo, err := git.PlainInit(dir, false)
+	require.NoError(t, err)
+	w, err := repo.Worktree()
+	require.NoError(t, err)
+
+	sig := &object.Signature{Name: "test", Email: "test@test.co", When: time.Now()}
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "f.txt"), []byte("x"), 0644))
+	_, err = w.Add("f.txt")
+	require.NoError(t, err)
+	_, err = w.Commit("init", &git.CommitOptions{Author: sig})
+	require.NoError(t, err)
+
+	r := &GitRepo{
+		repo:       repo,
+		worktree:   w,
+		commitOpts: &git.CommitOptions{All: false, Author: sig},
+	}
+	err = r.Commit("no changes here")
+	assert.ErrorIs(t, err, ErrNoChanges)
+}
 
 var testRepo = map[string]string{
 	"url":         "https://github.com/tyklabs/git-tests",

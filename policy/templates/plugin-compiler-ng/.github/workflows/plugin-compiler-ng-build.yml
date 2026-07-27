@@ -179,7 +179,8 @@ jobs:
             BASE_IMAGE=${{`{{ env.NG_BASE_IMAGE }}`}}
             GOLANG_IMAGE=tykio/golang-cross:${{`{{ env.GOLANG_CROSS }}`}}
             GITHUB_SHA=${{`{{ github.sha }}`}}
-            GITHUB_TAG=${{`{{ github.ref_name }}`}}{{ $ng.VariantBuildArgsBlock $variant }}
+            GITHUB_TAG=${{`{{ github.ref_name }}`}}
+            WITH_GATEWAY_SELFTEST=1{{ $ng.VariantBuildArgsBlock $variant }}
 
       - name: Gate NG plugin load{{ $variant.StepSuffix }}
         run: ci/images/plugin-compiler-ng/scripts/loadtest-gate.sh tyk-plugin-compiler-ng-gate:{{ default "std" $variant.Name }} {{ $variant.NextGenEdition }}
@@ -206,6 +207,7 @@ jobs:
             BASE_IMAGE=${{`{{ env.NG_BASE_IMAGE }}`}}
             GOLANG_IMAGE=tykio/golang-cross:${{`{{ env.GOLANG_CROSS }}`}}
             GITHUB_SHA=${{`{{ github.sha }}`}}
-            GITHUB_TAG=${{`{{ github.ref_name }}`}}{{ $ng.VariantBuildArgsBlock $variant }}{{ if lt (add1 $i) (len ($pc.NextGenVariants)) }}
+            GITHUB_TAG=${{`{{ github.ref_name }}`}}
+            WITH_GATEWAY_SELFTEST=0{{ $ng.VariantBuildArgsBlock $variant }}{{ if lt (add1 $i) (len ($pc.NextGenVariants)) }}
 
 {{ end }}{{ end }}

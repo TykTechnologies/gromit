@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -59,8 +60,10 @@ This command does not overlay the rendered output into a git tree. You will have
 		dir := args[0]
 		repoName, _ := cmd.Flags().GetString("repo")
 		rp, err := configPolicies.GetRepoPolicy(repoName)
-		rp.SetBranch(polBranch)
 		if err != nil {
+			return fmt.Errorf("repopolicy %s: %v", repoName, err)
+		}
+		if err := rp.SetBranch(polBranch); err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repoName, err)
 		}
 		b, err := policy.NewBundle(rp.Branchvals.Features)
@@ -152,6 +155,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 			gh = policy.NewGithubClient(ghToken)
 		}
 
+		var syncErr error
 		for _, branch := range branches {
 			repo, err := policy.InitGit(fmt.Sprintf("https://github.com/%s/%s", rp.Owner, repoName),
 				branch,
@@ -167,9 +171,14 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 				CommitMsg:    msg,
 				Repo:         repo,
 			}
-			err = rp.ProcessBranch(pushOpts)
-			if err != nil {
-				cmd.Printf("Could not process %s/%s: %v\n", repoName, branch, err)
+			syncErr = rp.ProcessBranch(pushOpts)
+			if errors.Is(syncErr, policy.ErrNoChanges) {
+				cmd.Printf("%s/%s is already in sync, skipping\n", repoName, branch)
+				syncErr = nil
+				continue
+			}
+			if syncErr != nil {
+				cmd.Printf("Could not process %s/%s: %v\n", repoName, branch, syncErr)
 				cmd.Println("Will not process remaining branches")
 				break
 			}
@@ -191,6 +200,8 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 				pr, err := gh.CreatePR(rp, prOpts)
 				if err != nil {
 					cmd.Printf("gh create pr --base %s --head %s: %v", repo.Branch(), pushOpts.RemoteBranch, err)
+					syncErr = err
+					continue
 				}
 				prs = append(prs, *pr.HTMLURL)
 			}
@@ -199,7 +210,7 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 		for _, pr := range prs {
 			cmd.Printf("- %s\n", pr)
 		}
-		return err
+		return syncErr
 	},
 }
 

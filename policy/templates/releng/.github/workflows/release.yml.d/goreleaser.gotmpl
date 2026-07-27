@@ -11,6 +11,9 @@
       github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
     runs-on: {{`${{ vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
+    {{- if eq .Name "tyk-analytics" }}
+    timeout-minutes: 90
+    {{- end }}
     permissions:
       id-token: write   # AWS OIDC JWT
       contents: read    # actions/checkout
@@ -147,6 +150,10 @@
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
+{{- if ne .Name "tyk" }}
+      - uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a  # v3
+
+{{- end }}
       - name: Login to DockerHub
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
         with:
@@ -315,6 +322,25 @@
           echo "dist_ready=true" >> $GITHUB_OUTPUT
 {{- end }}
 
+{{- $needsScout := false }}
+{{- if ne $r.Name "tyk" }}
+{{- range $b, $bv := $r.GetDockerBuilds }}
+  {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
+    {{- $needsScout = true }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- if $needsScout }}
+      - name: Install Docker Scout CLI
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
+        run: |
+          mkdir -p ~/.docker/cli-plugins
+          curl --proto '=https' --tlsv1.2 -fsSL https://github.com/docker/scout-cli/releases/download/v1.22.0/docker-scout_1.22.0_linux_amd64.tar.gz -o /tmp/scout.tar.gz
+          curl --proto '=https' --tlsv1.2 -fsSL https://github.com/docker/scout-cli/releases/download/v1.22.0/docker-scout_1.22.0_checksums.txt -o /tmp/scout_checksums.txt
+          grep "docker-scout_1.22.0_linux_amd64.tar.gz" /tmp/scout_checksums.txt | awk '{print $1 "  /tmp/scout.tar.gz"}' | sha256sum -c -
+          tar -xzf /tmp/scout.tar.gz -C ~/.docker/cli-plugins/ docker-scout
+          chmod +x ~/.docker/cli-plugins/docker-scout
+{{- end }}
 {{- range $b, $bv := $r.GetDockerBuilds }}
       - name: Docker metadata for {{ $b }} CI
         id: ci_metadata_{{ $b }}
@@ -345,7 +371,9 @@
           file: ci/Dockerfile.std
           {{ end }}
           provenance: mode=max
+          {{- if eq $r.Name "tyk" }}
           sbom: true
+          {{- end }}
           outputs: type=image,push=true,compression=gzip,force-compression=true,oci-mediatypes=true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -435,7 +463,9 @@
           file: ci/Dockerfile.std
           {{- end }}
           provenance: mode=max
+          {{- if eq $r.Name "tyk" }}
           sbom: true
+          {{- end }}
           cache-from: type=gha
           outputs: type=image,push=true,compression=gzip,force-compression=true,oci-mediatypes=true
           tags: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.tags }}`}}
@@ -490,6 +520,20 @@
             verify_manifest manifest.json
           fi
           echo "Success: All layers are uniformly compressed using gzip."
+{{- if and (ne $r.Name "tyk") $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
+
+      - name: Attach base image VEX to {{ $b }}
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
+        run: |
+          docker scout vex get --org tykio -o /tmp/{{ $b }}-vex.json {{ $bv.DockerBaseImage }} || true
+          if [ -f /tmp/{{ $b }}-vex.json ]; then
+            {{- range $image := $bv.GetImages "DHRepo" "CSRepo" }}
+            cosign attest --yes --type openvex \
+              --predicate /tmp/{{ $b }}-vex.json \
+              {{ $image }}:{{`${{ github.ref_name }}`}} || true
+            {{- end }}
+          fi
+{{- end }}
 {{ end }} {{/* range getDockerBuilds */}}
 
       - name: save deb

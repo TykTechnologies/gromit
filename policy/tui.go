@@ -2,13 +2,23 @@ package policy
 
 import (
 	"bytes"
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"text/template"
 )
+
+//go:embed app/index.html
+var indexTemplateFS embed.FS
+
+//go:embed app/static/*
+var staticFS embed.FS
 
 // GenerateStatic generates static files for the TUI
 func GenerateStatic(configDir, outDir string) error {
@@ -90,7 +100,65 @@ func GenerateStatic(configDir, outDir string) error {
 		}
 	}
 
-	return nil
+	if err := generateIndex(av, outDir); err != nil {
+		return err
+	}
+	return copyStaticAssets(outDir)
+}
+
+func generateIndex(av AllTestsuiteVariations, outDir string) error {
+	tFS, err := fs.Sub(indexTemplateFS, "app")
+	if err != nil {
+		return fmt.Errorf("creating template FS: %w", err)
+	}
+	t, err := template.New("index.html").Funcs(template.FuncMap{
+		"trimSuffix": strings.TrimSuffix,
+	}).ParseFS(tFS, "index.html")
+	if err != nil {
+		return fmt.Errorf("parsing index.html: %w", err)
+	}
+	data := struct {
+		AllVariations AllTestsuiteVariations
+		SaveDir       string
+	}{AllVariations: av}
+
+	if err := os.MkdirAll(outDir, 0755); err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(outDir, "index.html"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return t.Execute(f, data)
+}
+
+func copyStaticAssets(outDir string) error {
+	srcFS, err := fs.Sub(staticFS, "app/static")
+	if err != nil {
+		return fmt.Errorf("creating static FS: %w", err)
+	}
+	destDir := filepath.Join(outDir, "static")
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return err
+	}
+	return fs.WalkDir(srcFS, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		src, err := srcFS.Open(path)
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+		dst, err := os.Create(filepath.Join(destDir, path))
+		if err != nil {
+			return err
+		}
+		defer dst.Close()
+		_, err = io.Copy(dst, src)
+		return err
+	})
 }
 
 func writeJSON(path string, obj any) error {
