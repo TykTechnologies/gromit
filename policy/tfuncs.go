@@ -188,7 +188,7 @@ func (ng pluginCompilerNextGenConfig) BaseImageValue() string {
 	if ng.BaseImage != "" {
 		return ng.BaseImage
 	}
-	return "dhi.io/busybox:1-debian-dev"
+	return "dhi.io/busybox:1-debian-fips-dev"
 }
 
 func (ng pluginCompilerNextGenConfig) BaseSourceImageRefValue() string {
@@ -210,7 +210,7 @@ func (ng pluginCompilerNextGenConfig) SlimValue() string {
 	if ng.Slim != "" {
 		return ng.Slim
 	}
-	return "1"
+	return "0"
 }
 
 func (ng pluginCompilerNextGenConfig) WithCxxValue() string {

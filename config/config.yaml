@@ -203,10 +203,10 @@ policy:
               baseimagetag: latest
               workflowbaseimagename: tyk-plugin-compiler
               workflowbaseimagetag: ng-base-${{ github.sha }}
-              baseimage: dhi.io/busybox:1-debian-dev
+              baseimage: dhi.io/busybox:1-debian-fips-dev
               glibctarget: "2.17"
               cross: "1"
-              slim: "1"
+              slim: "0"
               withcxx: "1"
               withgit: "1"
               gatewaytrimpath: "true"
