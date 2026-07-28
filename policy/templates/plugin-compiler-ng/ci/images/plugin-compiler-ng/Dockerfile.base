@@ -16,10 +16,10 @@ ARG SYSROOT_SUITE=bullseye
 # is built (its cgo is linked with the CentOS 7 gcc 4.8.5 / glibc 2.17 toolchain). 2.31 =
 # Debian bullseye - opt-in, for plugins whose C code needs a glibc 2.18-2.31 function.
 ARG GLIBC_TARGET=2.17
-# Shared public DHI FIPS-dev base: minimal Debian tooling plus Docker-authored security metadata.
+# Shared Docker-managed DHI base with the compiler package closure pre-provisioned.
 # This base is supply-chain hardening, not a claim that every compiler variant is FIPS compliant;
 # FIPS plugin crypto still comes from the matching Gateway Go toolchain and edition settings.
-ARG BASE_IMAGE=dhi.io/busybox:1-debian-fips-dev
+ARG BASE_IMAGE={{ .Branchvals.PluginCompiler.NextGen.BaseSourceImageRefValue }}
 
 ############################################################################
 # Stage 1 - glibc link sysroots (amd64 + arm64 + s390x). Two sources, selected by
@@ -134,13 +134,12 @@ FROM sysroots-${GLIBC_TARGET} AS sysroots
 FROM ${BASE_IMAGE} AS base
 # DHI bases default to a non-root user; the compiler needs root to apt-install the toolchain at
 # build time and to write build artifacts + the mounted /plugin-source volume at run time.
-USER root
+USER 0
 ARG BASE_IMAGE
 ARG GLIBC_TARGET
 ARG WITH_CXX=1
 ARG WITH_GIT=1
-# Digest of the DHI base this image was built from - the watcher compares this to
-# the live DHI digest to decide when to re-stack (CVE patch) on a new base.
+# Immutable DHI source digest recorded on the image for audit and promotion tooling.
 ARG DHI_DIGEST=unknown
 # Two orthogonal axes:
 #   CROSS (default 0) -> native-only image: host-arch toolchain only = the :V images (build for
@@ -182,27 +181,46 @@ RUN set -eux; \
         # Wolfi: gcc includes C++; cross-gcc is not packaged, so a Wolfi image builds \
         # NATIVELY for its own arch only (amd64 image -> amd64, arm64 -> arm64). \
         # Cross targets (s390x, opposite arch) require the busybox-glibc -x variant. \
+    else \
+        echo "Using pre-provisioned compiler toolchain from ${BASE_IMAGE}"; \
     fi
 
 # --- Safe filesystem slimming + package-integrity gate ----------------------
 # Git's Debian package depends on Perl and apt depends on gpgv. They are part of the compiler's
 # real package closure and must stay installed and visible to scanners. SLIM therefore removes only
 # non-executable documentation and caches; it never force-purges packages or edits dpkg/DHI package
-# records. The final audit is unconditional for Debian-based images so a future base/package change
-# cannot publish an internally inconsistent compiler image.
+# records. Full Debian images run dpkg and apt dependency audits. Runtime DHI variants intentionally
+# omit those package-manager tools, so validate every recorded package state, required executable,
+# and trust bundle instead; Docker's signed customized-image SBOM records the resolved closure.
 RUN set -eux; \
     case "$SLIM" in 0|1) ;; *) echo "ERROR: SLIM must be 0 or 1 (got $SLIM)" >&2; exit 1 ;; esac; \
     if [ "$SLIM" = "1" ]; then \
       rm -rf /usr/share/doc/* /usr/share/info/* /usr/share/man/* /var/cache/apt/*; \
     fi; \
-    needs="gcc ld jq file make bash sed awk grep"; \
+    needs="gcc ld ld.gold readelf jq file make bash sed awk grep tar find"; \
     [ "$WITH_GIT" = "1" ] && needs="$needs git"; \
+    [ "$WITH_CXX" = "1" ] && needs="$needs g++"; \
     [ "$CROSS" = "1" ] && needs="$needs x86_64-linux-gnu-gcc aarch64-linux-gnu-gcc s390x-linux-gnu-gcc"; \
+    [ "$CROSS" = "1" ] && [ "$WITH_CXX" = "1" ] && needs="$needs x86_64-linux-gnu-g++ aarch64-linux-gnu-g++ s390x-linux-gnu-g++"; \
     for need in $needs; do \
       command -v "$need" >/dev/null 2>&1 || { echo "ERROR: missing required tool: $need" >&2; exit 1; }; \
     done; \
+    test -s /etc/ssl/certs/ca-certificates.crt; \
     if command -v dpkg >/dev/null; then \
-      test -z "$(dpkg --audit)"; \
+      if dpkg --help 2>&1 | grep -q -- '--audit'; then \
+        test -z "$(dpkg --audit)"; \
+      else \
+        awk '\
+          /^Package: / { packages++ } \
+          /^Status: / { \
+            statuses++; \
+            if ($0 != "Status: install ok installed") bad++; \
+          } \
+          END { exit !(packages > 0 && packages == statuses && bad == 0) } \
+        ' /var/lib/dpkg/status; \
+      fi; \
+    fi; \
+    if command -v apt-get >/dev/null; then \
       apt-get check; \
     fi
 

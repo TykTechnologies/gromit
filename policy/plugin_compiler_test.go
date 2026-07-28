@@ -52,7 +52,9 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 	assert.Contains(t, releaseDockerfile, "test ! -e /usr/local/bin/tyk")
 
 	baseWorkflow := readRenderedFile(t, outputDir, ".github/workflows/plugin-compiler-ng-base.yml")
-	assert.Contains(t, baseWorkflow, "NG_BASE_SOURCE: dhi.io/busybox:1-debian-fips-dev")
+	assert.Contains(t, baseWorkflow,
+		"NG_BASE_SOURCE: tykio/dhi-busybox-plugin-compiler:1.37.0-debian13-fips_plugin-compiler-ng-toolchain@"+
+			"sha256:8a8967f03d2243d88659256e8a3ca3f5a7b009a4b522e5608f1facfed9be3733")
 	assert.Contains(t, baseWorkflow, `BASE_IMAGE=${{ steps.source-base.outputs.ref }}`)
 	assert.Equal(t, 1, strings.Count(baseWorkflow, "docker/setup-buildx-action@"))
 	assert.Equal(t, 1, strings.Count(baseWorkflow, "sbom: true"))
@@ -60,6 +62,14 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(baseWorkflow, "contents: read"))
 
 	baseDockerfile := readRenderedFile(t, outputDir, "ci/images/plugin-compiler-ng/Dockerfile.base")
+	assert.Contains(t, baseDockerfile, "Using pre-provisioned compiler toolchain")
+	assert.Contains(t, baseDockerfile, "USER 0")
+	assert.NotContains(t, baseDockerfile, "USER root")
+	assert.Contains(t, baseDockerfile, `needs="gcc ld ld.gold readelf jq file make bash sed awk grep tar find"`)
+	assert.Contains(t, baseDockerfile, `test -s /etc/ssl/certs/ca-certificates.crt`)
+	assert.Contains(t, baseDockerfile, `command -v apt-get >/dev/null`)
+	assert.Contains(t, baseDockerfile,
+		`needs="$needs x86_64-linux-gnu-g++ aarch64-linux-gnu-g++ s390x-linux-gnu-g++"`)
 	assert.Contains(t, baseDockerfile, `"$SR/usr/lib/libpython"*.so*`)
 	assert.Contains(t, baseDockerfile,
 		`test -z "$(find "$SR/usr/lib" -maxdepth 1 -name 'libpython*.so*' -print -quit)"`)
@@ -76,7 +86,9 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 	assert.Contains(t, baseDockerfile, `test ! -e "$SR/usr/lib/krb5"`)
 	assert.Contains(t, baseDockerfile, "preserving unrelated generic libraries")
 	assert.Equal(t, 2, strings.Count(baseDockerfile, "ARG BASE_IMAGE"))
+	assert.Contains(t, baseDockerfile, `dpkg --help 2>&1 | grep -q -- '--audit'`)
 	assert.Contains(t, baseDockerfile, `test -z "$(dpkg --audit)"`)
+	assert.Contains(t, baseDockerfile, `packages > 0 && packages == statuses && bad == 0`)
 	assert.Contains(t, baseDockerfile, "apt-get check")
 	assert.NotContains(t, baseDockerfile, "dpkg --purge --force-all")
 	assert.NotContains(t, baseDockerfile, "rm -f \"/var/lib/dpkg/status.d/")

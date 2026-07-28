@@ -14,7 +14,7 @@ on:
 env:
   NG_BASE_IMAGE: tyk-plugin-compiler-ng-base
   NG_BASE_TAG: latest
-  NG_BASE_SOURCE: dhi.io/busybox:1-debian-fips-dev
+  NG_BASE_SOURCE: tykio/dhi-busybox-plugin-compiler:1.37.0-debian13-fips_plugin-compiler-ng-toolchain@sha256:8a8967f03d2243d88659256e8a3ca3f5a7b009a4b522e5608f1facfed9be3733
   NG_GLIBC_TARGET: "2.17"
   NG_CROSS: "1"
   NG_SLIM: "0"

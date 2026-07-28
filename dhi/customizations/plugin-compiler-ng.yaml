@@ -1,0 +1,52 @@
+# Docker-managed toolchain base for all next-generation plugin compiler variants.
+# Docker resolves and records the transitive package closure in the customized
+# image SBOM; keep this list limited to tools the compiler directly requires.
+name: plugin compiler ng toolchain
+
+targets:
+  - destination: tykio/dhi-busybox-plugin-compiler
+    tag_definition_id: busybox/debian-13/1-fips
+
+platforms:
+  - linux/amd64
+  - linux/arm64
+
+compression: GZIP
+
+contents:
+  packages:
+    - bash
+    - jq
+    - ca-certificates
+    - coreutils
+    - sed
+    - grep
+    - findutils
+    - tar
+    - binutils
+    - binutils-gold
+    - file
+    - make
+    - gcc
+    - gcc-x86-64-linux-gnu
+    - gcc-aarch64-linux-gnu
+    - gcc-s390x-linux-gnu
+    - g++
+    - g++-x86-64-linux-gnu
+    - g++-aarch64-linux-gnu
+    - g++-s390x-linux-gnu
+    - git
+    # Keep the scanner-visible header package in Docker's customized-image
+    # assessment even though the compiler packages also depend on it.
+    - linux-libc-dev
+
+labels:
+  org.opencontainers.image.title: Tyk Plugin Compiler NG Toolchain Base
+  org.opencontainers.image.description: Docker-managed toolchain base derived from the Debian 13 FIPS BusyBox DHI
+  org.opencontainers.image.source: https://github.com/TykTechnologies/gromit
+  org.opencontainers.image.vendor: Tyk Technologies
+
+annotations:
+  org.opencontainers.image.title: Tyk Plugin Compiler NG Toolchain Base
+  org.opencontainers.image.description: Docker-managed toolchain base derived from the Debian 13 FIPS BusyBox DHI
+  org.opencontainers.image.source: https://github.com/TykTechnologies/gromit
