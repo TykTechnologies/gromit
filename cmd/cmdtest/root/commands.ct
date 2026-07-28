@@ -10,6 +10,7 @@ Usage:
 
 Available Commands:
   completion  Generate completion script
+  dhi-vex     Run Trivy with Docker's current signed DHI VEX
   env         Manage cluster of tyk components
   help        Help about any command
   orgs        Dump/restore org keys and mongodb
