@@ -63,6 +63,18 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 	assert.Contains(t, baseDockerfile, `"$SR/usr/lib/libpython"*.so*`)
 	assert.Contains(t, baseDockerfile,
 		`test -z "$(find "$SR/usr/lib" -maxdepth 1 -name 'libpython*.so*' -print -quit)"`)
+	assert.Contains(t, baseDockerfile, `"$SR/usr/lib"/libkrb5*`)
+	assert.Contains(t, baseDockerfile, `"$SR/usr/lib"/libgssapi_krb5*`)
+	assert.Contains(t, baseDockerfile, `"$SR/usr/lib"/libk5crypto*`)
+	assert.Contains(t, baseDockerfile, `"$SR/usr/lib"/libgssrpc*`)
+	assert.Contains(t, baseDockerfile, `"$SR/usr/lib"/libkadm5*`)
+	assert.Contains(t, baseDockerfile, `"$SR/usr/lib"/libkdb5*`)
+	assert.Contains(t, baseDockerfile, `"$SR/usr/lib"/libkrad*`)
+	assert.Contains(t, baseDockerfile, `rm -rf "$SR/usr/lib/krb5"`)
+	assert.Contains(t, baseDockerfile,
+		`test -z "$(find "$SR/usr/lib" -maxdepth 1 \( -name 'libkrb5*'`)
+	assert.Contains(t, baseDockerfile, `test ! -e "$SR/usr/lib/krb5"`)
+	assert.Contains(t, baseDockerfile, "preserving unrelated generic libraries")
 	assert.Equal(t, 2, strings.Count(baseDockerfile, "ARG BASE_IMAGE"))
 	assert.Contains(t, baseDockerfile, `test -z "$(dpkg --audit)"`)
 	assert.Contains(t, baseDockerfile, "apt-get check")
