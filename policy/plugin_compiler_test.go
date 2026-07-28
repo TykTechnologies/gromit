@@ -132,7 +132,10 @@ func TestPluginCompilerNGValidatorRejectsUncheckedOrPythonLinkedPlugin(t *testin
 		dynamic            string
 		dynamicReadelfFail bool
 		versionReadelfFail bool
+		edition            string
+		binaryStrings      string
 		wantFailure        string
+		wantOutput         string
 	}{
 		{
 			name: "supported glibc dependency",
@@ -178,6 +181,66 @@ func TestPluginCompilerNGValidatorRejectsUncheckedOrPythonLinkedPlugin(t *testin
 			versionReadelfFail: true,
 			wantFailure:        "unable to inspect ELF version requirements",
 		},
+		{
+			name: "native Go FIPS uses its embedded build setting",
+			dynamic: strings.Join([]string{
+				"Dynamic section at offset 0x1 contains 1 entry:",
+				" 0x0000000000000001 (NEEDED) Shared library: [libc.so.6]",
+			}, "\n"),
+			edition:       "ee-fips",
+			binaryStrings: "crypto/internal/boring\ncrypto/internal/fips140\nbuild\tGOFIPS140=v1.0.0",
+			wantOutput:    "FIPS: GOFIPS140=v1.0.0 (embedded build setting)",
+		},
+		{
+			name: "legacy BoringCrypto uses its explicit C symbol",
+			dynamic: strings.Join([]string{
+				"Dynamic section at offset 0x1 contains 1 entry:",
+				" 0x0000000000000001 (NEEDED) Shared library: [libc.so.6]",
+			}, "\n"),
+			edition:       "ee-fips",
+			binaryStrings: "_goboringcrypto\ncrypto/internal/boring\ncrypto/internal/fips140",
+			wantOutput:    "FIPS: boringcrypto (embedded build setting/symbol)",
+		},
+		{
+			name: "legacy BoringCrypto build setting is accepted",
+			dynamic: strings.Join([]string{
+				"Dynamic section at offset 0x1 contains 1 entry:",
+				" 0x0000000000000001 (NEEDED) Shared library: [libc.so.6]",
+			}, "\n"),
+			edition:       "ee-fips",
+			binaryStrings: "build\tGOEXPERIMENT=boringcrypto",
+			wantOutput:    "FIPS: boringcrypto (embedded build setting/symbol)",
+		},
+		{
+			name: "ordinary Go crypto packages are not FIPS evidence",
+			dynamic: strings.Join([]string{
+				"Dynamic section at offset 0x1 contains 1 entry:",
+				" 0x0000000000000001 (NEEDED) Shared library: [libc.so.6]",
+			}, "\n"),
+			edition:       "ee-fips",
+			binaryStrings: "crypto/internal/boring\ncrypto/internal/fips140",
+			wantFailure:   "plugin shows NO FIPS crypto",
+		},
+		{
+			name: "disabled native Go FIPS is rejected",
+			dynamic: strings.Join([]string{
+				"Dynamic section at offset 0x1 contains 1 entry:",
+				" 0x0000000000000001 (NEEDED) Shared library: [libc.so.6]",
+			}, "\n"),
+			edition:       "ee-fips",
+			binaryStrings: "build\tGOFIPS140=off\ncrypto/internal/fips140",
+			wantFailure:   "plugin shows NO FIPS crypto",
+		},
+		{
+			name: "conflicting native and legacy evidence fails closed",
+			dynamic: strings.Join([]string{
+				"Dynamic section at offset 0x1 contains 1 entry:",
+				" 0x0000000000000001 (NEEDED) Shared library: [libc.so.6]",
+			}, "\n"),
+			edition:       "ee-fips",
+			binaryStrings: "build\tGOFIPS140=v1.0.0\n_goboringcrypto",
+			wantFailure:   "conflicting native GOFIPS140 and legacy boringcrypto",
+		},
 	}
 
 	for _, test := range tests {
@@ -188,11 +251,14 @@ echo "ELF 64-bit LSB shared object"
 `)
 			writeExecutable(t, filepath.Join(fakeBin, "go"), `#!/bin/sh
 if [ "$1" = "version" ] && [ "${2:-}" = "-m" ]; then
-  printf '%s: go1.25.12\n' "$3"
+  printf '%s: go1.25.12\n\tbuild\t-buildmode=plugin\n\tbuild\t-tags=ee,fips\n' "$3"
 else
   echo "go version go1.25.12 linux/amd64"
 fi
 `)
+			markerCommand := "#!/bin/sh\ncat <<'EOF'\n" + test.binaryStrings + "\nEOF\n"
+			writeExecutable(t, filepath.Join(fakeBin, "strings"), markerCommand)
+			writeExecutable(t, filepath.Join(fakeBin, "nm"), markerCommand)
 
 			readelf := `#!/bin/sh
 case "$1" in
@@ -221,15 +287,22 @@ esac
 			require.NoError(t, os.WriteFile(artifact, []byte("fixture"), 0o600))
 
 			cmd := exec.Command("/bin/bash", validator, artifact)
+			edition := test.edition
+			if edition == "" {
+				edition = "ce"
+			}
 			cmd.Env = []string{
 				"PATH=" + fakeBin + string(os.PathListSeparator) +
 					"/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
-				"EXPECT_EDITION=ce",
+				"EXPECT_EDITION=" + edition,
 			}
 			output, runErr := cmd.CombinedOutput()
 			if test.wantFailure == "" {
 				require.NoError(t, runErr, string(output))
 				assert.Contains(t, string(output), "validation OK")
+				if test.wantOutput != "" {
+					assert.Contains(t, string(output), test.wantOutput)
+				}
 				return
 			}
 			require.Error(t, runErr, string(output))

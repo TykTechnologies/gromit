@@ -100,34 +100,35 @@ if command -v go >/dev/null; then
     fi
   fi
   if [ "$edition" = "ee-fips" ]; then
-    # Authoritative FIPS check reads the BINARY (deterministic, load-independent) - NOT the
-    # build-info metadata, which `go version -m` intermittently fails to surface for a
-    # -buildmode=plugin .so (notably under load), which previously caused spurious
-    # "no FIPS crypto" failures. boringcrypto links BoringSSL (_goboringcrypto* /
-    # crypto/internal/boring symbols); Go-native FIPS-140 compiles in crypto/internal/fips140.
-    # build info is only a fallback if symbol scanning is somehow unavailable.
+    # FIPS mode is a build setting, not a package-presence check. Default non-FIPS Go
+    # binaries can contain both crypto/internal/boring and crypto/internal/fips140, so
+    # neither package path is evidence. `go version -m` can intermittently return no
+    # metadata for a -buildmode=plugin .so, therefore also read the same embedded build
+    # settings directly from the binary. Legacy boringcrypto additionally exposes the
+    # distinctive _goboringcrypto* C symbols.
     # IMPORTANT: extract the marker LINES with `grep -o` (reads all input) rather than
     # `grep -q` (closes the pipe early -> SIGPIPEs the huge strings/nm output -> the pipeline
     # reports failure under `set -o pipefail`, which would silently drop back to build info).
-    marks=""
+    marks="$buildinfo"
     if command -v strings >/dev/null 2>&1; then
-      marks="$(strings -a "$SO" 2>/dev/null | grep -oiE '_goboringcrypto|crypto/internal/(boring|fips140)' | sort -u || true)"
+      marks="$(printf '%s\n' "$marks"; strings -a "$SO" 2>/dev/null | grep -oiE '_goboringcrypto|GO(FIPS140|EXPERIMENT)=[^[:space:]]+' || true)"
     fi
-    if [ -z "$marks" ] && command -v nm >/dev/null 2>&1; then
-      marks="$(nm "$SO" 2>/dev/null | grep -oiE 'boringcrypto|crypto/internal/(boring|fips140)' | sort -u || true)"
+    if ! printf '%s\n' "$marks" | grep -qi '_goboringcrypto' && command -v nm >/dev/null 2>&1; then
+      marks="$(printf '%s\n' "$marks"; nm "$SO" 2>/dev/null | grep -oi '_goboringcrypto' || true)"
     fi
+    fipssetting="$(printf '%s\n' "$marks" | grep -oE 'GOFIPS140=[^[:space:]]+' | head -1 || true)"
+    fipsvalue="${fipssetting#GOFIPS140=}"
+    boringsetting="$(printf '%s\n' "$marks" | grep -oiE '_goboringcrypto|GOEXPERIMENT=[^[:space:]]*boringcrypto[^[:space:]]*' | head -1 || true)"
     fipskind=""
-    if printf '%s\n' "$marks" | grep -qiE '_?goboringcrypto|crypto/internal/boring'; then
-      fipskind="boringcrypto (binary symbols)"
-    elif printf '%s\n' "$marks" | grep -qi 'crypto/internal/fips140'; then
-      fipskind="GOFIPS140 (binary symbols)"
-    elif echo "$buildinfo" | grep -qE 'GOFIPS140='; then
-      fipskind="$(echo "$buildinfo" | grep -oE 'GOFIPS140=[^[:space:]]+' | head -1) (build-info)"
-    elif echo "$buildinfo" | grep -qi 'boringcrypto'; then
-      fipskind="boringcrypto (build-info)"
+    if [ -n "$fipsvalue" ] && [ "$fipsvalue" != "off" ] && [ -n "$boringsetting" ]; then
+      fail "plugin contains conflicting native GOFIPS140 and legacy boringcrypto build evidence."
+    elif [ -n "$fipsvalue" ] && [ "$fipsvalue" != "off" ]; then
+      fipskind="$fipssetting (embedded build setting)"
+    elif [ -n "$boringsetting" ]; then
+      fipskind="boringcrypto (embedded build setting/symbol)"
     fi
     if [ -n "$fipskind" ]; then ok "FIPS: $fipskind"
-    else fail "EDITION=ee-fips but the plugin shows NO FIPS crypto - no boringcrypto/fips140 symbols in the binary AND no GOFIPS140/boringcrypto in build info. It will not match a FIPS Gateway."
+    else fail "EDITION=ee-fips but the plugin shows NO FIPS crypto - no enabled GOFIPS140 or explicit boringcrypto build evidence. It will not match a FIPS Gateway."
     fi
   fi
   # tyk dependency revision alignment (best-effort; pseudo-version embeds the sha)

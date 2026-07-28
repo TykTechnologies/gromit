@@ -9,6 +9,25 @@ provenance, and VEX attestations.
 The Docker token remains in the local or CI Docker/DHI credential store. It
 must not be added to this repository.
 
+## FIPS scopes
+
+The customized base and the generated plugin use separate cryptographic
+modules:
+
+- the customized DHI contains Docker's OpenSSL FIPS Provider 3.1.2, which is
+  active at runtime;
+- the current Tyk FIPS plugin compiler sets `GOFIPS140=v1.0.0`, linking the
+  native Go Cryptographic Module covered by CMVP Certificate #5247 into the
+  plugin; it does not use legacy Go+BoringCrypto;
+- older release branches can still select Go+BoringCrypto through their
+  Gromit branch variables.
+
+Docker has not published its FIPS predicate for the exact customized image
+subject. That is an evidence gap for claiming that the customized compiler
+container is Docker-FIPS-attested. It does not mean the generated Go plugin is
+non-FIPS, and it does not block an alpha unless that exact container claim is
+an alpha requirement.
+
 ## Apply
 
 ```bash
@@ -98,14 +117,17 @@ The final 2026-07-28 build passed these gates:
 - native and cross C/C++ compilers for amd64, arm64, and s390x execute;
 - the OpenSSL FIPS provider is active;
 - Trivy 0.72 reports 17 Critical and 75 High without VEX;
-- the downstream FIPS compiler builds and loads an amd64 plugin, validates an
-  arm64 plugin, and excludes the test-only Gateway binary from the production
-  image.
+- the downstream FIPS compiler builds and loads an amd64 native-Go-FIPS plugin
+  with `GOFIPS140=v1.0.0`, validates an arm64 plugin, and excludes the
+  test-only Gateway binary from the production image.
 
 The following are open upstream gates and must not be represented as passing:
 
-- the custom image has the `com.docker.dhi.compliance=fips,stig,cis` label but
-  lacks Docker's signed `https://docker.com/dhi/fips/v0.1` attestation;
+- the custom image has the `com.docker.dhi.compliance=fips,stig,cis` label and
+  an active OpenSSL FIPS provider, but lacks Docker's signed
+  `https://docker.com/dhi/fips/v0.1` attestation for the customized subject;
+  this limits the compiler-container claim, not the generated plugin's native
+  Go FIPS mode;
 - anonymous Scout VEX retrieval for the custom repository returns
   `UNAUTHORIZED`, so customers currently need Docker registry access to fetch
   the live custom-product document;

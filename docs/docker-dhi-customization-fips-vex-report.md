@@ -12,6 +12,14 @@ Debian 13 BusyBox FIPS DHI. The resulting image has a signed SBOM, provenance,
 STIG evidence, and three signed OpenVEX attestations. Runtime OpenSSL loads the
 FIPS provider, and the image carries Docker's `fips,stig,cis` compliance label.
 
+A Docker FIPS predicate is evidence for the OpenSSL module in the customized
+container subject. It is independent of the generated Tyk plugin, which the
+current master compiler builds with the native Go Cryptographic Module selected
+by `GOFIPS140=v1.0.0`. The missing Docker predicate does not show that the Go
+plugin is non-FIPS and is not, by itself, a technical blocker for an alpha. It
+does prevent claiming that the exact customized compiler image is
+Docker-FIPS-attested.
+
 Four independent issues prevent the customized image from providing the same
 customer-verifiable security posture as its source FIPS DHI:
 
@@ -81,6 +89,10 @@ Requested behavior: either generate a FIPS predicate that accurately explains
 the customized image's compliance boundary, or make the customization result
 explicitly fail/non-FIPS instead of retaining a FIPS compliance label without
 the corresponding signed evidence.
+
+This request is scoped to Docker's attestation for the customized container.
+It does not request or provide evidence for the separately linked native Go
+Cryptographic Module in compiler output.
 
 ## Issue 2: live VEX is not anonymously retrievable
 
