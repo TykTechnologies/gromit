@@ -90,10 +90,18 @@
             exit 0
           fi
 
-          BRANCH=${HEAD_REF##*/}
+          BRANCH="$HEAD_REF"
           echo "Checking for branch: $BRANCH in tyk-analytics"
 
-          if git ls-remote --heads https://$GITHUB_TOKEN@github.com/TykTechnologies/tyk-analytics.git refs/heads/$BRANCH | grep -q .; then
+          if ! REMOTE_REF=$(git ls-remote \
+            --heads \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/TykTechnologies/tyk-analytics.git" \
+            "refs/heads/$BRANCH"); then
+            echo "::error::Unable to query tyk-analytics; check GitHub App authentication and repository permissions"
+            exit 1
+          fi
+
+          if [ -n "$REMOTE_REF" ]; then
             echo "✓ Branch '$BRANCH' exists in tyk-analytics"
             echo "branch_exists=true" >> $GITHUB_OUTPUT
             echo "branch=$BRANCH" >> $GITHUB_OUTPUT
@@ -144,6 +152,7 @@
           PR_NUMBER: {{`${{ github.event.pull_request.number }}`}}
           HAS_RELEVANT_CHANGES: {{`${{ steps.check_changes.outputs.has_relevant_changes }}`}}
           ORG_GH_TOKEN: {{`${{ secrets.ORG_GH_TOKEN }}`}}
+          GH_TOKEN: {{`${{ steps.app-token.outputs.token }}`}}
         run: |
           echo "=================================="
           echo "📊 Dashboard Image Resolution"
@@ -161,12 +170,31 @@
           # For non-master base branches, check if the same branch exists in tyk-analytics
           if [ "$BASE_REF" != "master" ]; then
             if git ls-remote --exit-code --heads "https://x-access-token:${ORG_GH_TOKEN}@github.com/TykTechnologies/tyk-analytics.git" "refs/heads/$BASE_REF" > /dev/null 2>&1; then
-              echo "📋 Strategy: Use release branch '$BASE_REF' from tyk-analytics"
-              echo "    → Base branch exists in tyk-analytics, using it directly"
-              echo "dashboard_image=${REGISTRY}/tyk-analytics:${BASE_REF}" >> $GITHUB_OUTPUT
-              echo "needs_build=false" >> $GITHUB_OUTPUT
-              echo "dashboard_branch=$BASE_REF" >> $GITHUB_OUTPUT
-              echo "strategy=release-branch-match" >> $GITHUB_OUTPUT
+              if aws ecr describe-images \
+                --repository-name tyk-analytics \
+                --image-ids imageTag=${BASE_REF} \
+                --region eu-central-1 > /dev/null 2>&1; then
+                echo "📋 Strategy: Use release branch '$BASE_REF' from tyk-analytics"
+                echo "    → Base branch exists in tyk-analytics, using it directly"
+                echo "dashboard_image=${REGISTRY}/tyk-analytics:${BASE_REF}" >> $GITHUB_OUTPUT
+                echo "needs_build=false" >> $GITHUB_OUTPUT
+                echo "dashboard_branch=$BASE_REF" >> $GITHUB_OUTPUT
+                echo "strategy=release-branch-match" >> $GITHUB_OUTPUT
+              elif [ -n "$PR_NUMBER" ]; then
+                echo "🔨 Strategy: Build dashboard from base branch '$BASE_REF'"
+                echo "    → Branch exists in tyk-analytics but has no ECR image"
+                echo "    → Will push to: ${REGISTRY}/tyk-analytics:tyk-${PR_NUMBER}"
+                echo "dashboard_image=${REGISTRY}/tyk-analytics:tyk-${PR_NUMBER}" >> $GITHUB_OUTPUT
+                echo "needs_build=true" >> $GITHUB_OUTPUT
+                echo "dashboard_branch=$BASE_REF" >> $GITHUB_OUTPUT
+                echo "strategy=build-from-base-branch" >> $GITHUB_OUTPUT
+              else
+                echo "ℹ️ Strategy: Use gromit default (no ECR image for '$BASE_REF' and not a PR)"
+                echo "dashboard_image=" >> $GITHUB_OUTPUT
+                echo "needs_build=false" >> $GITHUB_OUTPUT
+                echo "dashboard_branch=" >> $GITHUB_OUTPUT
+                echo "strategy=gromit-default" >> $GITHUB_OUTPUT
+              fi
             else
               echo "ℹ️ Strategy: Use gromit default (base branch '$BASE_REF' not found in tyk-analytics)"
               echo "    → Falling back to gromit default"
@@ -176,14 +204,31 @@
               echo "strategy=gromit-default" >> $GITHUB_OUTPUT
             fi
 
-          # Strategy 1: Matching branch exists in tyk-analytics → use gromit
+          # Strategy 1: Matching branch exists in tyk-analytics → use its PR image, or build from it
           elif [ "$BRANCH_EXISTS" = "true" ]; then
-            echo "📋 Strategy: Use matching branch '$BRANCH' via gromit"
-            echo "    → No override needed, gromit will handle it"
-            echo "dashboard_image=" >> $GITHUB_OUTPUT
-            echo "needs_build=false" >> $GITHUB_OUTPUT
-            echo "dashboard_branch=$BRANCH" >> $GITHUB_OUTPUT
-            echo "strategy=gromit-branch" >> $GITHUB_OUTPUT
+            DASH_PR=$(curl -sf -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/TykTechnologies/tyk-analytics/pulls?head=TykTechnologies:${BRANCH}&state=open" \
+              | jq -r '.[0].number // empty' 2>/dev/null || true)
+
+            if [ -n "$DASH_PR" ] && aws ecr describe-images \
+              --repository-name tyk-analytics \
+              --image-ids imageTag=pr-${DASH_PR} \
+              --region eu-central-1 > /dev/null 2>&1; then
+              echo "📋 Strategy: Use tyk-analytics PR #${DASH_PR} image for matching branch '$BRANCH'"
+              echo "    → Image: ${REGISTRY}/tyk-analytics:pr-${DASH_PR}"
+              echo "dashboard_image=${REGISTRY}/tyk-analytics:pr-${DASH_PR}" >> $GITHUB_OUTPUT
+              echo "needs_build=false" >> $GITHUB_OUTPUT
+              echo "dashboard_branch=$BRANCH" >> $GITHUB_OUTPUT
+              echo "strategy=analytics-pr-image" >> $GITHUB_OUTPUT
+            else
+              echo "🔨 Strategy: Build dashboard from matching branch '$BRANCH'"
+              echo "    → No open tyk-analytics PR image found for the branch"
+              echo "    → Will push to: ${REGISTRY}/tyk-analytics:tyk-${PR_NUMBER}"
+              echo "dashboard_image=${REGISTRY}/tyk-analytics:tyk-${PR_NUMBER}" >> $GITHUB_OUTPUT
+              echo "needs_build=true" >> $GITHUB_OUTPUT
+              echo "dashboard_branch=$BRANCH" >> $GITHUB_OUTPUT
+              echo "strategy=build-from-branch" >> $GITHUB_OUTPUT
+            fi
 
           # Strategy 2a: PR has relevant changes → build new image
           elif [ "$HAS_RELEVANT_CHANGES" = "true" ]; then
