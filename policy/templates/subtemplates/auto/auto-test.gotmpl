@@ -51,8 +51,15 @@
       needs.goreleaser.result == 'success'
     {{- end }}
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
+    # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
+    timeout-minutes: 45
     env:
       XUNIT_REPORT_PATH: {{`${{ github.workspace}}`}}/test-results.xml
+{{- if and (eq .dot.Name "tyk-analytics") (eq .test "ui") }}
+      # Use the runner's cores; playwright.config.ts reads PLAYWRIGHT_WORKERS.
+      # Sized for the 8x runner set via the DEFAULT_RUNNER GitHub variable.
+      PLAYWRIGHT_WORKERS: "6"
+{{- end }}
 {{- if eq .dot.Name "tyk-pro" }}
       BASE_REF: master
 {{- end }}

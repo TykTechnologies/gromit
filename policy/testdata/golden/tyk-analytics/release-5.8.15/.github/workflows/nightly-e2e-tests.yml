@@ -69,8 +69,13 @@ jobs:
     needs:
       - test-controller-ui
     runs-on: ${{ vars.DEFAULT_RUNNER }}
+    # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
+    timeout-minutes: 45
     env:
       XUNIT_REPORT_PATH: ${{ github.workspace}}/test-results.xml
+      # Use the runner's cores; playwright.config.ts reads PLAYWRIGHT_WORKERS.
+      # Sized for the 8x runner set via the DEFAULT_RUNNER GitHub variable.
+      PLAYWRIGHT_WORKERS: "6"
     permissions:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
@@ -207,6 +212,8 @@ jobs:
     needs:
       - test-controller-api
     runs-on: ${{ vars.DEFAULT_RUNNER }}
+    # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
+    timeout-minutes: 45
     env:
       XUNIT_REPORT_PATH: ${{ github.workspace}}/test-results.xml
     permissions:

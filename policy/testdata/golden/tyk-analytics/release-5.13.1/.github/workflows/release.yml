@@ -157,14 +157,20 @@ jobs:
         if: ${{ matrix.golang_cross == '1.25-bullseye' }}
         with:
           mask-password: 'true'
-      - uses: WarpBuilds/cache@f643a1ba29942d56621d07fc2d4284c7219868ad # v1
+      # Restore-only here; the matching save runs after Build and only off-PR
+      # (see "Save Go build cache"). PRs read the cache but never write it, so
+      # they don't re-upload the multi-GB cache each run, and the store isn't
+      # churned. master/tags keep the cache warm for PRs to restore from.
+      - uses: WarpBuilds/cache/restore@f643a1ba29942d56621d07fc2d4284c7219868ad # v1
         with:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          # loose prefix so a changed go.sum / fresh branch gets a partial
+          # restore instead of a cold rebuild (exact key = no fallback).
           restore-keys: |
-            ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+            ${{ runner.os }}-go-
       - name: Validate Go version
         run: |
           GO_VERSION_STR=$(docker run --rm tykio/golang-cross:${{ matrix.golang_cross }} go version 2>&1 || true)
@@ -209,9 +215,10 @@ jobs:
           ci/bin/unlock-agent.sh
           git config --global url."https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/".insteadOf "https://github.com/"
           git config --global --add safe.directory /go/src/github.com/TykTechnologies/tyk-analytics
-          goreleaser release --timeout 120m --clean -f ${{ matrix.goreleaser }} ${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker' }}' | tee /tmp/build.sh
+          goreleaser release --timeout 120m --clean --parallelism 2 -f ${{ github.event_name == 'pull_request' && 'ci/goreleaser/goreleaser.pr.yml' || matrix.goreleaser }} ${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker' }}' | tee /tmp/build.sh
           chmod +x /tmp/build.sh
           docker run --rm --privileged -e GITHUB_TOKEN=${{ github.token }} \
+          -e GOMAXPROCS=4                                                        \
           -e GOPRIVATE=github.com/TykTechnologies                                \
           -e DEBVERS='${{ matrix.debvers }}'                               \
           -e RPMVERS='${{ matrix.rpmvers }}'                               \
@@ -230,6 +237,16 @@ jobs:
           -v /tmp/build.sh:/tmp/build.sh                                         \
           -w /go/src/github.com/TykTechnologies/tyk-analytics                      \
           tykio/golang-cross:${{ matrix.golang_cross }} /tmp/build.sh
+      # Only master/tags populate the go cache; PRs are read-only (see the
+      # restore step above) so they don't pay the multi-GB upload every run.
+      - name: Save Go build cache
+        uses: WarpBuilds/cache/save@f643a1ba29942d56621d07fc2d4284c7219868ad # v1
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
       - name: Copy assets to S3 for tags
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -581,7 +598,7 @@ jobs:
             !dist/*fips*.deb
       - name: save rpm
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: ${{ matrix.golang_cross == '1.25-bullseye' }}
+        if: ${{ matrix.golang_cross == '1.25-bullseye' && github.event_name != 'pull_request' }}
         with:
           name: rpm
           retention-days: 1
@@ -617,8 +634,13 @@ jobs:
       !cancelled() &&
       needs.goreleaser.result == 'success'
     runs-on: ${{ vars.DEFAULT_RUNNER }}
+    # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
+    timeout-minutes: 45
     env:
       XUNIT_REPORT_PATH: ${{ github.workspace}}/test-results.xml
+      # Use the runner's cores; playwright.config.ts reads PLAYWRIGHT_WORKERS.
+      # Sized for the 8x runner set via the DEFAULT_RUNNER GitHub variable.
+      PLAYWRIGHT_WORKERS: "6"
     permissions:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
@@ -726,6 +748,8 @@ jobs:
       !cancelled() &&
       needs.goreleaser.result == 'success'
     runs-on: ${{ vars.DEFAULT_RUNNER }}
+    # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
+    timeout-minutes: 45
     env:
       XUNIT_REPORT_PATH: ${{ github.workspace}}/test-results.xml
     permissions:
