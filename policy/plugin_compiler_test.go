@@ -42,6 +42,24 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 	// artifact that actually ships.
 	assert.NotContains(t, buildWorkflow, "NG_PR_BASE_SOURCE")
 	assert.NotContains(t, buildWorkflow, "debian:bookworm-slim")
+	// That base is a private Docker Hub repo, so pull requests need the Docker
+	// Hub login too -- it must not be gated to non-pull_request events.
+	loginIdx := strings.Index(buildWorkflow, "- name: Login to Docker Hub")
+	require.Greater(t, loginIdx, -1)
+	loginStep := buildWorkflow[loginIdx:]
+	if end := strings.Index(loginStep, "\n      - name:"); end > -1 {
+		loginStep = loginStep[:end]
+	}
+	assert.NotContains(t, loginStep, `github.event_name != 'pull_request'`)
+	// Fork pull requests get no secrets at all, so they cannot pull the base.
+	// The job must skip for them rather than fail with an opaque 401, and the
+	// condition must stay a bare expression: a ${{ }} fragment spliced into an
+	// already-bare `if` string-concatenates and silently always passes.
+	dockerBuildIf := buildWorkflow[strings.Index(buildWorkflow, "  docker-build:"):]
+	dockerBuildIf = dockerBuildIf[:strings.Index(dockerBuildIf, "runs-on:")]
+	assert.Contains(t, dockerBuildIf,
+		"github.event.pull_request.head.repo.full_name == github.repository")
+	assert.NotContains(t, dockerBuildIf, "${{")
 	assert.Contains(t, buildWorkflow,
 		`group: ${{ github.workflow }}-${{ startsWith(github.ref, 'refs/tags/') && 'tags' || github.ref }}`)
 	assert.NotContains(t, buildWorkflow,
@@ -85,7 +103,9 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 	assert.Contains(t, buildWorkflow,
 		"if: ${{ github.event_name != 'pull_request' }}\n"+
 			"        uses: aws-actions/configure-aws-credentials@")
-	assert.Contains(t, buildWorkflow,
+	// Deliberately NOT gated to non-pull_request, unlike the ECR steps above:
+	// the toolchain base is a private Docker Hub repo that every event must pull.
+	assert.NotContains(t, buildWorkflow,
 		"if: ${{ github.event_name != 'pull_request' }}\n"+
 			"        uses: docker/login-action@")
 	assert.Equal(t, 3, strings.Count(buildWorkflow, "latest=false"))
