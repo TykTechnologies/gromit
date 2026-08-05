@@ -1,0 +1,15 @@
+Final AI metadata reconcile started at Thu May 21 15:57:46 +03 2026
+Log: /Users/leonidbugaev/go/src/gromit/migration-sync-logs/ai-metadata-stage/20260521-155746-final-reconcile.log
+
+Staged top-level sizes:
+2.7G	/Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged/.claude
+ 27G	/Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged/.codex
+388K	/Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged/.claude.json
+
+Staged key files:
+1609499 bytes May 20 10:19:51 2026 /Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged/.claude/history.jsonl
+395983 bytes May 20 11:34:54 2026 /Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged/.claude.json
+1331457 bytes May 20 09:55:43 2026 /Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged/.codex/history.jsonl
+684347392 bytes May 20 11:41:03 2026 /Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged/.codex/logs_2.sqlite
+1830912 bytes May 20 11:34:42 2026 /Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged/.codex/state_5.sqlite
+Final AI metadata reconcile finished at Thu May 21 16:01:24 +03 2026

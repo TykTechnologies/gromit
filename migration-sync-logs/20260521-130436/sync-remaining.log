@@ -1,0 +1,10 @@
+Remaining migration sync started at Thu May 21 13:04:36 +03 2026
+Log dir: /Users/leonidbugaev/go/src/gromit/migration-sync-logs/20260521-130436
+
+==> go/src/reqforge
+    /Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/reqforge/
+ -> /Users/leonidbugaev/go/src/reqforge/
+rsync error: received SIGINT, SIGTERM, or SIGHUP (code 20) at /AppleInternal/Library/BuildRoots/4ff29661-3588-11ef-9513-e2437461156c/Library/Caches/com.apple.xbs/Sources/rsync/rsync/rsync.c(244) [receiver=2.6.9]
+rsync: writefd_unbuffered failed to write 477 bytes [sender]: Broken pipe (32)
+rsync: connection unexpectedly closed (8 bytes received so far) [sender]
+rsync error: received SIGINT, SIGTERM, or SIGHUP (code 20) at /AppleInternal/Library/BuildRoots/4ff29661-3588-11ef-9513-e2437461156c/Library/Caches/com.apple.xbs/Sources/rsync/rsync/io.c(453) [sender=2.6.9]

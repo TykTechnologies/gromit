@@ -1,0 +1,112 @@
+layout {
+    default_tab_template {
+        pane size=1 borderless=true {
+            plugin location="zellij:tab-bar"
+        }
+        children
+        pane size=2 borderless=true {
+            plugin location="zellij:status-bar"
+        }
+    }
+
+    tab name="01 codex project guide" {
+        pane cwd="/Users/leonidbugaev/go/src/reqforge" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec codex --search --dangerously-bypass-approvals-and-sandbox resume 019d4580-38c3-7970-81d3-841199cd35cb"
+        }
+    }
+    tab name="02 claude NASA FRET CLI" {
+        pane cwd="/Users/leonidbugaev/go/src/fret" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec claude --dangerously-skip-permissions --resume ba9c8515-3817-419b-811d-0bfbe3309083"
+        }
+    }
+    tab name="03 codex audit cache perf" {
+        pane cwd="/Users/leonidbugaev/go/src/reqforge" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec codex --search --dangerously-bypass-approvals-and-sandbox resume 019df6ce-6def-7c63-a711-7981798d3626"
+        }
+    }
+    tab name="04 claude AGENT onboarding" {
+        pane cwd="/Users/leonidbugaev/go/src/reqforge" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec claude --dangerously-skip-permissions --resume 978f8ef4-2e16-46a1-8a4d-ef2d381f47d2"
+        }
+    }
+    tab name="05 claude FIPS image PR" {
+        pane cwd="/Users/leonidbugaev/go/src/tyk" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec claude --dangerously-skip-permissions --resume 36ed7149-c5c4-4639-bd60-5379c76298ef"
+        }
+    }
+    tab name="06 claude Tyk repo checklist" {
+        pane cwd="/Users/leonidbugaev/go/src/fret/fret-electron" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec claude --dangerously-skip-permissions --resume 3959a225-28c9-4744-9999-930e629c1931"
+        }
+    }
+    tab name="07 claude packagecloud stats" {
+        pane cwd="/Users/leonidbugaev/go/src/list-docker-cves" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec claude --dangerously-skip-permissions --resume 0ab98529-666f-4359-9fc6-6f359fe26221"
+        }
+    }
+    tab name="08 claude load-test tokens" {
+        pane cwd="/Users/leonidbugaev/go/src/tyk-performance-testing" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec claude --dangerously-skip-permissions --resume 638361b0-f592-4307-b1c2-dc8d97c911aa"
+        }
+    }
+    tab name="09 claude GraphQL proof audit" {
+        pane cwd="/Users/leonidbugaev/go/src/graphql-go-tools-proof" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec claude --dangerously-skip-permissions --resume 455a3e3b-368b-45e9-afec-f8112d966d16"
+        }
+    }
+    tab name="10 codex git clone bloat" {
+        pane cwd="/Users/leonidbugaev/go/src/list-docker-cves" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec codex --search --dangerously-bypass-approvals-and-sandbox resume 019d4ea8-8a93-7801-8f19-ca92fcd0ee30"
+        }
+    }
+    tab name="11 codex GCP perf env" {
+        pane cwd="/Users/leonidbugaev/go/src/tyk-performance-testing" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec codex --search --dangerously-bypass-approvals-and-sandbox resume 019c03f2-90f6-7740-8b56-b7425462c49e"
+        }
+    }
+    tab name="12 codex AI security article" {
+        pane cwd="/Users/leonidbugaev/go/src/reqforge" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec codex --search --dangerously-bypass-approvals-and-sandbox resume 019df6fe-f694-7451-b21f-55cfe7cbc300"
+        }
+    }
+    tab name="13 codex Substack calendar" {
+        pane cwd="/Users/leonidbugaev/go/src/reqforge" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec codex --search --dangerously-bypass-approvals-and-sandbox resume 019df376-2fc3-7490-aaeb-7ec6c557b69a"
+        }
+    }
+    tab name="14 codex Z3 gap roadmap" {
+        pane cwd="/Users/leonidbugaev/go/src/reqforge" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec codex --search --dangerously-bypass-approvals-and-sandbox resume 019df2a3-b7ae-7393-a5be-732ec22f5aca"
+        }
+    }
+    tab name="15 claude OSS-Fuzz fuzzer" {
+        pane cwd="/Users/leonidbugaev/go/src/jsonparser" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec claude --dangerously-skip-permissions --resume 6fb1405f-9eb4-4927-8190-b00ad56142df"
+        }
+    }
+    tab name="16 codex Proof CLI discovery" {
+        pane cwd="/Users/leonidbugaev/go/src/jsonparser" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec codex --search --dangerously-bypass-approvals-and-sandbox resume 019d876c-e93d-7ef2-b396-b010838bcce6"
+        }
+    }
+    tab name="17 codex Go MC/DC OR-case" {
+        pane cwd="/Users/leonidbugaev/go/src/reqforge" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec codex --search --dangerously-bypass-approvals-and-sandbox resume 019d646c-d39d-7343-b101-104ea390ec05"
+        }
+    }
+    tab name="18 codex LLM billing root cause" {
+        pane cwd="/Users/leonidbugaev/go/src/helpwanted.dev" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "exec codex --search --dangerously-bypass-approvals-and-sandbox resume 019cf06f-de85-7383-a38d-d02ccb77e42e"
+        }
+    }
+    tab name="19 codex luxembourg probe" {
+        pane cwd="/Users/leonidbugaev" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "printf '%s\n' 'Missing folder: /Users/leonidbugaev/conductor/repo/probe/luxembourg-v2' 'Session: 019cc30f-ff12-7852-985b-a311a746da94' 'Not launching resume.'; exec zsh -i"
+        }
+    }
+    tab name="20 codex gates conductor" {
+        pane cwd="/Users/leonidbugaev" command="/usr/bin/arch" {
+            args "-arm64" "/bin/zsh" "-lc" "printf '%s\n' 'Missing folder: /Users/leonidbugaev/go/src/gates/.conductor/sao-paulo' 'Session: 019c85fa-226b-7871-bbd7-8590036311b5' 'Not launching resume.'; exec zsh -i"
+        }
+    }
+}

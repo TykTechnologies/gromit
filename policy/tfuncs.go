@@ -86,6 +86,13 @@ func (v pluginCompilerVariant) MetadataID() string {
 	return "set-metadata-" + v.Name
 }
 
+func (v pluginCompilerVariant) PublishID() string {
+	if v.Name == "" || v.Name == "std" {
+		return "build-push-ng"
+	}
+	return "build-push-" + v.Name + "-ng"
+}
+
 func (v pluginCompilerVariant) StepSuffix() string {
 	if v.Name == "" || v.Name == "std" {
 		return ""

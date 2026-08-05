@@ -1,0 +1,221 @@
+
+
+## Overview
+
+              │                    Analyzed Image                     
+──────────────┼───────────────────────────────────────────────────────
+ Subject      │  dhi.io/busybox:1-debian-fips-dev                     
+   digest     │  4086ad19166e                                         
+   platform   │ linux/amd64                                           
+   provenance │ https://github.com/docker-hardened-images/definitions 
+              │  https://github.com/docker-hardened-images/definitions/blob/87289c9c2b8f13ae45a9aa9445524b70c4edc51f             
+   size       │ 22 MB                                                 
+   packages   │ 87                                                    
+
+
+## Attestations
+
+https://cyclonedx.org/bom/v1.6  CycloneDX SBOM  
+  sha256:4d0435413444067de2c4b92786fcc6ec2889e31b62084db922f72671dda79061
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  4d0435413444                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://cyclonedx.org/bom/v1.6             
+
+
+https://docker.com/dhi/changelog/v0.1  Changelog  
+  sha256:97f3ae216d543134e42abf1f6ee7c04feb7d302366fb3b46ffa168435d6cbf41
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  97f3ae216d54                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://docker.com/dhi/changelog/v0.1      
+
+
+https://docker.com/dhi/fips/v0.1  FIPS compliance  
+  sha256:dae5f82b40e2218eaf24024aa035f38790cc141527e16103bfdde9b6e2c857be
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  dae5f82b40e2                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://docker.com/dhi/fips/v0.1           
+
+
+https://docker.com/dhi/source/v0.1
+  sha256:341ea91ec11b78b470da22ca80f3125ac28c6a243b2ba6a1a606007bac2a4204
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  341ea91ec11b                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://docker.com/dhi/source/v0.1         
+
+
+https://docker.com/dhi/stig/v0.1  STIG scan  
+  sha256:36966d168e095df4a5818beb95cfa243b094ab17849288d76f79b1d645ab8523
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  36966d168e09                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://docker.com/dhi/stig/v0.1           
+
+
+https://in-toto.io/attestation/vulns/v0.2  in-toto vulnerabilities  
+  sha256:c300ffc26099817ca396c2f4f9b29740bf8734c27d7937cb37181db23cfc792a
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  c300ffc26099                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://in-toto.io/attestation/vulns/v0.2  
+
+
+https://openvex.dev/ns/v0.2.0  OpenVEX  
+  sha256:f7d210856281e20551d0ab79815aae46d8338701229253ed06e62520fa780b88
+
+ Name                          │  dhi.io/busybox                            
+   digest                      │  f7d210856281                              
+                               │                                            
+ Media type                    │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type                 │ application/vnd.in-toto+json               
+ Annotations                   │                                            
+   com.docker.scout.vex.source │ exceptions                                 
+   in-toto.io/predicate-type   │ https://openvex.dev/ns/v0.2.0              
+
+
+https://scout.docker.com/provenance/v0.1  Scout provenance  
+  sha256:a50574cac96855add7537c0b84a5b440b1aa220130c3848c6a9a04e36fc7e947
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  a50574cac968                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://scout.docker.com/provenance/v0.1   
+
+
+https://scout.docker.com/sbom/v0.1  Scout SBOM  
+  sha256:cc7ba973243dd3c4984739628021689bd2ee39c1e2e3168d0728c6327fe6e11e
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  cc7ba973243d                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://scout.docker.com/sbom/v0.1         
+
+
+https://scout.docker.com/secrets/v0.1  Scout secret scan  
+  sha256:95a7f7e63fc7549069ae39b15f82f209a64c1e733b99232ff07a5b39473ece07
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  95a7f7e63fc7                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://scout.docker.com/secrets/v0.1      
+
+
+https://scout.docker.com/tests/v0.1  Scout test report  
+  sha256:1b430cb63889690b02b4e1485d90be33a92300ef502c5721243173afd9331b33
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  1b430cb63889                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://scout.docker.com/tests/v0.1        
+
+
+https://scout.docker.com/virus/v0.1  Scout virus/malware report  
+  sha256:b095e8f7bbeedbf5e16848db5c15ae953f06623f6e50ab272b709146b30bd34e
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  b095e8f7bbee                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://scout.docker.com/virus/v0.1        
+
+
+https://scout.docker.com/vulnerabilities/v0.1  Scout vulnerabilities  
+  sha256:c1595a7d9c96e462a225f94d0f43362c674567bc7c88acc83a32a4ad869a2f53
+
+ Name                        │  dhi.io/busybox                               
+   digest                    │  c1595a7d9c96                                 
+                             │                                               
+ Media type                  │ application/vnd.oci.image.manifest.v1+json    
+ Artifact type               │ application/vnd.in-toto+json                  
+ Annotations                 │                                               
+   in-toto.io/predicate-type │ https://scout.docker.com/vulnerabilities/v0.1 
+
+
+https://slsa.dev/provenance/v0.2  SLSA provenance  
+  sha256:a4ce20b0f14fef17774f75245008e9cd60979629e67b2f6edab65f5321d0d18a
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  a4ce20b0f14f                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://slsa.dev/provenance/v0.2           
+
+
+https://slsa.dev/provenance/v1  SLSA provenance  
+  sha256:2763bd3d5ad233c97cf38889ee07724c61481298ef4c974878b0707112315f01
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  2763bd3d5ad2                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://slsa.dev/provenance/v1             
+
+
+https://slsa.dev/verification_summary/v1  SLSA verification summary  
+  sha256:89a404e4a87f9bef9f5e20b9bee92300e9b710228cc520b1895524dd4aa43b2c
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  89a404e4a87f                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://slsa.dev/verification_summary/v1   
+
+
+https://spdx.dev/Document  SPDX SBOM  
+  sha256:7c4c36eefee21672ba79074066ca225d522bf8666eb5fbca5c02352b18f89842
+
+ Name                        │  dhi.io/busybox                            
+   digest                    │  7c4c36eefee2                              
+                             │                                            
+ Media type                  │ application/vnd.oci.image.manifest.v1+json 
+ Artifact type               │ application/vnd.in-toto+json               
+ Annotations                 │                                            
+   in-toto.io/predicate-type │ https://spdx.dev/Document                  
+

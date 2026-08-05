@@ -52,6 +52,9 @@ policy:
       repos:
         # Repo specific policy for `tyk` starts here->
         tyk:
+          deletedfiles:
+            - .github/workflows/plugin-compiler-ng-base.yml
+            - ci/images/plugin-compiler-ng/data/rewrite-imports.go
           # packagename is the historical name of the package. Builds
           # may produce artifacts named differently but the
           # directories and contents of the package use this name.
@@ -204,7 +207,6 @@ policy:
               workflowbaseimagename: tyk-plugin-compiler
               workflowbaseimagetag: ng-base-${{ github.sha }}
               baseimage: tykio/dhi-busybox-plugin-compiler:1.37.0-debian13-fips_plugin-compiler-ng-toolchain
-              baseimagedigest: sha256:8a8967f03d2243d88659256e8a3ca3f5a7b009a4b522e5608f1facfed9be3733
               glibctarget: "2.17"
               cross: "1"
               slim: "0"

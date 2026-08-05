@@ -283,18 +283,13 @@ if [ -n "$GW_GO_MM" ] && [ -f go.mod ]; then
     fi
 fi
 
-# ensureGoMod rewrites a go module based on plugin_id if available.
+# ensureGoMod creates a module only when the plugin does not provide one.
+# Existing module paths and Go source imports are never rewritten.
 function ensureGoMod {
-	NEW_MODULE=tyk.internal/tyk_plugin${plugin_id}
-
 	if [ ! -f "go.mod" ] ; then
+		NEW_MODULE=tyk.internal/tyk_plugin${plugin_id}
 		echo "INFO: Creating go.mod"
 		go mod init "$NEW_MODULE"
-		return
-	fi
-
-	if [ -z "${plugin_id}" ] ; then
-		echo "INFO: No plugin id provided, keeping go.mod as is"
 		return
 	fi
 
@@ -309,9 +304,7 @@ function ensureGoMod {
 		;;
 	esac
 
-	go mod edit -module "$NEW_MODULE"
-	GO111MODULE=off go run /usr/local/lib/tyk-plugin-compiler/rewrite-imports.go \
-		"$OLD_MODULE" "$NEW_MODULE" .
+	echo "INFO: Preserving existing go.mod module path and Go source imports"
 }
 
 ensureGoMod

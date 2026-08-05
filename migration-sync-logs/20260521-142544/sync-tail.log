@@ -1,0 +1,113 @@
+Tail migration sync started at Thu May 21 14:25:44 +03 2026
+
+==> go/src/reqproof-proof
+
+==> go/src/testkube-proof
+
+==> go/src/tyk-proof
+
+==> go/src/github.com/asaskevich/govalidator
+
+==> go/src/github.com/spf13/cast
+
+==> go/src/github.com/tidwall/gjson
+
+==> divergent tyk-analytics side copy
+
+==> divergent tyk-sink side copy
+
+==> Creating tyk worktree for broken-Mac commit f5b63df8e
+Preparing worktree (detached HEAD f5b63df8e)
+HEAD is now at f5b63df8e feat: enable code_signal_obligations_reviewed audit check
+
+==> remote-only ~/Projects
+
+==> Downloads/tyk-eu-ai-act-data-act-api-ai-governance-article.md
+
+==> Downloads/tyk-ai-studio-eu-ai-act-data-act-readiness.md
+
+==> Downloads/Audit_Report_PreDex.pdf
+
+==> Downloads/system_truth_layer_proposal.docx
+
+==> Downloads/agentic_delivery_provocation.pdf
+
+==> Downloads/CVBGF-AI augmented delivery - working approach and hyptothesis-090526-095633.pdf
+
+==> Downloads/agentic_exec_summary.pdf
+
+==> Downloads/AI SE Handbook Volume 1.pdf
+
+==> Downloads/69f24d3e09b921b92403774e_Claude-Deploying-Claude-Across-Your-Organization-04292026.pdf
+
+==> Downloads/tyk-token-exchange-flow-examples.md
+
+==> Downloads/tyk-token-exchange-rfc-review.md
+
+==> Downloads/tyk-token-exchange-market-research.md
+
+==> Downloads/EN-Token Exchange in externalOAuth-290426-120924.pdf
+
+==> Downloads/Tyk Technologies - Questionnaire - API Management Software, Q3 2026(Questionnaire).xlsx
+
+==> Downloads/Tyk Technologies - Questionnaire - API Management Software, Q3 2026(Questionnaire) - Tyk Technologies - Questionnaire - API Management Software, Q3 2026(Questionnaire).csv
+
+==> Downloads/Tyk_RD_Report_Feb2025_Jan2026.docx
+
+==> Downloads/tyk-rd-report-2025-research.md
+
+==> Downloads/Docker_DHI_SMBPackage_Tyk_2026.pdf
+
+==> Downloads/Technical_Report_Copilot_FRET (4).pdf
+
+==> Downloads/Technical_Report_Copilot_FRET (4) (1).pdf
+
+==> Downloads/Technical_Report_Copilot_FRET (4) (2).pdf
+
+==> Downloads/FretRequirements.pdf
+
+==> Downloads/FretRequirements (1).pdf
+
+==> Downloads/FRET-SWS-May2020.pdf
+
+==> Downloads/FRET2021Sfymmhv2.pdf
+
+==> Downloads/TechnicalReport_NASA_FRET_PLCverif.pdf
+
+==> Downloads/FINAL NFM23_NASA_FRET_PLCverif.pdf
+
+==> Downloads/TechnicalReport__FRET_Realizability_Checking.pdf
+
+==> Downloads/TechnicalReport__Unrealizability_in_FRET_FSESubmission.pdf
+
+==> Downloads/nasa-engineering-for-software.pdf
+
+==> Downloads/nasa.pptx
+
+==> Downloads/claude-code-main.zip
+
+==> Downloads/clusterfuzz-testcase-minimized-fuzzdelete-4649128545288192
+
+==> Downloads/clusterfuzz-testcase-minimized-fuzzdelete-4649128545288192 (1)
+
+==> stage config .gitconfig
+
+==> stage config .zshrc
+
+==> stage config .zprofile
+
+==> stage config .zshenv
+
+==> stage config .zshlocal
+
+==> stage config .bashrc
+
+==> stage config .bashlocal
+
+==> stage config .profile
+
+==> stage config .npmrc
+
+==> stage config .actrc
+
+Tail migration sync finished at Thu May 21 14:45:09 +03 2026

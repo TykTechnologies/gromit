@@ -1,0 +1,35 @@
+Finish started at Thu May 21 15:14:18 +03 2026
+Log: /Users/leonidbugaev/go/src/gromit/migration-sync-logs/replacement-tyk-tyk-analytics-config-ssh/20260521-151418-finish-after-node-modules.log
+Moving old local tyk-analytics aside: /Users/leonidbugaev/migration-backups/old-tyk-analytics-root-owned-20260521-151418
+Broken-Mac side copy tyk-analytics HEAD: 6135f442a
+Config/.ssh backup dir: /Users/leonidbugaev/migration-backups/config-and-ssh-before-replace-20260521-150553
+Replacing /Users/leonidbugaev/.gitconfig
+Replacing /Users/leonidbugaev/.zshrc
+Replacing /Users/leonidbugaev/.ssh from broken Mac
+
+VERIFY tyk status:
+## experiment/formal-requirements-policy...origin/experiment/formal-requirements-policy
+local tyk HEAD: f5b63df8e
+remote tyk HEAD: f5b63df8e
+tyk tracked file-list cmp: match
+
+VERIFY tyk-analytics status:
+## fix/disable-fips-release-5.12...origin/fix/disable-fips-release-5.12
+ M webclient
+local tyk-analytics HEAD: 6135f442a
+remote tyk-analytics HEAD: 6135f442a
+tyk-analytics tracked file-list cmp: match
+
+VERIFY configs:
+.gitconfig matches staged broken-Mac config
+.zshrc matches staged broken-Mac config
+
+VERIFY ssh:
+top-level entries match
+ssh config cmp: match
+ssh known_hosts cmp: match
+ssh dir mode: drwx------ /Users/leonidbugaev/.ssh
+
+Leftovers:
+Old root-owned local tyk-analytics moved to: /Users/leonidbugaev/migration-backups/old-tyk-analytics-root-owned-20260521-151418
+Finish completed at Thu May 21 15:14:19 +03 2026

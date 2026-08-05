@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -33,33 +32,90 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 	buildWorkflow := readRenderedFile(t, outputDir, ".github/workflows/plugin-compiler-ng-build.yml")
 	assert.Contains(t, buildWorkflow, `NG_SLIM: "0"`)
 	assert.Contains(t, buildWorkflow,
-		"tykio/tyk-plugin-compiler,enable=${{ startsWith(github.ref, 'refs/tags/') }}")
-	assert.Contains(t, buildWorkflow, "id: build-ng-base")
+		"NG_BASE_SOURCE: tykio/dhi-busybox-plugin-compiler:"+
+			"1.37.0-debian13-fips_plugin-compiler-ng-toolchain")
+	assert.NotContains(t, buildWorkflow,
+		"NG_BASE_SOURCE: tykio/dhi-busybox-plugin-compiler:"+
+			"1.37.0-debian13-fips_plugin-compiler-ng-toolchain@sha256:")
+	// There is no separate pull-request base. PRs build the same DHI
+	// customization the release builds, so the compile/load gate validates the
+	// artifact that actually ships.
+	assert.NotContains(t, buildWorkflow, "NG_PR_BASE_SOURCE")
+	assert.NotContains(t, buildWorkflow, "debian:bookworm-slim")
 	assert.Contains(t, buildWorkflow,
-		`base="tykio/tyk-plugin-compiler@${{ steps.build-ng-base.outputs.digest }}"`)
-	assert.Contains(t, buildWorkflow,
-		`base="${{ steps.login-ecr.outputs.registry }}/tyk-plugin-compiler@${{ steps.build-ng-base.outputs.digest }}"`)
+		`group: ${{ github.workflow }}-${{ startsWith(github.ref, 'refs/tags/') && 'tags' || github.ref }}`)
+	assert.NotContains(t, buildWorkflow,
+		`group: ${{ github.workflow }}-${{ github.ref }}`)
+	assert.Equal(t, 1, strings.Count(buildWorkflow,
+		`docker buildx imagetools inspect "$source"`))
+	assert.Equal(t, 2, strings.Count(buildWorkflow,
+		`--format '{{json .}}'`))
+	assert.NotContains(t, buildWorkflow, `imagetools inspect "$source" --raw`)
+	assert.NotContains(t, buildWorkflow, `imagetools inspect "$go_source" --raw`)
+	assert.Equal(t, 1, strings.Count(buildWorkflow, `source="$NG_BASE_SOURCE"`))
+	assert.Equal(t, 1, strings.Count(buildWorkflow,
+		`docker buildx imagetools inspect "$go_source"`))
+	assert.Equal(t, 1, strings.Count(buildWorkflow,
+		`go_source="tykio/golang-cross:${GOLANG_CROSS}"`))
+	assert.Equal(t, 2, strings.Count(buildWorkflow,
+		`echo "platform_digest=$platform_digest" >> "$GITHUB_OUTPUT"`))
+	assert.Equal(t, 3, strings.Count(buildWorkflow,
+		`printf 'source_base_linux_amd64_digest=%s\n'`))
+	assert.Equal(t, 3, strings.Count(buildWorkflow,
+		`printf 'go_toolchain_linux_amd64_digest=%s\n'`))
+	assert.NotContains(t, buildWorkflow, `GOLANG_IMAGE=tykio/golang-cross:`)
+	assert.Equal(t, 1, strings.Count(buildWorkflow, "name: Build workflow-local NG base"))
 	assert.Contains(t, buildWorkflow, `BASE_IMAGE=${{ steps.source-base.outputs.ref }}`)
-	assert.Equal(t, 1, strings.Count(buildWorkflow, "docker/setup-buildx-action@"))
+	assert.Contains(t, buildWorkflow,
+		`GO_TOOLCHAIN_IMAGE_REF=${{ steps.source-go.outputs.ref }}`)
+	assert.NotContains(t, buildWorkflow, `PREPROVISIONED_TOOLCHAIN`)
+	assert.Contains(t, buildWorkflow,
+		`base="${{ steps.login-ecr.outputs.registry }}/tyk-plugin-compiler@`+
+			`${{ steps.build-ng-base.outputs.digest }}"`)
+	assert.Contains(t, buildWorkflow,
+		`driver: ${{ github.event_name == 'pull_request' && 'docker' || 'docker-container' }}`)
+	assert.Contains(t, buildWorkflow,
+		`push: ${{ github.event_name != 'pull_request' }}`)
+	assert.Contains(t, buildWorkflow,
+		`load: ${{ github.event_name == 'pull_request' }}`)
+	assert.Contains(t, buildWorkflow,
+		`sbom: ${{ github.event_name != 'pull_request' }}`)
+	assert.Contains(t, buildWorkflow,
+		`provenance: ${{ github.event_name != 'pull_request' && 'mode=max' || 'false' }}`)
+	assert.Contains(t, buildWorkflow,
+		"if: ${{ github.event_name != 'pull_request' }}\n"+
+			"        uses: aws-actions/configure-aws-credentials@")
+	assert.Contains(t, buildWorkflow,
+		"if: ${{ github.event_name != 'pull_request' }}\n"+
+			"        uses: docker/login-action@")
 	assert.Equal(t, 3, strings.Count(buildWorkflow, "latest=false"))
-	assert.Equal(t, 4, strings.Count(buildWorkflow, "sbom: true"))
-	assert.Equal(t, 4, strings.Count(buildWorkflow, "provenance: mode=max"))
-	assert.Equal(t, 2, strings.Count(buildWorkflow, "contents: read"))
+	assert.Equal(t, 3, strings.Count(buildWorkflow, "sbom: true"))
+	assert.Equal(t, 3, strings.Count(buildWorkflow, "provenance: mode=max"))
+	assert.Equal(t, 1, strings.Count(buildWorkflow, "docker/setup-buildx-action@"))
+	assert.Equal(t, 3, strings.Count(buildWorkflow, "name: Verify pushed NG digest and attestations"))
+	assert.Equal(t, 3, strings.Count(buildWorkflow,
+		`docker buildx imagetools inspect "$exact_ref" --format '{{json .SBOM}}'`))
+	assert.Equal(t, 3, strings.Count(buildWorkflow,
+		`docker buildx imagetools inspect "$exact_ref" --format '{{json .Provenance}}'`))
+	assert.Equal(t, 3, strings.Count(buildWorkflow, `test "$resolved" = "$PUBLISHED_DIGEST"`))
+	assert.Equal(t, 3, strings.Count(buildWorkflow, "expected_repositories=2"))
+	assert.Equal(t, 3, strings.Count(buildWorkflow, "actions/upload-artifact@"))
 	assertPluginCompilerSelfTestBuilds(t, buildWorkflow, 3)
+	assertPluginCompilerVariantParity(t, buildWorkflow)
 
 	releaseDockerfile := readRenderedFile(t, outputDir, "ci/images/plugin-compiler-ng/Dockerfile.release")
 	assert.Equal(t, 1, strings.Count(releaseDockerfile, "ARG WITH_GATEWAY_SELFTEST=0"))
 	assert.Contains(t, releaseDockerfile, "test ! -e /usr/local/bin/tyk")
+	assert.Contains(t, releaseDockerfile, `test ! -e "$TYK_GW_PATH/tyk"`)
 
-	baseWorkflow := readRenderedFile(t, outputDir, ".github/workflows/plugin-compiler-ng-base.yml")
-	assert.Contains(t, baseWorkflow,
-		"NG_BASE_SOURCE: tykio/dhi-busybox-plugin-compiler:1.37.0-debian13-fips_plugin-compiler-ng-toolchain@"+
-			"sha256:8a8967f03d2243d88659256e8a3ca3f5a7b009a4b522e5608f1facfed9be3733")
-	assert.Contains(t, baseWorkflow, `BASE_IMAGE=${{ steps.source-base.outputs.ref }}`)
-	assert.Equal(t, 1, strings.Count(baseWorkflow, "docker/setup-buildx-action@"))
-	assert.Equal(t, 1, strings.Count(baseWorkflow, "sbom: true"))
-	assert.Equal(t, 1, strings.Count(baseWorkflow, "provenance: mode=max"))
-	assert.Equal(t, 1, strings.Count(baseWorkflow, "contents: read"))
+	releaseDockerignore := readRenderedFile(
+		t,
+		outputDir,
+		"ci/images/plugin-compiler-ng/Dockerfile.release.dockerignore",
+	)
+	assert.Contains(t, strings.Split(releaseDockerignore, "\n"), "/tyk")
+	assert.Contains(t, strings.Split(releaseDockerignore, "\n"),
+		"/ci/images/plugin-compiler-ng/scripts/loadtest-gate.sh")
 
 	baseDockerfile := readRenderedFile(t, outputDir, "ci/images/plugin-compiler-ng/Dockerfile.base")
 	assert.Contains(t, baseDockerfile, "Using pre-provisioned compiler toolchain")
@@ -68,6 +124,28 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 	assert.Contains(t, baseDockerfile, `needs="gcc ld ld.gold readelf jq file make bash sed awk grep tar find"`)
 	assert.Contains(t, baseDockerfile, `test -s /etc/ssl/certs/ca-certificates.crt`)
 	assert.Contains(t, baseDockerfile, `command -v apt-get >/dev/null`)
+	// The toolchain is never installed at build time: it must arrive
+	// pre-provisioned in the DHI customization, so that every compiler package
+	// carries a +dhi version covered by Docker's maintenance obligation and by
+	// published DHI vulnerability decisions. There is no fallback and no switch.
+	assert.NotContains(t, baseDockerfile, `PREPROVISIONED_TOOLCHAIN`)
+	assert.Contains(t, baseDockerfile,
+		`echo "Using pre-provisioned compiler toolchain from ${BASE_IMAGE}"`)
+	assert.Contains(t, baseDockerfile,
+		`is missing pre-provisioned toolchain components:$missing`)
+	assert.Contains(t, baseDockerfile,
+		`ERROR: the toolchain must be provisioned by the DHI customization, not installed here.`)
+	// The verification step reads the base and fails; it must never install.
+	verifyStart := strings.Index(baseDockerfile,
+		`echo "Using pre-provisioned compiler toolchain from ${BASE_IMAGE}"`)
+	slimStart := strings.Index(baseDockerfile,
+		`# --- Safe filesystem slimming + package-integrity gate `)
+	require.Greater(t, verifyStart, -1)
+	require.Greater(t, slimStart, verifyStart)
+	verifyBlock := baseDockerfile[verifyStart:slimStart]
+	assert.NotContains(t, verifyBlock, "apt-get")
+	assert.NotContains(t, verifyBlock, "apk add")
+	assert.Contains(t, verifyBlock, "exit 1")
 	assert.Contains(t, baseDockerfile,
 		`needs="$needs x86_64-linux-gnu-g++ aarch64-linux-gnu-g++ s390x-linux-gnu-g++"`)
 	assert.Contains(t, baseDockerfile, `"$SR/usr/lib/libpython"*.so*`)
@@ -92,14 +170,15 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 	assert.Contains(t, baseDockerfile, "apt-get check")
 	assert.NotContains(t, baseDockerfile, "dpkg --purge --force-all")
 	assert.NotContains(t, baseDockerfile, "rm -f \"/var/lib/dpkg/status.d/")
-	assert.Contains(t, baseDockerfile,
-		"COPY data/rewrite-imports.go /usr/local/lib/tyk-plugin-compiler/rewrite-imports.go")
+	assert.NotContains(t, baseDockerfile, "rewrite-imports")
 
 	buildScript := readRenderedFile(t, outputDir, "ci/images/plugin-compiler-ng/data/build.sh")
 	assert.Contains(t, buildScript, `plugin_name must be a file basename, not a path`)
 	assert.Contains(t, buildScript, `[ "$(basename "$source_entry")" != ".git" ]`)
 	assert.Contains(t, buildScript,
-		"GO111MODULE=off go run /usr/local/lib/tyk-plugin-compiler/rewrite-imports.go")
+		"Preserving existing go.mod module path and Go source imports")
+	assert.NotContains(t, buildScript, "rewrite-imports")
+	assert.NotContains(t, buildScript, "go mod edit -module")
 	assert.Contains(t, buildScript,
 		`drop_godebug && /^[[:space:]]*godebug[[:space:]]+/ { next }`)
 	assert.Contains(t, buildScript,
@@ -110,14 +189,29 @@ func TestPluginCompilerNGReleaseSupplyChainMetadata(t *testing.T) {
 		`drop_ignore && /^[[:space:]]*ignore[[:space:]]+/ { next }`)
 	assert.NotContains(t, buildScript, `sed -i -e "s,\"${OLD_MODULE}`)
 
-	rewriteImports := readRenderedFile(t, outputDir,
-		"ci/images/plugin-compiler-ng/data/rewrite-imports.go")
-	assert.Contains(t, rewriteImports, "parser.ImportsOnly")
+	_, rewriteErr := os.Stat(filepath.Join(
+		outputDir,
+		"ci/images/plugin-compiler-ng/data/rewrite-imports.go",
+	))
+	require.ErrorIs(t, rewriteErr, os.ErrNotExist)
 
 	validator := readRenderedFile(t, outputDir, "ci/images/plugin-compiler-ng/data/validate-plugin.sh")
 	assert.Contains(t, validator, "unable to inspect ELF dynamic dependencies")
 	assert.Contains(t, validator, "unable to inspect ELF version requirements")
 	assert.Contains(t, validator, "the official Gateway image does not ship libpython")
+
+	gateScript := readRenderedFile(t, outputDir,
+		"ci/images/plugin-compiler-ng/scripts/loadtest-gate.sh")
+	assert.Contains(t, gateScript, `plugin load -f /gate-plugin.so -s "$SYMBOL"`)
+	assert.Contains(t, gateScript, `"path": "/gate/plugin.so"`)
+	assert.Contains(t, gateScript, `"target_url": "http://upstream:8081/"`)
+	assert.Contains(t, gateScript, `r.Header.Get("Foo")`)
+	assert.Contains(t, gateScript, `[ "$response" = "Bar" ]`)
+	assert.Contains(t, gateScript,
+		"redis:6.0-alpine@sha256:2b35fc7d2908e25aa6aa197f97882c8a67829d3b106ad5ea5c8028f816f26aa8")
+	assert.Less(t,
+		strings.Index(gateScript, `if [ "${VALIDATE_ONLY:-0}" = "1" ]`),
+		strings.Index(gateScript, `docker network create "$NETWORK"`))
 }
 
 func TestPluginCompilerNGValidatorRejectsUncheckedOrPythonLinkedPlugin(t *testing.T) {
@@ -356,102 +450,6 @@ func TestPluginCompilerNGBuildScriptRejectsUnsafeInputs(t *testing.T) {
 	}
 }
 
-func TestPluginCompilerNGRewriteImportsUsesGoSyntax(t *testing.T) {
-	helper, err := filepath.Abs(filepath.Join(
-		"templates", "plugin-compiler-ng", "ci", "images", "plugin-compiler-ng",
-		"data", "rewrite-imports.go",
-	))
-	require.NoError(t, err)
-
-	sourceDir := t.TempDir()
-	sourcePath := filepath.Join(sourceDir, "main.go")
-	source := `package main
-
-import (
-	"example.com/a&b/pkg"
-	alias "example.com/a&b"
-	"example.com/a&b-extra/unchanged"
-)
-
-var notAnImport = "example.com/a&b/pkg"
-var _ = alias.Value
-`
-	require.NoError(t, os.WriteFile(sourcePath, []byte(source), 0o740))
-	for _, explicitImportDir := range []string{"testdata", ".hidden", "_tooling"} {
-		dir := filepath.Join(sourceDir, explicitImportDir)
-		require.NoError(t, os.MkdirAll(dir, 0o750))
-		require.NoError(t, os.WriteFile(
-			filepath.Join(dir, "valid.go"),
-			[]byte("package explicit\nimport \"example.com/a&b/pkg\"\n"),
-			0o640,
-		))
-		require.NoError(t, os.WriteFile(
-			filepath.Join(dir, "broken.go"),
-			[]byte("package broken\nimport (\n"),
-			0o640,
-		))
-	}
-	for _, ignoredDir := range []string{"vendor", ".git"} {
-		dir := filepath.Join(sourceDir, ignoredDir)
-		require.NoError(t, os.MkdirAll(dir, 0o750))
-		require.NoError(t, os.WriteFile(
-			filepath.Join(dir, "broken.go"),
-			[]byte("package broken\nimport (\n"),
-			0o640,
-		))
-	}
-	require.NoError(t, os.WriteFile(
-		filepath.Join(sourceDir, "_ignored.go"),
-		[]byte("package broken\nimport (\n"),
-		0o640,
-	))
-
-	cmd := exec.Command(
-		filepath.Join(runtime.GOROOT(), "bin", "go"), "run", helper,
-		"example.com/a&b", "tyk.internal/tyk_plugin-safe", sourceDir,
-	)
-	cmd.Env = []string{
-		"CGO_ENABLED=0",
-		"GOCACHE=" + t.TempDir(),
-		"GO111MODULE=off",
-		"GOROOT=" + runtime.GOROOT(),
-		"HOME=" + t.TempDir(),
-		"PATH=/usr/bin:/bin",
-	}
-	output, runErr := cmd.CombinedOutput()
-	require.NoError(t, runErr, string(output))
-
-	rewrittenBytes, err := os.ReadFile(sourcePath)
-	require.NoError(t, err)
-	rewritten := string(rewrittenBytes)
-	assert.Contains(t, rewritten, `"tyk.internal/tyk_plugin-safe/pkg"`)
-	assert.Contains(t, rewritten, `alias "tyk.internal/tyk_plugin-safe"`)
-	assert.Contains(t, rewritten, `"example.com/a&b-extra/unchanged"`)
-	assert.Contains(t, rewritten, `var notAnImport = "example.com/a&b/pkg"`)
-	for _, explicitImportDir := range []string{"testdata", ".hidden", "_tooling"} {
-		validBytes, err := os.ReadFile(filepath.Join(sourceDir, explicitImportDir, "valid.go"))
-		require.NoError(t, err)
-		assert.Contains(t, string(validBytes), `"tyk.internal/tyk_plugin-safe/pkg"`)
-
-		brokenBytes, err := os.ReadFile(filepath.Join(sourceDir, explicitImportDir, "broken.go"))
-		require.NoError(t, err)
-		assert.Equal(t, "package broken\nimport (\n", string(brokenBytes))
-	}
-	for _, ignoredPath := range []string{
-		filepath.Join(sourceDir, "vendor", "broken.go"),
-		filepath.Join(sourceDir, ".git", "broken.go"),
-		filepath.Join(sourceDir, "_ignored.go"),
-	} {
-		ignoredBytes, err := os.ReadFile(ignoredPath)
-		require.NoError(t, err)
-		assert.Equal(t, "package broken\nimport (\n", string(ignoredBytes))
-	}
-
-	info, err := os.Stat(sourcePath)
-	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o740), info.Mode().Perm())
-}
-
 func writeExecutable(t *testing.T, path, contents string) {
 	t.Helper()
 	require.NoError(t, os.WriteFile(path, []byte(contents), 0o700))
@@ -487,11 +485,12 @@ func TestPluginCompilerNGReleaseBranchConfiguration(t *testing.T) {
 		goImage          string
 		variantCount     int
 		usesBoringCrypto bool
+		usesNativeFIPS   bool
 	}{
 		{branch: "release-5.3", goImage: "1.23-bullseye", variantCount: 1},
 		{branch: "release-5.8", goImage: "1.25-bullseye", variantCount: 3, usesBoringCrypto: true},
 		{branch: "release-5.8.15", goImage: "1.25-bullseye", variantCount: 3, usesBoringCrypto: true},
-		{branch: "release-5.13", goImage: "1.25-bullseye", variantCount: 3},
+		{branch: "release-5.13", goImage: "1.25-bullseye", variantCount: 3, usesNativeFIPS: true},
 	}
 
 	for _, test := range tests {
@@ -519,8 +518,13 @@ func TestPluginCompilerNGReleaseBranchConfiguration(t *testing.T) {
 			if test.usesBoringCrypto {
 				assert.Contains(t, workflow, "FIPS_GOEXPERIMENT=boringcrypto")
 				assert.Contains(t, workflow, "SELFTEST_GOEXPERIMENT=boringcrypto")
+				assert.NotContains(t, workflow, "FIPS_GOFIPS140=")
 			} else {
 				assert.NotContains(t, workflow, "boringcrypto")
+			}
+			if test.usesNativeFIPS {
+				assert.Contains(t, workflow, "FIPS_GOFIPS140=v1.0.0")
+				assert.Contains(t, workflow, "SELFTEST_GOFIPS140=v1.0.0")
 			}
 		})
 	}
@@ -529,20 +533,36 @@ func TestPluginCompilerNGReleaseBranchConfiguration(t *testing.T) {
 func assertPluginCompilerSelfTestBuilds(t *testing.T, workflow string, variantCount int) {
 	t.Helper()
 
+	type workflowStep struct {
+		Name string         `yaml:"name"`
+		ID   string         `yaml:"id"`
+		If   string         `yaml:"if"`
+		Uses string         `yaml:"uses"`
+		Env  map[string]any `yaml:"env"`
+		With map[string]any `yaml:"with"`
+	}
 	var rendered struct {
 		Jobs map[string]struct {
-			Steps []struct {
-				Name string         `yaml:"name"`
-				With map[string]any `yaml:"with"`
-			} `yaml:"steps"`
+			Strategy any            `yaml:"strategy"`
+			Steps    []workflowStep `yaml:"steps"`
 		} `yaml:"jobs"`
 	}
 	require.NoError(t, yaml.Unmarshal([]byte(workflow), &rendered))
 
 	job, ok := rendered.Jobs["docker-build"]
 	require.True(t, ok)
+	assert.Nil(t, job.Strategy)
+	assert.NotContains(t, workflow, "matrix:")
+	jobsWithSteps := 0
+	for _, candidate := range rendered.Jobs {
+		if len(candidate.Steps) > 0 {
+			jobsWithSteps++
+		}
+	}
+	assert.Equal(t, 1, jobsWithSteps)
 
-	var gateBuilds, pushedBuilds int
+	var gateBuilds, pushedBuilds, proofSteps, evidenceUploads int
+	var publishIDs []string
 	for _, step := range job.Steps {
 		buildArgs, _ := step.With["build-args"].(string)
 		switch {
@@ -550,18 +570,91 @@ func assertPluginCompilerSelfTestBuilds(t *testing.T, workflow string, variantCo
 			gateBuilds++
 			assert.Equal(t, false, step.With["push"])
 			assert.Equal(t, true, step.With["load"])
+			assert.Contains(t, buildArgs, `GOLANG_IMAGE=${{ steps.source-go.outputs.ref }}`)
 			assert.Contains(t, buildArgs, "WITH_GATEWAY_SELFTEST=1")
 			assert.NotContains(t, buildArgs, "WITH_GATEWAY_SELFTEST=0")
-		case strings.HasPrefix(step.Name, "Build and push NG to dockerhub/ECR"):
+		case strings.HasPrefix(step.Name, "Build and push NG image"):
 			pushedBuilds++
+			publishIDs = append(publishIDs, step.ID)
+			assert.NotEmpty(t, step.ID)
 			assert.Equal(t, true, step.With["push"])
+			assert.Equal(t, "${{ github.event_name != 'pull_request' }}", step.If)
+			assert.Contains(t, buildArgs, `GOLANG_IMAGE=${{ steps.source-go.outputs.ref }}`)
 			assert.Contains(t, buildArgs, "WITH_GATEWAY_SELFTEST=0")
 			assert.NotContains(t, buildArgs, "WITH_GATEWAY_SELFTEST=1")
+			assert.Equal(t, true, step.With["sbom"])
+			assert.Equal(t, "mode=max", step.With["provenance"])
+		case strings.HasPrefix(step.Name, "Verify pushed NG digest and attestations"):
+			proofSteps++
+			assert.Equal(t, "${{ github.event_name != 'pull_request' }}", step.If)
+			assert.Contains(t, step.Env["PUBLISHED_DIGEST"], ".outputs.digest")
+		case strings.HasPrefix(step.Name, "Retain pushed NG evidence"):
+			evidenceUploads++
+			assert.Contains(t, step.Uses, "actions/upload-artifact@")
 		}
 	}
 
 	assert.Equal(t, variantCount, gateBuilds)
 	assert.Equal(t, variantCount, pushedBuilds)
+	assert.Equal(t, variantCount, proofSteps)
+	assert.Equal(t, variantCount, evidenceUploads)
+	assert.Len(t, publishIDs, variantCount)
+	expectedPublishIDs := []string{"build-push-ng"}
+	if variantCount > 1 {
+		expectedPublishIDs = append(expectedPublishIDs, "build-push-ee-ng")
+	}
+	if variantCount > 2 {
+		expectedPublishIDs = append(expectedPublishIDs, "build-push-fips-ng")
+	}
+	assert.ElementsMatch(t, expectedPublishIDs, publishIDs)
+
+	suffixes := []string{""}
+	if variantCount > 1 {
+		suffixes = append(suffixes, " EE")
+	}
+	if variantCount > 2 {
+		suffixes = append(suffixes, " FIPS")
+	}
+	lastIndex := -1
+	for _, suffix := range suffixes {
+		for _, prefix := range []string{
+			"Build local NG gate image",
+			"Gate NG plugin load",
+			"Build and push NG image",
+			"Verify pushed NG digest and attestations",
+			"Retain pushed NG evidence",
+		} {
+			name := prefix + suffix
+			index := -1
+			for i, step := range job.Steps {
+				if step.Name == name {
+					index = i
+					break
+				}
+			}
+			require.Greater(t, index, lastIndex, "step %q must be sequential", name)
+			lastIndex = index
+		}
+	}
+}
+
+func assertPluginCompilerVariantParity(t *testing.T, workflow string) {
+	t.Helper()
+
+	for _, gate := range []string{
+		"tyk-plugin-compiler-ng-gate:std ce",
+		"tyk-plugin-compiler-ng-gate:ee ee",
+		"tyk-plugin-compiler-ng-gate:fips ee-fips",
+	} {
+		assert.Contains(t, workflow, gate)
+	}
+	for _, image := range []string{
+		"tykio/tyk-plugin-compiler,",
+		"tykio/tyk-plugin-compiler-ee,",
+		"tykio/tyk-plugin-compiler-fips,",
+	} {
+		assert.Contains(t, workflow, image)
+	}
 }
 
 func readRenderedFile(t *testing.T, outputDir, name string) string {

@@ -126,9 +126,9 @@ done
 
 ## Anonymous public-access issue
 
-The GitHub VEX and signatures are anonymously downloadable, but the complete
-registry predicate is not. With Docker Scout 1.23.1 and an empty Docker
-configuration, registry retrieval returns:
+The GitHub VEX and signatures are anonymously downloadable, but the captured
+registry predicate with the additional observed aliases is not. With Docker
+Scout 1.23.1 and an empty Docker configuration, registry retrieval returns:
 
 ```text
 GET https://dhi.io/token?scope=repository%3Abusybox%3Apull&service=registry.docker.io:
@@ -141,8 +141,12 @@ contains the required aliases.
 ## Expected behavior
 
 The public VEX publication pipeline should include the scanner-matchable
-Debian binary aliases present in the signed registry export, or the complete
-signed predicate should be anonymously retrievable.
+Debian binary aliases present in the captured signed registry export, or an
+authenticated complete current predicate should be anonymously retrievable.
 
-The public GitHub feed is a live object and should remain the source of truth;
-the requested fix is not a static VEX mirror in downstream images.
+Docker remains the decision authority. Customers need an anonymously
+retrievable, machine-consumable view of Docker's complete current applicable
+evidence, whether that is the public GitHub feed, signed image-specific
+artifacts, or a documented combination. Neither transport alone should be
+called permanently complete. The requested fix is not a static VEX mirror in
+downstream images.

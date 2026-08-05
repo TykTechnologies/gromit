@@ -1,0 +1,42 @@
+priority,area,source_path,destination_path,status,branch,head,dirty_summary,recommended_action
+P0,reqforge,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/reqforge,/Users/leonidbugaev/go/src/reqforge,remote-only,feat/solidity-support-71,3573ad69,"121 modified; 26 untracked",copy-whole-with-worktrees
+P0,reqforge,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/reqforge-release-proof-fix,/Users/leonidbugaev/go/src/reqforge-release-proof-fix,remote-only-worktree,detached,8cc433a5,clean,copy-with-reqforge-set
+P0,reqforge,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/reqforge-worktrees,/Users/leonidbugaev/go/src/reqforge-worktrees,remote-only,unknown,unknown,container/workspace,copy-with-reqforge-set
+P0,reqforge,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/reqforge-wt-signals-cli,/Users/leonidbugaev/go/src/reqforge-wt-signals-cli,remote-only-worktree,feat/ext-signals-cli,7981180b,clean,copy-with-reqforge-set
+P0,reqforge,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/reqforge-wt-signals-core,/Users/leonidbugaev/go/src/reqforge-wt-signals-core,remote-only-worktree,feat/ext-signals-core,a1402b56,"2 modified",copy-with-reqforge-set
+P0,reqforge,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/reqforge-wt-signals-fixtures,/Users/leonidbugaev/go/src/reqforge-wt-signals-fixtures,remote-only-worktree,feat/ext-signals-fixtures,966c1c27,clean,copy-with-reqforge-set
+P0,reqforge,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/reqforge-wt-signals-workflow,/Users/leonidbugaev/go/src/reqforge-wt-signals-workflow,remote-only-worktree,feat/ext-signals-workflow,7640cfe2,clean,copy-with-reqforge-set
+P0,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/encoding-json-v2-proof,/Users/leonidbugaev/go/src/encoding-json-v2-proof,remote-only,main,d37b317,"1 deleted; 1 modified; 3 untracked",copy-whole
+P0,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/libxml2-pr-compatible,/Users/leonidbugaev/go/src/libxml2-pr-compatible,remote-only,feat/gnome-proof-dogfood-pr,60c588e4,"15 modified; 16 untracked",copy-whole
+P0,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/testkube-proof,/Users/leonidbugaev/go/src/testkube-proof,remote-only,main,5334924,"705 untracked",copy-whole
+P0,existing-repo,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/tyk-analytics,/Users/leonidbugaev/go/src/tyk-analytics-from-broken-mac,exists-locally-divergent,fix/disable-fips-release-5.12,6135f442a,"1 modified webclient",copy-side-by-side
+P0,existing-repo,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/tyk-sink,/Users/leonidbugaev/go/src/tyk-sink-from-broken-mac,exists-locally-divergent,TT-16932-cve-fixes,a26a088,"untracked desc/output files",copy-side-by-side
+P1,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/fret,/Users/leonidbugaev/go/src/fret,remote-only,master,58db455,"3 modified; 65 untracked",copy-whole-review-secrets
+P1,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/kubernetes,/Users/leonidbugaev/go/src/kubernetes,remote-only,master,8f511d81,"2 modified",copy-whole
+P1,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/libxml2,/Users/leonidbugaev/go/src/libxml2,remote-only,main,c28108f8,"1 modified; 10 untracked",copy-whole
+P1,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/proof-solidity-demo,/Users/leonidbugaev/go/src/proof-solidity-demo,remote-only,main,13bad42,"15 modified",copy-whole
+P1,existing-repo,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/tyk,/Users/leonidbugaev/go/src/tyk-formal-requirements-policy,exists-locally-commit-present,experiment/formal-requirements-policy,f5b63df8e,clean,create-local-worktree
+P1,app,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/ShowProfit,/Users/leonidbugaev/go/src/ShowProfit,remote-only,refactor/split-settlement-app,ae998e3,"1 modified; 267 untracked",copy-whole-review-generated-data
+P1,app,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/dailydev_hackaton,/Users/leonidbugaev/go/src/dailydev_hackaton,remote-only,main,no-commits-yet,"5 untracked",copy-whole
+P1,tooling,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/list-docker-cves,/Users/leonidbugaev/go/src/list-docker-cves,remote-only,main,72e6d59,"9 untracked",copy-whole
+P1,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/probe,/Users/leonidbugaev/go/src/probe,remote-only,feat/proof-rust-dogfood,cf18ab81,"1 untracked",copy-whole
+P2,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/graphql-go-tools-proof,/Users/leonidbugaev/go/src/graphql-go-tools-proof,remote-only,audit-disclosure-panic-dos,9fcfffd9,clean,copy-whole
+P2,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/jsonparser,/Users/leonidbugaev/go/src/jsonparser,remote-only,fix-oss-fuzz-delete-leading-comma,b0adab0,clean,copy-whole
+P2,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/libxml2-gnome-proof,/Users/leonidbugaev/go/src/libxml2-gnome-proof,remote-only,feat/gnome-proof-dogfood,9b5849e9,clean,copy-whole
+P2,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/proof-action,/Users/leonidbugaev/go/src/proof-action,remote-only,main,09a843c,clean,copy-whole
+P2,proof,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/proof-coverage,/Users/leonidbugaev/go/src/proof-coverage,remote-only,main,048030e,clean,copy-whole
+P2,docs,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/customer-insights,/Users/leonidbugaev/go/src/customer-insights,remote-only,main,4bbb543,clean,copy-if-needed
+P2,tooling,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/license-analysis,/Users/leonidbugaev/go/src/license-analysis,remote-only,main,13e4280,clean,copy-if-needed
+P2,existing-repo,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/tyk-docs/.claude/settings.local.json,/Users/leonidbugaev/go/src/tyk-docs/.claude/settings.local.json,exists-locally-same-head,feature/ai-studio-install-updates,287bcf018,"1 untracked settings file",copy-file-if-wanted
+P3,nested-github,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/github.com/asaskevich/govalidator,/Users/leonidbugaev/go/src/github.com/asaskevich/govalidator,remote-only-nested,detached,f21760c,clean,copy-if-needed
+P3,nested-github,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/github.com/spf13/cast,/Users/leonidbugaev/go/src/github.com/spf13/cast,remote-only-nested,detached,fc73346,clean,copy-if-needed
+P3,nested-github,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/github.com/tidwall/gjson,/Users/leonidbugaev/go/src/github.com/tidwall/gjson,remote-only-nested,detached,133f42c,clean,copy-if-needed
+P3,config,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/.claude,/Users/leonidbugaev/go/src/.claude,remote-only,unknown,unknown,"1 entry",copy-if-needed
+P3,config,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/.wrangler,/Users/leonidbugaev/go/src/.wrangler,remote-only,unknown,unknown,"1 entry",copy-if-needed
+P3,binary-artifact,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/graphql-go-tools-proof-bin,/Users/leonidbugaev/go/src/graphql-go-tools-proof-bin,remote-only,unknown,unknown,"1 entry",copy-if-needed
+P3,workspace,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/graphql-go-tools-proof-workspace,/Users/leonidbugaev/go/src/graphql-go-tools-proof-workspace,remote-only,unknown,unknown,"0 entries",skip-or-copy-empty-dir
+P3,proof-artifact,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/jsonparser-proof,/Users/leonidbugaev/go/src/jsonparser-proof,remote-only,unknown,unknown,"1 entry",copy-if-needed
+P3,proof-artifact,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/reqproof-proof,/Users/leonidbugaev/go/src/reqproof-proof,remote-only,unknown,unknown,"1 entry",copy-if-needed
+P3,proof-artifact,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/tyk-proof,/Users/leonidbugaev/go/src/tyk-proof,remote-only,unknown,unknown,"19 entries",copy-if-needed
+SKIP,generated-dependency,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/node_modules,/Users/leonidbugaev/go/src/node_modules,exists-both,none,none,"top-level dependency cache; local copy already exists",skip-reinstall-if-needed
+SKIP,finder-metadata,/Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/.DS_Store,/Users/leonidbugaev/go/src/.DS_Store,exists-both,none,none,"macOS Finder metadata",skip

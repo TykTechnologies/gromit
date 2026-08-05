@@ -359,24 +359,7 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 	if err != nil {
 		return fmt.Errorf("bundle gen %v: %v", rp.Branchvals.Features, err)
 	}
-	for _, f := range rp.Branchvals.DeletedFiles {
-		fname := filepath.Join(pushOpts.OpDir, f)
-		fi, err := os.Stat(fname)
-		if os.IsNotExist(err) {
-			continue
-		}
-		if err != nil {
-			log.Warn().Err(err).Msgf("stat %s", fname)
-		}
-		glob := f
-		if fi.IsDir() {
-			log.Debug().Msgf("recursively deleting %s", fname)
-			glob += "/*"
-		}
-		if err := pushOpts.Repo.RemoveAll(glob); err != nil {
-			log.Warn().Err(err).Msgf("removing %s from the index", f)
-		}
-	}
+	removeDeletedFiles(pushOpts.OpDir, pushOpts.Repo, rp.Branchvals.DeletedFiles)
 	// Add rendered files to git staging.
 	for _, f := range files {
 		_, err := pushOpts.Repo.AddFile(f)
@@ -406,6 +389,28 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 	log.Info().Msgf("pushed %s to %s", pushOpts.RemoteBranch, rp.Name)
 
 	return nil
+}
+
+func removeDeletedFiles(opDir string, repo *GitRepo, deletedFiles []string) {
+	for _, f := range deletedFiles {
+		fname := filepath.Join(opDir, f)
+		fi, err := os.Stat(fname)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			log.Warn().Err(err).Msgf("stat %s", fname)
+			continue
+		}
+		glob := f
+		if fi.IsDir() {
+			log.Debug().Msgf("recursively deleting %s", fname)
+			glob += "/*"
+		}
+		if err := repo.RemoveAll(glob); err != nil {
+			log.Warn().Err(err).Msgf("removing %s from the index", f)
+		}
+	}
 }
 
 // LoadRepoPolicies populates the supplied policies with the policy key from a the config file

@@ -166,8 +166,7 @@ func (b *Bundle) write(buf *bytes.Buffer, opFile string) error {
 func skipYamlfmt(opFile string) bool {
 	opFile = filepath.ToSlash(opFile)
 	return strings.HasSuffix(opFile, ".github/workflows/plugin-compiler-build.yml") ||
-		strings.HasSuffix(opFile, ".github/workflows/plugin-compiler-ng-build.yml") ||
-		strings.HasSuffix(opFile, ".github/workflows/plugin-compiler-ng-base.yml")
+		strings.HasSuffix(opFile, ".github/workflows/plugin-compiler-ng-build.yml")
 }
 
 // String will provide a human readable bundle listing

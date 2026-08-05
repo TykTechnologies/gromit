@@ -1,0 +1,10 @@
+AI metadata replacement started at Thu May 21 17:04:12 +03 2026
+Stage: /Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged
+Backup: /Users/leonidbugaev/migration-backups/ai-metadata-before-replace-20260521-170412
+Log: /Users/leonidbugaev/go/src/gromit/migration-sync-logs/ai-metadata-replace/20260521-170412-replace.log
+
+Refusing to replace live AI metadata while Codex/Claude-related processes are running:
+73050 node /Users/leonidbugaev/.npm-global/bin/codex resume 019e4951-ede6-7ec2-8fa6-b14799855ace
+73051 /Users/leonidbugaev/.npm-global/lib/node_modules/@openai/codex/node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin/codex/codex resume 019e4951-ede6-7ec2-8fa6-b14799855ace
+
+Close Codex and Claude Code, then rerun this script.

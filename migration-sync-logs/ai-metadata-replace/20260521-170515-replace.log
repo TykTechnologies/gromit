@@ -1,0 +1,33 @@
+AI metadata replacement started at Thu May 21 17:05:15 +03 2026
+Stage: /Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged
+Backup: /Users/leonidbugaev/migration-backups/ai-metadata-before-replace-20260521-170515
+Log: /Users/leonidbugaev/go/src/gromit/migration-sync-logs/ai-metadata-replace/20260521-170515-replace.log
+
+Existing AI metadata backup found and preserved:
+  /Users/leonidbugaev/migration-backups/ai-metadata-before-replace-20260521-170132
+A fresh backup of the current live state will also be created before this run continues.
+Backed up /Users/leonidbugaev/.claude
+Backed up /Users/leonidbugaev/.claude.json
+Backed up /Users/leonidbugaev/.codex
+
+Replacing ~/.claude from staged broken-Mac copy
+
+Replacing ~/.codex from staged broken-Mac copy
+
+Replacing ~/.claude.json from staged broken-Mac copy
+
+Verifying key files
+1609499 bytes May 20 10:19:51 2026 /Users/leonidbugaev/.claude/history.jsonl
+395983 bytes May 20 11:34:54 2026 /Users/leonidbugaev/.claude.json
+1331457 bytes May 20 09:55:43 2026 /Users/leonidbugaev/.codex/history.jsonl
+684347392 bytes May 20 11:41:03 2026 /Users/leonidbugaev/.codex/logs_2.sqlite
+1830912 bytes May 20 11:34:42 2026 /Users/leonidbugaev/.codex/state_5.sqlite
+
+Verifying top-level metadata entries
+.claude top-level entries match
+.codex top-level entries match
+
+2.7G	/Users/leonidbugaev/.claude
+ 27G	/Users/leonidbugaev/.codex
+388K	/Users/leonidbugaev/.claude.json
+AI metadata replacement finished at Thu May 21 17:07:29 +03 2026

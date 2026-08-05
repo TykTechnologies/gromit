@@ -23,7 +23,6 @@ on:
 
 env:
   GOLANG_CROSS: {{ $pc.GetGoImage .Branchvals.Buildenv }}
-  NG_BASE_IMAGE: {{ $ng.BaseImageRefValue }}
   NG_BASE_SOURCE: {{ $ng.BaseSourceImageRefValue }}
   NG_GLIBC_TARGET: "{{ $ng.GlibcTargetValue }}"
   NG_CROSS: "{{ $ng.CrossValue }}"
@@ -32,7 +31,7 @@ env:
   NG_WITH_GIT: "{{ $ng.WithGitValue }}"
 
 concurrency:
-  group: ${{`{{ github.workflow }}-${{ github.ref }}`}}
+  group: ${{`{{ github.workflow }}-${{ startsWith(github.ref, 'refs/tags/') && 'tags' || github.ref }}`}}
   cancel-in-progress: ${{`{{ github.event_name == 'pull_request' }}`}}
 
 jobs:
@@ -57,7 +56,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - name: "Reclaim some runner space"
+      - name: Reclaim runner space
         run: sudo rm -rf /usr/local/bin/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
 
       - name: Checkout
@@ -67,9 +66,11 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+        with:
+          driver: ${{`{{ github.event_name == 'pull_request' && 'docker' || 'docker-container' }}`}}
 
-      - name: Configure AWS Credentials
-        id: configure-aws
+      - name: Configure AWS credentials
+        if: ${{`{{ github.event_name != 'pull_request' }}`}}
         uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355  # v2
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
@@ -77,58 +78,90 @@ jobs:
           aws-region: eu-central-1
 
       - name: Login to AWS ECR
+        if: ${{`{{ github.event_name != 'pull_request' }}`}}
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@5a88a04c91d5c6f97aae0d9be790e64d9b1d47b7  # v1
 
-      - name: Login to Dockerhub
+      - name: Login to Docker Hub
+        if: ${{`{{ github.event_name != 'pull_request' }}`}}
         uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc  # v2
         with:
-          username: ${{`{{ secrets.DOCKER_USERNAME }}`}}
-          password: ${{`{{ secrets.DOCKER_PASSWORD }}`}}
-
-      - name: Login to DHI
-        if: ${{`{{ startsWith(env.NG_BASE_SOURCE, 'dhi.io/') }}`}}
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc  # v2
-        with:
-          registry: dhi.io
           username: ${{`{{ secrets.DOCKER_USERNAME }}`}}
           password: ${{`{{ secrets.DOCKER_PASSWORD }}`}}
 
       - name: Resolve source base digest
         id: source-base
         run: |
-          digest="$(docker buildx imagetools inspect "$NG_BASE_SOURCE" | awk '/^Digest:/ {print $2; exit}')"
+          # Always the DHI customization. Pull requests build the same base the release
+          # builds, so the compile/load gate validates the artifact that actually ships.
+          source="$NG_BASE_SOURCE"
+          inspect="$(docker buildx imagetools inspect "$source" --format '{{`{{json .}}`}}')"
+          digest="$(jq -er '.manifest.digest' <<<"$inspect")"
           test -n "$digest"
-          if [[ "$NG_BASE_SOURCE" == *@sha256:* ]]; then
-            test "${NG_BASE_SOURCE##*@}" = "$digest"
-            ref="$NG_BASE_SOURCE"
+          case "$digest" in sha256:*) ;; *) echo "unexpected source digest: $digest" >&2; exit 1 ;; esac
+          if jq -e '(.manifest.manifests? | type) == "array"' <<<"$inspect" >/dev/null; then
+            platform_digest="$(jq -er '
+              [.manifest.manifests[] | select(
+                .platform.os == "linux" and
+                .platform.architecture == "amd64"
+              )] |
+              if length == 1 then .[0].digest
+              else error("expected exactly one linux/amd64 source manifest")
+              end
+            ' <<<"$inspect")"
           else
-            ref="${NG_BASE_SOURCE}@${digest}"
+            platform_digest="$digest"
+          fi
+          case "$platform_digest" in sha256:*) ;; *) echo "unexpected source platform digest: $platform_digest" >&2; exit 1 ;; esac
+          if [[ "$source" == *@sha256:* ]]; then
+            test "${source##*@}" = "$digest"
+            ref="$source"
+          else
+            ref="${source}@${digest}"
           fi
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "platform_digest=$platform_digest" >> "$GITHUB_OUTPUT"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
 
-      - name: Set workflow-local NG base metadata
-        id: set-base-metadata
-        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175  # v4
-        with:
-          images: |
-            ${{`{{ steps.login-ecr.outputs.registry }}`}}/{{ $ng.WorkflowBaseImageNameValue }}
-            tykio/{{ $ng.WorkflowBaseImageNameValue }},enable=${{`{{ startsWith(github.ref, 'refs/tags/') }}`}}
-          tags: |
-            type=raw,value={{ $ng.WorkflowBaseImageTagValue }}
+      - name: Resolve Go toolchain digest
+        id: source-go
+        run: |
+          go_source="tykio/golang-cross:${GOLANG_CROSS}"
+          inspect="$(docker buildx imagetools inspect "$go_source" --format '{{`{{json .}}`}}')"
+          digest="$(jq -er '.manifest.digest' <<<"$inspect")"
+          test -n "$digest"
+          case "$digest" in sha256:*) ;; *) echo "unexpected Go toolchain digest: $digest" >&2; exit 1 ;; esac
+          if jq -e '(.manifest.manifests? | type) == "array"' <<<"$inspect" >/dev/null; then
+            platform_digest="$(jq -er '
+              [.manifest.manifests[] | select(
+                .platform.os == "linux" and
+                .platform.architecture == "amd64"
+              )] |
+              if length == 1 then .[0].digest
+              else error("expected exactly one linux/amd64 Go toolchain manifest")
+              end
+            ' <<<"$inspect")"
+          else
+            platform_digest="$digest"
+          fi
+          case "$platform_digest" in sha256:*) ;; *) echo "unexpected Go toolchain platform digest: $platform_digest" >&2; exit 1 ;; esac
+          ref="${go_source}@${digest}"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "platform_digest=$platform_digest" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
 
-      - name: Build NG base for this workflow
+      - name: Build workflow-local NG base
         id: build-ng-base
         uses: docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9  # v4
         with:
           context: ci/images/plugin-compiler-ng
           file: ci/images/plugin-compiler-ng/Dockerfile.base
           platforms: linux/amd64
-          push: true
-          sbom: true
-          provenance: mode=max
-          tags: ${{`{{ steps.set-base-metadata.outputs.tags }}`}}
+          push: ${{`{{ github.event_name != 'pull_request' }}`}}
+          load: ${{`{{ github.event_name == 'pull_request' }}`}}
+          sbom: ${{`{{ github.event_name != 'pull_request' }}`}}
+          provenance: ${{`{{ github.event_name != 'pull_request' && 'mode=max' || 'false' }}`}}
+          tags: ${{`{{ github.event_name == 'pull_request' && format('tyk-plugin-compiler-ng-base:{0}', github.sha) || format('{0}/`}}{{ $ng.WorkflowBaseImageNameValue }}{{`:ng-base-{1}-{2}', steps.login-ecr.outputs.registry, github.run_id, github.run_attempt) }}`}}
           build-args: |
             BASE_IMAGE=${{`{{ steps.source-base.outputs.ref }}`}}
             GLIBC_TARGET=${{`{{ env.NG_GLIBC_TARGET }}`}}
@@ -137,22 +170,24 @@ jobs:
             WITH_CXX=${{`{{ env.NG_WITH_CXX }}`}}
             WITH_GIT=${{`{{ env.NG_WITH_GIT }}`}}
             DHI_DIGEST=${{`{{ steps.source-base.outputs.digest }}`}}
+            GO_TOOLCHAIN_IMAGE_REF=${{`{{ steps.source-go.outputs.ref }}`}}
 
-      - name: Use workflow-local NG base
+      - name: Select workflow-local NG base
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            base="tykio/{{ $ng.WorkflowBaseImageNameValue }}@${{`{{ steps.build-ng-base.outputs.digest }}`}}"
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            base="tyk-plugin-compiler-ng-base:$GITHUB_SHA"
           else
             base="${{`{{ steps.login-ecr.outputs.registry }}`}}/{{ $ng.WorkflowBaseImageNameValue }}@${{`{{ steps.build-ng-base.outputs.digest }}`}}"
           fi
           echo "NG_BASE_IMAGE=$base" >> "$GITHUB_ENV"
 
-{{ range $i, $variant := $pc.NextGenVariants }}      - name: Set docker metadata{{ $variant.StepSuffix }}
+{{ range $i, $variant := $pc.NextGenVariants }}      - name: Set Docker metadata{{ $variant.StepSuffix }}
+        if: ${{`{{ github.event_name != 'pull_request' }}`}}
         id: {{ $variant.MetadataID }}-ng
         uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175  # v4
         with:
           images: |
-            tykio/{{ $variant.ImageName }},enable=${{`{{ startsWith(github.ref, 'refs/tags') }}`}}
+            tykio/{{ $variant.ImageName }},enable=${{`{{ startsWith(github.ref, 'refs/tags/') }}`}}
             ${{`{{ steps.login-ecr.outputs.registry }}`}}/{{ $variant.ImageName }}
           flavor: |
             latest=false
@@ -160,7 +195,6 @@ jobs:
             org.opencontainers.image.title={{ $variant.NextGenTitle $tagSuffix }}
             org.opencontainers.image.description={{ $variant.Description }} (next generation)
           tags: |
-            type=ref,event=pr,suffix={{ $tagSuffix }}
             type=semver,pattern=v{{`{{version}}`}},suffix={{ $tagSuffix }}
             type=semver,pattern=v{{`{{major}}`}}.{{`{{minor}}`}},suffix={{ $tagSuffix }}
             type=semver,pattern={{`{{raw}}`}},suffix={{ $tagSuffix }}
@@ -177,7 +211,7 @@ jobs:
           tags: tyk-plugin-compiler-ng-gate:{{ default "std" $variant.Name }}
           build-args: |
             BASE_IMAGE=${{`{{ env.NG_BASE_IMAGE }}`}}
-            GOLANG_IMAGE=tykio/golang-cross:${{`{{ env.GOLANG_CROSS }}`}}
+            GOLANG_IMAGE=${{`{{ steps.source-go.outputs.ref }}`}}
             GITHUB_SHA=${{`{{ github.sha }}`}}
             GITHUB_TAG=${{`{{ github.ref_name }}`}}
             WITH_GATEWAY_SELFTEST=1{{ $ng.VariantBuildArgsBlock $variant }}
@@ -192,7 +226,9 @@ jobs:
         run: VALIDATE_ONLY=1 ci/images/plugin-compiler-ng/scripts/loadtest-gate.sh tyk-plugin-compiler-ng-gate:{{ default "std" $variant.Name }} {{ $variant.NextGenEdition }} s390x
 
 {{ end }}{{ end }}
-      - name: Build and push NG to dockerhub/ECR{{ $variant.StepSuffix }}
+      - name: Build and push NG image{{ $variant.StepSuffix }}
+        if: ${{`{{ github.event_name != 'pull_request' }}`}}
+        id: {{ $variant.PublishID }}
         uses: docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9  # v4
         with:
           context: .
@@ -205,9 +241,74 @@ jobs:
           tags: ${{`{{ steps.`}}{{ $variant.MetadataID }}{{`-ng.outputs.tags }}`}}
           build-args: |
             BASE_IMAGE=${{`{{ env.NG_BASE_IMAGE }}`}}
-            GOLANG_IMAGE=tykio/golang-cross:${{`{{ env.GOLANG_CROSS }}`}}
+            GOLANG_IMAGE=${{`{{ steps.source-go.outputs.ref }}`}}
             GITHUB_SHA=${{`{{ github.sha }}`}}
             GITHUB_TAG=${{`{{ github.ref_name }}`}}
-            WITH_GATEWAY_SELFTEST=0{{ $ng.VariantBuildArgsBlock $variant }}{{ if lt (add1 $i) (len ($pc.NextGenVariants)) }}
+            WITH_GATEWAY_SELFTEST=0{{ $ng.VariantBuildArgsBlock $variant }}
+
+      - name: Verify pushed NG digest and attestations{{ $variant.StepSuffix }}
+        if: ${{`{{ github.event_name != 'pull_request' }}`}}
+        env:
+          PUBLISHED_DIGEST: ${{`{{ steps.`}}{{ $variant.PublishID }}{{`.outputs.digest }}`}}
+          PUBLISHED_TAGS: ${{`{{ steps.`}}{{ $variant.MetadataID }}{{`-ng.outputs.tags }}`}}
+        run: |
+          set -euo pipefail
+          evidence_dir="$RUNNER_TEMP/plugin-compiler-ng-evidence/{{ default "std" $variant.Name }}"
+          mkdir -p "$evidence_dir"
+          {
+            printf 'variant=%s\n' '{{ default "std" $variant.Name }}'
+            printf 'published_digest=%s\n' "$PUBLISHED_DIGEST"
+            printf 'source_base=%s\n' '${{`{{ steps.source-base.outputs.ref }}`}}'
+            printf 'source_base_linux_amd64_digest=%s\n' '${{`{{ steps.source-base.outputs.platform_digest }}`}}'
+            printf 'go_toolchain=%s\n' '${{`{{ steps.source-go.outputs.ref }}`}}'
+            printf 'go_toolchain_linux_amd64_digest=%s\n' '${{`{{ steps.source-go.outputs.platform_digest }}`}}'
+            printf 'workflow_base=%s\n' "$NG_BASE_IMAGE"
+            printf 'published_tags<<EOF\n%s\nEOF\n' "$PUBLISHED_TAGS"
+          } > "$evidence_dir/metadata.txt"
+
+          case "$PUBLISHED_DIGEST" in sha256:*) ;; *) echo "unexpected published digest: $PUBLISHED_DIGEST" >&2; exit 1 ;; esac
+
+          repositories="$evidence_dir/repositories.txt"
+          printf '%s\n' "$PUBLISHED_TAGS" |
+            tr ',' '\n' |
+            sed '/^[[:space:]]*$/d; s/[[:space:]]*$//' |
+            while IFS= read -r tag; do printf '%s\n' "${tag%:*}"; done |
+            sort -u > "$repositories"
+
+          expected_repositories=1
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            expected_repositories=2
+          fi
+          actual_repositories="$(wc -l < "$repositories" | tr -d '[:space:]')"
+          test "$actual_repositories" = "$expected_repositories"
+
+          while IFS= read -r repository; do
+            exact_ref="${repository}@${PUBLISHED_DIGEST}"
+            safe_repository="$(printf '%s' "$repository" | tr '/:.' '_')"
+            inspect_file="$evidence_dir/${safe_repository}.inspect.txt"
+            sbom_file="$evidence_dir/${safe_repository}.sbom.json"
+            provenance_file="$evidence_dir/${safe_repository}.provenance.json"
+
+            docker buildx imagetools inspect "$exact_ref" | tee "$inspect_file"
+            resolved="$(awk '/^Digest:/ {print $2; exit}' "$inspect_file")"
+            test "$resolved" = "$PUBLISHED_DIGEST"
+
+            docker buildx imagetools inspect "$exact_ref" --format '{{`{{json .SBOM}}`}}' > "$sbom_file"
+            jq -e '[.. | objects | select(has("SPDX"))] | length > 0' "$sbom_file" >/dev/null
+
+            docker buildx imagetools inspect "$exact_ref" --format '{{`{{json .Provenance}}`}}' > "$provenance_file"
+            jq -e '[.. | objects | select(has("SLSA"))] | length > 0' "$provenance_file" >/dev/null
+
+            printf 'verified %s\n' "$exact_ref" | tee -a "$evidence_dir/verified-refs.txt" "$GITHUB_STEP_SUMMARY"
+          done < "$repositories"
+
+      - name: Retain pushed NG evidence{{ $variant.StepSuffix }}
+        if: ${{`{{ always() && github.event_name != 'pull_request' && steps.`}}{{ $variant.PublishID }}{{`.outcome == 'success' }}`}}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: plugin-compiler-ng-{{ default "std" $variant.Name }}-${{`{{ github.run_id }}`}}-${{`{{ github.run_attempt }}`}}
+          path: ${{`{{ runner.temp }}`}}/plugin-compiler-ng-evidence/{{ default "std" $variant.Name }}
+          if-no-files-found: error
+          retention-days: 30{{ if lt (add1 $i) (len ($pc.NextGenVariants)) }}
 
 {{ end }}{{ end }}

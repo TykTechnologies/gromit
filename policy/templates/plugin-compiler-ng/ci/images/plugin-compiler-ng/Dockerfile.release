@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 ARG GOLANG_IMAGE=tykio/golang-cross:{{ .Branchvals.PluginCompiler.GetGoImage .Branchvals.Buildenv }}
-ARG BASE_IMAGE={{ .Branchvals.PluginCompiler.NextGen.BaseImageRefValue }}
+ARG BASE_IMAGE
 
 FROM ${GOLANG_IMAGE} AS go-toolchain
 
@@ -10,14 +10,14 @@ COPY --from=go-toolchain /usr/local/go /usr/local/go
 
 ENV GOTOOLCHAIN=local
 
-ADD go.mod go.sum $TYK_GW_PATH/
+COPY go.mod go.sum $TYK_GW_PATH/
 WORKDIR $TYK_GW_PATH
 
 RUN --mount=type=cache,mode=0755,target=/go/pkg/mod \
     --mount=type=cache,mode=0755,target=/root/.cache/go-build \
     go mod download
 
-ADD . $TYK_GW_PATH
+COPY . $TYK_GW_PATH
 
 ARG GITHUB_SHA
 ARG GITHUB_TAG
@@ -64,6 +64,7 @@ RUN --mount=type=cache,mode=0755,target=/go/pkg/mod \
     else \
       echo "skipping gateway self-test binary (WITH_GATEWAY_SELFTEST=0)"; \
       test ! -e /usr/local/bin/tyk; \
+      test ! -e "$TYK_GW_PATH/tyk"; \
     fi
 
 LABEL description="Next-generation image for Tyk plugin development" \

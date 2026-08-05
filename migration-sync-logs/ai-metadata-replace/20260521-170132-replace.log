@@ -1,0 +1,15 @@
+AI metadata replacement started at Thu May 21 17:01:32 +03 2026
+Stage: /Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged
+Backup: /Users/leonidbugaev/migration-backups/ai-metadata-before-replace-20260521-170132
+Log: /Users/leonidbugaev/go/src/gromit/migration-sync-logs/ai-metadata-replace/20260521-170132-replace.log
+Backed up /Users/leonidbugaev/.claude
+Backed up /Users/leonidbugaev/.claude.json
+Backed up /Users/leonidbugaev/.codex
+
+Replacing ~/.claude from staged broken-Mac copy
+copyfile(todos/.._41bca726-8820-435b-bc93-3b4c3c54fb80-agent-41bca726-8820-435b-bc93-3b4c3c54fb80.json.pHx5ut,todos/41bca726-8820-435b-bc93-3b4c3c54fb80-agent-41bca726-8820-435b-bc93-3b4c3c54fb80.json, COPYFILE_UNPACK) failed:9
+copyfile(todos/.._506e21ea-b049-4d93-b45b-0f948ce28971-agent-506e21ea-b049-4d93-b45b-0f948ce28971.json.d4aztS,todos/506e21ea-b049-4d93-b45b-0f948ce28971-agent-506e21ea-b049-4d93-b45b-0f948ce28971.json, COPYFILE_UNPACK) failed:9
+copyfile(todos/.._8b45d9cd-c8b6-4fcc-8d46-e049bc06ed5c-agent-8b45d9cd-c8b6-4fcc-8d46-e049bc06ed5c.json.eBB8t6,todos/8b45d9cd-c8b6-4fcc-8d46-e049bc06ed5c-agent-8b45d9cd-c8b6-4fcc-8d46-e049bc06ed5c.json, COPYFILE_UNPACK) failed:9
+copyfile(todos/.._d76cd241-693e-42b9-a006-7131138cfd12-agent-d76cd241-693e-42b9-a006-7131138cfd12.json.dz9H9a,todos/d76cd241-693e-42b9-a006-7131138cfd12-agent-d76cd241-693e-42b9-a006-7131138cfd12.json, COPYFILE_UNPACK) failed:9
+copyfile(todos/.._fe6d8d7c-0239-48d4-99fa-bd744d21e351-agent-fe6d8d7c-0239-48d4-99fa-bd744d21e351.json.ybnV9y,todos/fe6d8d7c-0239-48d4-99fa-bd744d21e351-agent-fe6d8d7c-0239-48d4-99fa-bd744d21e351.json, COPYFILE_UNPACK) failed:9
+rsync error: some files could not be transferred (code 23) at /AppleInternal/Library/BuildRoots/4ff29661-3588-11ef-9513-e2437461156c/Library/Caches/com.apple.xbs/Sources/rsync/rsync/main.c(996) [sender=2.6.9]
