@@ -24,7 +24,6 @@ To various degrees of competence, gromit can:
   * gpac (github policy as code)
 - fetch developer licenses for dashboard and mdcb
 - generate config files from a `text/template`
-- run [DHI VEX-aware Trivy scans](docs/dhi-vex.md)
 - dump redis and mongo data for a classic cloud org to local disk (broken)
 - restore redis and mongo data for a classic cloud org from local disk (broken)
 
