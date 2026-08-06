@@ -44,3 +44,4 @@ __pycache__
 
 .idea/
 public/
+.DS_Store
