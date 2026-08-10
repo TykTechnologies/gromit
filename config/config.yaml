@@ -523,10 +523,17 @@ policy:
                   skipdocker: true
               env:
                 - GOFIPS140=v1.0.0
+          # Every managed tyk-pump branch ships fips builds, so the feature
+          # lives at repo level instead of being repeated per branch.
+          features:
+            - fips
+
           branches:
             master:
-              features:
-                - fips
+            release-1.14:
+            release-1.14.1:
+            release-1.15.0:
+            release-1.16.0:
 
         tyk-identity-broker:
           exposeports: 80
