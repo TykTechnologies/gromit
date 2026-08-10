@@ -128,6 +128,16 @@ jobs:
           DHI_ORG: {{ $ng.CustomizationOrgValue }}
         run: |
           set -euo pipefail
+          # `docker dhi` ships with Docker Desktop and is absent from hosted
+          # runners. Without this guard the first call falls through to plain
+          # `docker`, which reports `unknown flag: --org` and exit 125 -- an error
+          # that says nothing about the actual problem.
+          if ! docker dhi --help >/dev/null 2>&1; then
+            echo "::warning title=DHI CLI unavailable::docker dhi is not installed on this runner, so the customization cannot be refreshed. The compiler will build on the existing base, which may be missing recent package fixes."
+            printf '### DHI customization refresh\n\nSkipped: docker dhi is not available on this runner.\n' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
           before="$(docker dhi customization build list "$DHI_CUSTOMIZATION" \
             --org "$DHI_ORG" | awk 'NR==2 {print $1}')"
           echo "latest build before refresh: ${before:-none}"
