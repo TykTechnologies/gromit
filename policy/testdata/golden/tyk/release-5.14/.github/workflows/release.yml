@@ -116,6 +116,7 @@ jobs:
       # they don't re-upload the multi-GB cache each run, and the store isn't
       # churned. master/tags keep the cache warm for PRs to restore from.
       - uses: WarpBuilds/cache/restore@f643a1ba29942d56621d07fc2d4284c7219868ad # v1
+        id: go-cache
         with:
           path: |
             ~/.cache/go-build
@@ -192,14 +193,19 @@ jobs:
           tykio/golang-cross:${{ matrix.golang_cross }} /tmp/build.sh
       # Only master/tags populate the go cache; PRs are read-only (see the
       # restore step above) so they don't pay the multi-GB upload every run.
+      # Save under the restore step's primary key (computed from the committed
+      # go.sum at job start), NOT a fresh hashFiles() — the build rewrites go.sum,
+      # so re-hashing here would save under a key the next run never looks up,
+      # causing a perpetual re-save + cache eviction. Skip if we already had an
+      # exact hit (nothing new to store).
       - name: Save Go build cache
         uses: WarpBuilds/cache/save@f643a1ba29942d56621d07fc2d4284c7219868ad # v1
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && steps.go-cache.outputs.cache-hit != 'true' }}
         with:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          key: ${{ steps.go-cache.outputs.cache-primary-key }}
       - name: Install Docker Scout CLI
         if: ${{ matrix.golang_cross == '1.25-bullseye' && startsWith(github.ref, 'refs/tags') }}
         run: |
