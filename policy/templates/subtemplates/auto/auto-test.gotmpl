@@ -50,7 +50,11 @@
       !cancelled() &&
       needs.goreleaser.result == 'success'
     {{- end }}
-    runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
+    {{/* BIGGER_RUNNER: opt-in upsize for the heavy ui/api test jobs. Unset ->
+         falls back to DEFAULT_RUNNER, so it only affects workflows already
+         carrying this template. The tiny test-controller job stays on
+         DEFAULT_RUNNER. */ -}}
+    runs-on: {{`${{ vars.BIGGER_RUNNER || vars.DEFAULT_RUNNER }}`}}
     # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
     timeout-minutes: 45
     env:

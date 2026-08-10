@@ -44,7 +44,7 @@ jobs:
       (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') &&
       github.event.pull_request.draft == false
     name: '${{ matrix.golang_cross }}'
-    runs-on: ${{ vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}
+    runs-on: ${{ vars.BIGGER_RUNNER || vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}
     timeout-minutes: 90
     permissions:
       id-token: write # AWS OIDC JWT
@@ -461,7 +461,7 @@ jobs:
     if: |
       !cancelled() &&
       needs.goreleaser.result == 'success'
-    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    runs-on: ${{ vars.BIGGER_RUNNER || vars.DEFAULT_RUNNER }}
     # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
     timeout-minutes: 45
     env:
@@ -575,7 +575,7 @@ jobs:
     if: |
       !cancelled() &&
       needs.goreleaser.result == 'success'
-    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    runs-on: ${{ vars.BIGGER_RUNNER || vars.DEFAULT_RUNNER }}
     # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
     timeout-minutes: 45
     env:

@@ -31,7 +31,7 @@ jobs:
   api-tests:
     needs:
       - test-controller-api
-    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    runs-on: ${{ vars.BIGGER_RUNNER || vars.DEFAULT_RUNNER }}
     # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
     timeout-minutes: 45
     env:
@@ -125,7 +125,7 @@ jobs:
   ui-tests:
     needs:
       - test-controller-ui
-    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    runs-on: ${{ vars.BIGGER_RUNNER || vars.DEFAULT_RUNNER }}
     # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
     timeout-minutes: 45
     env:
