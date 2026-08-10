@@ -37,6 +37,7 @@ policy:
       # accordingly to it
       features:
         - releng
+        - zizmor
       # The build environment used for this repo. Right now, this value
       # is used for selecting the appropriate golang-cross image
       # used for building the binary, packages and docker images.
@@ -460,6 +461,7 @@ policy:
       features:
         - releng
         - distroless
+        - zizmor
       buildenv: 1.26-bookworm
       baseimage: debian:trixie-slim
       distrolessbaseimage: static-debian13:nonroot
