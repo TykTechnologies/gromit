@@ -39,6 +39,13 @@ contents:
     # Keep the scanner-visible header package in Docker's customized-image
     # assessment even though the compiler packages also depend on it.
     - linux-libc-dev
+    # Same reasoning, and a concrete case for it: expat arrives only as a
+    # transitive dependency, so nothing here pinned it and nothing rebuilt it.
+    # Docker published expat 2.8.2-1~deb13u1+dhi0 on 2026-07-30 while the
+    # customization stayed on 2.7.1-2+dhi5, carrying four HIGH findings that
+    # already had a fix upstream. Declaring it puts the package in Docker's own
+    # assessment of this image instead of leaving it implicit.
+    - expat
 
 labels:
   org.opencontainers.image.title: Tyk Plugin Compiler NG Toolchain Base

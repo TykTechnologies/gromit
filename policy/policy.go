@@ -105,7 +105,13 @@ type pluginCompilerNextGenConfig struct {
 	WorkflowBaseImageTag  string
 	BaseImage             string
 	BaseImageDigest       string
-	GlibcTarget           string
+	// CustomizationID names the Docker Hardened Images customization that
+	// builds BaseImage. When set, release builds refresh it before resolving
+	// the base digest so the compiler ships current packages. Empty disables
+	// the refresh entirely.
+	CustomizationID  string
+	CustomizationOrg string
+	GlibcTarget      string
 	Cross                 string
 	Slim                  string
 	WithCxx               string

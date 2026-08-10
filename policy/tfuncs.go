@@ -305,3 +305,16 @@ func (ng pluginCompilerNextGenConfig) VariantBuildArgsBlock(v pluginCompilerVari
 	}
 	return "\n            " + strings.Join(args, "\n            ")
 }
+
+// CustomizationOrgValue is the Docker Hub organization owning the DHI
+// customization. It defaults to the organization prefix of BaseImage so the
+// common case needs no extra configuration.
+func (ng pluginCompilerNextGenConfig) CustomizationOrgValue() string {
+	if ng.CustomizationOrg != "" {
+		return ng.CustomizationOrg
+	}
+	if org, _, found := strings.Cut(ng.BaseImage, "/"); found {
+		return org
+	}
+	return ""
+}

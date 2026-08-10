@@ -55,7 +55,7 @@ func TestPluginCompilerCustomization(t *testing.T) {
 		"gcc", "gcc-x86-64-linux-gnu", "gcc-aarch64-linux-gnu",
 		"gcc-s390x-linux-gnu", "g++", "g++-x86-64-linux-gnu",
 		"g++-aarch64-linux-gnu", "g++-s390x-linux-gnu", "git",
-		"linux-libc-dev",
+		"linux-libc-dev", "expat",
 	}, manifest.Contents.Packages)
 
 	info, err := os.Stat("apply-plugin-compiler-customization.sh")
