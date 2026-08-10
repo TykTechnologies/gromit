@@ -50,11 +50,10 @@
       !cancelled() &&
       needs.goreleaser.result == 'success'
     {{- end }}
-    {{/* BIGGER_RUNNER: opt-in upsize for the heavy ui/api test jobs. Unset ->
-         falls back to DEFAULT_RUNNER, so it only affects workflows already
-         carrying this template. The tiny test-controller job stays on
-         DEFAULT_RUNNER. */ -}}
-    runs-on: {{`${{ vars.BIGGER_RUNNER || vars.DEFAULT_RUNNER }}`}}
+    {{/* Heavy ui/api test jobs run on the org 8x runner (vars.WARP_RUNNER_8X_X64),
+         falling back to DEFAULT_RUNNER if absent. Only regenerated workflows
+         reference it; the tiny test-controller job stays on DEFAULT_RUNNER. */ -}}
+    runs-on: {{`${{ vars.WARP_RUNNER_8X_X64 || vars.DEFAULT_RUNNER }}`}}
     # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
     timeout-minutes: 45
     env:

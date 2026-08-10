@@ -10,10 +10,11 @@
       (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') &&
       github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
-    {{/* BIGGER_RUNNER: opt-in upsize for the heavy build job. Unset -> falls back
-         to today's runner, so setting it only affects workflows already carrying
-         this template (safe for a phased rollout; old branches don't read it). */ -}}
-    runs-on: {{`${{ vars.BIGGER_RUNNER || vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
+    {{/* Heavy build job runs on the org 8x runner (vars.WARP_RUNNER_8X_X64),
+         falling back to today's runner if that var is absent. Only workflows
+         regenerated from this template reference it, so un-migrated branches
+         stay on DEFAULT_RUNNER (safe for a phased rollout). */ -}}
+    runs-on: {{`${{ vars.WARP_RUNNER_8X_X64 || vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
     {{- if eq .Name "tyk-analytics" }}
     timeout-minutes: 90
     {{- end }}
