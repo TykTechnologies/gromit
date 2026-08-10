@@ -633,6 +633,12 @@ jobs:
       - name: Generate test reports and collect logs
         uses: TykTechnologies/github-actions/.github/actions/tests/reporting@production
         if: always() && (steps.test_execution.conclusion != 'skipped')
+        # Bound this best-effort step: `docker compose logs` inside it can hang on
+        # an unresponsive container and otherwise burn the whole job timeout.
+        # continue-on-error keeps a log-collection hang from failing an otherwise
+        # green test run (the real result comes from the Execute step above).
+        timeout-minutes: 8
+        continue-on-error: true
         with:
           report_xml: 'true'
           execution_status: ${{ steps.test_execution.outcome }}
