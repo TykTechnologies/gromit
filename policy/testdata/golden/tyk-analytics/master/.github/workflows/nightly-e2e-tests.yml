@@ -70,7 +70,7 @@ jobs:
       - test-controller-ui
     runs-on: ${{ vars.WARP_RUNNER_8X_X64 || vars.DEFAULT_RUNNER }}
     # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       XUNIT_REPORT_PATH: ${{ github.workspace}}/test-results.xml
       # Use the runner's cores; playwright.config.ts reads PLAYWRIGHT_WORKERS.
@@ -219,7 +219,7 @@ jobs:
       - test-controller-api
     runs-on: ${{ vars.WARP_RUNNER_8X_X64 || vars.DEFAULT_RUNNER }}
     # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       XUNIT_REPORT_PATH: ${{ github.workspace}}/test-results.xml
     permissions:
@@ -320,7 +320,7 @@ jobs:
           sparse-checkout: tests/api
       - name: Run API tests
         uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@production
-        timeout-minutes: 65
+        timeout-minutes: 30
         id: test_execution
         with:
           user_api_secret: ${{ steps.env_up.outputs.USER_API_SECRET }}
