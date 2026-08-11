@@ -211,8 +211,7 @@ func fsTreeWalk(b *Bundle, tfs fs.FS, root string, subTemps []string) error {
 			return fs.SkipDir
 		}
 		if !d.IsDir() {
-			// The top-level template must be the first element
-			subTemps = append([]string{path}, subTemps...)
+			files := append([]string{path}, subTemps...)
 
 			stPath := path + ".d"
 			fi, err := fs.Stat(tfs, stPath)
@@ -222,18 +221,18 @@ func fsTreeWalk(b *Bundle, tfs fs.FS, root string, subTemps []string) error {
 					return err
 				}
 				for _, de := range des {
-					subTemps = append(subTemps, filepath.Join(stPath, de.Name()))
+					files = append(files, filepath.Join(stPath, de.Name()))
 				}
 			}
 			// Normalize the path to use '/' as the separator
 			path = strings.ReplaceAll(path, string(os.PathSeparator), "/")
-			log.Trace().Strs("files", subTemps).Str("template", d.Name()).Msg("adding to bundle")
+			log.Trace().Strs("files", files).Str("template", d.Name()).Msg("adding to bundle")
 
 			t := template.Must(
 				template.New(d.Name()).
 					Funcs(sprig.TxtFuncMap()).
 					Option("missingkey=error").
-					ParseFS(tfs, subTemps...))
+					ParseFS(tfs, files...))
 			b.Add(path, t)
 		}
 		return nil

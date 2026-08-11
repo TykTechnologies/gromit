@@ -1,10 +1,12 @@
 package policy
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
+	"testing/fstest"
 
 	"github.com/TykTechnologies/gromit/config"
 )
@@ -81,6 +83,49 @@ func TestBundleRender(t *testing.T) {
 			if renderCount != expectedCount {
 				t.Fatalf("Rendered %d files, expected %d", renderCount, expectedCount)
 			}
+		}
+	}
+}
+
+// TestFsTreeWalkBasenameCollision guards against parse-list leakage
+// between bundle files that share a base name. text/template names
+// templates by base name and the last duplicate parsed wins, so if the
+// parse list accumulates across the walk, .github/zizmor.yml (zizmor
+// config) and .github/workflows/zizmor.yml (caller workflow) would
+// render identical content.
+func TestFsTreeWalkBasenameCollision(t *testing.T) {
+	tfs := fstest.MapFS{
+		"templates/test/.github/zizmor.yml":           &fstest.MapFile{Data: []byte("kind: config")},
+		"templates/test/.github/workflows/zizmor.yml": &fstest.MapFile{Data: []byte("kind: workflow")},
+	}
+	b := &Bundle{Name: "test", tree: &bundleNode{}}
+	if err := fsTreeWalk(b, tfs, "templates/test", nil); err != nil {
+		t.Fatalf("fsTreeWalk: %v", err)
+	}
+
+	got := make(map[string]string)
+	var walk func(n *bundleNode)
+	walk = func(n *bundleNode) {
+		for _, c := range n.Children {
+			walk(c)
+		}
+		if len(n.Children) == 0 && n.template != nil {
+			var buf bytes.Buffer
+			if err := n.template.Execute(&buf, nil); err != nil {
+				t.Fatalf("rendering %s: %v", n.path, err)
+			}
+			got[n.path] = buf.String()
+		}
+	}
+	walk(b.tree)
+
+	want := map[string]string{
+		".github/zizmor.yml":           "kind: config",
+		".github/workflows/zizmor.yml": "kind: workflow",
+	}
+	for path, content := range want {
+		if got[path] != content {
+			t.Errorf("%s rendered %q, want %q", path, got[path], content)
 		}
 	}
 }

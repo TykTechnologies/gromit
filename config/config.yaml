@@ -37,10 +37,11 @@ policy:
       # accordingly to it
       features:
         - releng
+        - zizmor
       # The build environment used for this repo. Right now, this value
       # is used for selecting the appropriate golang-cross image
       # used for building the binary, packages and docker images.
-      buildenv: 1.25-bullseye
+      buildenv: 1.26-bullseye
       # baseimage what the container images are based on. It needs to be a
       # debian compatible distro as the Dockerfile assumes apt-get
       baseimage: debian:trixie-slim
@@ -346,7 +347,7 @@ policy:
           packagename: portal
           binary: dev-portal
           buildpackagename: portal
-          buildenv: 1.25-bookworm
+          buildenv: 1.26-bookworm
           cgo: true
           upgradefromver: 1.0.0
           configfile: portal.conf
@@ -463,7 +464,8 @@ policy:
       features:
         - releng
         - distroless
-      buildenv: 1.25-bookworm
+        - zizmor
+      buildenv: 1.26-bookworm
       baseimage: debian:trixie-slim
       distrolessbaseimage: static-debian13:nonroot
       repos:
@@ -524,10 +526,17 @@ policy:
                   skipdocker: true
               env:
                 - GOFIPS140=v1.0.0
+          # Every managed tyk-pump branch ships fips builds, so the feature
+          # lives at repo level instead of being repeated per branch.
+          features:
+            - fips
+
           branches:
             master:
-              features:
-                - fips
+            release-1.14:
+            release-1.14.1:
+            release-1.15.0:
+            release-1.16.0:
 
         tyk-identity-broker:
           exposeports: 80
