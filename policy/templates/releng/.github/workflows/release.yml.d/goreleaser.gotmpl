@@ -10,11 +10,13 @@
       (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') &&
       github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
-    {{- if eq .Name "tyk-analytics" }}
+    {{- if or (eq .Name "tyk-analytics") (eq .Name "tyk") }}
     runs-on: {{`${{ vars.WARP_RUNNER_8X_X64 || vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
-    timeout-minutes: 90
     {{- else }}
     runs-on: {{`${{ vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
+    {{- end }}
+    {{- if eq .Name "tyk-analytics" }}
+    timeout-minutes: 90
     {{- end }}
     permissions:
       id-token: write   # AWS OIDC JWT
