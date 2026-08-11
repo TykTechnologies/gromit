@@ -16,7 +16,7 @@
          stay on DEFAULT_RUNNER (safe for a phased rollout). */ -}}
     runs-on: {{`${{ vars.WARP_RUNNER_8X_X64 || vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
     {{- if eq .Name "tyk-analytics" }}
-    timeout-minutes: 25
+    timeout-minutes: 30
     {{- end }}
     permissions:
       id-token: write   # AWS OIDC JWT
