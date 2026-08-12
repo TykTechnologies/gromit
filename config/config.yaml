@@ -297,6 +297,9 @@ policy:
           features:
             - distroless
             - release-test
+            # Generates ci/goreleaser/goreleaser.pr.yml (std+fips amd64 deb only),
+            # which release.yml selects with -f on pull_request builds.
+            - pr-minimal-build
           # buildenv is inherited from the cgo-services group default unless
           # overridden here.
           branches:

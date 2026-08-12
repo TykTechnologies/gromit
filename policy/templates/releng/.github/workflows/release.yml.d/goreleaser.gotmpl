@@ -10,13 +10,15 @@
       (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') &&
       github.event.pull_request.draft == false
     name: '{{`${{ matrix.golang_cross }}`}}'
+    {{/* 8x runner for the heavy build (tyk-analytics + tyk) via vars.WARP_RUNNER_8X_X64,
+         with fallback so other repos / un-migrated branches stay on DEFAULT_RUNNER. */ -}}
     {{- if or (eq .Name "tyk-analytics") (eq .Name "tyk") }}
     runs-on: {{`${{ vars.WARP_RUNNER_8X_X64 || vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
     {{- else }}
     runs-on: {{`${{ vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
     {{- end }}
     {{- if eq .Name "tyk-analytics" }}
-    timeout-minutes: 90
+    timeout-minutes: 30
     {{- end }}
     permissions:
       id-token: write   # AWS OIDC JWT
@@ -184,14 +186,21 @@
         with:
           mask-password: 'true'
 
-      - uses: WarpBuilds/cache@f643a1ba29942d56621d07fc2d4284c7219868ad  # v1
+      # Restore-only here; the matching save runs after Build and only off-PR
+      # (see "Save Go build cache"). PRs read the cache but never write it, so
+      # they don't re-upload the multi-GB cache each run, and the store isn't
+      # churned. master/tags keep the cache warm for PRs to restore from.
+      - uses: WarpBuilds/cache/restore@f643a1ba29942d56621d07fc2d4284c7219868ad  # v1
+        id: go-cache
         with:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: {{`${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}`}}
+          key: {{`${{ runner.os }}-go-${{ hashFiles('go.sum') }}`}}
+          # loose prefix so a changed go.sum / fresh branch gets a partial
+          # restore instead of a cold rebuild (exact key = no fallback).
           restore-keys: |
-            {{`${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}`}}
+            {{`${{ runner.os }}-go-`}}
 
       - name: Validate Go version
         run: |
@@ -254,9 +263,17 @@
           {{ end -}}
           git config --global url."https://x-access-token:{{`${{ steps.app-token.outputs.token }}`}}@github.com/".insteadOf "https://github.com/"
           git config --global --add safe.directory /go/src/github.com/TykTechnologies/{{ .Name }}
+{{- if eq .Name "tyk-analytics" }}
+          {{/* On PRs only the std amd64 .deb (goreleaser.pr.yml) is needed for the test image; tune parallelism to the runner. */ -}}
+          goreleaser release --timeout 120m --clean --parallelism 2 -f {{`${{ github.event_name == 'pull_request' && 'ci/goreleaser/goreleaser.pr.yml' || matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker' }}`}}' | tee /tmp/build.sh
+{{- else }}
           goreleaser release --timeout 120m --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker' }}`}}' | tee /tmp/build.sh
+{{- end }}
           chmod +x /tmp/build.sh
           docker run --rm --privileged -e GITHUB_TOKEN={{`${{ github.token }}`}} \
+{{- if eq .Name "tyk-analytics" }}
+          -e GOMAXPROCS=4                                                        \
+{{- end }}
           -e GOPRIVATE=github.com/TykTechnologies                                \
           {{ if has "plugin-compiler-fix-vendor" .Branchvals.Features -}}
           -e GO111MODULE=off                                                     \
@@ -278,6 +295,22 @@
           -v /tmp/build.sh:/tmp/build.sh                                         \
           -w /go/src/github.com/TykTechnologies/{{ .Name }}                      \
           tykio/golang-cross:{{`${{ matrix.golang_cross }}`}} /tmp/build.sh
+
+      # Only master/tags populate the go cache; PRs are read-only (see the
+      # restore step above) so they don't pay the multi-GB upload every run.
+      # Save under the restore step's primary key (computed from the committed
+      # go.sum at job start), NOT a fresh hashFiles() — the build rewrites go.sum,
+      # so re-hashing here would save under a key the next run never looks up,
+      # causing a perpetual re-save + cache eviction. Skip if we already had an
+      # exact hit (nothing new to store).
+      - name: Save Go build cache
+        uses: WarpBuilds/cache/save@f643a1ba29942d56621d07fc2d4284c7219868ad  # v1
+        if: {{`${{ github.event_name != 'pull_request' && steps.go-cache.outputs.cache-hit != 'true' }}`}}
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: {{`${{ steps.go-cache.outputs.cache-primary-key }}`}}
 
 {{- if eq .Name "tyk-analytics" }}
 
@@ -543,7 +576,12 @@
 
       - name: save rpm
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+{{- if eq .Name "tyk-analytics" }}
+        {{/* PR build (goreleaser.pr.yml) is deb-only, so no rpm to upload on PRs */ -}}
+        if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' && github.event_name != 'pull_request' }}`}}
+{{- else }}
         if: {{`${{ matrix.golang_cross == '` }}{{.Branchvals.Buildenv}}{{`' }}`}}
+{{- end }}
         with:
           name: rpm
           retention-days: 1

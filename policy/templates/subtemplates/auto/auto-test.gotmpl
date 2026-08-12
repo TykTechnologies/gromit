@@ -50,9 +50,19 @@
       !cancelled() &&
       needs.goreleaser.result == 'success'
     {{- end }}
-    runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
+    {{/* Heavy ui/api test jobs run on the org 8x runner (vars.WARP_RUNNER_8X_X64),
+         falling back to DEFAULT_RUNNER if absent. Only regenerated workflows
+         reference it; the tiny test-controller job stays on DEFAULT_RUNNER. */ -}}
+    runs-on: {{`${{ vars.WARP_RUNNER_8X_X64 || vars.DEFAULT_RUNNER }}`}}
+    # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
+    timeout-minutes: {{ if eq .flow "nightly" }}30{{ else }}25{{ end }}
     env:
       XUNIT_REPORT_PATH: {{`${{ github.workspace}}`}}/test-results.xml
+{{- if and (eq .dot.Name "tyk-analytics") (eq .test "ui") }}
+      # Use the runner's cores; playwright.config.ts reads PLAYWRIGHT_WORKERS.
+      # Sized for the 8x runner set via the DEFAULT_RUNNER GitHub variable.
+      PLAYWRIGHT_WORKERS: "6"
+{{- end }}
 {{- if eq .dot.Name "tyk-pro" }}
       BASE_REF: master
 {{- end }}
@@ -191,7 +201,7 @@
       {{ if eq .test "api" }}
       - name: Run API tests
         uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@production
-        timeout-minutes: {{ if eq .flow "nightly" }}65{{ else }}45{{ end }}
+        timeout-minutes: {{ if eq .flow "nightly" }}30{{ else }}25{{ end }}
         id: test_execution
         with:
           user_api_secret: {{`${{ steps.env_up.outputs.USER_API_SECRET }}`}}
@@ -202,7 +212,7 @@
         run: >
           git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
       - name: Execute UI tests
-        timeout-minutes: 30
+        timeout-minutes: {{ if eq .flow "nightly" }}30{{ else }}25{{ end }}
         uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests@production
         id: test_execution
 
@@ -217,6 +227,12 @@
       - name: Generate test reports and collect logs
         uses: TykTechnologies/github-actions/.github/actions/tests/reporting@production
         if: always() && (steps.test_execution.conclusion != 'skipped')
+        # Bound this best-effort step: `docker compose logs` inside it can hang on
+        # an unresponsive container and otherwise burn the whole job timeout.
+        # continue-on-error keeps a log-collection hang from failing an otherwise
+        # green test run (the real result comes from the Execute step above).
+        timeout-minutes: 8
+        continue-on-error: true
         with:
           report_xml: 'true'
           execution_status: {{`${{ steps.test_execution.outcome }}`}}
