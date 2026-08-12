@@ -1,6 +1,0 @@
-
-==> chunked rsync reqforge
-    /Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/reqforge
- -> /Users/leonidbugaev/go/src/reqforge
-SKIP generated/cache top-level entry: /Volumes/Macintosh HD-1/Users/leonidbugaev/go/src/reqforge/.DS_Store
-  rsync entry: .claude

@@ -1,9 +1,0 @@
-AI metadata replacement started at Thu May 21 17:01:14 +03 2026
-Stage: /Users/leonidbugaev/migration-from-broken-mac-2026-05-21/ai-metadata-staged
-Backup: /Users/leonidbugaev/migration-backups/ai-metadata-before-replace-20260521-170114
-Log: /Users/leonidbugaev/go/src/gromit/migration-sync-logs/ai-metadata-replace/20260521-170114-replace.log
-
-Refusing to replace live AI metadata while Codex/Claude-related processes are running:
-51864 /bin/zsh -c -l source /Users/leonidbugaev/.claude/shell-snapshots/snapshot-zsh-1769153584067-9vflqc.sh && setopt NO_EXTENDED_GLOB 2>/dev/null || true && eval 'bun run dev' \< /dev/null && pwd -P >| /var/folders/bd/7mkdqnbs13x30zb67bm7xrm00000gn/T/claude-9d09-cwd
-
-Close Codex and Claude Code, then rerun this script.
