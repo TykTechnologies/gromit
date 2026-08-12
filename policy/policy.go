@@ -112,15 +112,15 @@ type pluginCompilerNextGenConfig struct {
 	CustomizationID  string
 	CustomizationOrg string
 	GlibcTarget      string
-	Cross                 string
-	Slim                  string
-	WithCxx               string
-	WithGit               string
-	GatewayTrimpath       string
-	CEArchs               string
-	EEArchs               string
-	FIPSArchs             string
-	Variants              []pluginCompilerVariant
+	Cross            string
+	Slim             string
+	WithCxx          string
+	WithGit          string
+	GatewayTrimpath  string
+	CEArchs          string
+	EEArchs          string
+	FIPSArchs        string
+	Variants         []pluginCompilerVariant
 }
 
 // Policies models the config file structure. There are three levels

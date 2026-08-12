@@ -49,7 +49,7 @@ public/
 # of the project and were once committed by accident; ignoring them keeps a
 # `git add -A` from sweeping them back in.
 /goal.md
-/config.yaml
+/config.yaml   # stray local copy; the real one is config/config.yaml
 /base-att.txt
 /ai-metadata-*.md
 /migration-*
@@ -60,3 +60,5 @@ public/
 /sync-reqforge-worktrees-*.sh
 /launch-agentic-sessions-*.sh
 /zellij-agentic-sessions-*.kdl
+/plugin-compiler-ng-jira-ticket.md
+/plugin-compiler-ng-security-scanning.md

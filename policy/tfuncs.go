@@ -313,8 +313,14 @@ func (ng pluginCompilerNextGenConfig) CustomizationOrgValue() string {
 	if ng.CustomizationOrg != "" {
 		return ng.CustomizationOrg
 	}
-	if org, _, found := strings.Cut(ng.BaseImage, "/"); found {
-		return org
+	// BaseImageValue applies the configured default; reading the raw field would
+	// yield "" when only a default is set.
+	if org, _, found := strings.Cut(ng.BaseImageValue(), "/"); found {
+		// A registry host is not a Docker Hub organization. Returning one would
+		// render `--org dhi.io`, so leave it empty and let the caller's guard fire.
+		if !strings.Contains(org, ".") && !strings.Contains(org, ":") {
+			return org
+		}
 	}
 	return ""
 }

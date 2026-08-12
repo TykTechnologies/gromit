@@ -8,6 +8,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// RebuildTriggerAnnotation is written by CI solely to force a manifest difference
+// and is ignored when comparing customizations.
+const RebuildTriggerAnnotation = "io.tyk.rebuild-trigger"
+
 // EqualCustomizations compares complete customization YAML documents while
 // ignoring Docker's server-assigned top-level id and formatting differences.
 func EqualCustomizations(left, right io.Reader) (bool, error) {
@@ -50,5 +54,17 @@ func decodeCustomization(reader io.Reader) (map[string]any, error) {
 	}
 
 	delete(value, "id")
+	// The release workflow stamps a run id into this annotation purely to make the
+	// manifest differ, because Docker offers no way to request a customization
+	// rebuild (docker-hardened-images/advisories#2017). It describes nothing about
+	// the desired image, so it must not count as a difference here -- otherwise the
+	// apply script would see every post-release manifest as changed, edit it to
+	// remove the stamp, and that edit would itself queue another rebuild.
+	if annotations, ok := value["annotations"].(map[string]any); ok {
+		delete(annotations, RebuildTriggerAnnotation)
+		if len(annotations) == 0 {
+			delete(value, "annotations")
+		}
+	}
 	return value, nil
 }
