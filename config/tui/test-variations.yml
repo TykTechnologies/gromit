@@ -25,6 +25,7 @@ level: # testsuites
         level: # trigger
           workflow_dispatch:
             level: # repo
+              tyk-analytics:
           pull_request:
             level: # repo
               tyk:
@@ -92,6 +93,7 @@ level: # testsuites
                     gwdash: "master"
           workflow_dispatch:
             level: # repo
+              tyk-analytics:
           pull_request:
             level: # repo
               tyk:

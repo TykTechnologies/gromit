@@ -62,3 +62,4 @@ public/
 /zellij-agentic-sessions-*.kdl
 /plugin-compiler-ng-jira-ticket.md
 /plugin-compiler-ng-security-scanning.md
+.DS_Store

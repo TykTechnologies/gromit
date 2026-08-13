@@ -508,9 +508,9 @@ func TestPluginCompilerNGReleaseBranchConfiguration(t *testing.T) {
 		usesNativeFIPS   bool
 	}{
 		{branch: "release-5.3", goImage: "1.23-bullseye", variantCount: 1},
-		{branch: "release-5.8", goImage: "1.25-bullseye", variantCount: 3, usesBoringCrypto: true},
-		{branch: "release-5.8.15", goImage: "1.25-bullseye", variantCount: 3, usesBoringCrypto: true},
-		{branch: "release-5.13", goImage: "1.25-bullseye", variantCount: 3, usesNativeFIPS: true},
+		{branch: "release-5.8", goImage: "1.26-bullseye", variantCount: 3, usesBoringCrypto: true},
+		{branch: "release-5.8.15", goImage: "1.26-bullseye", variantCount: 3, usesBoringCrypto: true},
+		{branch: "release-5.13", goImage: "1.26-bullseye", variantCount: 3, usesNativeFIPS: true},
 	}
 
 	for _, test := range tests {

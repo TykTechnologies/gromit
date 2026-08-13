@@ -1,0 +1,35 @@
+---
+name: zizmor
+
+# Audits gromit's own workflows and the rendered golden files, i.e. what
+# policy sync would push to the managed repos.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions: {}
+
+jobs:
+  zizmor:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      ZIZMOR_VERSION: "1.29.0"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      # Advisory while existing findings are burned down: annotate but
+      # never fail. To enforce, drop "--no-exit-codes".
+      - name: Audit rendered templates and own workflows
+        run: |
+          uvx "zizmor@${ZIZMOR_VERSION}" --offline --format github --no-exit-codes \
+            policy/testdata/golden .github/workflows

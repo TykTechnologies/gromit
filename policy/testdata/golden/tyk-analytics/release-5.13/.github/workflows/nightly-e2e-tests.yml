@@ -68,9 +68,14 @@ jobs:
   ui-tests:
     needs:
       - test-controller-ui
-    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    runs-on: ${{ vars.WARP_RUNNER_8X_X64 || vars.DEFAULT_RUNNER }}
+    # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
+    timeout-minutes: 30
     env:
       XUNIT_REPORT_PATH: ${{ github.workspace}}/test-results.xml
+      # Use the runner's cores; playwright.config.ts reads PLAYWRIGHT_WORKERS.
+      # Sized for the 8x runner set via the DEFAULT_RUNNER GitHub variable.
+      PLAYWRIGHT_WORKERS: "6"
     permissions:
       id-token: write # This is required for requesting the Github JWT
       contents: read # This is required for actions/checkout
@@ -185,6 +190,12 @@ jobs:
       - name: Generate test reports and collect logs
         uses: TykTechnologies/github-actions/.github/actions/tests/reporting@production
         if: always() && (steps.test_execution.conclusion != 'skipped')
+        # Bound this best-effort step: `docker compose logs` inside it can hang on
+        # an unresponsive container and otherwise burn the whole job timeout.
+        # continue-on-error keeps a log-collection hang from failing an otherwise
+        # green test run (the real result comes from the Execute step above).
+        timeout-minutes: 8
+        continue-on-error: true
         with:
           report_xml: 'true'
           execution_status: ${{ steps.test_execution.outcome }}
@@ -206,7 +217,9 @@ jobs:
   api-tests:
     needs:
       - test-controller-api
-    runs-on: ${{ vars.DEFAULT_RUNNER }}
+    runs-on: ${{ vars.WARP_RUNNER_8X_X64 || vars.DEFAULT_RUNNER }}
+    # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
+    timeout-minutes: 30
     env:
       XUNIT_REPORT_PATH: ${{ github.workspace}}/test-results.xml
     permissions:
@@ -307,13 +320,19 @@ jobs:
           sparse-checkout: tests/api
       - name: Run API tests
         uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@production
-        timeout-minutes: 65
+        timeout-minutes: 30
         id: test_execution
         with:
           user_api_secret: ${{ steps.env_up.outputs.USER_API_SECRET }}
       - name: Generate test reports and collect logs
         uses: TykTechnologies/github-actions/.github/actions/tests/reporting@production
         if: always() && (steps.test_execution.conclusion != 'skipped')
+        # Bound this best-effort step: `docker compose logs` inside it can hang on
+        # an unresponsive container and otherwise burn the whole job timeout.
+        # continue-on-error keeps a log-collection hang from failing an otherwise
+        # green test run (the real result comes from the Execute step above).
+        timeout-minutes: 8
+        continue-on-error: true
         with:
           report_xml: 'true'
           execution_status: ${{ steps.test_execution.outcome }}
