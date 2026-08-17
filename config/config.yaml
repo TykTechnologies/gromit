@@ -716,7 +716,8 @@ pkgs:
       - v2.9.4.3-1
       - v2.9.4.7
       - v2.8.3
-      - v3.0.8 # used in upgrade tests
+      - v3.0.8 # used in upgrade tests on branches not yet re-synced
+      - v3.0.9 # used in upgrade tests
     versioncutoff: v3
   tyk-pump:
     notbackup: false
