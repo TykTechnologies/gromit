@@ -3,39 +3,24 @@
 name: zizmor
 on:
   pull_request:
+    paths:
+      - ".github/workflows/**"
+      - ".github/actions/**"
   push:
     branches:
       - release-1.14
+    paths:
+      - ".github/workflows/**"
+      - ".github/actions/**"
+  workflow_dispatch:
 permissions: {}
 jobs:
   zizmor:
     uses: TykTechnologies/github-actions/.github/workflows/zizmor.yml@production
+    with:
+      upload_sarif: true
     permissions:
       security-events: write
       contents: read
       actions: read
-  notify:
-    name: Notify Slack
-    if: github.event_name == 'push'
-    runs-on: ubuntu-24.04
-    needs: [zizmor]
-    permissions: {}
-    steps:
-      - name: Post to Slack
-        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
-        with:
-          method: chat.postMessage
-          token: ${{ secrets.SLACK_BOT_TOKEN }}
-          payload: |
-            {
-              "channel": "${{ secrets.CVE_SLACK_CHANNEL }}",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*zizmor scan: ${{ github.repository }}*\n${{ needs.zizmor.outputs.slack_summary }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Run>"
-                  }
-                }
-              ]
-            }
+      pull-requests: write
