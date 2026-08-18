@@ -787,6 +787,16 @@ policy:
 # policy key, you cannot override parameters from other levels.
 # Precedence is exceptions > versioncutoff > agecutoff
 
+# tracks models the release trains that drive the artifact retention
+# policy. current_feature is bumped in the same PR that adds a new
+# release branch; LTS changes are signed off by product.
+tracks:
+  # gateway covers Gateway and Dashboard, which share the 5.x train
+  gateway:
+    current_feature: "5.14"
+    current_lts: "5.13"
+    lts_minus_1: "5.8"
+
 # Quirks of x/mod/semver:
 # - all versions string have a v prefix though the packages do not
 # - vMAJOR is treated as vMAJOR.0.0
@@ -796,6 +806,10 @@ pkgs:
     # notbackup determines if packages are downloaded before being deleted
     # It is inverted so that if it is omitted from some repo, it will failsafe to false
     notbackup: false
+    # derives the `pkgs plan` cutoff from tracks; the static
+    # versioncutoff below still drives `pkgs clean`
+    track: gateway
+    editions: [ce, ee]
     # exceptions are those versions that should not be deleted from
     # packagecloud. These don't have to be semver.
     exceptions:
@@ -813,6 +827,8 @@ pkgs:
     versioncutoff: v3
   tyk-dashboard:
     notbackup: false
+    track: gateway
+    editions: [ce, ee]
     exceptions:
       - v2.6.2
       - v2.9.3
@@ -822,7 +838,8 @@ pkgs:
       - v2.9.4.3-1
       - v2.9.4.7
       - v2.8.3
-      - v3.0.8 # used in upgrade tests
+      - v3.0.8 # used in upgrade tests on branches not yet re-synced
+      - v3.0.9 # used in upgrade tests
     versioncutoff: v3
   tyk-pump:
     notbackup: false
