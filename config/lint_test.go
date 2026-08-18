@@ -3,8 +3,10 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
+	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
 
@@ -218,6 +220,123 @@ func TestUpgradeVersionsProtected(t *testing.T) {
 		}
 	}
 
+	for _, f := range findings {
+		t.Errorf("  - %s", f)
+	}
+}
+
+// TestTracksMatchBranchConfig keeps the tracks section in step with the
+// release branches gromit actually manages.
+//
+// The retention windows computed by `pkgs plan` are anchored on tracks
+// values (current_feature, current_lts, lts_minus_1), which are edited
+// by hand. The likely failure is cutting a new release branch and
+// forgetting to bump current_feature: the retention window then anchors
+// one series too low and pruning is more aggressive than announced.
+//
+// For every policy repo whose packages are pruned under a track, this
+// test fails when:
+//   - current_feature is not the newest release-X.Y[.Z] series in the
+//     repo's branch config (bump it in the same PR that adds the branch)
+//   - current_lts or lts_minus_1 has no configured release branch (a
+//     series inside the retention window should still be maintained)
+func TestTracksMatchBranchConfig(t *testing.T) {
+	raw, err := os.ReadFile("config.yaml")
+	if err != nil {
+		t.Fatalf("read config.yaml: %v", err)
+	}
+	var doc struct {
+		Policy struct {
+			Groups map[string]map[string]any `yaml:"groups"`
+		} `yaml:"policy"`
+		Tracks map[string]struct {
+			CurrentFeature string `yaml:"current_feature"`
+			CurrentLTS     string `yaml:"current_lts"`
+			LTSMinus1      string `yaml:"lts_minus_1"`
+		} `yaml:"tracks"`
+		Pkgs map[string]struct {
+			Track string `yaml:"track"`
+		} `yaml:"pkgs"`
+	}
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parse config.yaml: %v", err)
+	}
+
+	var findings []string
+	trackedRepos := 0
+	for gName, group := range doc.Policy.Groups {
+		repos, _ := group["repos"].(map[string]any)
+		for rName, r := range repos {
+			repo, _ := r.(map[string]any)
+			if repo == nil {
+				continue
+			}
+			pkgsName := rName
+			if pn, ok := repo["packagename"].(string); ok && pn != "" {
+				pkgsName = pn
+			}
+			if alias, ok := pkgsAlias[rName]; ok {
+				pkgsName = alias
+			}
+			pkgsRepo, found := doc.Pkgs[pkgsName]
+			if !found || pkgsRepo.Track == "" {
+				continue
+			}
+			trackedRepos++
+			where := fmt.Sprintf("%s.%s", gName, rName)
+			track, found := doc.Tracks[pkgsRepo.Track]
+			if !found {
+				findings = append(findings, fmt.Sprintf(
+					"pkgs.%s: track %q is not in the tracks section", pkgsName, pkgsRepo.Track))
+				continue
+			}
+
+			// minor series that have a configured release branch
+			series := make(map[string]bool)
+			newest := ""
+			branches, _ := repo["branches"].(map[string]any)
+			for bName := range branches {
+				v, isRelease := strings.CutPrefix(bName, "release-")
+				if !isRelease {
+					continue
+				}
+				s := semver.MajorMinor("v" + v)
+				if !semver.IsValid(s) {
+					continue
+				}
+				series[s] = true
+				if newest == "" || semver.Compare(s, newest) > 0 {
+					newest = s
+				}
+			}
+			if newest == "" {
+				findings = append(findings, fmt.Sprintf(
+					"%s: pruned under track %q but has no release-* branches to anchor it",
+					where, pkgsRepo.Track))
+				continue
+			}
+
+			if feature := semver.MajorMinor("v" + track.CurrentFeature); feature != newest {
+				findings = append(findings, fmt.Sprintf(
+					"%s: newest configured release series is %s but tracks.%s.current_feature is %s; bump current_feature in the same PR that adds the release branch",
+					where, newest, pkgsRepo.Track, feature))
+			}
+			for name, val := range map[string]string{
+				"current_lts": track.CurrentLTS,
+				"lts_minus_1": track.LTSMinus1,
+			} {
+				if !series[semver.MajorMinor("v"+val)] {
+					findings = append(findings, fmt.Sprintf(
+						"%s: tracks.%s.%s is %s but no release-%s branch is configured; a series inside the retention window should still be maintained",
+						where, pkgsRepo.Track, name, val, val))
+				}
+			}
+		}
+	}
+
+	if trackedRepos == 0 {
+		t.Fatal("no policy repo maps to a tracked pkgs entry; the lint is checking nothing")
+	}
 	for _, f := range findings {
 		t.Errorf("  - %s", f)
 	}
