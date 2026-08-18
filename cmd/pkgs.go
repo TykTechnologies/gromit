@@ -16,8 +16,10 @@ limitations under the License.
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/TykTechnologies/gromit/pkgs"
 	"github.com/rs/zerolog"
@@ -100,8 +102,58 @@ Each repo is processed sequentially, Deletions within a repo are processed concu
 	},
 }
 
+var planSubCmd = &cobra.Command{
+	Use:   "plan <repo>...",
+	Args:  cobra.MinimumNArgs(1),
+	Short: "Dry-run report of what the retention policy would prune",
+	Long: `Computes the retention cutoff for each repo and classifies every package
+against it, without deleting or downloading anything.
+
+Repos with a track in the config derive their cutoff from the tracks
+section; other repos use their static versioncutoff/agecutoff, making
+the plan a preview of what 'pkgs clean' would do.
+
+The JSON output carries the full prune-eligible package list with
+checksums, which later execution stages verify before deleting.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		asJSON, _ := cmd.Flags().GetBool("json")
+		tracks, err := pkgs.LoadTracks()
+		if err != nil {
+			return fmt.Errorf("loading tracks config: %w", err)
+		}
+		var plans []pkgs.Plan
+		for _, repoName := range args {
+			cfg, found := (*repos)[repoName]
+			if !found {
+				return fmt.Errorf("%s not present in pkgs config", repoName)
+			}
+			items, err := pkgClient.ListPackages(repoName)
+			if err != nil {
+				return fmt.Errorf("listing %s: %w", repoName, err)
+			}
+			plan, err := pkgs.BuildPlan(repoName, cfg, tracks, items, time.Now())
+			if err != nil {
+				return fmt.Errorf("planning %s: %w", repoName, err)
+			}
+			plans = append(plans, plan)
+			if !asJSON {
+				cmd.Print(plan.Render())
+			}
+		}
+		if asJSON {
+			out, err := json.MarshalIndent(plans, "", "  ")
+			if err != nil {
+				return err
+			}
+			cmd.Println(string(out))
+		}
+		return nil
+	},
+}
+
 func init() {
 	pkgsCmd.AddCommand(cleanSubCmd)
+	pkgsCmd.AddCommand(planSubCmd)
 	rootCmd.AddCommand(pkgsCmd)
 
 	pkgsCmd.PersistentFlags().String("owner", "tyk", "PackageCloud repo owner")
@@ -111,4 +163,6 @@ func init() {
 	cleanSubCmd.Flags().Int("concurrency", 3, "Cleanup concurrency level")
 	cleanSubCmd.Flags().String("savedir", "./backup", "Local directory root to save packages before deleting")
 	cleanSubCmd.Flags().Bool("delete", false, "Actually delete the package from the repo")
+
+	planSubCmd.Flags().Bool("json", false, "Emit the plan as JSON, including the prune-eligible package list")
 }

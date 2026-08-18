@@ -38,6 +38,11 @@ type pkgConfig struct {
 	VersionCutoff string
 	AgeCutoff     time.Duration
 	NotBackup     bool
+	// Track derives the version cutoff from the named tracks entry
+	// instead of VersionCutoff; Editions ("ce", "ee") selects the
+	// window, longest wins.
+	Track    string
+	Editions []string
 }
 
 // CleanConfig is the consolidated options that can be passed to the Clean method

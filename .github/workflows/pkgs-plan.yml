@@ -1,0 +1,57 @@
+name: pkgs plan
+
+# Read-only dry run of the artifact retention policy: reports what
+# would be pruned without deleting anything. The full plan.json is
+# uploaded as an artifact, a summary lands on the run page.
+
+on:
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Space-separated packagecloud repos to plan'
+        type: string
+        required: true
+        default: 'tyk-identity-broker'
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff  # v5
+        with:
+          go-version-file: go.mod
+
+      - name: Generate plan
+        env:
+          PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}
+          REPOS: ${{ inputs.repos }}
+        run: |
+          # shellcheck disable=SC2086 # repos is deliberately word-split
+          go run . pkgs plan --json $REPOS > plan.json
+
+          {
+            echo "## pkgs plan"
+            echo ""
+            echo "| Repo | Packages | Retained | Pruned | Pruned GiB | Anchor | Cutoff |"
+            echo "|------|----------|----------|--------|------------|--------|--------|"
+            jq -r '.[] | "| \(.repo) | \(.retained + .pruned) | \(.retained) | \(.pruned) | \(.pruned_bytes / 1073741824 * 10 | round / 10) | \(.anchor // "-") | \(.cutoff // "-") |"' plan.json
+            echo ""
+            echo "Nothing was deleted. The full plan, including the prune-eligible"
+            echo "package list with checksums, is in the plan.json artifact."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload plan
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: plan
+          path: plan.json
+          retention-days: 90
