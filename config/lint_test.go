@@ -11,12 +11,13 @@ import (
 )
 
 var nonScalarKeys = map[string]bool{
-	"repos":        true,
-	"branches":     true,
-	"builds":       true,
-	"features":     true,
-	"deletedfiles": true,
-	"tests":        true,
+	"repos":          true,
+	"branches":       true,
+	"builds":         true,
+	"features":       true,
+	"deletedfiles":   true,
+	"tests":          true,
+	"plugincompiler": true,
 }
 
 // TestConfigRedundancy keeps config.yaml honest about its own cascade.

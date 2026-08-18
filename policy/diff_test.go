@@ -24,7 +24,6 @@ func gitInTest(t *testing.T, dir string, args ...string) {
 	require.NoErrorf(t, err, "git %v: %s", args, out)
 }
 
-
 func TestNonTrivialDiff(t *testing.T) {
 	t.Setenv("PATH", origPATH)
 

@@ -140,7 +140,7 @@ func (b *Bundle) write(buf *bytes.Buffer, opFile string) error {
 	}
 	var op []byte
 	var err error
-	if b.isYaml.MatchString(opFile) {
+	if b.isYaml.MatchString(opFile) && !skipYamlfmt(opFile) {
 		op, err = b.yamlfmt.Format(buf.Bytes())
 		if err != nil {
 			os.WriteFile("error.yaml", buf.Bytes(), 0644)
@@ -161,6 +161,12 @@ func (b *Bundle) write(buf *bytes.Buffer, opFile string) error {
 	defer opf.Close()
 	_, err = opf.Write(op)
 	return err
+}
+
+func skipYamlfmt(opFile string) bool {
+	opFile = filepath.ToSlash(opFile)
+	return strings.HasSuffix(opFile, ".github/workflows/plugin-compiler-build.yml") ||
+		strings.HasSuffix(opFile, ".github/workflows/plugin-compiler-ng-build.yml")
 }
 
 // String will provide a human readable bundle listing

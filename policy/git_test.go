@@ -41,6 +41,51 @@ func TestCommitNoChanges(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNoChanges)
 }
 
+func TestPluginCompilerNGDeletedFilesAreRemovedBySync(t *testing.T) {
+	config.LoadConfig("")
+	var policies Policies
+	require.NoError(t, LoadRepoPolicies(&policies))
+	repoPolicy, err := policies.GetRepoPolicy("tyk")
+	require.NoError(t, err)
+	require.NoError(t, repoPolicy.SetBranch("master"))
+
+	staleFiles := []string{
+		".github/workflows/plugin-compiler-ng-base.yml",
+		"ci/images/plugin-compiler-ng/data/rewrite-imports.go",
+	}
+	for _, staleFile := range staleFiles {
+		require.Contains(t, repoPolicy.Branchvals.DeletedFiles, staleFile)
+	}
+
+	dir := t.TempDir()
+	repo, err := git.PlainInit(dir, false)
+	require.NoError(t, err)
+	worktree, err := repo.Worktree()
+	require.NoError(t, err)
+
+	for _, staleFile := range staleFiles {
+		stalePath := filepath.Join(dir, filepath.FromSlash(staleFile))
+		require.NoError(t, os.MkdirAll(filepath.Dir(stalePath), 0755))
+		require.NoError(t, os.WriteFile(stalePath, []byte("stale\n"), 0644))
+		_, err = worktree.Add(staleFile)
+		require.NoError(t, err)
+	}
+	_, err = worktree.Commit("seed stale files", &git.CommitOptions{
+		Author: &object.Signature{Name: "test", Email: "test@test.co", When: time.Now()},
+	})
+	require.NoError(t, err)
+
+	gitRepo := &GitRepo{repo: repo, worktree: worktree}
+	removeDeletedFiles(dir, gitRepo, repoPolicy.Branchvals.DeletedFiles)
+
+	status, err := worktree.Status()
+	require.NoError(t, err)
+	for _, staleFile := range staleFiles {
+		require.NoFileExists(t, filepath.Join(dir, filepath.FromSlash(staleFile)))
+		require.Equal(t, git.Deleted, status.File(staleFile).Staging)
+	}
+}
+
 var testRepo = map[string]string{
 	"url":         "https://github.com/tyklabs/git-tests",
 	"owner":       "tyklabs",

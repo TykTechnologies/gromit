@@ -156,8 +156,10 @@
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
+{{- if ne .Name "tyk" }}
       - uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a  # v3
 
+{{- end }}
       - name: Login to DockerHub
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
         with:
@@ -358,10 +360,12 @@
 {{- end }}
 
 {{- $needsScout := false }}
+{{- if ne $r.Name "tyk" }}
 {{- range $b, $bv := $r.GetDockerBuilds }}
   {{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
     {{- $needsScout = true }}
   {{- end }}
+{{- end }}
 {{- end }}
 {{- if $needsScout }}
       - name: Install Docker Scout CLI
@@ -404,6 +408,9 @@
           file: ci/Dockerfile.std
           {{ end }}
           provenance: mode=max
+          {{- if eq $r.Name "tyk" }}
+          sbom: true
+          {{- end }}
           outputs: type=image,push=true,compression=gzip,force-compression=true,oci-mediatypes=true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -493,6 +500,9 @@
           file: ci/Dockerfile.std
           {{- end }}
           provenance: mode=max
+          {{- if eq $r.Name "tyk" }}
+          sbom: true
+          {{- end }}
           cache-from: type=gha
           outputs: type=image,push=true,compression=gzip,force-compression=true,oci-mediatypes=true
           tags: {{printf "%s_%s%s" `${{ steps.tag_metadata` $b `.outputs.tags }}`}}
@@ -547,7 +557,7 @@
             verify_manifest manifest.json
           fi
           echo "Success: All layers are uniformly compressed using gzip."
-{{- if and $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
+{{- if and (ne $r.Name "tyk") $bv.DockerBaseImage (ne $bv.DockerBaseImage "distroless") }}
 
       - name: Attach base image VEX to {{ $b }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
