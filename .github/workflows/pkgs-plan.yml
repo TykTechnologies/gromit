@@ -7,11 +7,27 @@ name: pkgs plan
 on:
   workflow_dispatch:
     inputs:
-      repos:
-        description: 'Space-separated packagecloud repos to plan'
-        type: string
+      repo:
+        description: 'Packagecloud repo to plan'
+        type: choice
         required: true
-        default: 'tyk-identity-broker'
+        default: tyk-identity-broker
+        # keep in sync with the pkgs section of config/config.yaml
+        options:
+          - all
+          - tyk-gateway
+          - tyk-dashboard
+          - tyk-pump
+          - tyk-mdcb
+          - portal
+          - tyk-identity-broker
+          - tyk-gateway-unstable
+          - tyk-dashboard-unstable
+          - tyk-pump-unstable
+          - tyk-mdcb-unstable
+          - portal-unstable
+          - tyk-identity-broker-unstable
+          - tyk-sync-unstable
 
 permissions:
   contents: read
@@ -33,8 +49,14 @@ jobs:
       - name: Generate plan
         env:
           PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}
-          REPOS: ${{ inputs.repos }}
+          REPO: ${{ inputs.repo }}
         run: |
+          if [ "$REPO" = "all" ]; then
+            # every repo in the pkgs config
+            REPOS=$(yq '.pkgs | keys | join(" ")' config/config.yaml)
+          else
+            REPOS=$REPO
+          fi
           # shellcheck disable=SC2086 # repos is deliberately word-split
           go run . pkgs plan --json $REPOS > plan.json
 

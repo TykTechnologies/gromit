@@ -137,7 +137,7 @@ checksums, which later execution stages verify before deleting.`,
 			}
 			plans = append(plans, plan)
 			if !asJSON {
-				cmd.Print(plan.Render())
+				fmt.Fprint(cmd.OutOrStdout(), plan.Render())
 			}
 		}
 		if asJSON {
@@ -145,7 +145,7 @@ checksums, which later execution stages verify before deleting.`,
 			if err != nil {
 				return err
 			}
-			cmd.Println(string(out))
+			fmt.Fprintln(cmd.OutOrStdout(), string(out))
 		}
 		return nil
 	},
