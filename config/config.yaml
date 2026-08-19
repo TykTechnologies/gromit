@@ -319,6 +319,11 @@ policy:
                 - fips
                 - ee
                 - resolve-dashboard
+            release-5.13.2:
+              features:
+                - fips
+                - ee
+                - resolve-dashboard
             release-5.14:
               features:
                 - fips
@@ -333,6 +338,16 @@ policy:
                 - resolve-dashboard
                 # DX-2386 (tyk#8451): api tests fall back to master variations
                 - test-fallback
+            release-5.15:
+              features:
+                - fips
+                - ee
+                - resolve-dashboard
+            release-5.15.0:
+              features:
+                - fips
+                - ee
+                - resolve-dashboard
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
           dhrepo: tykio/tyk-dashboard
@@ -437,12 +452,27 @@ policy:
               features:
                 - nightly-e2e
                 - fips
+            release-5.13.2:
+              cgo: false
+              features:
+                - nightly-e2e
+                - fips
             release-5.14:
               cgo: false
               features:
                 - nightly-e2e
                 - fips
             release-5.14.0:
+              cgo: false
+              features:
+                - nightly-e2e
+                - fips
+            release-5.15:
+              cgo: false
+              features:
+                - nightly-e2e
+                - fips
+            release-5.15.0:
               cgo: false
               features:
                 - nightly-e2e
@@ -793,7 +823,7 @@ policy:
 tracks:
   # gateway covers Gateway and Dashboard, which share the 5.x train
   gateway:
-    current_feature: "5.14"
+    current_feature: "5.15"
     current_lts: "5.13"
     lts_minus_1: "5.8"
 
