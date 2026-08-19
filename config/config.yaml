@@ -314,6 +314,7 @@ policy:
                 - fips
                 - ee
                 - resolve-dashboard
+                - plugin-compiler-ng
             release-5.13.1:
               features:
                 - fips
@@ -324,6 +325,7 @@ policy:
                 - fips
                 - ee
                 - resolve-dashboard
+                - plugin-compiler-ng
             release-5.14:
               features:
                 - fips
@@ -343,11 +345,13 @@ policy:
                 - fips
                 - ee
                 - resolve-dashboard
+                - plugin-compiler-ng
             release-5.15.0:
               features:
                 - fips
                 - ee
                 - resolve-dashboard
+                - plugin-compiler-ng
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
           dhrepo: tykio/tyk-dashboard
