@@ -218,9 +218,32 @@ policy:
               withcxx: "1"
               withgit: "1"
               gatewaytrimpath: "true"
+              # Architectures a plugin can be built FOR. The compiler
+              # cross-compiles these from whatever host it runs on.
               cearchs: amd64,arm64,s390x
               eearchs: amd64,arm64
               fipsarchs: amd64,arm64
+              # Platforms the compiler IMAGE itself is published for -- a
+              # different thing from the archs above, which are what a plugin
+              # can be built for. An amd64 image already cross-compiles arm64
+              # plugins; this is about running the compiler natively on an
+              # arm64 host instead of under emulation.
+              #
+              # Set here rather than per branch on purpose: a branch-level
+              # `plugincompiler:` block REPLACES this one wholesale instead of
+              # merging, so overriding one key there silently resets the DHI
+              # base, customization id and variants to their defaults.
+              imageplatforms: linux/amd64,linux/arm64
+              # Which variant carries the Tier B toolchain gate for the extra
+              # platforms. That gate runs emulated and costs tens of minutes,
+              # and the toolchain it proves is identical across variants, so it
+              # is paid once rather than per variant. Empty would gate them all.
+              extragatevariant: ee
+              # The one platform that gets the full compile-and-load gate.
+              # Every other platform is still built and its toolchain exercised,
+              # but plugin.Open needs a runner of that architecture and the org
+              # has none, so it stays amd64. See the PR for the follow-up.
+              gateplatform: linux/amd64
           # Features common to every tyk branch. Branch entries below only
           # add their genuine extras (features are unioned across levels).
           features:

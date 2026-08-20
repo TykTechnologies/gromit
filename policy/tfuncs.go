@@ -324,3 +324,64 @@ func (ng pluginCompilerNextGenConfig) CustomizationOrgValue() string {
 	}
 	return ""
 }
+
+// ImagePlatformsValue is the platform list the compiler image is published for.
+// This is the image's own architecture, not the architectures a plugin can be
+// built for -- see CEArchsValue and friends for those.
+func (ng pluginCompilerNextGenConfig) ImagePlatformsValue() string {
+	if ng.ImagePlatforms != "" {
+		return ng.ImagePlatforms
+	}
+	return "linux/amd64"
+}
+
+// GatePlatformValue is the platform that runs the full compile-and-load gate.
+// It must appear in ImagePlatformsValue; a gate build uses `load: true`, which
+// accepts a single platform only.
+func (ng pluginCompilerNextGenConfig) GatePlatformValue() string {
+	if ng.GatePlatform != "" {
+		return ng.GatePlatform
+	}
+	return "linux/amd64"
+}
+
+// ImageNeedsGoTarball reports whether any requested image platform has to fetch
+// the Go toolchain from go.dev instead of copying it out of golang-cross, which
+// is published for amd64 only. When it is false the workflow makes no go.dev
+// call at all, so an amd64-only build gains no new network dependency.
+func (ng pluginCompilerNextGenConfig) ImageNeedsGoTarball() bool {
+	for _, p := range strings.Split(ng.ImagePlatformsValue(), ",") {
+		if p = strings.TrimSpace(p); p != "" && p != "linux/amd64" {
+			return true
+		}
+	}
+	return false
+}
+
+// GatesExtraPlatforms reports whether this variant gets the Tier B toolchain
+// gate. With ExtraGateVariant set, exactly one variant does; the others publish
+// their extra platforms on the strength of that one plus the full gate they
+// each get on GatePlatformValue.
+func (ng pluginCompilerNextGenConfig) GatesExtraPlatforms(v pluginCompilerVariant) bool {
+	if ng.ExtraGateVariant == "" {
+		return true
+	}
+	name := v.Name
+	if name == "" {
+		name = "std"
+	}
+	return name == ng.ExtraGateVariant
+}
+
+// ExtraImagePlatforms is ImagePlatformsValue minus GatePlatformValue: the
+// platforms that are published but do not get the full gate.
+func (ng pluginCompilerNextGenConfig) ExtraImagePlatforms() []string {
+	gate := ng.GatePlatformValue()
+	var extra []string
+	for _, p := range strings.Split(ng.ImagePlatformsValue(), ",") {
+		if p = strings.TrimSpace(p); p != "" && p != gate {
+			extra = append(extra, p)
+		}
+	}
+	return extra
+}

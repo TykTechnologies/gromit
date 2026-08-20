@@ -684,3 +684,105 @@ func readRenderedFile(t *testing.T, outputDir, name string) string {
 	require.NoError(t, err)
 	return string(contents)
 }
+
+// TestPluginCompilerNGImagePlatforms pins what `imageplatforms` controls. The
+// key is the feature flag for native multi-arch compiler images: with it at its
+// default the render must be byte-for-byte what an amd64-only build always was,
+// and every piece of emulation machinery must appear only when a non-native
+// platform is actually asked for.
+func TestPluginCompilerNGImagePlatforms(t *testing.T) {
+	render := func(t *testing.T, platforms string) string {
+		t.Helper()
+
+		var pol Policies
+		config.LoadConfig("")
+		require.NoError(t, LoadRepoPolicies(&pol))
+
+		repo, err := pol.GetRepoPolicy("tyk")
+		require.NoError(t, err)
+		require.NoError(t, repo.SetBranch("master"))
+
+		ng := repo.Branchvals.PluginCompiler.NextGen
+		ng.ImagePlatforms = platforms
+		repo.Branchvals.PluginCompiler.NextGen = ng
+
+		bundle, err := NewBundle([]string{"plugin-compiler-ng"})
+		require.NoError(t, err)
+
+		outputDir := t.TempDir()
+		_, err = bundle.Render(repo, outputDir, nil)
+		require.NoError(t, err)
+
+		return readRenderedFile(t, outputDir, ".github/workflows/plugin-compiler-ng-build.yml")
+	}
+
+	// Everything below is emulation machinery. None of it may cost an
+	// amd64-only build anything -- notably the go.dev lookup, which would
+	// otherwise make every release depend on a third-party host it has no
+	// reason to contact.
+	armOnly := []string{
+		"setup-qemu-action",
+		"go.dev/dl",
+		"GO_TARBALL_SHA256_ARM64",
+		"Build linux/arm64 NG gate image",   // the per-platform Tier B build
+		"Validate linux/arm64 NG toolchain", // its VALIDATE_ONLY companion
+		"COMPILER_PLATFORM",                 // which pins that companion to the emulated image
+	}
+
+	t.Run("amd64 only is the default and renders no emulation", func(t *testing.T) {
+		workflow := render(t, "")
+
+		for _, marker := range armOnly {
+			assert.NotContains(t, workflow, marker,
+				"an amd64-only image must not carry %q", marker)
+		}
+		assert.NotContains(t, workflow, "linux/arm64,",
+			"no build step may span platforms")
+
+		// `load: true` accepts exactly one platform, so the Tier A gate build
+		// stays single-platform no matter what else is requested.
+		assert.Equal(t, 7, strings.Count(workflow, "platforms: linux/amd64\n"),
+			"expected the base build plus a gate and a push build per variant")
+	})
+
+	t.Run("adding arm64 enables emulation and spans the push", func(t *testing.T) {
+		workflow := render(t, "linux/amd64,linux/arm64")
+
+		for _, marker := range armOnly {
+			assert.Contains(t, workflow, marker,
+				"a multi-platform image must carry %q", marker)
+		}
+
+		// The published index spans both platforms; the gate build cannot.
+		assert.Equal(t, 3, strings.Count(workflow, "platforms: linux/amd64,linux/arm64\n"),
+			"expected the push step per variant to span both platforms")
+		assert.Equal(t, 3, strings.Count(workflow, "platforms: linux/amd64\n"),
+			"the Tier A gate build stays on the gate platform")
+		// Tier B is paid once, not per variant: the toolchain it exercises is
+		// the same in all of them and the gate runs emulated.
+		assert.Equal(t, 1, strings.Count(workflow, "platforms: linux/arm64\n"),
+			"expected exactly one Tier B gate build, for ExtraGateVariant")
+		assert.Contains(t, workflow, "- name: Build linux/arm64 NG gate image EE\n")
+		assert.NotContains(t, workflow, "- name: Build linux/arm64 NG gate image FIPS\n")
+		assert.NotContains(t, workflow, "- name: Build linux/arm64 NG gate image\n")
+
+		// Pull requests use the `docker` driver, which cannot build more than
+		// one platform, so the base build has to narrow itself there.
+		assert.Contains(t, workflow,
+			"platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}")
+
+		// Emulated work must never run on a pull request: forks have no
+		// secrets, and the `docker` driver cannot load a foreign platform.
+		for _, step := range []string{
+			"Set up QEMU",
+			"Build linux/arm64 NG gate image EE",
+			"Validate linux/arm64 NG toolchain EE",
+		} {
+			idx := strings.Index(workflow, "- name: "+step+"\n")
+			require.NotEqual(t, -1, idx, "step %q not rendered", step)
+			assert.Contains(t, workflow[idx:min(idx+200, len(workflow))],
+				"if: ${{ github.event_name != 'pull_request' }}",
+				"step %q must be release-only", step)
+		}
+	})
+}

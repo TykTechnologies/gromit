@@ -117,9 +117,26 @@ type pluginCompilerNextGenConfig struct {
 	WithCxx          string
 	WithGit          string
 	GatewayTrimpath  string
-	CEArchs          string
-	EEArchs          string
-	FIPSArchs        string
+	// CEArchs, EEArchs and FIPSArchs are the architectures a plugin can be
+	// built FOR. They become the CE_ARCHS/EE_ARCHS/FIPS_ARCHS build args and
+	// are enforced at run time by data/build.sh.
+	CEArchs   string
+	EEArchs   string
+	FIPSArchs string
+	// ImagePlatforms and GatePlatform describe the compiler image ITSELF, which
+	// is a different thing: an amd64 image cross-compiles arm64 plugins today.
+	// ImagePlatforms is the platform list the image is published for.
+	// GatePlatform is the one platform that gets the full compile-and-load gate;
+	// the others are built and their toolchain exercised, but no plugin is
+	// loaded, because that needs a runner of that architecture.
+	ImagePlatforms string
+	GatePlatform   string
+	// ExtraGateVariant names the single variant whose image gets the Tier B
+	// toolchain gate on the non-gate platforms. That gate runs under emulation
+	// and costs tens of minutes, so it is not worth paying per variant when the
+	// toolchain it exercises is the same one in all of them. Empty means every
+	// variant is gated.
+	ExtraGateVariant string
 	Variants         []pluginCompilerVariant
 }
 
