@@ -40,6 +40,13 @@ update-test-cases:
 	@echo Updating test cases for cmd test
 	go test ./cmd/ -update
 
+# Regenerate the golden render snapshot in policy/testdata/golden after an
+# intended change to templates, config or rendering code. Commit the result;
+# the PR diff will show the effect on every repo/branch.
+update-golden:
+	@echo Regenerating golden render snapshot
+	go test ./policy -run TestGoldenRender -update
+
 update-actions-versions: bin/update-actions-versions.sed
 	echo $(TEMPLATES) | xargs $(SED_I) -f $<
 
@@ -81,4 +88,4 @@ opr: gromit
 loc: clean
 	gocloc --skip-duplicated --not-match-d=\.terraform --output-type=json ~gromit ~ci | jq -r '.languages | map([.name, .code]) | transpose[] | @csv'
 
-.PHONY: clean update-test-cases test loc cpr upr opr push
+.PHONY: clean update-test-cases update-golden test loc cpr upr opr push

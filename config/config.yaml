@@ -37,10 +37,11 @@ policy:
       # accordingly to it
       features:
         - releng
+        - zizmor
       # The build environment used for this repo. Right now, this value
       # is used for selecting the appropriate golang-cross image
       # used for building the binary, packages and docker images.
-      buildenv: 1.25-bullseye
+      buildenv: 1.26-bullseye
       # baseimage what the container images are based on. It needs to be a
       # debian compatible distro as the Dockerfile assumes apt-get
       baseimage: debian:trixie-slim
@@ -52,7 +53,9 @@ policy:
       repos:
         # Repo specific policy for `tyk` starts here->
         tyk:
-          distrolessbaseimage: base-debian13:nonroot
+          deletedfiles:
+            - .github/workflows/plugin-compiler-ng-base.yml
+            - ci/images/plugin-compiler-ng/data/rewrite-imports.go
           # packagename is the historical name of the package. Builds
           # may produce artifacts named differently but the
           # directories and contents of the package use this name.
@@ -173,72 +176,182 @@ policy:
           # official images. These tests are usually required for PRs to
           # pass so be careful with names
           tests: [api]
+          plugincompiler:
+            depguardref: d3fa20888fa2878e877e22bb7702141217290e7c
+            depguardif: github.event_name == 'pull_request'
+            dockerbuildif: |-
+              !cancelled() &&
+              (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') &&
+              !github.event.pull_request.draft
+            checkoutdepth: 0
+            pullrequesttypesstyle: inline
+            pullrequesttypes: [opened, synchronize, reopened, labeled]
+            variants:
+              - name: std
+                title: tyk-plugin-compiler
+                description: Plugin compiler for the Tyk API Gateway
+              - name: ee
+                imagesuffix: -ee
+                title: tyk-plugin-compiler-ee
+                description: Plugin compiler for the Tyk API Gateway Enterprise Edition
+                buildtag: ee
+              - name: fips
+                imagesuffix: -fips
+                title: tyk-plugin-compiler-fips
+                description: Plugin compiler for the Tyk API Gateway FIPS Edition
+                buildtag: ee,fips
+                gofips140: v1.0.0
+            nextgen:
+              tagsuffix: -ng
+              baseimagename: tyk-plugin-compiler-ng-base
+              baseimagetag: latest
+              workflowbaseimagename: tyk-plugin-compiler
+              workflowbaseimagetag: ng-base-${{ github.sha }}
+              baseimage: tykio/dhi-busybox-plugin-compiler:1.37.0-debian13-fips_plugin-compiler-ng-toolchain
+              # Docker does not rebuild a customization when packages it adds are
+              # patched. Release builds refresh it first so the compiler ships
+              # current packages. See docker-hardened-images/advisories#2017.
+              customizationid: cz_3gxyrz8ca7x0l
+              glibctarget: "2.17"
+              cross: "1"
+              slim: "0"
+              withcxx: "1"
+              withgit: "1"
+              gatewaytrimpath: "true"
+              cearchs: amd64,arm64,s390x
+              eearchs: amd64,arm64
+              fipsarchs: amd64,arm64
+          # Features common to every tyk branch. Branch entries below only
+          # add their genuine extras (features are unioned across levels).
+          features:
+            - release-test
+            - distroless
           # Different branches could have different policy as older branches
           # could be on a different releaese workflow. To override any branch
           # policy for a specific branch, they could be specified here, under
           # the respective branches.
+          # buildenv is inherited from the cgo-services group default unless
+          # overridden here.
           # Branch specific policy for different branches starts here.->
           branches:
             master:
               features:
-                - release-test
-                - distroless
                 - fips
                 - ee
                 - resolve-dashboard
+                - plugin-compiler
+                - plugin-compiler-ng
             release-5.3:
               buildenv: 1.24-bullseye
-              features:
-                - release-test
-                - distroless
+              plugincompiler:
+                goimage: 1.23-bullseye
+                depguardref: 2b35ab5dd4cfff21ced9d12446e9e27d10bf5785
+                depguardif: ${{ github.event_name == 'pull_request' }}
+                dockerbuildif: ${{ !github.event.pull_request.draft && always() && (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') }}
+                checkoutdepth: 1
+                pullrequesttypesstyle: list
+                pullrequesttypes: [opened, reopened, synchronize, labeled]
+                variants:
+                  - name: std
+                    title: tyk-plugin-compiler
+                    description: Plugin compiler for the Tyk API Gateway
             release-5.8:
-              buildenv: 1.25-bullseye
+              plugincompiler:
+                depguardref: 2b35ab5dd4cfff21ced9d12446e9e27d10bf5785
+                depguardif: ${{ github.event_name == 'pull_request' }}
+                dockerbuildif: ${{ always() && !github.event.pull_request.draft && (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') }}
+                checkoutdepth: 1
+                pullrequesttypesstyle: inline
+                pullrequesttypes: [opened, reopened, synchronize, labeled]
+                variants:
+                  - name: std
+                    title: tyk-plugin-compiler
+                    description: Plugin compiler for the Tyk API Gateway
+                  - name: ee
+                    imagesuffix: -ee
+                    title: tyk-plugin-compiler-ee
+                    description: Plugin compiler for the Tyk API Gateway Enterprise Edition
+                    buildtag: ee
+                  - name: fips
+                    imagesuffix: -fips
+                    title: tyk-plugin-compiler-fips
+                    description: Plugin compiler for the Tyk API Gateway FIPS Edition
+                    buildtag: ee,fips,boringcrypto
+                    goexperiment: boringcrypto
               features:
-                - release-test
-                - distroless
                 - fips
                 - ee
                 - resolve-dashboard
             release-5.8.15:
-              buildenv: 1.25-bullseye
+              plugincompiler:
+                depguardref: 2b35ab5dd4cfff21ced9d12446e9e27d10bf5785
+                depguardif: ${{ github.event_name == 'pull_request' }}
+                dockerbuildif: ${{ always() && !github.event.pull_request.draft && (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') }}
+                checkoutdepth: 1
+                pullrequesttypesstyle: inline
+                pullrequesttypes: [opened, reopened, synchronize, labeled]
+                variants:
+                  - name: std
+                    title: tyk-plugin-compiler
+                    description: Plugin compiler for the Tyk API Gateway
+                  - name: ee
+                    imagesuffix: -ee
+                    title: tyk-plugin-compiler-ee
+                    description: Plugin compiler for the Tyk API Gateway Enterprise Edition
+                    buildtag: ee
+                  - name: fips
+                    imagesuffix: -fips
+                    title: tyk-plugin-compiler-fips
+                    description: Plugin compiler for the Tyk API Gateway FIPS Edition
+                    buildtag: ee,fips,boringcrypto
+                    goexperiment: boringcrypto
               features:
-                - release-test
-                - distroless
                 - fips
                 - ee
                 - resolve-dashboard
             release-5.13:
-              buildenv: 1.25-bullseye
               features:
-                - release-test
-                - distroless
+                - fips
                 - ee
                 - resolve-dashboard
-                - fips
+                - plugin-compiler-ng
             release-5.13.1:
-              buildenv: 1.25-bullseye
               features:
-                - release-test
-                - distroless
+                - fips
                 - ee
                 - resolve-dashboard
+            release-5.13.2:
+              features:
                 - fips
+                - ee
+                - resolve-dashboard
+                - plugin-compiler-ng
             release-5.14:
-              buildenv: 1.25-bullseye
               features:
-                - release-test
-                - distroless
+                - fips
                 - ee
                 - resolve-dashboard
-                - fips
+                # DX-2386 (tyk#8451): api tests fall back to master variations
+                - test-fallback
             release-5.14.0:
-              buildenv: 1.25-bullseye
               features:
-                - release-test
-                - distroless
+                - fips
                 - ee
                 - resolve-dashboard
+                # DX-2386 (tyk#8451): api tests fall back to master variations
+                - test-fallback
+            release-5.15:
+              features:
                 - fips
+                - ee
+                - resolve-dashboard
+                - plugin-compiler-ng
+            release-5.15.0:
+              features:
+                - fips
+                - ee
+                - resolve-dashboard
+                - plugin-compiler-ng
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
           dhrepo: tykio/tyk-dashboard
@@ -304,68 +417,69 @@ policy:
                   skipdocker: true
               env:
                 - GOFIPS140=v1.0.0
+          # Features common to every tyk-analytics branch. Branch entries
+          # below only add their genuine extras (features are unioned).
+          features:
+            - distroless
+            - release-test
+            # Generates ci/goreleaser/goreleaser.pr.yml (std+fips amd64 deb only),
+            # which release.yml selects with -f on pull_request builds.
+            - pr-minimal-build
+          # buildenv is inherited from the cgo-services group default unless
+          # overridden here.
           branches:
             master:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
             release-5.3:
               buildenv: 1.24-bullseye
               cgo: false
-              features:
-                - distroless
-                - release-test
             release-5.8:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
             release-5.8.15:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
             release-5.13:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
             release-5.13.1:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
+                - fips
+            release-5.13.2:
+              cgo: false
+              features:
+                - nightly-e2e
                 - fips
             release-5.14:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
                 - fips
             release-5.14.0:
-              buildenv: 1.25-bullseye
               cgo: false
               features:
                 - nightly-e2e
-                - distroless
-                - release-test
+                - fips
+            release-5.15:
+              cgo: false
+              features:
+                - nightly-e2e
+                - fips
+            release-5.15.0:
+              cgo: false
+              features:
+                - nightly-e2e
                 - fips
 
         portal:
@@ -373,7 +487,7 @@ policy:
           packagename: portal
           binary: dev-portal
           buildpackagename: portal
-          buildenv: 1.25-bookworm
+          buildenv: 1.26-bookworm
           cgo: true
           upgradefromver: 1.0.0
           configfile: portal.conf
@@ -439,7 +553,6 @@ policy:
           configfile: tyk-ai-studio.conf
           versionpackage: main
           features:
-            - releng
             - ai-studio-frontend-build
             - default-distros
           builds:
@@ -486,13 +599,13 @@ policy:
                   docker: linux/s390x
           branches:
             main:
-              buildenv: 1.25-bullseye
 
     pgo-services:
       features:
         - releng
         - distroless
-      buildenv: 1.25-bookworm
+        - zizmor
+      buildenv: 1.26-bookworm
       baseimage: debian:trixie-slim
       distrolessbaseimage: static-debian13:nonroot
       repos:
@@ -553,10 +666,17 @@ policy:
                   skipdocker: true
               env:
                 - GOFIPS140=v1.0.0
+          # Every managed tyk-pump branch ships fips builds, so the feature
+          # lives at repo level instead of being repeated per branch.
+          features:
+            - fips
+
           branches:
             master:
-              features:
-                - fips
+            release-1.14:
+            release-1.14.1:
+            release-1.15.0:
+            release-1.16.0:
 
         tyk-identity-broker:
           exposeports: 80
@@ -590,7 +710,6 @@ policy:
           branches:
             master: {}
         tyk-sink:
-          buildenv: 1.25-bookworm
           exposeports: 80
           binary: tyk-sink
           cgo: false
@@ -599,7 +718,7 @@ policy:
           configfile: tyk_sink.conf
           versionpackage: github.com/TykTechnologies/tyk-sink/main
           tests: [api]
-          builds: 
+          builds:
             std:
               description: >-
                 Tyk RPC server backend (bridge)
@@ -659,7 +778,7 @@ policy:
           upgradefromver: 0.0.1
           configfile: midsommar.conf
           versionpackage: github.com/TykTechnologies/midsommar/main
-          builds: 
+          builds:
             std:
               buildpackagename: midsommar
               description: >-
@@ -702,6 +821,16 @@ policy:
 # policy key, you cannot override parameters from other levels.
 # Precedence is exceptions > versioncutoff > agecutoff
 
+# tracks models the release trains that drive the artifact retention
+# policy. current_feature is bumped in the same PR that adds a new
+# release branch; LTS changes are signed off by product.
+tracks:
+  # gateway covers Gateway and Dashboard, which share the 5.x train
+  gateway:
+    current_feature: "5.15"
+    current_lts: "5.13"
+    lts_minus_1: "5.8"
+
 # Quirks of x/mod/semver:
 # - all versions string have a v prefix though the packages do not
 # - vMAJOR is treated as vMAJOR.0.0
@@ -711,8 +840,12 @@ pkgs:
     # notbackup determines if packages are downloaded before being deleted
     # It is inverted so that if it is omitted from some repo, it will failsafe to false
     notbackup: false
+    # derives the `pkgs plan` cutoff from tracks; the static
+    # versioncutoff below still drives `pkgs clean`
+    track: gateway
+    editions: [ce, ee]
     # exceptions are those versions that should not be deleted from
-    # packagecloud. These don't have to be semver. 
+    # packagecloud. These don't have to be semver.
     exceptions:
       - v2.6.2
       - v2.9.3
@@ -728,6 +861,8 @@ pkgs:
     versioncutoff: v3
   tyk-dashboard:
     notbackup: false
+    track: gateway
+    editions: [ce, ee]
     exceptions:
       - v2.6.2
       - v2.9.3
@@ -737,7 +872,8 @@ pkgs:
       - v2.9.4.3-1
       - v2.9.4.7
       - v2.8.3
-      - v3.0.8 # used in upgrade tests
+      - v3.0.8 # used in upgrade tests on branches not yet re-synced
+      - v3.0.9 # used in upgrade tests
     versioncutoff: v3
   tyk-pump:
     notbackup: false

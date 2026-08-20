@@ -1,0 +1,107 @@
+{{- $pc := .Branchvals.PluginCompiler -}}
+---
+name: Plugin-compiler build
+
+on:
+  pull_request:
+{{- if $pc.PullRequestTypesInline }}
+    types: [{{ $pc.PullRequestTypes | join ", " }}]
+{{- else }}
+    types:
+{{- range $type := $pc.PullRequestTypes }}
+      - {{ $type }}
+{{- end }}
+{{- end }}
+  push:
+    branches:
+      - master
+      - release-**
+    tags:
+      - "v*"
+
+env:
+  GOLANG_CROSS: {{ $pc.GetGoImage .Branchvals.Buildenv }}
+
+concurrency:
+  group: ${{`{{ github.workflow }}-${{ github.ref }}`}}
+  cancel-in-progress: ${{`{{ github.event_name == 'pull_request' }}`}}
+
+jobs:
+  dep-guard:
+{{- if $pc.DepGuardIf }}
+    if: {{ $pc.DepGuardIf }}
+{{- end }}
+    uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@{{ $pc.DepGuardRef }}  # main
+    permissions:
+      contents: read
+
+  docker-build:
+    needs: [dep-guard]
+{{- if $pc.DockerBuildIfMultiline }}
+    if: |
+{{ $pc.DockerBuildIf | indent 6 }}
+{{- else }}
+    if: {{ $pc.DockerBuildIf }}
+{{- end }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: "Reclaim some runner space"
+        run: sudo rm -rf /usr/local/bin/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: {{ $pc.CheckoutDepth }}
+
+      - name: Configure AWS Credentials
+        id: configure-aws
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355  # v2
+        with:
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: ci-plugin-compiler-push
+          aws-region: eu-central-1
+
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@5a88a04c91d5c6f97aae0d9be790e64d9b1d47b7  # v1
+
+{{ range $i, $variant := $pc.Variants }}      - name: Set docker metadata{{ $variant.StepSuffix }}
+        id: {{ $variant.MetadataID }}
+        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175  # v4
+        with:
+          images: |
+            tykio/{{ $variant.ImageName }},enable=${{`{{ startsWith(github.ref, 'refs/tags') }}`}}
+            ${{`{{ steps.login-ecr.outputs.registry }}`}}/{{ $variant.ImageName }}
+          labels: |
+            org.opencontainers.image.title={{ $variant.Title }}
+            org.opencontainers.image.description={{ $variant.Description }}
+          tags: |
+            type=ref,event=pr
+            type=semver,pattern=v{{`{{version}}`}}
+            type=semver,pattern=v{{`{{major}}`}}.{{`{{minor}}`}}
+            type=semver,pattern={{`{{raw}}`}}
+            type=sha,format=long
+
+{{ if eq $variant.Name "std" }}      - name: Login to Dockerhub
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc  # v2
+        with:
+          username: ${{`{{ secrets.DOCKER_USERNAME }}`}}
+          password: ${{`{{ secrets.DOCKER_PASSWORD }}`}}
+
+{{ end }}      - name: Build and push to dockerhub/ECR{{ $variant.StepSuffix }}
+        uses: docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9  # v4
+        with:
+          context: .
+          file: ci/images/plugin-compiler/Dockerfile
+          platforms: linux/amd64
+          push: true
+          labels: ${{`{{ steps.`}}{{ $variant.MetadataID }}{{`.outputs.labels }}`}}
+          tags: ${{`{{ steps.`}}{{ $variant.MetadataID }}{{`.outputs.tags }}`}}
+          build-args: |
+            BASE_IMAGE=tykio/golang-cross:${{`{{ env.GOLANG_CROSS }}`}}
+            GITHUB_SHA=${{`{{ github.sha }}`}}
+            GITHUB_TAG=${{`{{ github.ref_name }}`}}{{ $variant.BuildArgsBlock }}{{ if lt (add1 $i) (len $pc.Variants) }}
+
+{{ end }}{{ end }}

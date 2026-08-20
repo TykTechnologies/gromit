@@ -140,7 +140,7 @@ func (b *Bundle) write(buf *bytes.Buffer, opFile string) error {
 	}
 	var op []byte
 	var err error
-	if b.isYaml.MatchString(opFile) {
+	if b.isYaml.MatchString(opFile) && !skipYamlfmt(opFile) {
 		op, err = b.yamlfmt.Format(buf.Bytes())
 		if err != nil {
 			os.WriteFile("error.yaml", buf.Bytes(), 0644)
@@ -161,6 +161,12 @@ func (b *Bundle) write(buf *bytes.Buffer, opFile string) error {
 	defer opf.Close()
 	_, err = opf.Write(op)
 	return err
+}
+
+func skipYamlfmt(opFile string) bool {
+	opFile = filepath.ToSlash(opFile)
+	return strings.HasSuffix(opFile, ".github/workflows/plugin-compiler-build.yml") ||
+		strings.HasSuffix(opFile, ".github/workflows/plugin-compiler-ng-build.yml")
 }
 
 // String will provide a human readable bundle listing
@@ -211,8 +217,7 @@ func fsTreeWalk(b *Bundle, tfs fs.FS, root string, subTemps []string) error {
 			return fs.SkipDir
 		}
 		if !d.IsDir() {
-			// The top-level template must be the first element
-			subTemps = append([]string{path}, subTemps...)
+			files := append([]string{path}, subTemps...)
 
 			stPath := path + ".d"
 			fi, err := fs.Stat(tfs, stPath)
@@ -222,18 +227,18 @@ func fsTreeWalk(b *Bundle, tfs fs.FS, root string, subTemps []string) error {
 					return err
 				}
 				for _, de := range des {
-					subTemps = append(subTemps, filepath.Join(stPath, de.Name()))
+					files = append(files, filepath.Join(stPath, de.Name()))
 				}
 			}
 			// Normalize the path to use '/' as the separator
 			path = strings.ReplaceAll(path, string(os.PathSeparator), "/")
-			log.Trace().Strs("files", subTemps).Str("template", d.Name()).Msg("adding to bundle")
+			log.Trace().Strs("files", files).Str("template", d.Name()).Msg("adding to bundle")
 
 			t := template.Must(
 				template.New(d.Name()).
 					Funcs(sprig.TxtFuncMap()).
 					Option("missingkey=error").
-					ParseFS(tfs, subTemps...))
+					ParseFS(tfs, files...))
 			b.Add(path, t)
 		}
 		return nil

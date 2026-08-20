@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,6 +39,7 @@ type repoConfig struct {
 	UpgradeFromVer      string
 	Tests               []string
 	Features            []string
+	PluginCompiler      pluginCompilerConfig
 	DeletedFiles        []string
 	Branches            map[string]branchVals `copier:"-"`
 	Repos               map[string]repoConfig `copier:"-"`
@@ -71,6 +73,56 @@ type build struct {
 
 type buildMap map[string]*build
 
+type pluginCompilerConfig struct {
+	GoImage               string
+	DepGuardRef           string
+	DepGuardIf            string
+	DockerBuildIf         string
+	CheckoutDepth         int
+	PullRequestTypes      []string
+	PullRequestTypesStyle string
+	Variants              []pluginCompilerVariant
+	NextGen               pluginCompilerNextGenConfig
+}
+
+type pluginCompilerVariant struct {
+	Name         string
+	ImageSuffix  string
+	Title        string
+	Description  string
+	BuildTag     string
+	GoExperiment string
+	GoFips140    string
+	Edition      string
+}
+
+type pluginCompilerNextGenConfig struct {
+	TagSuffix             string
+	BaseImageName         string
+	BaseImageTag          string
+	BaseImageRef          string
+	WorkflowBaseImageName string
+	WorkflowBaseImageTag  string
+	BaseImage             string
+	BaseImageDigest       string
+	// CustomizationID names the Docker Hardened Images customization that
+	// builds BaseImage. When set, release builds refresh it before resolving
+	// the base digest so the compiler ships current packages. Empty disables
+	// the refresh entirely.
+	CustomizationID  string
+	CustomizationOrg string
+	GlibcTarget      string
+	Cross            string
+	Slim             string
+	WithCxx          string
+	WithGit          string
+	GatewayTrimpath  string
+	CEArchs          string
+	EEArchs          string
+	FIPSArchs        string
+	Variants         []pluginCompilerVariant
+}
+
 // Policies models the config file structure. There are three levels
 // at which a particular value can be set: group-level, repo, branch.
 // The group level is applicable for all the repos in that group.
@@ -95,6 +147,7 @@ type branchVals struct {
 	UpgradeFromVer      string
 	Tests               []string
 	Features            []string
+	PluginCompiler      pluginCompilerConfig
 	Builds              buildMap
 	DeletedFiles        []string
 }
@@ -312,24 +365,7 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 	if err != nil {
 		return fmt.Errorf("bundle gen %v: %v", rp.Branchvals.Features, err)
 	}
-	for _, f := range rp.Branchvals.DeletedFiles {
-		fname := filepath.Join(pushOpts.OpDir, f)
-		fi, err := os.Stat(fname)
-		if os.IsNotExist(err) {
-			continue
-		}
-		if err != nil {
-			log.Warn().Err(err).Msgf("stat %s", fname)
-		}
-		glob := f
-		if fi.IsDir() {
-			log.Debug().Msgf("recursively deleting %s", fname)
-			glob += "/*"
-		}
-		if err := pushOpts.Repo.RemoveAll(glob); err != nil {
-			log.Warn().Err(err).Msgf("removing %s from the index", f)
-		}
-	}
+	removeDeletedFiles(pushOpts.OpDir, pushOpts.Repo, rp.Branchvals.DeletedFiles)
 	// Add rendered files to git staging.
 	for _, f := range files {
 		_, err := pushOpts.Repo.AddFile(f)
@@ -338,6 +374,10 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 		}
 	}
 	err = pushOpts.Repo.Commit(pushOpts.CommitMsg)
+	if errors.Is(err, ErrNoChanges) {
+		log.Info().Msgf("%s/%s is already in sync with the templates, nothing to push", rp.Name, pushOpts.Branch)
+		return ErrNoChanges
+	}
 	if err != nil {
 		return fmt.Errorf("git commit %s: %v", pushOpts.Repo.url, err)
 	}
@@ -355,6 +395,28 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 	log.Info().Msgf("pushed %s to %s", pushOpts.RemoteBranch, rp.Name)
 
 	return nil
+}
+
+func removeDeletedFiles(opDir string, repo *GitRepo, deletedFiles []string) {
+	for _, f := range deletedFiles {
+		fname := filepath.Join(opDir, f)
+		fi, err := os.Stat(fname)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			log.Warn().Err(err).Msgf("stat %s", fname)
+			continue
+		}
+		glob := f
+		if fi.IsDir() {
+			log.Debug().Msgf("recursively deleting %s", fname)
+			glob += "/*"
+		}
+		if err := repo.RemoveAll(glob); err != nil {
+			log.Warn().Err(err).Msgf("removing %s from the index", f)
+		}
+	}
 }
 
 // LoadRepoPolicies populates the supplied policies with the policy key from a the config file

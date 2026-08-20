@@ -1,0 +1,81 @@
+name: fips name audit
+
+# TT-17822: one-off, read-only audit of package names across every
+# packagecloud repo, to verify that historical FIPS packages follow the
+# *-fips naming convention the pruning code will rely on. Lives on a
+# temporary branch; delete after the ticket is closed.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Enumerate packages and find FIPS names
+        env:
+          PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${PACKAGECLOUD_TOKEN:?secret PACKAGECLOUD_TOKEN is not available}"
+
+          REPOS=$(curl -sf -u "$PACKAGECLOUD_TOKEN:" \
+            "https://packagecloud.io/api/v1/repos.json" \
+            | jq -r '.[] | select(.fqname | startswith("tyk/")) | .name')
+          echo "repos found:" $REPOS
+
+          mkdir -p audit
+          for repo in $REPOS; do
+            echo "=== $repo ==="
+            page=1
+            : > "audit/$repo.jsonl"
+            while :; do
+              resp=$(curl -sf -u "$PACKAGECLOUD_TOKEN:" \
+                "https://packagecloud.io/api/v1/repos/tyk/$repo/packages.json?per_page=250&page=$page") || {
+                echo "  fetch failed (page $page), skipping repo"; break; }
+              count=$(jq length <<<"$resp")
+              [ "$count" -eq 0 ] && break
+              jq -c '.[] | {name, version, created_at}' <<<"$resp" >> "audit/$repo.jsonl"
+              page=$((page + 1))
+            done
+            echo "  $(wc -l < "audit/$repo.jsonl") packages"
+          done
+
+          {
+            echo "## Unique package names per repo"
+            for repo in $REPOS; do
+              [ -s "audit/$repo.jsonl" ] || continue
+              echo "--- $repo"
+              jq -r .name "audit/$repo.jsonl" | sort | uniq -c | sort -rn
+            done
+            echo
+            echo "## FIPS-related packages (name or version contains 'fips')"
+            for repo in $REPOS; do
+              [ -s "audit/$repo.jsonl" ] || continue
+              hits=$(jq -r 'select((.name + .version) | ascii_downcase | contains("fips"))
+                | [.name, .version, .created_at] | @tsv' "audit/$repo.jsonl" || true)
+              if [ -n "$hits" ]; then
+                echo "--- $repo"
+                echo "$hits" | awk -F'\t' '{n[$1]++; if (!min[$1] || $3 < min[$1]) min[$1]=$3;
+                  if ($3 > max[$1]) max[$1]=$3}
+                  END {for (k in n) printf "  %-28s %5d pkgs  %s .. %s\n", k, n[k], min[k], max[k]}'
+              fi
+            done
+          } | tee audit/report.txt
+
+          {
+            echo '## FIPS name audit'
+            echo '```'
+            cat audit/report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload raw data
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: fips-name-audit
+          path: audit/
+          retention-days: 90
