@@ -17,8 +17,11 @@ import (
 type Plan struct {
 	Repo        string    `json:"repo"`
 	GeneratedAt time.Time `json:"generated_at"`
-	Track       string    `json:"track,omitempty"`
-	Editions    []string  `json:"editions,omitempty"`
+	// NotBefore is the earliest time a deletion step may execute
+	// this plan; the grace period is carried by the plan itself
+	NotBefore time.Time `json:"not_before"`
+	Track     string    `json:"track,omitempty"`
+	Editions  []string  `json:"editions,omitempty"`
 	// Anchor is the series the retention window counts down from,
 	// Cutoff the oldest retained series, Series every minor series
 	// with released packages
@@ -76,10 +79,11 @@ func (c *Client) ListPackages(repo string) ([]pc.PackageDetail, error) {
 // BuildPlan classifies every package in a repo against the retention
 // policy. Repos without a track use their static cutoffs, making the
 // plan a preview of what `pkgs clean` would do today.
-func BuildPlan(repoName string, cfg pkgConfig, tracks Tracks, items []pc.PackageDetail, now time.Time) (Plan, error) {
+func BuildPlan(repoName string, cfg pkgConfig, tracks Tracks, items []pc.PackageDetail, now time.Time, grace time.Duration) (Plan, error) {
 	p := Plan{
 		Repo:         repoName,
 		GeneratedAt:  now,
+		NotBefore:    now.Add(grace),
 		Track:        cfg.Track,
 		Editions:     cfg.Editions,
 		PrunedSeries: make(map[string]int),
@@ -170,6 +174,7 @@ func (p Plan) Render() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s: %d packages, %d retained, %d pruned (%.1f GiB)\n",
 		p.Repo, p.Retained+p.Pruned, p.Retained, p.Pruned, float64(p.PrunedBytes)/(1<<30))
+	fmt.Fprintf(&b, "  no deletion before %s\n", p.NotBefore.Format("2006-01-02"))
 	if p.Track != "" {
 		fmt.Fprintf(&b, "  track %s editions %v, anchor %s -> cutoff %s (oldest retained series)\n",
 			p.Track, p.Editions, p.Anchor, p.Cutoff)
