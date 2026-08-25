@@ -117,6 +117,8 @@ The JSON output carries the full prune-eligible package list with
 checksums, which later execution stages verify before deleting.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		asJSON, _ := cmd.Flags().GetBool("json")
+		graceDays, _ := cmd.Flags().GetInt("grace-days")
+		grace := time.Duration(graceDays) * 24 * time.Hour
 		tracks, err := pkgs.LoadTracks()
 		if err != nil {
 			return fmt.Errorf("loading tracks config: %w", err)
@@ -131,7 +133,7 @@ checksums, which later execution stages verify before deleting.`,
 			if err != nil {
 				return fmt.Errorf("listing %s: %w", repoName, err)
 			}
-			plan, err := pkgs.BuildPlan(repoName, cfg, tracks, items, time.Now())
+			plan, err := pkgs.BuildPlan(repoName, cfg, tracks, items, time.Now(), grace)
 			if err != nil {
 				return fmt.Errorf("planning %s: %w", repoName, err)
 			}
@@ -165,4 +167,5 @@ func init() {
 	cleanSubCmd.Flags().Bool("delete", false, "Actually delete the package from the repo")
 
 	planSubCmd.Flags().Bool("json", false, "Emit the plan as JSON, including the prune-eligible package list")
+	planSubCmd.Flags().Int("grace-days", 30, "Days until the plan's not_before deadline; override for the 90-day launch notice")
 }

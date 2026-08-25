@@ -10,6 +10,7 @@ import (
 )
 
 var planNow = time.Date(2026, 8, 17, 0, 0, 0, 0, time.UTC)
+var planGrace = 30 * 24 * time.Hour
 
 func pkg(version string, age time.Duration) pc.PackageDetail {
 	return pc.PackageDetail{
@@ -47,9 +48,11 @@ func TestBuildPlanTrackDriven(t *testing.T) {
 	}
 	// EE window: anchor 5.8, retaining three shipped series below it
 	// (5.3, 5.2, 3.0), so the cutoff is v3.0
-	plan, err := BuildPlan("tyk-test", cfg, testTracks, items, planNow)
+	plan, err := BuildPlan("tyk-test", cfg, testTracks, items, planNow, planGrace)
 	require.NoError(t, err)
 
+	// the plan carries its own grace-period deadline
+	assert.Equal(t, planNow.AddDate(0, 0, 30), plan.NotBefore)
 	assert.Equal(t, "5.8", plan.Anchor)
 	assert.Equal(t, "v3.0", plan.Cutoff)
 	assert.Equal(t, 2, plan.Pruned)
@@ -81,7 +84,7 @@ func TestBuildPlanStatic(t *testing.T) {
 		pkg("1.9.0", 4*365*24*time.Hour), // above cutoff but too old: pruned
 		pkg("2.0.0", 24*time.Hour),       // fresh and above cutoff: retained
 	}
-	plan, err := BuildPlan("tyk-mdcb", cfg, testTracks, items, planNow)
+	plan, err := BuildPlan("tyk-mdcb", cfg, testTracks, items, planNow, planGrace)
 	require.NoError(t, err)
 
 	assert.Empty(t, plan.Anchor)
@@ -92,17 +95,17 @@ func TestBuildPlanStatic(t *testing.T) {
 }
 
 func TestBuildPlanBadTrack(t *testing.T) {
-	_, err := BuildPlan("x", pkgConfig{Track: "nonesuch", Editions: []string{"ce"}}, testTracks, nil, planNow)
+	_, err := BuildPlan("x", pkgConfig{Track: "nonesuch", Editions: []string{"ce"}}, testTracks, nil, planNow, planGrace)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not in the tracks config")
 
-	_, err = BuildPlan("x", pkgConfig{Track: "gateway"}, testTracks, nil, planNow)
+	_, err = BuildPlan("x", pkgConfig{Track: "gateway"}, testTracks, nil, planNow, planGrace)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no editions")
 
 	// anchor with no shipped packages: loud failure
 	_, err = BuildPlan("x", pkgConfig{Track: "gateway", Editions: []string{"ce"}},
-		testTracks, []pc.PackageDetail{pkg("1.0.0", 0)}, planNow)
+		testTracks, []pc.PackageDetail{pkg("1.0.0", 0)}, planNow, planGrace)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no released packages")
 }
