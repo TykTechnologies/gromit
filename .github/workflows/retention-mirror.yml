@@ -1,0 +1,92 @@
+name: Retention mirror
+
+# Copies the prune-eligible packages from a committed retention plan to
+# the S3 archive bucket, verifying every object by checksum. Nothing is
+# deleted: this is the safety net the (separate, later) deletion step
+# depends on - a package not confirmed archived is never deleted.
+
+on:
+  workflow_dispatch:
+    inputs:
+      month:
+        description: 'Plan month to mirror (YYYY-MM, empty = latest committed plan)'
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: retention-mirror
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # OIDC handshake with AWS
+  contents: read
+
+jobs:
+  mirror:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        with:
+          app-id: ${{ secrets.PROBE_APP_ID }}
+          private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
+          owner: TykTechnologies
+          repositories: artifact-retention-plans
+          permission-contents: read
+
+      - name: Checkout gromit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout plans repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: TykTechnologies/artifact-retention-plans
+          token: ${{ steps.app-token.outputs.token }}
+          path: plans-repo
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+
+      - name: Assume archive role
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ secrets.ARCHIVE_ROLE_ARN }}
+          aws-region: eu-north-1
+
+      - name: Mirror plan to archive
+        env:
+          PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}
+          MONTH: ${{ inputs.month }}
+        run: |
+          set -euo pipefail
+          if [ -n "$MONTH" ]; then
+            PLAN="plans-repo/plans/$MONTH/plan.json"
+          else
+            PLAN=$(ls plans-repo/plans/*/plan.json | sort | tail -1)
+          fi
+          if [ ! -f "$PLAN" ]; then
+            echo "::error::no plan found at $PLAN"
+            exit 1
+          fi
+          echo "mirroring $PLAN"
+          go run . pkgs mirror --plan "$PLAN" --verify | tee mirror.txt
+
+          {
+            echo "## Retention mirror"
+            echo ""
+            echo "Plan: \`$PLAN\`"
+            echo ""
+            echo '```'
+            cat mirror.txt
+            echo '```'
+            echo ""
+            echo "Every archived object was read back and checksum-verified."
+            echo "Nothing was deleted."
+          } >> "$GITHUB_STEP_SUMMARY"

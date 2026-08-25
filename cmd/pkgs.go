@@ -25,6 +25,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 var pkgClient *pkgs.Client
@@ -153,9 +154,69 @@ checksums, which later execution stages verify before deleting.`,
 	},
 }
 
+var mirrorSubCmd = &cobra.Command{
+	Use:   "mirror",
+	Short: "Copy the prune-eligible packages from a plan to the S3 archive",
+	Long: `Reads a plan (the JSON from 'pkgs plan --json'), matches each
+prune-eligible package by sha256 against the live repo, and uploads it
+to the archive bucket. Packages already archived are skipped, so
+reruns are idempotent. Nothing is ever deleted.
+
+With --verify, every archived object is read back and its hash checked
+against the plan, proving the copy is restorable.
+
+Exits non-zero if any package could not be confirmed archived; such a
+plan must not proceed to deletion.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		planFile, _ := cmd.Flags().GetString("plan")
+		bucket, _ := cmd.Flags().GetString("bucket")
+		verify, _ := cmd.Flags().GetBool("verify")
+
+		data, err := os.ReadFile(planFile)
+		if err != nil {
+			return err
+		}
+		var plans []pkgs.Plan
+		if err := json.Unmarshal(data, &plans); err != nil {
+			return fmt.Errorf("parsing %s: %w", planFile, err)
+		}
+		store, err := pkgs.NewS3Store(cmd.Context(), bucket)
+		if err != nil {
+			return err
+		}
+		concurrency, _ := cmd.Flags().GetInt("concurrency")
+		results := make([]pkgs.MirrorResult, len(plans))
+		g := new(errgroup.Group)
+		g.SetLimit(concurrency)
+		for i, plan := range plans {
+			g.Go(func() error {
+				items, err := pkgClient.ListPackages(plan.Repo)
+				if err != nil {
+					return fmt.Errorf("listing %s: %w", plan.Repo, err)
+				}
+				results[i] = pkgs.MirrorPlan(cmd.Context(), plan, items, store, verify)
+				return nil
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return err
+		}
+		clean := true
+		for _, res := range results {
+			fmt.Fprint(cmd.OutOrStdout(), res.Render())
+			clean = clean && res.Clean()
+		}
+		if !clean {
+			return fmt.Errorf("some packages are not confirmed archived")
+		}
+		return nil
+	},
+}
+
 func init() {
 	pkgsCmd.AddCommand(cleanSubCmd)
 	pkgsCmd.AddCommand(planSubCmd)
+	pkgsCmd.AddCommand(mirrorSubCmd)
 	rootCmd.AddCommand(pkgsCmd)
 
 	pkgsCmd.PersistentFlags().String("owner", "tyk", "PackageCloud repo owner")
@@ -168,4 +229,10 @@ func init() {
 
 	planSubCmd.Flags().Bool("json", false, "Emit the plan as JSON, including the prune-eligible package list")
 	planSubCmd.Flags().Int("grace-days", 30, "Days until the plan's not_before deadline; override for the 90-day launch notice")
+
+	mirrorSubCmd.Flags().String("plan", "", "Plan file from 'pkgs plan --json'")
+	mirrorSubCmd.MarkFlagRequired("plan")
+	mirrorSubCmd.Flags().String("bucket", "tyk-artifact-archive", "S3 bucket to archive to")
+	mirrorSubCmd.Flags().Bool("verify", false, "Read every archived object back and check its hash")
+	mirrorSubCmd.Flags().Int("concurrency", 3, "Repos to mirror in parallel")
 }
