@@ -59,6 +59,9 @@ jobs:
         with:
           role-to-assume: ${{ secrets.ARCHIVE_ROLE_ARN }}
           aws-region: eu-north-1
+          # the first full mirror runs for hours; the role's own max
+          # session duration must be raised to match.
+          role-duration-seconds: 21600
 
       - name: Mirror plan to archive
         env:
