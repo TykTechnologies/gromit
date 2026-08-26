@@ -1,6 +1,8 @@
 package pkgs
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -20,7 +22,6 @@ func pkg(version string, age time.Duration) pc.PackageDetail {
 		DistroVersion: "ubuntu/jammy",
 		Filename:      "tyk-test_" + version + "_amd64.deb",
 		Sha256Sum:     "sha-" + version,
-		Size:          "1000",
 		CreateTime:    planNow.Add(-age),
 	}
 }
@@ -60,7 +61,6 @@ func TestBuildPlanTrackDriven(t *testing.T) {
 	assert.Equal(t, 1, plan.NonSemver)
 	assert.Equal(t, map[string]int{"v3.0.9": 1}, plan.Protected)
 	assert.Equal(t, map[string]int{"v2.8": 1, "v2.9": 1}, plan.PrunedSeries)
-	assert.Equal(t, int64(2000), plan.PrunedBytes)
 
 	// the prune list carries the tamper-evident identity
 	require.Len(t, plan.Packages, 2)
@@ -92,6 +92,35 @@ func TestBuildPlanStatic(t *testing.T) {
 	assert.Equal(t, 2, plan.Pruned)
 	assert.Equal(t, 3, plan.Retained)
 	assert.Equal(t, map[string]int{"v1.8.2": 1}, plan.Protected)
+}
+
+func TestFillPrunedBytes(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodHead, r.Method)
+		w.Header().Set("Content-Length", "1000")
+	}))
+	defer srv.Close()
+
+	items := []pc.PackageDetail{
+		pkg("1.6.9", 0),
+		pkg("1.6.10", 0),
+		pkg("2.0.0", 0), // retained: must not be sized
+	}
+	// same file under a second distro version: counted once
+	dup := pkg("1.6.9", 0)
+	dup.DistroVersion = "debian/bookworm"
+	items = append(items, dup)
+	for i := range items {
+		items[i].DownloadURL = srv.URL + "/" + items[i].Filename
+	}
+
+	plan, err := BuildPlan("tyk-test", pkgConfig{VersionCutoff: "v1.7"}, testTracks, items, planNow, planGrace)
+	require.NoError(t, err)
+	require.Equal(t, 3, plan.Pruned)
+
+	c := NewClient("test-token", "tyk", 100, 100)
+	c.FillPrunedBytes(&plan, items, 4)
+	assert.Equal(t, int64(2000), plan.PrunedBytes)
 }
 
 func TestBuildPlanBadTrack(t *testing.T) {

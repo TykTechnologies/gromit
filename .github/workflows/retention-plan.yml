@@ -71,8 +71,11 @@ jobs:
           # shellcheck disable=SC2086
           go run . pkgs plan --grace-days "$GRACE_DAYS" $REPOS > plan.txt
 
-      # Newly eligible = checksums in this plan that were not in the
-      # previous committed plan. Only these trigger the Slack notice.
+      # One released file is indexed once per distro version on
+      # Packagecloud, so entry counts run ~10x higher than file counts;
+      # checksums identify the underlying files. Newly eligible =
+      # checksums in this plan that were not in the previous committed
+      # plan. Only these trigger the Slack notice.
       - name: Diff against previous plan
         id: diff
         run: |
@@ -85,6 +88,7 @@ jobs:
           fi
           comm -23 current.shas previous.shas > new.shas
           echo "new_count=$(wc -l < new.shas | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          echo "total_files=$(wc -l < current.shas | tr -d ' ')" >> "$GITHUB_OUTPUT"
           echo "total_pruned=$(jq '[.[].pruned] | add' plan.json)" >> "$GITHUB_OUTPUT"
           echo "total_gib=$(jq '[.[].pruned_bytes] | add / 1073741824 * 10 | round / 10' plan.json)" >> "$GITHUB_OUTPUT"
           echo "not_before=$(jq -r '.[0].not_before[:10]' plan.json)" >> "$GITHUB_OUTPUT"
@@ -121,7 +125,7 @@ jobs:
             echo "|------|----------|----------|--------|------------|------------|"
             jq -r '.[] | "| \(.repo) | \(.retained + .pruned) | \(.retained) | \(.pruned) | \(.pruned_bytes / 1073741824 * 10 | round / 10) | \(.not_before[:10]) |"' plan.json
             echo ""
-            echo "$NEW_COUNT newly eligible packages since the previous plan."
+            echo "$NEW_COUNT files newly eligible since the previous plan."
             echo "Committed as [\`$COMMIT\`](https://github.com/TykTechnologies/artifact-retention-plans/commit/$COMMIT)."
             echo ""
             echo "Nothing was deleted by this workflow."
@@ -141,7 +145,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Artifact retention plan published* — @support-team\n${{ steps.diff.outputs.new_count }} packages are newly eligible for pruning (${{ steps.diff.outputs.total_pruned }} total eligible, ${{ steps.diff.outputs.total_gib }} GiB). Nothing will be deleted before *${{ steps.diff.outputs.not_before }}*.\n<https://github.com/TykTechnologies/artifact-retention-plans/commit/${{ steps.commit.outputs.sha }}|Review the committed plan>"
+                    "text": "*Artifact retention plan published* — @support-team\n${{ steps.diff.outputs.new_count }} files are newly eligible for pruning since the last plan. In total ${{ steps.diff.outputs.total_files }} files are eligible, which appear as ${{ steps.diff.outputs.total_pruned }} package listings on Packagecloud (one per distro version, ${{ steps.diff.outputs.total_gib }} GiB). Nothing will be deleted before *${{ steps.diff.outputs.not_before }}*.\n<https://github.com/TykTechnologies/artifact-retention-plans/commit/${{ steps.commit.outputs.sha }}|Review the committed plan>"
                   }
                 }
               ]

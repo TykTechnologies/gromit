@@ -119,6 +119,7 @@ checksums, which later execution stages verify before deleting.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		asJSON, _ := cmd.Flags().GetBool("json")
 		graceDays, _ := cmd.Flags().GetInt("grace-days")
+		concurrency, _ := cmd.Flags().GetInt("concurrency")
 		grace := time.Duration(graceDays) * 24 * time.Hour
 		tracks, err := pkgs.LoadTracks()
 		if err != nil {
@@ -138,6 +139,7 @@ checksums, which later execution stages verify before deleting.`,
 			if err != nil {
 				return fmt.Errorf("planning %s: %w", repoName, err)
 			}
+			pkgClient.FillPrunedBytes(&plan, items, concurrency)
 			plans = append(plans, plan)
 			if !asJSON {
 				fmt.Fprint(cmd.OutOrStdout(), plan.Render())
@@ -229,6 +231,7 @@ func init() {
 
 	planSubCmd.Flags().Bool("json", false, "Emit the plan as JSON, including the prune-eligible package list")
 	planSubCmd.Flags().Int("grace-days", 30, "Days until the plan's not_before deadline; override for the 90-day launch notice")
+	planSubCmd.Flags().Int("concurrency", 8, "Concurrent size lookups, bounded overall by rps/burst")
 
 	mirrorSubCmd.Flags().String("plan", "", "Plan file from 'pkgs plan --json'")
 	mirrorSubCmd.MarkFlagRequired("plan")
