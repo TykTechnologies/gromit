@@ -18,7 +18,7 @@
     runs-on: {{`${{ vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
     {{- end }}
     {{- if eq .Name "tyk-analytics" }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     {{- end }}
     permissions:
       id-token: write   # AWS OIDC JWT
