@@ -3,13 +3,16 @@ package pkgs
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"sort"
-	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	pc "github.com/tyklabs/packagecloud/api/v1"
 	"golang.org/x/mod/semver"
+	"golang.org/x/sync/errgroup"
 )
 
 // Plan is a dry-run report of what the retention policy would prune
@@ -29,8 +32,9 @@ type Plan struct {
 	Cutoff string   `json:"cutoff,omitempty"`
 	Series []string `json:"series"`
 
-	Retained    int   `json:"retained"`
-	Pruned      int   `json:"pruned"`
+	Retained int `json:"retained"`
+	Pruned   int `json:"pruned"`
+	// PrunedBytes counts each unique file once
 	PrunedBytes int64 `json:"pruned_bytes"`
 
 	PrunedSeries map[string]int `json:"pruned_series,omitempty"`
@@ -150,9 +154,6 @@ func BuildPlan(repoName string, cfg pkgConfig, tracks Tracks, items []pc.Package
 		if prune {
 			p.Pruned++
 			p.PrunedSeries[semver.MajorMinor(v)]++
-			if sz, err := strconv.ParseInt(item.Size, 10, 64); err == nil {
-				p.PrunedBytes += sz
-			}
 			p.Packages = append(p.Packages, PlanPackage{
 				Name:          item.Name,
 				Version:       item.Version,
@@ -167,6 +168,66 @@ func BuildPlan(repoName string, cfg pkgConfig, tracks Tracks, items []pc.Package
 		}
 	}
 	return p, nil
+}
+
+// FillPrunedBytes sets p.PrunedBytes from the Content-Length of each
+// unique prune-eligible file; the listing API does not return sizes.
+// The count is advisory, so failures are logged and skipped.
+func (c *Client) FillPrunedBytes(p *Plan, items []pc.PackageDetail, concurrency int) {
+	urlBySha := make(map[string]string, len(items))
+	for _, item := range items {
+		urlBySha[item.Sha256Sum] = item.DownloadURL
+	}
+	seen := make(map[string]bool, len(p.Packages))
+	var total atomic.Int64
+	g := new(errgroup.Group)
+	g.SetLimit(concurrency)
+	for _, pp := range p.Packages {
+		if seen[pp.Sha256Sum] {
+			continue
+		}
+		seen[pp.Sha256Sum] = true
+		url, found := urlBySha[pp.Sha256Sum]
+		if !found {
+			log.Warn().Str("sha256", pp.Sha256Sum).Msgf("sizing %s: not in the repo listing", pp.Filename)
+			continue
+		}
+		g.Go(func() error {
+			size, err := c.headSize(url)
+			if err != nil {
+				log.Warn().Err(err).Msgf("sizing %s", pp.Filename)
+				return nil
+			}
+			total.Add(size)
+			return nil
+		})
+	}
+	_ = g.Wait()
+	p.PrunedBytes = total.Load()
+}
+
+// headSize returns the Content-Length of a download URL
+func (c *Client) headSize(url string) (int64, error) {
+	req, err := http.NewRequestWithContext(c.ctx, "HEAD", url, nil)
+	if err != nil {
+		return 0, err
+	}
+	req.SetBasicAuth(c.token, "")
+	if err := c.limiter.Wait(c.ctx); err != nil {
+		return 0, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("%s: %s", url, resp.Status)
+	}
+	if resp.ContentLength < 0 {
+		return 0, fmt.Errorf("%s: no content length", url)
+	}
+	return resp.ContentLength, nil
 }
 
 // Render returns a human-readable summary of the plan
