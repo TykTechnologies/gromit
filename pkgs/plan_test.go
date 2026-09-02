@@ -35,6 +35,7 @@ func TestBuildPlanTrackDriven(t *testing.T) {
 		Track:      "gateway",
 		Editions:   []string{"ce", "ee"},
 		Exceptions: []string{"v3.0.9"},
+		Name:       "Tyk Test",
 	}
 	items := []pc.PackageDetail{
 		pkg("2.8.3", 8*365*24*time.Hour), // below cutoff: pruned
@@ -51,6 +52,7 @@ func TestBuildPlanTrackDriven(t *testing.T) {
 	// (5.3, 5.2, 3.0), so the cutoff is v3.0
 	plan, err := BuildPlan("tyk-test", cfg, testTracks, items, planNow, planGrace)
 	require.NoError(t, err)
+	assert.Equal(t, "Tyk Test", plan.Product)
 
 	// the plan carries its own grace-period deadline
 	assert.Equal(t, planNow.AddDate(0, 0, 30), plan.NotBefore)

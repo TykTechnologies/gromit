@@ -867,6 +867,8 @@ pkgs:
     # versioncutoff below still drives `pkgs clean`
     track: gateway
     editions: [ce, ee]
+    # display name on the tyk.io retirement page
+    name: Tyk Gateway
     # exceptions are those versions that should not be deleted from
     # packagecloud. These don't have to be semver.
     exceptions:
@@ -886,6 +888,7 @@ pkgs:
     notbackup: false
     track: gateway
     editions: [ce, ee]
+    name: Tyk Dashboard
     exceptions:
       - v2.6.2
       - v2.9.3
