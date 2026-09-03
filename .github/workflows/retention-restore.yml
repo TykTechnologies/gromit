@@ -1,0 +1,195 @@
+name: Retention restore
+
+# Restores one archived artifact for a support request. Deep Archive
+# restores take hours, so the workflow is run twice: the first run
+# initiates the restore, a later run downloads the object, verifies it
+# against the committed plan and attaches it as a workflow artifact.
+# Support runbook:
+# https://tyktech.atlassian.net/wiki/spaces/SESAP/pages/4577394690/Support+Runbook+Retired+Artifact+Requests
+
+on:
+  workflow_dispatch:
+    inputs:
+      key:
+        description: 'Archive key, e.g. tyk-gateway/ubuntu/focal/tyk-gateway_4.2.3_amd64.deb'
+        type: string
+        required: true
+      tier:
+        description: 'Restore tier: Bulk ~48h, Standard ~12h (urgent, costlier)'
+        type: choice
+        options:
+          - Bulk
+          - Standard
+        default: Bulk
+
+concurrency:
+  group: retention-restore-${{ inputs.key }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # OIDC handshake with AWS
+  contents: read
+
+env:
+  BUCKET: tyk-artifact-archive
+
+jobs:
+  restore:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        with:
+          app-id: ${{ secrets.PROBE_APP_ID }}
+          private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
+          owner: TykTechnologies
+          repositories: artifact-retention-plans
+          permission-contents: read
+
+      - name: Checkout plans repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: TykTechnologies/artifact-retention-plans
+          token: ${{ steps.app-token.outputs.token }}
+          path: plans-repo
+          persist-credentials: false
+
+      # Only artifacts in a committed plan can be restored; the plan's
+      # checksum is what the download is verified against.
+      - name: Find checksum in committed plans
+        id: plan
+        env:
+          KEY: ${{ inputs.key }}
+        run: |
+          set -euo pipefail
+          repo=${KEY%%/*}
+          filename=${KEY##*/}
+          mid=${KEY#"$repo"/}
+          distro=${mid%/*}
+          sha=$(jq -r --arg repo "$repo" --arg d "$distro" --arg f "$filename" \
+            '.[] | select(.repo==$repo) | .packages[]? | select(.distro_version==$d and .filename==$f) | .sha256sum' \
+            plans-repo/plans/*/plan.json | sort -u)
+          if [ -z "$sha" ]; then
+            echo "::error::$KEY is not in any committed plan; only planned artifacts are archived"
+            exit 1
+          fi
+          if [ "$(echo "$sha" | wc -l)" -ne 1 ]; then
+            echo "::error::$KEY has conflicting checksums across plans: $sha"
+            exit 1
+          fi
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+          echo "filename=$filename" >> "$GITHUB_OUTPUT"
+
+      - name: Assume archive role
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ secrets.ARCHIVE_ROLE_ARN }}
+          aws-region: eu-north-1
+
+      - name: Check object state, restore or fetch
+        id: check
+        env:
+          KEY: ${{ inputs.key }}
+          TIER: ${{ inputs.tier }}
+          SHA256: ${{ steps.plan.outputs.sha256 }}
+          FILENAME: ${{ steps.plan.outputs.filename }}
+        run: |
+          set -euo pipefail
+          head=$(aws s3api head-object --bucket "$BUCKET" --key "$KEY")
+          storage=$(echo "$head" | jq -r '.StorageClass // "STANDARD"')
+          restore=$(echo "$head" | jq -r '.Restore // ""')
+          echo "storage class: $storage; restore: ${restore:-none}"
+
+          ready=false
+          case "$storage" in
+            DEEP_ARCHIVE|GLACIER)
+              if echo "$restore" | grep -q 'ongoing-request="false"'; then
+                ready=true
+              elif echo "$restore" | grep -q 'ongoing-request="true"'; then
+                echo "state=in-progress" >> "$GITHUB_OUTPUT"
+              else
+                aws s3api restore-object --bucket "$BUCKET" --key "$KEY" \
+                  --restore-request "Days=7,GlacierJobParameters={Tier=$TIER}"
+                echo "state=initiated" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+            *)
+              ready=true
+              ;;
+          esac
+
+          if [ "$ready" = true ]; then
+            aws s3 cp "s3://$BUCKET/$KEY" "$FILENAME"
+            got=$(sha256sum "$FILENAME" | cut -d' ' -f1)
+            if [ "$got" != "$SHA256" ]; then
+              echo "::error::checksum mismatch: plan says $SHA256, downloaded $got"
+              exit 1
+            fi
+            meta=$(echo "$head" | jq -r '.Metadata.sha256 // ""')
+            if [ -n "$meta" ] && [ "$meta" != "$SHA256" ]; then
+              echo "::error::object metadata sha $meta disagrees with plan $SHA256"
+              exit 1
+            fi
+            echo "state=ready" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Attach verified artifact
+        if: steps.check.outputs.state == 'ready'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.plan.outputs.filename }}
+          path: ${{ steps.plan.outputs.filename }}
+          retention-days: 3
+
+      - name: Summarise
+        env:
+          KEY: ${{ inputs.key }}
+          TIER: ${{ inputs.tier }}
+          STATE: ${{ steps.check.outputs.state }}
+          SHA256: ${{ steps.plan.outputs.sha256 }}
+        run: |
+          {
+            echo "## Retention restore"
+            echo ""
+            echo "Key: \`$KEY\`"
+            echo ""
+            case "$STATE" in
+              ready)
+                echo "Verified against the committed plan (sha256 \`$SHA256\`) and"
+                echo "attached to this run as a workflow artifact (kept 3 days)."
+                echo ""
+                echo "Hand the file to the customer through the normal secure channel,"
+                echo "with the checksum, as-is/unsupported wording and an upgrade path."
+                ;;
+              initiated)
+                echo "Deep Archive restore initiated ($TIER tier)."
+                echo "Re-run this workflow with the same key after ~12h (Standard) or ~48h (Bulk)."
+                ;;
+              in-progress)
+                echo "A restore is already in progress. Re-run this workflow later."
+                ;;
+            esac
+            echo ""
+            echo "[Support runbook](https://tyktech.atlassian.net/wiki/spaces/SESAP/pages/4577394690/Support+Runbook+Retired+Artifact+Requests)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Slack notice
+        if: steps.check.outputs.state != ''
+        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {
+              "channel": "${{ secrets.RETENTION_SLACK_CHANNEL }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Retention restore* — `${{ inputs.key }}`\n${{ steps.check.outputs.state == 'ready' && 'Restored, checksum-verified and attached to the run as an artifact (kept 3 days).' || steps.check.outputs.state == 'initiated' && format('Deep Archive restore initiated ({0} tier). Re-run the workflow after the restore window to collect the file.', inputs.tier) || 'A restore is already in progress; re-run the workflow later.' }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run> · <https://tyktech.atlassian.net/wiki/spaces/SESAP/pages/4577394690/Support+Runbook+Retired+Artifact+Requests|Runbook>"
+                  }
+                }
+              ]
+            }
