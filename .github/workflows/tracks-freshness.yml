@@ -1,0 +1,77 @@
+name: Tracks freshness
+
+# Compares the tracks config against the latest actual Gateway release
+# so a release that ships without a tracks update is noticed within a
+# week instead of at the next retention plan. Stale tracks are safe
+# (the retention window anchors too old, retaining more); tracks ahead
+# of reality are dangerous and flagged separately.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # 09:00 UTC every Monday
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout gromit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Compare tracks with the latest release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          configured=$(yq '.tracks.gateway.current_feature' config/config.yaml)
+          latest_tag=$(gh api repos/TykTechnologies/tyk/releases/latest --jq '.tag_name')
+          latest=$(echo "${latest_tag#v}" | cut -d. -f1,2)
+          echo "configured=$configured" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
+          state=ok
+          if [ "$configured" != "$latest" ]; then
+            newest=$(printf '%s\n%s\n' "$configured" "$latest" | sort -V | tail -1)
+            if [ "$newest" = "$configured" ]; then
+              # tracks claim a series that has not shipped: this moves
+              # the retention window forward of reality
+              state=ahead
+            else
+              state=stale
+            fi
+          fi
+          echo "state=$state" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Tracks freshness"
+            echo ""
+            echo "Configured current_feature: \`$configured\`"
+            echo "Latest Gateway release: \`$latest\` (\`$latest_tag\`)"
+            echo ""
+            echo "State: **$state**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Slack alert
+        if: steps.check.outputs.state != 'ok'
+        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {
+              "channel": "${{ secrets.NONFUNC_SLACK_CHANNEL }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Tracks drift* — gromit's tracks say current_feature `${{ steps.check.outputs.configured }}` but the latest Gateway release is `${{ steps.check.outputs.latest }}`.\n${{ steps.check.outputs.state == 'ahead' && ':rotating_light: The config is AHEAD of reality: the retention window is anchored on an unreleased series. Fix config/config.yaml before the next retention plan runs.' || 'The config is stale: retention windows are anchored older than policy intends (safe, but the published policy lags). Update tracks in config/config.yaml as part of the release activities.' }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"
+                  }
+                }
+              ]
+            }

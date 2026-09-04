@@ -193,3 +193,25 @@ jobs:
                 }
               ]
             }
+
+      # Team copy: posts even when the run fails before the check step,
+      # so a restore that errored out is still noticed
+      - name: Slack notice (team)
+        if: always()
+        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {
+              "channel": "${{ secrets.NONFUNC_SLACK_CHANNEL }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Retention restore run* — `${{ inputs.key }}` (${{ inputs.tier }} tier)\nState: ${{ steps.check.outputs.state || 'failed before the S3 check' }} · triggered by ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"
+                  }
+                }
+              ]
+            }
