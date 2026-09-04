@@ -177,3 +177,24 @@ jobs:
                 }
               ]
             }
+
+      # The team copy posts on every run, so a silent month still
+      # confirms the automation ran
+      - name: Slack notice (team)
+        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {
+              "channel": "${{ secrets.NONFUNC_SLACK_CHANNEL }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Retention plan run* — ${{ steps.diff.outputs.new_count }} newly eligible files, ${{ steps.diff.outputs.total_files }} total (${{ steps.diff.outputs.total_gib }} GiB), not_before *${{ steps.diff.outputs.not_before }}*.\n<https://github.com/TykTechnologies/artifact-retention-plans/commit/${{ steps.commit.outputs.sha }}|Committed plan> · <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Run>"
+                  }
+                }
+              ]
+            }
