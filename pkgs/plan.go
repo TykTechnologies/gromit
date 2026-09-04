@@ -25,6 +25,9 @@ type Plan struct {
 	NotBefore time.Time `json:"not_before"`
 	Track     string    `json:"track,omitempty"`
 	Editions  []string  `json:"editions,omitempty"`
+	// Product is the display name from the pkgs config, carried in
+	// the plan so downstream renderers need no config access
+	Product string `json:"product,omitempty"`
 	// Anchor is the series the retention window counts down from,
 	// Cutoff the oldest retained series, Series every minor series
 	// with released packages
@@ -90,6 +93,7 @@ func BuildPlan(repoName string, cfg pkgConfig, tracks Tracks, items []pc.Package
 		NotBefore:    now.Add(grace),
 		Track:        cfg.Track,
 		Editions:     cfg.Editions,
+		Product:      cfg.Name,
 		PrunedSeries: make(map[string]int),
 		Protected:    make(map[string]int),
 	}

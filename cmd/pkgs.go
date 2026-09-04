@@ -39,6 +39,10 @@ var pkgsCmd = &cobra.Command{
 
 You can perform maintenance using this command tree.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// retirement works offline, from a plan file
+		if cmd.Name() == "retirement" {
+			return
+		}
 		pcToken := os.Getenv("PACKAGECLOUD_TOKEN")
 		if pcToken == "" {
 			log.Fatal().Msg("Working with packagecloud.io requires PACKAGECLOUD_TOKEN")
@@ -215,10 +219,35 @@ plan must not proceed to deletion.`,
 	},
 }
 
+var retirementSubCmd = &cobra.Command{
+	Use:   "retirement",
+	Short: "Render the public retired-versions table from a plan",
+	Long: `Reads a plan (the JSON from 'pkgs plan --json') and emits the
+retired-versions snippet published on the tyk.io retention policy
+page. Only track-driven repos appear in the table.
+
+Rendering from the committed plan rather than recomputing keeps the
+published table identical to what the pruning run will enforce.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		planFile, _ := cmd.Flags().GetString("plan")
+		data, err := os.ReadFile(planFile)
+		if err != nil {
+			return err
+		}
+		var plans []pkgs.Plan
+		if err := json.Unmarshal(data, &plans); err != nil {
+			return fmt.Errorf("parsing %s: %w", planFile, err)
+		}
+		fmt.Fprint(cmd.OutOrStdout(), pkgs.RenderRetiredVersions(plans))
+		return nil
+	},
+}
+
 func init() {
 	pkgsCmd.AddCommand(cleanSubCmd)
 	pkgsCmd.AddCommand(planSubCmd)
 	pkgsCmd.AddCommand(mirrorSubCmd)
+	pkgsCmd.AddCommand(retirementSubCmd)
 	rootCmd.AddCommand(pkgsCmd)
 
 	pkgsCmd.PersistentFlags().String("owner", "tyk", "PackageCloud repo owner")
@@ -238,4 +267,7 @@ func init() {
 	mirrorSubCmd.Flags().String("bucket", "tyk-artifact-archive", "S3 bucket to archive to")
 	mirrorSubCmd.Flags().Bool("verify", false, "Read every archived object back and check its hash")
 	mirrorSubCmd.Flags().Int("concurrency", 3, "Repos to mirror in parallel")
+
+	retirementSubCmd.Flags().String("plan", "", "Plan file from 'pkgs plan --json'")
+	retirementSubCmd.MarkFlagRequired("plan")
 }

@@ -43,6 +43,8 @@ type pkgConfig struct {
 	// window, longest wins.
 	Track    string
 	Editions []string
+	// Name is the display name on the tyk.io retirement page
+	Name string
 }
 
 // CleanConfig is the consolidated options that can be passed to the Clean method

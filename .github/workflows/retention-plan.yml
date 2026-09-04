@@ -37,8 +37,9 @@ jobs:
           app-id: ${{ secrets.PROBE_APP_ID }}
           private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
           owner: TykTechnologies
-          repositories: artifact-retention-plans
+          repositories: artifact-retention-plans,tyk-docs
           permission-contents: write
+          permission-pull-requests: write
 
       - name: Checkout gromit
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -130,6 +131,32 @@ jobs:
             echo ""
             echo "Nothing was deleted by this workflow."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # No PR is opened when the table is unchanged
+      - name: Checkout tyk-docs
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: TykTechnologies/tyk-docs
+          token: ${{ steps.app-token.outputs.token }}
+          path: tyk-docs
+          persist-credentials: false
+
+      - name: Render retired-versions snippet
+        run: go run . pkgs retirement --plan plan.json > tyk-docs/snippets/retired-versions.mdx
+
+      - name: PR the snippet to tyk-docs
+        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7.0.5
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          path: tyk-docs
+          branch: gromit/retired-versions
+          delete-branch: true
+          commit-message: 'Update retired versions table'
+          title: 'Update retired versions table'
+          body: |
+            Regenerated from the latest [retention plan](https://github.com/TykTechnologies/artifact-retention-plans/commit/${{ steps.commit.outputs.sha }}) by [this run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+
+            The table in `snippets/retired-versions.mdx` reflects the retention cutoffs the pruning run will enforce.
 
       - name: Slack notice
         if: steps.diff.outputs.new_count != '0'
