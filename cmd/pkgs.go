@@ -39,8 +39,15 @@ var pkgsCmd = &cobra.Command{
 
 You can perform maintenance using this command tree.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		// retirement works offline, from a plan file
 		if cmd.Name() == "retirement" {
+			return
+		}
+		var err error
+		repos, err = pkgs.LoadConfig()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Could not load repo config")
+		}
+		if cmd.Name() == "images" || (cmd.Parent() != nil && cmd.Parent().Name() == "images") {
 			return
 		}
 		pcToken := os.Getenv("PACKAGECLOUD_TOKEN")
@@ -51,11 +58,6 @@ You can perform maintenance using this command tree.`,
 		rps, _ := cmd.Flags().GetFloat64("rps")
 		burst, _ := cmd.Flags().GetInt("burst")
 		pkgClient = pkgs.NewClient(pcToken, owner, rps, burst)
-		var err error
-		repos, err = pkgs.LoadConfig()
-		if err != nil {
-			log.Fatal().Err(err).Msg("Could not load repo config")
-		}
 	},
 }
 
@@ -243,6 +245,144 @@ published table identical to what the pruning run will enforce.`,
 	},
 }
 
+var imagesCmd = &cobra.Command{
+	Use:   "images",
+	Short: "Docker Hub image retention",
+}
+
+var imagesPlanCmd = &cobra.Command{
+	Use:   "plan <repo>...",
+	Args:  cobra.MinimumNArgs(1),
+	Short: "Dry-run report of which Hub tags the retention policy would prune",
+	Long: `Lists tags on each product's Hub images (CE, EE, FIPS) and classifies
+them with the same cutoffs as 'pkgs plan'. Only real release tags
+(vMAJOR.MINOR.PATCH) can be pruned; aliases, RCs and moving tags are
+retained. Arguments are a pkgs key (tyk-gateway) or a Hub name
+(tyk-gateway-ee).
+
+Read-only: nothing is copied or deleted.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		asJSON, _ := cmd.Flags().GetBool("json")
+		graceDays, _ := cmd.Flags().GetInt("grace-days")
+		concurrency, _ := cmd.Flags().GetInt("concurrency")
+		grace := time.Duration(graceDays) * 24 * time.Hour
+		tracks, err := pkgs.LoadTracks()
+		if err != nil {
+			return fmt.Errorf("loading tracks config: %w", err)
+		}
+		rps, _ := cmd.Flags().GetFloat64("rps")
+		burst, _ := cmd.Flags().GetInt("burst")
+		hub := pkgs.NewHubClient("", rps, burst)
+		var plans []pkgs.ImagePlan
+		for _, arg := range args {
+			repoName, cfg, images, err := repos.ResolveImageArg(arg)
+			if err != nil {
+				return err
+			}
+			for _, image := range images {
+				tags, err := hub.ListTags(image)
+				if err != nil {
+					return err
+				}
+				plan, err := pkgs.BuildImagePlan(repoName, image, cfg, tracks, tags, time.Now(), grace)
+				if err != nil {
+					return fmt.Errorf("planning %s: %w", image, err)
+				}
+				if err := hub.FillPlanDigests(image, &plan, concurrency); err != nil {
+					return err
+				}
+				plans = append(plans, plan)
+				if !asJSON {
+					fmt.Fprint(cmd.OutOrStdout(), plan.Render())
+				}
+			}
+		}
+		if asJSON {
+			out, err := json.MarshalIndent(plans, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), string(out))
+		}
+		return nil
+	},
+}
+
+var imagesMirrorCmd = &cobra.Command{
+	Use:   "mirror",
+	Short: "Copy the prune-eligible Hub images from a plan to the S3 archive",
+	Long: `Reads a plan (the JSON from 'pkgs images plan --json'), matches each
+prune-eligible tag by digest against the live registry, and uploads an
+OCI-layout tarball to the archive bucket. Images already archived are
+skipped, so reruns are idempotent. FIPS images (never_mirror) are not
+copied. Nothing is ever deleted.
+
+With --verify, every archived object is read back and checked for the
+plan digest, proving the copy is restorable.
+
+Exits non-zero if any image could not be confirmed archived; such a
+plan must not proceed to deletion.
+
+Restore: extract the tarball and push the OCI layout, e.g.
+  crane push ./layout docker.io/<image>:<tag>`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		planFile, _ := cmd.Flags().GetString("plan")
+		bucket, _ := cmd.Flags().GetString("bucket")
+		verify, _ := cmd.Flags().GetBool("verify")
+
+		data, err := os.ReadFile(planFile)
+		if err != nil {
+			return err
+		}
+		var plans []pkgs.ImagePlan
+		if err := json.Unmarshal(data, &plans); err != nil {
+			return fmt.Errorf("parsing %s: %w", planFile, err)
+		}
+		store, err := pkgs.NewS3Store(cmd.Context(), bucket)
+		if err != nil {
+			return err
+		}
+		rps, _ := cmd.Flags().GetFloat64("rps")
+		burst, _ := cmd.Flags().GetInt("burst")
+		hub := pkgs.NewHubClient("", rps, burst)
+		concurrency, _ := cmd.Flags().GetInt("concurrency")
+		results := make([]pkgs.MirrorResult, len(plans))
+		g := new(errgroup.Group)
+		g.SetLimit(concurrency)
+		for i, plan := range plans {
+			g.Go(func() error {
+				results[i] = pkgs.MirrorImagePlan(cmd.Context(), plan, hub, store, verify)
+				return nil
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return err
+		}
+		clean := true
+		for _, res := range results {
+			fmt.Fprint(cmd.OutOrStdout(), res.Render())
+			clean = clean && res.Clean()
+		}
+		if !clean {
+			return fmt.Errorf("some images are not confirmed archived")
+		}
+		return nil
+	},
+}
+
+var imagesCheckCmd = &cobra.Command{
+	Use:   "check <file>",
+	Args:  cobra.ExactArgs(1),
+	Short: "Confirm an OCI-layout tarball contains a plan digest",
+	Long: `Used by the restore workflow after downloading an archived image.
+Exits non-zero if the tarball is not an OCI layout or does not contain
+the given digest.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		digest, _ := cmd.Flags().GetString("digest")
+		return pkgs.CheckImageArchive(args[0], digest)
+	},
+}
+
 func init() {
 	pkgsCmd.AddCommand(cleanSubCmd)
 	pkgsCmd.AddCommand(planSubCmd)
@@ -270,4 +410,21 @@ func init() {
 
 	retirementSubCmd.Flags().String("plan", "", "Plan file from 'pkgs plan --json'")
 	retirementSubCmd.MarkFlagRequired("plan")
+
+	imagesCmd.AddCommand(imagesPlanCmd)
+	imagesCmd.AddCommand(imagesMirrorCmd)
+	imagesCmd.AddCommand(imagesCheckCmd)
+	pkgsCmd.AddCommand(imagesCmd)
+	imagesPlanCmd.Flags().Bool("json", false, "Emit the plan as JSON, including the prune-eligible tag list")
+	imagesPlanCmd.Flags().Int("grace-days", 30, "Days until the plan's not_before deadline")
+	imagesPlanCmd.Flags().Int("concurrency", 8, "Concurrent digest lookups for tags the list endpoint omitted")
+
+	imagesMirrorCmd.Flags().String("plan", "", "Plan file from 'pkgs images plan --json'")
+	imagesMirrorCmd.MarkFlagRequired("plan")
+	imagesMirrorCmd.Flags().String("bucket", "tyk-artifact-archive", "S3 bucket to archive to")
+	imagesMirrorCmd.Flags().Bool("verify", false, "Read every archived object back and check its digest")
+	imagesMirrorCmd.Flags().Int("concurrency", 2, "Hub images to mirror in parallel")
+
+	imagesCheckCmd.Flags().String("digest", "", "Image digest the archive must contain")
+	imagesCheckCmd.MarkFlagRequired("digest")
 }

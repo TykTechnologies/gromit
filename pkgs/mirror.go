@@ -85,6 +85,7 @@ func (s *S3Store) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 // that is not confirmed archived must never be deleted.
 type MirrorResult struct {
 	Repo     string   `json:"repo"`
+	Kind     string   `json:"kind,omitempty"`
 	Mirrored int      `json:"mirrored"`
 	Skipped  int      `json:"skipped"`
 	Verified int      `json:"verified"`
@@ -102,7 +103,11 @@ func (r MirrorResult) Render() string {
 	fmt.Fprintf(&b, "%s: %d mirrored, %d already archived, %d verified\n",
 		r.Repo, r.Mirrored, r.Skipped, r.Verified)
 	if len(r.Missing) > 0 {
-		fmt.Fprintf(&b, "  MISSING from packagecloud (%d): %s\n", len(r.Missing), strings.Join(r.Missing, ", "))
+		src := "packagecloud"
+		if r.Kind == "images" {
+			src = "docker hub"
+		}
+		fmt.Fprintf(&b, "  MISSING from %s (%d): %s\n", src, len(r.Missing), strings.Join(r.Missing, ", "))
 	}
 	if len(r.Failed) > 0 {
 		fmt.Fprintf(&b, "  FAILED (%d): %s\n", len(r.Failed), strings.Join(r.Failed, ", "))

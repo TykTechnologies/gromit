@@ -1,9 +1,10 @@
 name: Retention restore
 
-# Restores one archived artifact for a support request. Deep Archive
-# restores take hours, so the workflow is run twice: the first run
-# initiates the restore, a later run downloads the object, verifies it
-# against the committed plan and attaches it as a workflow artifact.
+# Restores one archived artifact (package or Hub image) for a support
+# request. Deep Archive restores take hours, so the workflow is run
+# twice: the first run initiates the restore, a later run downloads
+# the object, verifies it against the committed plan and attaches it
+# as a workflow artifact.
 # Support runbook:
 # https://tyktech.atlassian.net/wiki/spaces/SESAP/pages/4577394690/Support+Runbook+Retired+Artifact+Requests
 
@@ -11,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       key:
-        description: 'Archive key, e.g. tyk-gateway/ubuntu/focal/tyk-gateway_4.2.3_amd64.deb'
+        description: 'Archive key, e.g. tyk-gateway/ubuntu/focal/tyk-gateway_4.2.3_amd64.deb or images/tykio/tyk-identity-broker/v1.4.1.tar'
         type: string
         required: true
       tier:
@@ -47,6 +48,11 @@ jobs:
           repositories: artifact-retention-plans
           permission-contents: read
 
+      - name: Checkout gromit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
       - name: Checkout plans repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -55,21 +61,58 @@ jobs:
           path: plans-repo
           persist-credentials: false
 
+      - name: Set up Go
+        if: startsWith(inputs.key, 'images/')
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+
       # Only artifacts in a committed plan can be restored; the plan's
-      # checksum is what the download is verified against.
+      # checksum (package sha256 or image digest) is what the download
+      # is verified against.
       - name: Find checksum in committed plans
         id: plan
         env:
           KEY: ${{ inputs.key }}
         run: |
           set -euo pipefail
-          repo=${KEY%%/*}
-          filename=${KEY##*/}
-          mid=${KEY#"$repo"/}
-          distro=${mid%/*}
-          sha=$(jq -r --arg repo "$repo" --arg d "$distro" --arg f "$filename" \
-            '.[] | select(.repo==$repo) | .packages[]? | select(.distro_version==$d and .filename==$f) | .sha256sum' \
-            plans-repo/plans/*/plan.json | sort -u)
+          shopt -s nullglob
+          if [[ "$KEY" == images/* ]]; then
+            rest=${KEY#images/}
+            rest=${rest%.tar}
+            image=${rest%/*}
+            tag=${rest##*/}
+            if [ -z "$image" ] || [ -z "$tag" ] || [ "$image" = "$rest" ]; then
+              echo "::error::$KEY is not images/<org>/<name>/<tag>.tar"
+              exit 1
+            fi
+            plans=(plans-repo/plans/*/images.json)
+            if [ ${#plans[@]} -eq 0 ]; then
+              echo "::error::no images.json in committed plans"
+              exit 1
+            fi
+            never=$(jq -rs --arg image "$image" \
+              'add | .[] | select(.image==$image) | .never_mirror // false' \
+              "${plans[@]}" | sort -u)
+            if [ "$never" = "true" ]; then
+              echo "::error::$image is FIPS and was never archived"
+              exit 1
+            fi
+            sha=$(jq -rs --arg image "$image" --arg tag "$tag" \
+              'add | .[] | select(.image==$image) | .tags[]? | select(.tag==$tag) | .digest' \
+              "${plans[@]}" | sort -u)
+            filename="${image##*/}-${tag}.tar"
+            echo "kind=image" >> "$GITHUB_OUTPUT"
+          else
+            repo=${KEY%%/*}
+            filename=${KEY##*/}
+            mid=${KEY#"$repo"/}
+            distro=${mid%/*}
+            sha=$(jq -r --arg repo "$repo" --arg d "$distro" --arg f "$filename" \
+              '.[] | select(.repo==$repo) | .packages[]? | select(.distro_version==$d and .filename==$f) | .sha256sum' \
+              plans-repo/plans/*/plan.json | sort -u)
+            echo "kind=package" >> "$GITHUB_OUTPUT"
+          fi
           if [ -z "$sha" ]; then
             echo "::error::$KEY is not in any committed plan; only planned artifacts are archived"
             exit 1
@@ -94,6 +137,7 @@ jobs:
           TIER: ${{ inputs.tier }}
           SHA256: ${{ steps.plan.outputs.sha256 }}
           FILENAME: ${{ steps.plan.outputs.filename }}
+          KIND: ${{ steps.plan.outputs.kind }}
         run: |
           set -euo pipefail
           head=$(aws s3api head-object --bucket "$BUCKET" --key "$KEY")
@@ -121,15 +165,19 @@ jobs:
 
           if [ "$ready" = true ]; then
             aws s3 cp "s3://$BUCKET/$KEY" "$FILENAME"
-            got=$(sha256sum "$FILENAME" | cut -d' ' -f1)
-            if [ "$got" != "$SHA256" ]; then
-              echo "::error::checksum mismatch: plan says $SHA256, downloaded $got"
-              exit 1
-            fi
             meta=$(echo "$head" | jq -r '.Metadata.sha256 // ""')
             if [ -n "$meta" ] && [ "$meta" != "$SHA256" ]; then
-              echo "::error::object metadata sha $meta disagrees with plan $SHA256"
+              echo "::error::object metadata $meta disagrees with plan $SHA256"
               exit 1
+            fi
+            if [ "$KIND" = "image" ]; then
+              go run . pkgs images check --digest "$SHA256" "$FILENAME"
+            else
+              got=$(sha256sum "$FILENAME" | cut -d' ' -f1)
+              if [ "$got" != "$SHA256" ]; then
+                echo "::error::checksum mismatch: plan says $SHA256, downloaded $got"
+                exit 1
+              fi
             fi
             echo "state=ready" >> "$GITHUB_OUTPUT"
           fi
@@ -148,6 +196,7 @@ jobs:
           TIER: ${{ inputs.tier }}
           STATE: ${{ steps.check.outputs.state }}
           SHA256: ${{ steps.plan.outputs.sha256 }}
+          KIND: ${{ steps.plan.outputs.kind }}
         run: |
           {
             echo "## Retention restore"
@@ -156,9 +205,18 @@ jobs:
             echo ""
             case "$STATE" in
               ready)
-                echo "Verified against the committed plan (sha256 \`$SHA256\`) and"
+                echo "Verified against the committed plan (\`$SHA256\`) and"
                 echo "attached to this run as a workflow artifact (kept 3 days)."
                 echo ""
+                if [ "$KIND" = "image" ]; then
+                  echo "The file is an OCI-layout tarball. Extract it and push, e.g."
+                  echo ""
+                  echo '```'
+                  echo "mkdir layout && tar -C layout -xf $FILENAME"
+                  echo "crane push ./layout docker.io/<image>:<tag>"
+                  echo '```'
+                  echo ""
+                fi
                 echo "Hand the file to the customer through the normal secure channel,"
                 echo "with the checksum, as-is/unsupported wording and an upgrade path."
                 ;;

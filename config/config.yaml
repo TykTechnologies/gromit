@@ -869,6 +869,10 @@ pkgs:
     editions: [ce, ee]
     # display name on the tyk.io retirement page
     name: Tyk Gateway
+    dhrepos:
+      - tykio/tyk-gateway
+      - tykio/tyk-gateway-ee
+      - tykio/tyk-gateway-fips
     # exceptions are those versions that should not be deleted from
     # packagecloud. These don't have to be semver.
     exceptions:
@@ -889,6 +893,9 @@ pkgs:
     track: gateway
     editions: [ce, ee]
     name: Tyk Dashboard
+    dhrepos:
+      - tykio/tyk-dashboard
+      - tykio/tyk-dashboard-fips
     exceptions:
       - v2.6.2
       - v2.9.3
@@ -903,21 +910,31 @@ pkgs:
     versioncutoff: v3
   tyk-pump:
     notbackup: false
+    dhrepos:
+      - tykio/tyk-pump-docker-pub
+      - tykio/tyk-pump-fips
     exceptions:
       - v1.6.0 # used in upgrade tests
     versioncutoff: v1
   tyk-mdcb:
     notbackup: false
+    dhrepos:
+      - tykio/tyk-mdcb-docker
+      - tykio/tyk-mdcb-docker-fips
     exceptions:
       - v1.8.2 # used in upgrade tests
     versioncutoff: v1.7
   portal:
     notbackup: false
+    dhrepos:
+      - tykio/portal
+      - tykio/portal-fips
     exceptions:
       - v1.0.0
     versioncutoff: v1
   tyk-identity-broker:
     notbackup: false
+    dhrepo: tykio/tyk-identity-broker
     exceptions:
       - v1.1.0 # used in upgrade tests
     agecutoff: 26280h # 3y
