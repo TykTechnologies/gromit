@@ -213,7 +213,7 @@ func archive(ctx context.Context, item pc.PackageDetail, wantSha, key string, st
 }
 
 // readBack fetches the archived object and confirms its content hash,
-// proving the archive copy is restorable
+// proving the archive copy is restorable.
 func readBack(ctx context.Context, key, wantSha string, store MirrorStore) error {
 	body, err := store.Get(ctx, key)
 	if err != nil {
