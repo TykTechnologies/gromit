@@ -149,6 +149,8 @@ func TestListTagsPaginatesAndFillsDigest(t *testing.T) {
 	defer srv.Close()
 
 	c := NewHubClient("", 100, 100)
+	c.token = ""
+	c.username = ""
 	c.base = srv.URL
 	c.auth = srv.URL
 	c.registry = srv.URL
@@ -166,6 +168,107 @@ func TestListTagsPaginatesAndFillsDigest(t *testing.T) {
 	assert.Equal(t, "sha256:list", plan.Tags[0].Digest)
 }
 
+func TestListTagsFallsBackToRegistry(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v2/repositories/", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+	})
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]string{"token": "reg-token"})
+	})
+	mux.HandleFunc("/v2/tykio/tyk-gateway/tags/list", func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "Bearer reg-token", r.Header.Get("Authorization"))
+		_ = json.NewEncoder(w).Encode(registryTagPage{Tags: []string{"v5.8.0", "latest"}})
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c := NewHubClient("", 100, 100)
+	c.token = ""
+	c.username = ""
+	c.base = srv.URL
+	c.auth = srv.URL
+	c.registry = srv.URL
+	tags, err := c.ListTags("tykio/tyk-gateway")
+	require.NoError(t, err)
+	require.Len(t, tags, 2)
+	assert.Equal(t, "v5.8.0", tags[0].Name)
+	assert.Equal(t, "latest", tags[1].Name)
+}
+
+func TestHubClientExchangesPATForJWT(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v2/auth/token", func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		var in struct {
+			Identifier string `json:"identifier"`
+			Secret     string `json:"secret"`
+		}
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&in))
+		assert.Equal(t, "tykbot", in.Identifier)
+		assert.Equal(t, "dckr_pat_test", in.Secret)
+		_ = json.NewEncoder(w).Encode(map[string]string{"access_token": "eyJtestjwt"})
+	})
+	mux.HandleFunc("/v2/repositories/tykio/tyk-identity-broker/tags", func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "Bearer eyJtestjwt", r.Header.Get("Authorization"))
+		_ = json.NewEncoder(w).Encode(hubTagPage{
+			Results: []hubTagEntry{{Name: "v1.8.0", Digest: "sha256:abc"}},
+		})
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c := NewHubClient("dckr_pat_test", 100, 100)
+	c.username = "tykbot"
+	c.base = srv.URL
+	c.auth = srv.URL
+	c.registry = srv.URL
+	tags, err := c.ListTags("tykio/tyk-identity-broker")
+	require.NoError(t, err)
+	require.Len(t, tags, 1)
+	assert.Equal(t, "sha256:abc", tags[0].Digest)
+}
+
+func TestHubClientFallsBackToAnonymousOn403(t *testing.T) {
+	authed := 0
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v2/auth/token", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]string{"access_token": "eyJtestjwt"})
+	})
+	mux.HandleFunc("/v2/repositories/tykio/tyk-identity-broker/tags", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "" {
+			authed++
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(hubTagPage{
+			Results: []hubTagEntry{{Name: "v1.8.0", Digest: "sha256:abc"}},
+		})
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c := NewHubClient("dckr_pat_test", 100, 100)
+	c.username = "tykio"
+	c.base = srv.URL
+	c.auth = srv.URL + "/registry-auth"
+	c.registry = srv.URL
+	tags, err := c.ListTags("tykio/tyk-identity-broker")
+	require.NoError(t, err)
+	require.Len(t, tags, 1)
+	assert.Equal(t, 1, authed)
+	assert.Equal(t, "sha256:abc", tags[0].Digest)
+}
+
+func TestHubClientPATRequiresUsername(t *testing.T) {
+	c := NewHubClient("dckr_pat_test", 100, 100)
+	c.username = ""
+	c.base = "https://hub.docker.com"
+	_, err := c.ListTags("tykio/tyk-identity-broker")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "DOCKERHUB_USERNAME")
+}
+
 func TestFillPlanDigestsErrorsWhenMissing(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -175,6 +278,8 @@ func TestFillPlanDigestsErrorsWhenMissing(t *testing.T) {
 	defer srv.Close()
 
 	c := NewHubClient("", 100, 100)
+	c.token = ""
+	c.username = ""
 	c.base = srv.URL
 	c.auth = srv.URL
 	c.registry = srv.URL

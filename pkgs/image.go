@@ -1,6 +1,7 @@
 package pkgs
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -80,19 +81,27 @@ type HubClient struct {
 	registry string
 	auth     string
 	token    string
-	limiter  *rate.Limiter
-	ctx      context.Context
+	username string
+	hubJWT   string
+	// hubAnonOnly is set after Hub rejects credentials (typical for
+	// org access tokens). Further Hub GETs skip the doomed authed try.
+	hubAnonOnly bool
+	limiter     *rate.Limiter
+	ctx         context.Context
 }
 
 func NewHubClient(token string, rps float64, burst int) *HubClient {
 	if token == "" {
 		token = os.Getenv("DOCKERHUB_TOKEN")
 	}
+	token = strings.Trim(strings.TrimSpace(token), `"'`)
+	username := strings.Trim(strings.TrimSpace(os.Getenv("DOCKERHUB_USERNAME")), `"'`)
 	return &HubClient{
 		base:     hubAPI,
 		registry: registryAPI,
 		auth:     registryAuth,
 		token:    token,
+		username: username,
 		limiter:  rate.NewLimiter(rate.Limit(rps), burst),
 		ctx:      context.TODO(),
 	}
@@ -133,13 +142,112 @@ func digestFromEntry(e hubTagEntry) string {
 	return ""
 }
 
+func isHubJWT(token string) bool {
+	return strings.HasPrefix(token, "eyJ")
+}
+
+// hubBearer is the Authorization value for hub.docker.com. A Personal
+// Access Token cannot be sent as Bearer; it must be exchanged for a JWT.
+func (c *HubClient) hubBearer() (string, error) {
+	if c.token == "" {
+		return "", nil
+	}
+	if isHubJWT(c.token) {
+		return "Bearer " + c.token, nil
+	}
+	if c.hubJWT != "" {
+		return "Bearer " + c.hubJWT, nil
+	}
+	if c.username == "" {
+		return "", fmt.Errorf("DOCKERHUB_TOKEN is a Hub PAT; set DOCKERHUB_USERNAME to the account that created it (Hub will 401 if the PAT is sent as Bearer). Unset DOCKERHUB_TOKEN to list public repos anonymously")
+	}
+	jwt, err := c.createAccessToken()
+	if err != nil {
+		return "", err
+	}
+	c.hubJWT = jwt
+	return "Bearer " + jwt, nil
+}
+
+func (c *HubClient) createAccessToken() (string, error) {
+	body, err := json.Marshal(map[string]string{
+		"identifier": c.username,
+		"secret":     c.token,
+	})
+	if err != nil {
+		return "", err
+	}
+	raw := c.base + "/v2/auth/token"
+	req, err := http.NewRequestWithContext(c.ctx, http.MethodPost, raw, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if err := c.limiter.Wait(c.ctx); err != nil {
+		return "", err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("hub login: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("hub login %s: %s (check DOCKERHUB_USERNAME matches the PAT)", raw, resp.Status)
+	}
+	var out struct {
+		AccessToken string `json:"access_token"`
+		Token       string `json:"token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return "", fmt.Errorf("hub login: %w", err)
+	}
+	jwt := out.AccessToken
+	if jwt == "" {
+		jwt = out.Token
+	}
+	if jwt == "" {
+		return "", fmt.Errorf("hub login: empty access token")
+	}
+	return jwt, nil
+}
+
+func (c *HubClient) authorize(req *http.Request) error {
+	raw := req.URL.String()
+	if strings.HasPrefix(raw, c.base) {
+		hdr, err := c.hubBearer()
+		if err != nil {
+			return err
+		}
+		if hdr != "" {
+			req.Header.Set("Authorization", hdr)
+		}
+		return nil
+	}
+	if c.username != "" && c.token != "" && !isHubJWT(c.token) {
+		req.SetBasicAuth(c.username, c.token)
+	} else if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+	return nil
+}
+
 func (c *HubClient) get(rawURL string, dest any) error {
+	withHubAuth := strings.HasPrefix(rawURL, c.base) && !c.hubAnonOnly
+	if !strings.HasPrefix(rawURL, c.base) {
+		withHubAuth = true
+	}
+	return c.doGet(rawURL, dest, withHubAuth)
+}
+
+func (c *HubClient) doGet(rawURL string, dest any, withHubAuth bool) error {
 	req, err := http.NewRequestWithContext(c.ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return err
 	}
-	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
+	if withHubAuth || !strings.HasPrefix(rawURL, c.base) {
+		if err := c.authorize(req); err != nil {
+			return err
+		}
 	}
 	if err := c.limiter.Wait(c.ctx); err != nil {
 		return err
@@ -149,6 +257,12 @@ func (c *HubClient) get(rawURL string, dest any) error {
 		return err
 	}
 	defer resp.Body.Close()
+	if (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) &&
+		withHubAuth && c.token != "" && strings.HasPrefix(rawURL, c.base) {
+		c.hubAnonOnly = true
+		log.Warn().Msgf("Hub rejected credentials (%s); listing public tags without them", resp.Status)
+		return c.doGet(rawURL, dest, false)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s: %s", rawURL, resp.Status)
 	}
@@ -178,8 +292,22 @@ func hubImagePath(image string) (string, error) {
 	return org + "/" + name, nil
 }
 
-// ListTags fetches every tag in a Hub repository. Read-only.
+// ListTags fetches every tag. Prefer the Hub list (it includes last
+// pushed and often the digest). If Hub rate-limits anonymous paging,
+// fall back to the registry tags API, which accepts an org token.
 func (c *HubClient) ListTags(image string) ([]ImageTag, error) {
+	if _, err := c.hubBearer(); err != nil {
+		return nil, err
+	}
+	tags, err := c.listHubTags(image)
+	if err == nil {
+		return tags, nil
+	}
+	log.Warn().Err(err).Msgf("Hub tag list failed for %s, trying the registry", image)
+	return c.listRegistryTags(image)
+}
+
+func (c *HubClient) listHubTags(image string) ([]ImageTag, error) {
 	path, err := hubImagePath(image)
 	if err != nil {
 		return nil, err
@@ -201,6 +329,91 @@ func (c *HubClient) ListTags(image string) ([]ImageTag, error) {
 		u = page.Next
 	}
 	return all, nil
+}
+
+type registryTagPage struct {
+	Tags []string `json:"tags"`
+}
+
+func (c *HubClient) listRegistryTags(image string) ([]ImageTag, error) {
+	path, err := hubImagePath(image)
+	if err != nil {
+		return nil, err
+	}
+	token, err := c.registryToken(path)
+	if err != nil {
+		return nil, fmt.Errorf("listing %s via registry: %w", image, err)
+	}
+	u := fmt.Sprintf("%s/v2/%s/tags/list?n=100", c.registry, path)
+	var all []ImageTag
+	seen := map[string]bool{}
+	for u != "" {
+		var page registryTagPage
+		next, err := c.registryJSON(u, token, &page)
+		if err != nil {
+			return nil, fmt.Errorf("listing %s via registry: %w", image, err)
+		}
+		for _, name := range page.Tags {
+			if name == "" || seen[name] {
+				continue
+			}
+			seen[name] = true
+			all = append(all, ImageTag{Name: name})
+		}
+		u = next
+	}
+	if len(all) == 0 {
+		return nil, fmt.Errorf("listing %s via registry: no tags", image)
+	}
+	return all, nil
+}
+
+func (c *HubClient) registryJSON(raw, token string, dest any) (next string, err error) {
+	req, err := http.NewRequestWithContext(c.ctx, http.MethodGet, raw, nil)
+	if err != nil {
+		return "", err
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	if err := c.limiter.Wait(c.ctx); err != nil {
+		return "", err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("%s: %s", raw, resp.Status)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(dest); err != nil {
+		return "", err
+	}
+	return nextLink(resp), nil
+}
+
+func nextLink(resp *http.Response) string {
+	for _, v := range resp.Header.Values("Link") {
+		if !strings.Contains(v, `rel="next"`) && !strings.Contains(v, "rel=next") {
+			continue
+		}
+		start := strings.Index(v, "<")
+		end := strings.Index(v, ">")
+		if start < 0 || end <= start {
+			continue
+		}
+		ref := v[start+1 : end]
+		if resp.Request == nil || resp.Request.URL == nil {
+			return ref
+		}
+		u, err := resp.Request.URL.Parse(ref)
+		if err != nil {
+			return ref
+		}
+		return u.String()
+	}
+	return ""
 }
 
 // FillPlanDigests looks up digests only for prune-eligible tags the

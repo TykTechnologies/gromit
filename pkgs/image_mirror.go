@@ -172,7 +172,9 @@ func (c *HubClient) remoteOptions(ctx context.Context) []remote.Option {
 		remote.WithContext(ctx),
 		remote.WithTransport(&limitedTransport{lim: c.limiter}),
 	}
-	if c.token != "" {
+	if c.username != "" && c.token != "" && !isHubJWT(c.token) {
+		opts = append(opts, remote.WithAuth(&authn.Basic{Username: c.username, Password: c.token}))
+	} else if c.token != "" {
 		opts = append(opts, remote.WithAuth(&authn.Bearer{Token: c.token}))
 	}
 	return opts

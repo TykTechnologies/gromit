@@ -194,6 +194,8 @@ func TestHubClientFetchFromRegistry(t *testing.T) {
 	require.NoError(t, remote.Write(ref, img))
 
 	c := NewHubClient("", 100, 100)
+	c.token = ""
+	c.username = ""
 	c.registry = srv.URL
 	ctx := context.Background()
 

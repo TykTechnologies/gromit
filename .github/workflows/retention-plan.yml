@@ -75,6 +75,7 @@ jobs:
       - name: Generate image plan
         env:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           GRACE_DAYS: ${{ inputs.grace_days || '30' }}
         run: |
           echo '[]' > images.json
