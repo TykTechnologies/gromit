@@ -1,8 +1,8 @@
 name: Retention plan notice
 
 # Monthly artifact retention notice: generates the pruning plan for
-# every configured repo, commits it to the tamper-evident plans repo,
-# and posts the Slack notice that starts the grace-period clock.
+# packages and Hub images, commits both to the tamper-evident plans
+# repo, and posts the Slack notice that starts the grace-period clock.
 # Nothing is ever deleted from this workflow; the plan's not_before
 # field is what the (separate) deletion step later enforces.
 
@@ -72,6 +72,26 @@ jobs:
           # shellcheck disable=SC2086
           go run . pkgs plan --grace-days "$GRACE_DAYS" $REPOS > plan.txt
 
+      - name: Generate image plan
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          GRACE_DAYS: ${{ inputs.grace_days || '30' }}
+        run: |
+          echo '[]' > images.json
+          : > images.txt
+          REPOS=$(yq '[.pkgs | to_entries[] | select(.value.dhrepo or .value.dhrepos) | .key] | join(" ")' config/config.yaml)
+          for repo in $REPOS; do
+            if ! go run . pkgs images plan --json --grace-days "$GRACE_DAYS" "$repo" > "/tmp/$repo-images.json"; then
+              echo "skipped $repo (listing failed)" | tee -a images.txt
+              continue
+            fi
+            jq -s '.[0] + .[1]' images.json "/tmp/$repo-images.json" > images.next
+            mv images.next images.json
+            # shellcheck disable=SC2086
+            go run . pkgs images plan --grace-days "$GRACE_DAYS" "$repo" >> images.txt
+          done
+
       # One released file is indexed once per distro version on
       # Packagecloud, so entry counts run ~10x higher than file counts;
       # checksums identify the underlying files. Newly eligible =
@@ -94,6 +114,18 @@ jobs:
           echo "total_gib=$(jq '[.[].pruned_bytes] | add / 1073741824 * 10 | round / 10' plan.json)" >> "$GITHUB_OUTPUT"
           echo "not_before=$(jq -r '.[0].not_before[:10]' plan.json)" >> "$GITHUB_OUTPUT"
 
+          jq -r '.[] | .image as $i | .tags[]? | "\($i)@\(.digest)"' images.json | sort -u > current.images
+          prev_img=$(ls plans-repo/plans/*/images.json 2>/dev/null | sort | tail -1 || true)
+          if [ -n "$prev_img" ]; then
+            jq -r '.[] | .image as $i | .tags[]? | "\($i)@\(.digest)"' "$prev_img" | sort -u > previous.images
+          else
+            : > previous.images
+          fi
+          comm -23 current.images previous.images > new.images
+          echo "new_images=$(wc -l < new.images | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          echo "total_images=$(wc -l < current.images | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          echo "total_image_pruned=$(jq '[.[].pruned] | add // 0' images.json)" >> "$GITHUB_OUTPUT"
+
       - name: Commit plan to plans repo
         id: commit
         env:
@@ -101,7 +133,7 @@ jobs:
         run: |
           month=$(date -u +%Y-%m)
           mkdir -p "plans-repo/plans/$month"
-          cp plan.json plan.txt "plans-repo/plans/$month/"
+          cp plan.json plan.txt images.json images.txt "plans-repo/plans/$month/"
           cd plans-repo
           git config user.name "gromit-retention"
           git config user.email "gromit-retention@users.noreply.github.com"
@@ -117,6 +149,8 @@ jobs:
       - name: Summarise
         env:
           NEW_COUNT: ${{ steps.diff.outputs.new_count }}
+          NEW_IMAGES: ${{ steps.diff.outputs.new_images }}
+          TOTAL_IMAGES: ${{ steps.diff.outputs.total_images }}
           COMMIT: ${{ steps.commit.outputs.sha }}
         run: |
           {
@@ -127,6 +161,14 @@ jobs:
             jq -r '.[] | "| \(.repo) | \(.retained + .pruned) | \(.retained) | \(.pruned) | \(.pruned_bytes / 1073741824 * 10 | round / 10) | \(.not_before[:10]) |"' plan.json
             echo ""
             echo "$NEW_COUNT files newly eligible since the previous plan."
+            echo ""
+            echo "## Hub images"
+            echo ""
+            echo "| Image | Tags | Retained | Pruned |"
+            echo "|-------|------|----------|--------|"
+            jq -r '.[] | "| \(.image) | \(.retained + .pruned) | \(.retained) | \(.pruned) |"' images.json
+            echo ""
+            echo "$NEW_IMAGES image tags newly eligible, $TOTAL_IMAGES total."
             echo "Committed as [\`$COMMIT\`](https://github.com/TykTechnologies/artifact-retention-plans/commit/$COMMIT)."
             echo ""
             echo "Nothing was deleted by this workflow."
@@ -159,7 +201,7 @@ jobs:
             The table in `snippets/retired-versions.mdx` reflects the retention cutoffs the pruning run will enforce.
 
       - name: Slack notice
-        if: steps.diff.outputs.new_count != '0'
+        if: steps.diff.outputs.new_count != '0' || steps.diff.outputs.new_images != '0'
         uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
         with:
           method: chat.postMessage
@@ -172,7 +214,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Artifact retention plan published* — @support-team\n${{ steps.diff.outputs.new_count }} files are newly eligible for pruning since the last plan. In total ${{ steps.diff.outputs.total_files }} files are eligible, which appear as ${{ steps.diff.outputs.total_pruned }} package listings on Packagecloud (one per distro version, ${{ steps.diff.outputs.total_gib }} GiB). Nothing will be deleted before *${{ steps.diff.outputs.not_before }}*.\n<https://github.com/TykTechnologies/artifact-retention-plans/commit/${{ steps.commit.outputs.sha }}|Review the committed plan>"
+                    "text": "*Artifact retention plan published* — @support-team\n${{ steps.diff.outputs.new_count }} files are newly eligible for pruning since the last plan. In total ${{ steps.diff.outputs.total_files }} files are eligible, which appear as ${{ steps.diff.outputs.total_pruned }} package listings on Packagecloud (one per distro version, ${{ steps.diff.outputs.total_gib }} GiB). ${{ steps.diff.outputs.new_images }} Hub image tags are newly eligible (${{ steps.diff.outputs.total_images }} total). Nothing will be deleted before *${{ steps.diff.outputs.not_before }}*.\n<https://github.com/TykTechnologies/artifact-retention-plans/commit/${{ steps.commit.outputs.sha }}|Review the committed plan>"
                   }
                 }
               ]
@@ -193,7 +235,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Retention plan run* — ${{ steps.diff.outputs.new_count }} newly eligible files, ${{ steps.diff.outputs.total_files }} total (${{ steps.diff.outputs.total_gib }} GiB), not_before *${{ steps.diff.outputs.not_before }}*.\n<https://github.com/TykTechnologies/artifact-retention-plans/commit/${{ steps.commit.outputs.sha }}|Committed plan> · <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Run>"
+                    "text": "*Retention plan run* — ${{ steps.diff.outputs.new_count }} newly eligible files, ${{ steps.diff.outputs.total_files }} total (${{ steps.diff.outputs.total_gib }} GiB); ${{ steps.diff.outputs.new_images }} newly eligible Hub tags, ${{ steps.diff.outputs.total_images }} total. not_before *${{ steps.diff.outputs.not_before }}*.\n<https://github.com/TykTechnologies/artifact-retention-plans/commit/${{ steps.commit.outputs.sha }}|Committed plan> · <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Run>"
                   }
                 }
               ]

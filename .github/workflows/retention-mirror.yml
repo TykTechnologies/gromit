@@ -1,9 +1,10 @@
 name: Retention mirror
 
-# Copies the prune-eligible packages from a committed retention plan to
-# the S3 archive bucket, verifying every object by checksum. Nothing is
-# deleted: this is the safety net the (separate, later) deletion step
-# depends on - a package not confirmed archived is never deleted.
+# Copies the prune-eligible packages and Hub images from a committed
+# retention plan to the S3 archive bucket, verifying every object.
+# Nothing is deleted: this is the safety net the (separate, later)
+# deletion step depends on - an artifact not confirmed archived is
+# never deleted. FIPS images are planned but never copied.
 
 on:
   workflow_dispatch:
@@ -66,20 +67,32 @@ jobs:
       - name: Mirror plan to archive
         env:
           PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           MONTH: ${{ inputs.month }}
         run: |
           set -euo pipefail
           if [ -n "$MONTH" ]; then
-            PLAN="plans-repo/plans/$MONTH/plan.json"
+            DIR="plans-repo/plans/$MONTH"
           else
-            PLAN=$(ls plans-repo/plans/*/plan.json | sort | tail -1)
+            DIR=$(dirname "$(ls plans-repo/plans/*/plan.json | sort | tail -1)")
           fi
+          PLAN="$DIR/plan.json"
+          IMAGES="$DIR/images.json"
           if [ ! -f "$PLAN" ]; then
             echo "::error::no plan found at $PLAN"
             exit 1
           fi
           echo "mirroring $PLAN"
           go run . pkgs mirror --plan "$PLAN" --verify | tee mirror.txt
+
+          : > images-mirror.txt
+          if [ -f "$IMAGES" ]; then
+            echo "mirroring $IMAGES"
+            go run . pkgs images mirror --plan "$IMAGES" --verify | tee images-mirror.txt
+          else
+            echo "no images.json next to $PLAN; skipping Hub mirror"
+          fi
 
           {
             echo "## Retention mirror"
@@ -89,7 +102,15 @@ jobs:
             echo '```'
             cat mirror.txt
             echo '```'
+            if [ -s images-mirror.txt ]; then
+              echo ""
+              echo "### Hub images"
+              echo ""
+              echo '```'
+              cat images-mirror.txt
+              echo '```'
+            fi
             echo ""
-            echo "Every archived object was read back and checksum-verified."
+            echo "Every archived object was read back and verified."
             echo "Nothing was deleted."
           } >> "$GITHUB_STEP_SUMMARY"

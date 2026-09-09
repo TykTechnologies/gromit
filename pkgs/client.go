@@ -45,6 +45,20 @@ type pkgConfig struct {
 	Editions []string
 	// Name is the display name on the tyk.io retirement page
 	Name string
+	// Dhrepo is the Docker Hub repository (org/name) for image plans
+	Dhrepo string
+	// Dhrepos lists every Hub repo for this product (CE, EE, FIPS)
+	Dhrepos []string
+}
+
+func (c pkgConfig) HubImages() []string {
+	if len(c.Dhrepos) > 0 {
+		return append([]string(nil), c.Dhrepos...)
+	}
+	if c.Dhrepo != "" {
+		return []string{c.Dhrepo}
+	}
+	return nil
 }
 
 // CleanConfig is the consolidated options that can be passed to the Clean method
