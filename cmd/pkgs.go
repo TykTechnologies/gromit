@@ -64,11 +64,37 @@ You can perform maintenance using this command tree.`,
 // pkgsCmd represents the pkgs command
 var cleanSubCmd = &cobra.Command{
 	Use:   "clean <repo>",
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cobra.ArbitraryArgs,
 	Short: "Cleanup packages from the repository",
 	Long: `The packages are removed from the repository. The removed pacakges are downloaded before being removed.
-Each repo is processed sequentially, Deletions within a repo are processed concurrently, limited by the rps and burst parameters. The concurrency level affects the run time by controlling the number of concurrent downloads. 4 downloads `,
+Each repo is processed sequentially, Deletions within a repo are processed concurrently, limited by the rps and burst parameters. The concurrency level affects the run time by controlling the number of concurrent downloads. 4 downloads
+
+With --plan, clean becomes the gated execution step of the retention
+pipeline (TT-17825) and ignores the static filter config entirely: see
+'pkgs clean --plan --help' notes below. Production deletion runs are
+workflow-driven from a plan committed to the plans repo; the deletion
+workflow ships deliberately inert until the rollout is signed off.
+
+Gates enforced with --plan:
+  - the plan's not_before must have elapsed (when --delete is set)
+  - the repo must set allow_delete in the pkgs config (when --delete is set)
+  - a freshly derived plan must still prune each listing
+  - the live listing must carry the announced sha256
+  - the archive must hold a verified copy (FIPS: deleted, never archived)
+
+Anything failing a gate is skipped and reported, never deleted.
+--executed writes the announced-versus-executed audit trail; commit it
+next to the plan. Positional args filter the plan to those repos.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if planFile, _ := cmd.Flags().GetString("plan"); planFile != "" {
+			if err := gatedClean(cmd, args, planFile); err != nil {
+				log.Fatal().Err(err).Msg("gated clean")
+			}
+			return
+		}
+		if len(args) < 1 {
+			log.Fatal().Msg("clean without --plan needs at least one repo argument")
+		}
 		concurrency, _ := cmd.Flags().GetInt("concurrency")
 		savedir, _ := cmd.Flags().GetString("savedir")
 		delete, err := cmd.Flags().GetBool("delete")
@@ -107,6 +133,81 @@ Each repo is processed sequentially, Deletions within a repo are processed concu
 			fmt.Println(repoName, filter)
 		}
 	},
+}
+
+func gatedClean(cmd *cobra.Command, args []string, planFile string) error {
+	doDelete, _ := cmd.Flags().GetBool("delete")
+	bucket, _ := cmd.Flags().GetString("bucket")
+	executedFile, _ := cmd.Flags().GetString("executed")
+
+	data, err := os.ReadFile(planFile)
+	if err != nil {
+		return err
+	}
+	var plans []pkgs.Plan
+	if err := json.Unmarshal(data, &plans); err != nil {
+		return fmt.Errorf("parsing %s: %w", planFile, err)
+	}
+	only := make(map[string]bool, len(args))
+	for _, a := range args {
+		only[a] = true
+	}
+	tracks, err := pkgs.LoadTracks()
+	if err != nil {
+		return fmt.Errorf("loading tracks config: %w", err)
+	}
+	store, err := pkgs.NewS3Store(cmd.Context(), bucket)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+	var results []pkgs.ExecuteResult
+	for _, plan := range plans {
+		if len(only) > 0 && !only[plan.Repo] {
+			continue
+		}
+		cfg, found := (*repos)[plan.Repo]
+		if !found {
+			return fmt.Errorf("%s is in the plan but not in the pkgs config", plan.Repo)
+		}
+		if doDelete && !cfg.AllowDelete {
+			return fmt.Errorf("%s is not enabled for deletion; the rollout is repo by repo, set pkgs.%s.allow_delete in a reviewed PR first", plan.Repo, plan.Repo)
+		}
+		items, err := pkgClient.ListPackages(plan.Repo)
+		if err != nil {
+			return fmt.Errorf("listing %s: %w", plan.Repo, err)
+		}
+		fresh, err := pkgs.BuildPlan(plan.Repo, cfg, tracks, items, now, 0)
+		if err != nil {
+			return fmt.Errorf("re-deriving the plan for %s: %w", plan.Repo, err)
+		}
+		res, err := pkgs.ExecutePlan(cmd.Context(), plan, fresh, items, store, pkgClient.Delete,
+			pkgs.ExecuteConfig{Delete: doDelete, Now: now})
+		if err != nil {
+			return err
+		}
+		results = append(results, res)
+		fmt.Fprint(cmd.OutOrStdout(), res.Render())
+	}
+	if len(results) == 0 {
+		return fmt.Errorf("no plans in %s matched %v", planFile, args)
+	}
+	if executedFile != "" {
+		out, err := json.MarshalIndent(results, "", "  ")
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(executedFile, out, 0o644); err != nil {
+			return err
+		}
+	}
+	for _, res := range results {
+		if !res.Clean() {
+			return fmt.Errorf("some deletions failed; see the execution report")
+		}
+	}
+	return nil
 }
 
 var planSubCmd = &cobra.Command{
@@ -397,6 +498,9 @@ func init() {
 	cleanSubCmd.Flags().Int("concurrency", 3, "Cleanup concurrency level")
 	cleanSubCmd.Flags().String("savedir", "./backup", "Local directory root to save packages before deleting")
 	cleanSubCmd.Flags().Bool("delete", false, "Actually delete the package from the repo")
+	cleanSubCmd.Flags().String("plan", "", "Committed plan (JSON from 'pkgs plan --json'): execute it gated instead of the static filters")
+	cleanSubCmd.Flags().String("executed", "", "Write the announced-versus-executed report (executed.json) here")
+	cleanSubCmd.Flags().String("bucket", "tyk-artifact-archive", "S3 archive bucket that must hold each package before it is deleted")
 
 	planSubCmd.Flags().Bool("json", false, "Emit the plan as JSON, including the prune-eligible package list")
 	planSubCmd.Flags().Int("grace-days", 30, "Days until the plan's not_before deadline; override for the 90-day launch notice")

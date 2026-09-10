@@ -1,0 +1,185 @@
+name: Retention delete
+
+# THIS WORKFLOW IS DELIBERATELY INERT.
+#
+# It is the only step in the retention pipeline that destroys
+# artifacts, and the rollout (TT-17825) is gated: support enablement
+# in place, the launch grace period elapsed, and the first production
+# target is tyk-identity-broker only. Until those preconditions are
+# signed off, this workflow must not be runnable.
+#
+# ENABLING IT is a reviewed PR that replaces the workflow_call trigger
+# below with the real one:
+#
+#   on:
+#     workflow_dispatch:
+#       inputs:
+#         month:
+#           description: 'Plan month to execute (YYYY-MM)'
+#           type: string
+#           required: true
+#         repo:
+#           description: 'Repo to delete from (rollout order: TIB first)'
+#           type: choice
+#           options: [tyk-identity-broker]
+#         delete:
+#           description: 'Actually delete (false = dry run + executed report)'
+#           type: boolean
+#           default: false
+#
+# The same PR (or an earlier one) sets pkgs.<repo>.allow_delete in
+# config/config.yaml; without it the command refuses --delete for the
+# repo regardless of how this workflow is invoked.
+#
+# A cron comes later still, once the manual runs have been reviewed.
+# The schedule only removes the human dispatch; every gate (plan age,
+# archive confirmation, allow_delete, fresh-plan agreement, checksum
+# match) is enforced by 'gromit pkgs clean --plan' on every run.
+#
+# workflow_call with no caller: valid trigger, never fires. Nothing
+# references this workflow, and wiring a caller instead of doing the
+# enablement PR above should be treated as an incident.
+on:
+  workflow_call:
+    inputs:
+      month:
+        description: 'Plan month to execute (YYYY-MM)'
+        type: string
+        required: true
+      repo:
+        description: 'Repo to delete from'
+        type: string
+        required: true
+      delete:
+        description: 'Actually delete (false = dry run + executed report)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: retention-delete
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # OIDC handshake with AWS
+  contents: read
+
+jobs:
+  delete:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        with:
+          app-id: ${{ secrets.PROBE_APP_ID }}
+          private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
+          owner: TykTechnologies
+          repositories: artifact-retention-plans
+          permission-contents: write
+
+      - name: Checkout gromit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      # Credentials stay persisted on purpose: the executed report is
+      # committed back to this checkout after the run.
+      - name: Checkout plans repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # zizmor: ignore[artipacked]
+        with:
+          repository: TykTechnologies/artifact-retention-plans
+          token: ${{ steps.app-token.outputs.token }}
+          path: plans-repo
+
+      # The grace period must have really passed: checked against the
+      # plan commit's server-side timestamp in the plans repo, not
+      # against a date inside the file. The command additionally
+      # enforces the plan's own not_before.
+      - name: Verify the plan commit is old enough
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          MONTH: ${{ inputs.month }}
+        run: |
+          set -euo pipefail
+          PLAN="plans/$MONTH/plan.json"
+          if [ ! -f "plans-repo/$PLAN" ]; then
+            echo "::error::no plan at $PLAN in the plans repo"
+            exit 1
+          fi
+          committed=$(gh api "repos/TykTechnologies/artifact-retention-plans/commits?path=$PLAN&per_page=1" \
+            --jq '.[0].commit.committer.date')
+          age_days=$(( ( $(date -u +%s) - $(date -u -d "$committed" +%s) ) / 86400 ))
+          echo "plan $PLAN committed $committed (${age_days}d ago)"
+          not_before=$(jq -r '.[0].not_before' "plans-repo/$PLAN")
+          if [ "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \< "$not_before" ]; then
+            echo "::error::plan not_before $not_before has not elapsed"
+            exit 1
+          fi
+          if [ "$age_days" -lt 30 ]; then
+            echo "::error::plan commit is only ${age_days} days old; the 30-day grace is counted from the commit, not the file"
+            exit 1
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+
+      - name: Assume archive role
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ secrets.ARCHIVE_ROLE_ARN }}
+          aws-region: eu-north-1
+
+      - name: Execute the plan
+        env:
+          PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}
+          MONTH: ${{ inputs.month }}
+          REPO: ${{ inputs.repo }}
+          DELETE: ${{ inputs.delete }}
+        run: |
+          set -euo pipefail
+          PLAN="plans-repo/plans/$MONTH/plan.json"
+          FLAGS=""
+          if [ "$DELETE" = "true" ]; then
+            FLAGS="--delete"
+          fi
+          # shellcheck disable=SC2086 # FLAGS is deliberately word-split
+          go run . pkgs clean --plan "$PLAN" $FLAGS \
+            --executed "executed-$REPO.json" "$REPO" | tee execute.txt
+
+      # Announced versus executed, side by side, is the permanent
+      # audit trail; dry runs are committed too.
+      - name: Commit the execution report
+        env:
+          MONTH: ${{ inputs.month }}
+          REPO: ${{ inputs.repo }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          stamp=$(date -u +%Y%m%dT%H%M%SZ)
+          dest="plans-repo/plans/$MONTH/executed-$REPO-$stamp.json"
+          cp "executed-$REPO.json" "$dest"
+          cd plans-repo
+          git config user.name "gromit-retention"
+          git config user.email "gromit-retention@users.noreply.github.com"
+          git add "plans/$MONTH"
+          git commit -m "Execution report for $REPO ($MONTH)" -m "Generated by $RUN_URL"
+          git push
+
+      - name: Summarise
+        env:
+          MONTH: ${{ inputs.month }}
+          DELETE: ${{ inputs.delete }}
+        run: |
+          {
+            echo "## Retention delete"
+            echo ""
+            echo "Plan month: \`$MONTH\`, delete: \`$DELETE\`"
+            echo ""
+            echo '```'
+            cat execute.txt
+            echo '```'
+            echo ""
+            echo "The execution report was committed next to the plan."
+          } >> "$GITHUB_STEP_SUMMARY"
