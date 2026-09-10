@@ -49,6 +49,10 @@ type pkgConfig struct {
 	Dhrepo string
 	// Dhrepos lists every Hub repo for this product (CE, EE, FIPS)
 	Dhrepos []string
+	// AllowDelete opts a repo into the gated deletion rollout
+	// (TT-17825). It fails safe: omitted means the deletion step
+	// refuses to delete from this repo, dry runs stay allowed.
+	AllowDelete bool `mapstructure:"allow_delete"`
 }
 
 func (c pkgConfig) HubImages() []string {
@@ -198,6 +202,13 @@ func (c *Client) download(item pc.PackageDetail, savedir string) error {
 	}
 
 	return nil
+}
+
+// Delete removes the given package listing from the public repo
+// permanently. The gated execution path (ExecutePlan) is the only
+// production caller.
+func (c *Client) Delete(item pc.PackageDetail) error {
+	return c.delete(item)
 }
 
 // delete deletes the given package from the repo permanently
