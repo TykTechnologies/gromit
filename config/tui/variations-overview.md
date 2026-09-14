@@ -13,7 +13,7 @@ closest ancestor that defines one (ultimately falling back to the top-level defa
 | Testsuite | Branch | Event | Repo | Cache | DB | Config | Notes |
 |---|---|---|---|---|---|---|---|
 | api | default | workflow_dispatch / pull_request / push | any | valkey8 | postgres15 | murmur128 | Default envfile for all branches not explicitly listed; kept on old versions for compatibility with old Tyk versions |
-| api | master | pull_request / push (repos other than tyk-pro) | any | valkey9_1 | postgres15 | murmur128 | Branch-level default for `master` |
+| api | master | pull_request / push (repos other than tyk-pro) | any | valkey9 | postgres15 | murmur128 | Branch-level default for `master` |
 | api | master | pull_request | tyk-pro | redis8 | mongo7 | sha256 | 1st override matrix entry |
 | api | master | pull_request | tyk-pro | valkey8 | postgres16 | murmur128 | 2nd override matrix entry |
 | api | master | schedule | tyk-analytics | redis8 | postgres15 | sha256 | 1st scheduled matrix entry (uses master gwdash) |
@@ -36,7 +36,7 @@ closest ancestor that defines one (ultimately falling back to the top-level defa
 | Testsuite | Branch | Event | Repo | Cache | DB | Config | Notes |
 |---|---|---|---|---|---|---|---|
 | api | default | workflow_dispatch / pull_request / push | any | valkey8 | postgres15 | murmur128 | Default envfile for all branches not explicitly listed; kept on old versions for compatibility |
-| api | master | pull_request / push (repos other than tyk-pro) | any | valkey9 | postgres15 | murmur128 | Branch-level default for `master` (note: `valkey9`, not `valkey9_1` as in test-variations) |
+| api | master | pull_request / push (repos other than tyk-pro) | any | valkey9 | postgres15 | murmur128 | Branch-level default for `master` |
 | api | master | pull_request | tyk-pro | redis8 | mongo7 | sha256 | 1st override matrix entry |
 | api | master | pull_request | tyk-pro | valkey8 | postgres16 | murmur128 | 2nd override matrix entry |
 | api | master | schedule | tyk-analytics | redis8 | postgres15 | sha256 | 1st scheduled matrix entry (uses master gwdash) |
@@ -58,7 +58,6 @@ closest ancestor that defines one (ultimately falling back to the top-level defa
 
 ## Key differences between test- and prod-variations
 
-- `api / master` default branch envfile: **test** uses `valkey9_1`, **prod** uses `valkey9` (otherwise identical: postgres15/murmur128).
 - `api / master / schedule / tyk-analytics` 3rd matrix entry: **test** uses `db: postgres14`, **prod** uses `db: postgres17` (both `redis8`/`murmur128`).
 - `prod-variations.yml` has an extra testsuite, **`lts-version`**, absent from `test-variations.yml`. It only exercises the `gwdash` version (master, release-5.8, release-5.13) against `tyk-analytics` on `master`/`schedule`, inheriting cache/db/config from the ancestor default.
 - `ui / master / schedule / tyk-analytics`: **prod** has an extra 3rd envfile entry (`redis8/postgres17/sha256`, gwdash master) that **test** does not have.

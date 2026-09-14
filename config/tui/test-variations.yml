@@ -46,7 +46,7 @@ level: # testsuites
               tyk-pro:
       master:
         envfiles:
-        - cache: "valkey9_1"
+        - cache: "valkey9"
           config: "murmur128"
           db: "postgres15"
           apimarkers: "not local and not dind and not sql"
