@@ -1,0 +1,52 @@
+name: archive write canary
+
+# TT-17972: proves a gromit workflow can write to the
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write # OIDC handshake with AWS
+  contents: read
+
+jobs:
+  canary:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Assume archive role
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ secrets.ARCHIVE_ROLE_ARN }}
+          aws-region: eu-north-1
+
+      - name: Write, read back and verify
+        run: |
+          set -euo pipefail
+          BUCKET=tyk-artifact-archive
+          KEY="canary/$(date -u +%Y-%m-%dT%H%M%SZ).txt"
+
+          echo "archive write canary, run ${GITHUB_RUN_ID}, $(date -u)" > canary.txt
+          SUM_BEFORE=$(sha256sum canary.txt | cut -d' ' -f1)
+
+          aws s3 cp canary.txt "s3://${BUCKET}/${KEY}"
+          aws s3 cp "s3://${BUCKET}/${KEY}" roundtrip.txt
+          SUM_AFTER=$(sha256sum roundtrip.txt | cut -d' ' -f1)
+
+          if [ "$SUM_BEFORE" != "$SUM_AFTER" ]; then
+            echo "::error::checksum mismatch: wrote $SUM_BEFORE, read back $SUM_AFTER"
+            exit 1
+          fi
+
+          # deletion must fail: the role is write-only by design
+          if aws s3 rm "s3://${BUCKET}/${KEY}" 2>/dev/null; then
+            echo "::error::role was able to delete; policy is broader than intended"
+            exit 1
+          fi
+
+          {
+            echo "## archive write canary"
+            echo ""
+            echo "- wrote and read back \`s3://${BUCKET}/${KEY}\`"
+            echo "- sha256 verified: \`${SUM_BEFORE}\`"
+            echo "- delete correctly denied (write-only role)"
+          } >> "$GITHUB_STEP_SUMMARY"
