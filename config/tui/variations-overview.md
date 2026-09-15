@@ -41,7 +41,7 @@ closest ancestor that defines one (ultimately falling back to the top-level defa
 | api | master | pull_request | tyk-pro | valkey8 | postgres16 | murmur128 | 2nd override matrix entry |
 | api | master | schedule | tyk-analytics | redis8 | postgres15 | sha256 | 1st scheduled matrix entry (uses master gwdash) |
 | api | master | schedule | tyk-analytics | redis8 | mongo8 | murmur128 | 2nd scheduled matrix entry (gwdash release-5.13) |
-| api | master | schedule | tyk-analytics | redis8 | postgres17 | murmur128 | 3rd scheduled matrix entry |
+| api | master | schedule | tyk-analytics | valkey9 | postgres18 | murmur128 | 3rd scheduled matrix entry |
 | api | master | schedule | tyk-analytics | valkey7 | postgres16 | sha256 | 4th scheduled matrix entry (gwdash release-5.8) |
 | api | master | schedule | tyk-analytics | valkey8 | postgres17 | murmur128 | 5th scheduled matrix entry |
 | api | master | schedule | tyk-analytics | valkey8 | mongo8 | sha256 | 6th scheduled matrix entry |
@@ -58,6 +58,6 @@ closest ancestor that defines one (ultimately falling back to the top-level defa
 
 ## Key differences between test- and prod-variations
 
-- `api / master / schedule / tyk-analytics` 3rd matrix entry: **test** uses `db: postgres14`, **prod** uses `db: postgres17` (both `redis8`/`murmur128`).
+- `api / master / schedule / tyk-analytics` 3rd matrix entry: **test** uses `cache: redis8, db: postgres14`, **prod** uses `cache: valkey9, db: postgres18` (per nightly-pipeline review request to cover the major-version bumps, both `murmur128`).
 - `prod-variations.yml` has an extra testsuite, **`lts-version`**, absent from `test-variations.yml`. It only exercises the `gwdash` version (master, release-5.8, release-5.13) against `tyk-analytics` on `master`/`schedule`, inheriting cache/db/config from the ancestor default.
 - `ui / master / schedule / tyk-analytics`: **prod** has an extra 3rd envfile entry (`redis8/postgres17/sha256`, gwdash master) that **test** does not have.

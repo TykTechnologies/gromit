@@ -72,9 +72,9 @@ level: # testsuites
                     sink: "$ECR/tyk-sink:master"
                     pump: "$ECR/tyk-pump:master"
                     gwdash: release-5.13
-                  - cache: "redis8"
+                  - cache: "valkey9"
                     config: "murmur128"
-                    db: "postgres17"
+                    db: "postgres18"
                     apimarkers: "not local and not dind and not sql"
                     gwdash: master
                   - cache: "valkey7"
