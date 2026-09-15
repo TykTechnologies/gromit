@@ -53,8 +53,11 @@ update-actions-versions: bin/update-actions-versions.sed
 update-variation: policy/templates/test-square/.github/workflows/test-square.yml policy/templates/releng/.github/workflows/release.yml
 	$(SED_I) 's/VARIATION: .*/VARIATION: $(VARIATION)/' $^
 
-push: dist/gromit_linux_amd64_v1/gromit
-	goreleaser --clean --snapshot
+push:
+	goreleaser release --clean --snapshot
+	@set -euo pipefail; \
+	imgs=$$(docker images 'tykio/gromit' --format '{{.Repository}}:{{.Tag}}' | grep -E '-(amd64|arm64)$$'); \
+	echo "$$imgs" | while read -r img; do docker push "$$img"; done; \
 	docker push tykio/gromit:latest
 
 

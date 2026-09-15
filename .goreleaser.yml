@@ -20,33 +20,58 @@ builds:
       - -X github.com/TykTechnologies/gromit/util.version={{.Version}}
       - -X github.com/TykTechnologies/gromit/util.commit={{.Commit}}
       - -X github.com/TykTechnologies/gromit/util.buildDate={{.Date}}
-    mod_timestamp: '{{ .CommitTimestamp }}'
+    mod_timestamp: "{{ .CommitTimestamp }}"
 
 dockers:
   - image_templates:
-      - "tykio/gromit:latest"
-      - "tykio/gromit:v{{ .Major }}.{{ .Minor }}{{.Prerelease}}"
-      - "tykio/gromit:{{.Tag}}"
+      - "tykio/gromit:{{ .Tag }}-amd64"
     use: buildx
+    goarch: amd64
     dockerfile: Dockerfile
     build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+  - image_templates:
+      - "tykio/gromit:{{ .Tag }}-arm64"
+    use: buildx
+    goarch: arm64
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm64"
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
 
+docker_manifests:
+  - name_template: "tykio/gromit:{{ .Tag }}"
+    image_templates:
+      - "tykio/gromit:{{ .Tag }}-amd64"
+      - "tykio/gromit:{{ .Tag }}-arm64"
+  - name_template: "tykio/gromit:v{{ .Major }}.{{ .Minor }}{{.Prerelease}}"
+    image_templates:
+      - "tykio/gromit:{{ .Tag }}-amd64"
+      - "tykio/gromit:{{ .Tag }}-arm64"
+  - name_template: "tykio/gromit:latest"
+    image_templates:
+      - "tykio/gromit:{{ .Tag }}-amd64"
+      - "tykio/gromit:{{ .Tag }}-arm64"
+
 changelog:
   sort: asc
   filters:
     exclude:
-    - '^utils:'
-    - (?i)typo
-    - 'Merge (pull request|branch)'
-    - '\[CI\]'
-    - '(?i)\[Buddy\]'
-    - 'cherry picked'
-    - '^rel-eng:'
-    - '^minor:'
+      - "^utils:"
+      - (?i)typo
+      - "Merge (pull request|branch)"
+      - '\[CI\]'
+      - '(?i)\[Buddy\]'
+      - "cherry picked"
+      - "^rel-eng:"
+      - "^minor:"
 
 release:
   github:
