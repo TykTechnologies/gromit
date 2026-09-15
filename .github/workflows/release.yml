@@ -79,6 +79,8 @@ jobs:
         with:
           go-version: "1.22"
 
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130  # v3
+
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
       - run: make test
@@ -96,15 +98,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 
-      - name: find amd64 linux binary
+      - name: find linux binary for this runner
         id: binary
         run: |
-          path=$(jq -rc '.[] | select((.type=="Binary") and (.goos=="linux") and .goarch=="amd64") | .path' dist/artifacts.json)
-          echo "path=${path}" >> $GITHUB_OUTPUT
+          case "$(uname -m)" in
+            x86_64) goarch=amd64 ;;
+            aarch64|arm64) goarch=arm64 ;;
+            *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
+          esac
+          path=$(jq -rc --arg a "$goarch" '.[] | select((.type=="Binary") and (.goos=="linux") and (.goarch==$a)) | .path' dist/artifacts.json)
+          echo "path=${path}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
-          name: binary-amd64
+          name: gromit-linux
           path: ${{ steps.binary.outputs.path }}
           retention-days: 1
 
@@ -151,7 +158,7 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.repo == 'all' || inputs.repo == matrix.repo }}
         id: download
         with:
-          name: binary-amd64
+          name: gromit-linux
 
       - name: prepare gromit
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.repo == 'all' || inputs.repo == matrix.repo }}
