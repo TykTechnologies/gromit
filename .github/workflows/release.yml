@@ -41,10 +41,10 @@ on:
         required: false
         default: 'gromit: sync templates'
       jira:
-        description: 'Jira issue key to use in the PR title, e.g. "TT-12345"'
+        description: 'Jira issue key to use in the PR title, e.g. "TT-12345". Required when "Create Pull Request" is checked.'
         type: string
         required: false
-        default: 'releng'
+        default: ''
       prefix:
         description: 'Branch prefix for template changes, e.g. "releng/" or "update/"'
         type: string
@@ -172,6 +172,14 @@ jobs:
         if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.repo == 'all' || inputs.repo == matrix.repo)) || (github.event_name == 'push' && github.ref_name == 'master') || endsWith(github.head_ref, 'releng') }}
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          # For push events, the Jira ID is taken from the title of the PR
+          # that was merged in this push (found via the commit->pulls API),
+          # falling back to the head commit message. Master is protected
+          # (PRs only, admins included) and the Jira linter requires PR
+          # titles to carry a valid issue key, so an ID is always present.
+          HEAD_COMMIT_MSG: ${{ github.event.head_commit.message }}
+          INPUT_JIRA: ${{ inputs.jira }}
+          INPUT_TITLE: ${{ inputs.title }}
         run: |
           set -eo pipefail
           BRANCH_ARGS=()
@@ -184,11 +192,30 @@ jobs:
             PREFIX_ARGS=(--prefix "${{ inputs.prefix }}")
           fi
           
+          find_jira_id() {
+            local jira_id=""
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              jira_id="$INPUT_JIRA"
+            elif [ "${{ github.event_name }}" = "push" ]; then
+              # Title of the PR merged in this push, if any
+              local pr_title
+              pr_title=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq '.[0].title // empty' 2>/dev/null || true)
+              jira_id=$(printf '%s\n%s\n' "$pr_title" "$HEAD_COMMIT_MSG" | grep -oEi -m1 '[A-Z]{1,10}-[0-9]{1,10}' | head -n1 || true)
+            fi
+            echo "$jira_id" | tr '[:lower:]' '[:upper:]'
+          }
+          
           PR_ARGS=()
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "master" ]; then
-            PR_ARGS=(--pr --title "gromit: sync templates" --jira "releng")
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.pr }}" = "true" ]; then
-            PR_ARGS=(--pr --title "${{ inputs.title }}" --jira "${{ inputs.jira }}")
+          if { [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "master" ]; } || \
+             { [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.pr }}" = "true" ]; }; then
+            JIRA_ID=$(find_jira_id)
+            if [ -z "$JIRA_ID" ]; then
+              echo "::error::No Jira issue key found. For manual runs, fill in the 'jira' input; for pushes, the merged PR title must contain one (e.g. TT-12345). Downstream PRs would fail the Jira linter without it." >&2
+              exit 1
+            fi
+            echo "Using Jira ID: $JIRA_ID"
+            PR_TITLE="${INPUT_TITLE:-gromit: sync templates}"
+            PR_ARGS=(--pr --title "$PR_TITLE" --jira "$JIRA_ID")
           fi
           
           ${{ steps.gromit.outputs.bin }} policy sync ${{ matrix.repo }} "${BRANCH_ARGS[@]}" "${PREFIX_ARGS[@]}" "${PR_ARGS[@]}"

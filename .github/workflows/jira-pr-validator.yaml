@@ -1,0 +1,29 @@
+name: Validate PR against Jira
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: jira-validator-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # The linter updates the PR description with ticket details and
+      # posts/removes a sticky comment on failure.
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Validate Jira ticket
+        uses: TykTechnologies/github-actions/jira-linter@production
+        with:
+          jira-base-url: ${{ secrets.JIRA_BASE_URL }}
+          jira-read-auth: ${{ secrets.JIRA_READ_AUTH }}
