@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/TykTechnologies/gromit/policy"
@@ -30,6 +31,11 @@ import (
 // polBranch so that it does not conflict with PrBranch
 var polBranch string
 var owner string
+
+// jiraIDRegexp matches a valid Jira issue key, e.g. TT-12345. The Jira linter
+// running on the managed repos requires PR titles to contain one, so PRs
+// created with a placeholder value would fail their checks.
+var jiraIDRegexp = regexp.MustCompile(`^[A-Za-z]{1,10}-[0-9]{1,10}$`)
 
 // policyCmd represents the policy command
 var policyCmd = &cobra.Command{
@@ -132,6 +138,10 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 		if pr && ghToken == "" {
 			return fmt.Errorf("Creating a PR requires GITHUB_TOKEN to be set")
 		}
+		jiraID, _ := cmd.Flags().GetString("jira")
+		if pr && !jiraIDRegexp.MatchString(jiraID) {
+			return fmt.Errorf("--jira %q is not a valid Jira issue key (expected e.g. TT-12345); the Jira linter on the managed repos requires PR titles to contain one", jiraID)
+		}
 		repoName := args[0]
 		err := policy.LoadRepoPolicies(&configPolicies)
 		if err != nil {
@@ -184,7 +194,6 @@ If --pr is supplied, a PR will be created with the changes and @devops will be a
 			}
 			if pr {
 				prTitle, _ := cmd.Flags().GetString("title")
-				jiraID, _ := cmd.Flags().GetString("jira")
 				prOpts := &policy.PullRequest{
 					BaseBranch: repo.Branch(),
 					PrBranch:   pushOpts.RemoteBranch,
@@ -277,7 +286,7 @@ var generateTuiCmd = &cobra.Command{
 func init() {
 	syncSubCmd.Flags().Bool("pr", false, "Create PR")
 	syncSubCmd.Flags().String("title", "", "Title of PR, required if --pr is present")
-	syncSubCmd.Flags().String("jira", "releng", "Jira ticket ID to use in the PR title, e.g. TT-12345")
+	syncSubCmd.Flags().String("jira", "", "Jira issue key to use in the PR title, e.g. TT-12345. Required with --pr as the Jira linter on the managed repos expects PR titles to contain a valid issue key.")
 	syncSubCmd.Flags().String("msg", "Auto generated from templates by gromit", "Commit message for the automated commit by gromit.")
 	syncSubCmd.MarkFlagsRequiredTogether("pr", "title")
 	syncSubCmd.Flags().StringVar(&owner, "owner", "TykTechnologies", "Github org")
