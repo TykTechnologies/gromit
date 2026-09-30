@@ -25,6 +25,7 @@ on:
           - tyk-sink
           - portal
           - tyk-pro
+          - ara
       branch:
         description: 'Branch name to sync, e.g. "release-5.13.0" (equivalent to running `gromit policy sync <repo> --branch release-5.13.0` locally). Leave empty to sync all configured branches.'
         type: string
@@ -131,6 +132,7 @@ jobs:
             tyk-sink,
             portal,
             tyk-pro,
+            ara,
           ]
         include:
           - owner: TykTechnologies
