@@ -89,9 +89,14 @@ level: # testsuites
                     gwdash: master
                   - cache: "valkey8"
                     config: "sha256"
-                    db: "mongo8"
+                    db: "mongo9"
                     apimarkers: "not local and not dind"
                     gwdash: "master"
+                  - cache: "redis7"
+                    config: "murmur128"
+                    db: "mongo9"
+                    apimarkers: "not local and not dind"
+                    gwdash: release-5.8
               tyk-pro:
                 envfiles:
                   - cache: "redis8"
@@ -177,6 +182,14 @@ level: # testsuites
                     pump: "$ECR/tyk-pump:master"
                     sink: "$ECR/tyk-sink:master"
                     gwdash: master
+                  - cache: "valkey9"
+                    config: "sha256"
+                    db: "mongo9"
+                    gwdash: master
+                  - cache: "valkey7"
+                    config: "sha256"
+                    db: "mongo9"
+                    gwdash: release-5.8
           workflow_dispatch:
             level: # repo
               tyk-analytics:
