@@ -88,9 +88,14 @@ level: # testsuites
                     gwdash: master
                   - cache: "valkey8"
                     config: "sha256"
-                    db: "mongo8"
+                    db: "mongo9"
                     apimarkers: "not local and not dind"
                     gwdash: "master"
+                  - cache: "redis7"
+                    config: "murmur128"
+                    db: "mongo9"
+                    apimarkers: "not local and not dind"
+                    gwdash: release-5.8
               tyk-pro:
                 envfiles:
                   - cache: "redis8"
@@ -159,6 +164,16 @@ level: # testsuites
                   - cache: "redis7"
                     config: "murmur128"
                     db: "mongo8"
+                    apimarkers: "not local and not dind"
+                    gwdash: release-5.8
+                  - cache: "valkey9"
+                    config: "sha256"
+                    db: "mongo9"
+                    apimarkers: "not local and not dind"
+                    gwdash: master
+                  - cache: "valkey7"
+                    config: "sha256"
+                    db: "mongo9"
                     apimarkers: "not local and not dind"
                     gwdash: release-5.8
           workflow_dispatch:
