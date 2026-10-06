@@ -166,7 +166,10 @@ func (b *Bundle) write(buf *bytes.Buffer, opFile string) error {
 func skipYamlfmt(opFile string) bool {
 	opFile = filepath.ToSlash(opFile)
 	return strings.HasSuffix(opFile, ".github/workflows/plugin-compiler-build.yml") ||
-		strings.HasSuffix(opFile, ".github/workflows/plugin-compiler-ng-build.yml")
+		strings.HasSuffix(opFile, ".github/workflows/plugin-compiler-ng-build.yml") ||
+		// yamlfmt drops the document start and comment padding that
+		// strict yamllint in repos like ara requires.
+		strings.HasSuffix(opFile, ".github/workflows/drift-check.yml")
 }
 
 // String will provide a human readable bundle listing
