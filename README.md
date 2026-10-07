@@ -33,6 +33,9 @@ Policies are implemented by rendering template bundles, which are usually embedd
 #### releng
 This bundle contains all of the code required to build and test all the artefacts that are created when a release is made. Releases are made by pushing a tag to github. 
 
+The opt-in [MCP qualification policy](docs/mcp-qualification.md) keeps serial MCP
+stack coverage in a shared workflow while generating its required release callers.
+
 #### gpac
 This bundle implements terraform manifests that model the state of the repos under management in github. This is used to [keep track of release branches](https://tyktech.atlassian.net/wiki/spaces/EN/pages/1907228677/Release+branches) as they are created.
 

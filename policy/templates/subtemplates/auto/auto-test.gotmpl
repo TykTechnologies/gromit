@@ -205,6 +205,10 @@
         id: test_execution
         with:
           user_api_secret: {{`${{ steps.env_up.outputs.USER_API_SECRET }}`}}
+          {{- if and (eq .flow "releng") (has "mcp-qualification" .dot.Branchvals.Features) }}
+          # MCP coverage runs serially against coordinated sources in the mandatory job below.
+          api_markers: ({{`${{ matrix.envfiles.apimarkers }}`}}) and not mcp
+          {{- end }}
       {{ else if eq .test "ui" }}
       - name: Fix private module deps
         env:

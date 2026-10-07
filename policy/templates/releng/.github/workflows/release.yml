@@ -22,7 +22,7 @@ on:
     - cron: "0 0 * * 1"
 {{- end }}
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened,{{ if has "mcp-qualification" .Branchvals.Features }} ready_for_review,{{ end }} labeled]
   push:
     branches:
       - master
@@ -61,6 +61,8 @@ jobs:
   {{- template "auto-test" (dict "dot" $dot "test" $test "flow" "releng") }}
   {{ end }}
 {{- end }} {{/* empty tests */}}
+
+{{- template "mcp-qualification" . }}
 
 {{- template "aggregator" . }}
 
