@@ -4,7 +4,11 @@ The opt-in `mcp-qualification` feature generates a small release workflow
 caller for the public shared workflow in `TykTechnologies/github-actions`.
 It is supported for Gateway (`tyk`), Dashboard (`tyk-analytics`) and Pump
 (`tyk-pump`) with an `api` test job. Other repositories and branches retain
-their existing generated workflows.
+their existing jobs and test selection.
+
+Every managed release workflow subscribes to `ready_for_review`, independent
+of the MCP flag. This lets existing draft-gated build and API jobs start when
+a PR becomes ready.
 
 When enabled, the policy:
 
@@ -13,7 +17,6 @@ When enabled, the policy:
 - Includes its result in the required aggregate job dependencies.
 - Excludes MCP from the parallel release API suite only when the mandatory
   serial qualification job is generated.
-- Starts release CI when a draft becomes ready for review.
 
 The reusable workflow lives in `github-actions`; tests, requirements, runner
 and compose fixtures remain under Dashboard's `tests/api`. The shared job

@@ -53,6 +53,9 @@ func TestMCPQualificationRelease(t *testing.T) {
 				}
 				require.NoError(t, yaml.Unmarshal([]byte(readRenderedFile(t, outputDir,
 					".github/workflows/release.yml")), &workflow))
+				// Leaving draft must start existing CI even when MCP is disabled.
+				assert.Equal(t, []string{"opened", "synchronize", "reopened", "ready_for_review", "labeled"},
+					workflow.On.PullRequest.Types)
 				qualification, exists := workflow.Jobs["mcp-qualification"]
 				assert.Equal(t, enabled, exists)
 				aggregate, exists := workflow.Jobs["aggregator-ci-test"]
@@ -93,10 +96,8 @@ func TestMCPQualificationRelease(t *testing.T) {
 					}, qualification.Secrets)
 					assert.Equal(t, map[string]string{"contents": "read"}, qualification.Permissions)
 					assert.Contains(t, dependencies, "mcp-qualification")
-					assert.Contains(t, workflow.On.PullRequest.Types, "ready_for_review")
 				} else {
 					assert.NotContains(t, dependencies, "mcp-qualification")
-					assert.NotContains(t, workflow.On.PullRequest.Types, "ready_for_review")
 				}
 				if repository == "tyk-analytics" && enabled {
 					// Nightly has no serial replacement; its existing MCP selection stays intact.

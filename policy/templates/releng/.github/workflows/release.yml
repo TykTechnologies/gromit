@@ -22,7 +22,7 @@ on:
     - cron: "0 0 * * 1"
 {{- end }}
   pull_request:
-    types: [opened, synchronize, reopened,{{ if has "mcp-qualification" .Branchvals.Features }} ready_for_review,{{ end }} labeled]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
   push:
     branches:
       - master
