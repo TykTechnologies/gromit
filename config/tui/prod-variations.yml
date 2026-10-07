@@ -104,6 +104,9 @@ level: # testsuites
                     db: "postgres18"
                     apimarkers: "not local and not dind and not sql"
                     gwdash: master
+              tyk-sink:
+              tyk-pump:
+              tyk:
           workflow_dispatch:
             level: # repo
               tyk-analytics:
