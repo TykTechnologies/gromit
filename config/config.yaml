@@ -566,6 +566,7 @@ policy:
             master:
               features:
                 - fips
+                - release-test
 
         ai-studio:
           packagename: tyk-ai-studio
@@ -793,6 +794,7 @@ policy:
             master:
               features:
                 - fips
+                - release-test
 
         midsommar:
           buildenv: 1.22-bullseye
