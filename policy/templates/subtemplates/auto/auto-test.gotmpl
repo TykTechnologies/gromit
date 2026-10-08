@@ -55,7 +55,10 @@
          reference it; the tiny test-controller job stays on DEFAULT_RUNNER. */ -}}
     runs-on: {{`${{ vars.WARP_RUNNER_8X_X64 || vars.DEFAULT_RUNNER }}`}}
     # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
-    timeout-minutes: {{ if eq .flow "nightly" }}30{{ else }}25{{ end }}
+    {{- if eq .test "ui" }}
+    # Playwright permits 40m; also allow installation, setup and reporting.
+    {{- end }}
+    timeout-minutes: {{ if eq .test "ui" }}60{{ else if eq .flow "nightly" }}30{{ else }}25{{ end }}
     env:
       XUNIT_REPORT_PATH: {{`${{ github.workspace}}`}}/test-results.xml
 {{- if and (eq .dot.Name "tyk-analytics") (eq .test "ui") }}
@@ -216,7 +219,8 @@
         run: >
           git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
       - name: Execute UI tests
-        timeout-minutes: {{ if eq .flow "nightly" }}30{{ else }}25{{ end }}
+        # Includes the 40m Playwright suite and npm/Chromium installation.
+        timeout-minutes: 45
         uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests@production
         id: test_execution
 

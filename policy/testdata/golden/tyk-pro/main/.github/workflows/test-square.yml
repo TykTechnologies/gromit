@@ -133,7 +133,8 @@ jobs:
       - test-controller-ui
     runs-on: ${{ vars.WARP_RUNNER_8X_X64 || vars.DEFAULT_RUNNER }}
     # Cost guard: hard cap vs the 360-min default (matters on bigger runners).
-    timeout-minutes: 25
+    # Playwright permits 40m; also allow installation, setup and reporting.
+    timeout-minutes: 60
     env:
       XUNIT_REPORT_PATH: ${{ github.workspace}}/test-results.xml
       BASE_REF: master
@@ -201,7 +202,8 @@ jobs:
         run: >
           git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
       - name: Execute UI tests
-        timeout-minutes: 25
+        # Includes the 40m Playwright suite and npm/Chromium installation.
+        timeout-minutes: 45
         uses: TykTechnologies/github-actions/.github/actions/tests/ui-tests@production
         id: test_execution
       - name: Upload UI test report to S3
