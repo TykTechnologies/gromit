@@ -1,0 +1,21 @@
+{{ define "mcp-qualification" }}
+{{- if has "mcp-qualification" .Branchvals.Features }}
+{{- if not (has .Name (list "tyk" "tyk-analytics" "tyk-pump")) }}
+{{- fail "mcp-qualification supports only tyk, tyk-analytics and tyk-pump" }}
+{{- end }}
+{{- if not (has "api" .Branchvals.Tests) }}
+{{- fail "mcp-qualification requires the api test job" }}
+{{- end }}
+  mcp-qualification:
+    name: Coordinated MCP qualification
+    needs: dep-guard
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    uses: TykTechnologies/github-actions/.github/workflows/mcp-qualification.yml@b2a86bbd65a78ecaf161ae381098be226606cd1f
+    secrets:
+      PROBE_APP_ID: {{`${{ secrets.PROBE_APP_ID }}`}}
+      PROBE_APP_PRIVATE_KEY: {{`${{ secrets.PROBE_APP_PRIVATE_KEY }}`}}
+      DASH_LICENSE: {{`${{ secrets.DASH_LICENSE }}`}}
+    permissions:
+      contents: read
+{{- end }}
+{{ end }}
