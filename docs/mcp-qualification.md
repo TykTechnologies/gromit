@@ -6,6 +6,14 @@ It is supported for Gateway (`tyk`), Dashboard (`tyk-analytics`) and Pump
 (`tyk-pump`) with an `api` test job. Other repositories and branches retain
 their existing jobs and test selection.
 
+Production configuration enables the feature only for these three repositories'
+`master` policies. Before merging or deploying this activation, merge
+[Dashboard #6298](https://github.com/TykTechnologies/tyk-analytics/pull/6298)
+so Dashboard `master` contains the runner and fixtures required by callers
+without a matching Dashboard source branch. The shared workflow is pinned to
+the authentication fix from
+[github-actions #165](https://github.com/TykTechnologies/github-actions/pull/165).
+
 Every managed release workflow subscribes to `ready_for_review`, independent
 of the MCP flag. This lets existing draft-gated build and API jobs start when
 a PR becomes ready.
@@ -32,7 +40,7 @@ Rollout order:
    read permissions and Dashboard license availability.
 3. Add `mcp-qualification` to the intended repository/branch features in
    `config/config.yaml`. Do not enable older release branches lacking the
-   Dashboard prerequisites. This support PR does not enable production policy.
+   Dashboard prerequisites.
 4. Build and deploy gromit through the normal release process. Drift checks
    execute the deployed policy, rather than a PR's proposed template changes.
 5. Regenerate the three consumer release workflows with that policy and remove

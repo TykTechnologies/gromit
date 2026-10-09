@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/TykTechnologies/gromit/config"
@@ -24,6 +25,10 @@ func TestMCPQualificationRelease(t *testing.T) {
 				repo, err := pol.GetRepoPolicy(repository)
 				require.NoError(t, err)
 				require.NoError(t, repo.SetBranch("master"))
+				// Exercise both states independently of the production rollout.
+				repo.Branchvals.Features = slices.DeleteFunc(repo.Branchvals.Features, func(feature string) bool {
+					return feature == "mcp-qualification"
+				})
 				if enabled {
 					repo.Branchvals.Features = append(repo.Branchvals.Features, "mcp-qualification")
 				}
@@ -86,7 +91,8 @@ func TestMCPQualificationRelease(t *testing.T) {
 				}
 				require.True(t, foundAPI)
 				if enabled {
-					assert.Regexp(t, `^TykTechnologies/github-actions/\.github/workflows/mcp-qualification\.yml@[0-9a-f]{40}$`, qualification.Uses)
+					// This revision grants access to the private api-definition module.
+					assert.Equal(t, "TykTechnologies/github-actions/.github/workflows/mcp-qualification.yml@aee08ff727a05046f05ab8236c57b2947a037834", qualification.Uses)
 					assert.Equal(t, "dep-guard", qualification.Needs)
 					assert.Equal(t, "github.event_name == 'pull_request' && github.event.pull_request.draft == false", qualification.If)
 					assert.Equal(t, map[string]any{
@@ -105,6 +111,31 @@ func TestMCPQualificationRelease(t *testing.T) {
 					assert.NotContains(t, nightly, "and not mcp")
 				}
 			})
+		}
+	}
+}
+
+func TestMCPQualificationProductionPolicy(t *testing.T) {
+	config.LoadConfig("")
+	var pol Policies
+	require.NoError(t, LoadRepoPolicies(&pol))
+
+	// Keep activation scoped to master: older release policies must not
+	// inherit it from their repository or group.
+	for _, group := range pol.Groups {
+		for repository := range group.Repos {
+			repo, err := pol.GetRepoPolicy(repository)
+			require.NoError(t, err)
+			for _, branch := range repo.GetAllBranches() {
+				t.Run(repository+"/"+branch, func(t *testing.T) {
+					repo, err := pol.GetRepoPolicy(repository)
+					require.NoError(t, err)
+					require.NoError(t, repo.SetBranch(branch))
+					wantEnabled := branch == "master" && slices.Contains(
+						[]string{"tyk", "tyk-analytics", "tyk-pump"}, repository)
+					assert.Equal(t, wantEnabled, slices.Contains(repo.Branchvals.Features, "mcp-qualification"))
+				})
+			}
 		}
 	}
 }
