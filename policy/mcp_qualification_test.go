@@ -2,6 +2,7 @@ package policy
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/TykTechnologies/gromit/config"
@@ -105,10 +106,10 @@ func TestMCPQualificationRelease(t *testing.T) {
 				} else {
 					assert.NotContains(t, dependencies, "mcp-qualification")
 				}
-				if repository == "tyk-analytics" && enabled {
-					// Nightly has no serial replacement; its existing MCP selection stays intact.
+				if repository == "tyk-analytics" {
+					// MCP tests require the dedicated serial stack, so the shared nightly stack must not select them.
 					nightly := readRenderedFile(t, outputDir, ".github/workflows/nightly-e2e-tests.yml")
-					assert.NotContains(t, nightly, "and not mcp")
+					assert.Equal(t, enabled, strings.Contains(nightly, "(${{ matrix.envfiles.apimarkers }}) and not mcp"))
 				}
 			})
 		}

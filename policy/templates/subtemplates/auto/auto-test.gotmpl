@@ -208,8 +208,12 @@
         id: test_execution
         with:
           user_api_secret: {{`${{ steps.env_up.outputs.USER_API_SECRET }}`}}
-          {{- if and (eq .flow "releng") (has "mcp-qualification" .dot.Branchvals.Features) }}
+          {{- if has "mcp-qualification" .dot.Branchvals.Features }}
+          {{- if eq .flow "releng" }}
           # MCP coverage runs serially against coordinated sources in the mandatory job below.
+          {{- else }}
+          # MCP tests need the dedicated serial stack from mcp-qualification and cannot run on this shared stack.
+          {{- end }}
           api_markers: ({{`${{ matrix.envfiles.apimarkers }}`}}) and not mcp
           {{- end }}
       {{ else if eq .test "ui" }}
