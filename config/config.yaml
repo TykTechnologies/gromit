@@ -350,6 +350,12 @@ policy:
                 - ee
                 - resolve-dashboard
                 - plugin-compiler-ng
+            release-5.13.4:
+              features:
+                - fips
+                - ee
+                - resolve-dashboard
+                - plugin-compiler-ng
             release-5.14:
               features:
                 - fips
@@ -482,6 +488,11 @@ policy:
                 - nightly-e2e
                 - fips
             release-5.13.2:
+              cgo: false
+              features:
+                - nightly-e2e
+                - fips
+            release-5.13.4:
               cgo: false
               features:
                 - nightly-e2e
