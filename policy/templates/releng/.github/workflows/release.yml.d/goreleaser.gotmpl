@@ -12,7 +12,10 @@
     name: '{{`${{ matrix.golang_cross }}`}}'
     {{/* 8x runner for the heavy build (tyk-analytics + tyk) via vars.WARP_RUNNER_8X_X64,
          with fallback so other repos / un-migrated branches stay on DEFAULT_RUNNER. */ -}}
-    {{- if or (eq .Name "tyk-analytics") (eq .Name "tyk") }}
+    {{- if eq .Name "tyk" }}
+    {{/* tyk: 16x runner via vars.WARP_RUNNER_16X_X64; falls back to 8x if the var is not set. */ -}}
+    runs-on: {{`${{ vars.WARP_RUNNER_16X_X64 || vars.WARP_RUNNER_8X_X64 || vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
+    {{- else if eq .Name "tyk-analytics" }}
     runs-on: {{`${{ vars.WARP_RUNNER_8X_X64 || vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
     {{- else }}
     runs-on: {{`${{ vars.BUILD_RUNNER || vars.DEFAULT_RUNNER }}`}}
