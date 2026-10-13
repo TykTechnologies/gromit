@@ -134,9 +134,71 @@ func TestMCPQualificationProductionPolicy(t *testing.T) {
 					wantEnabled := branch == "master" && slices.Contains(
 						[]string{"tyk", "tyk-analytics", "tyk-pump"}, repository)
 					assert.Equal(t, wantEnabled, slices.Contains(repo.Branchvals.Features, "mcp-qualification"))
+					assert.Equal(t, repository == "tyk-sink" && branch == "master",
+						slices.Contains(repo.Branchvals.Features, "exclude-mcp-api-tests"))
 				})
 			}
 		}
+	}
+}
+
+func TestSinkMCPExclusion(t *testing.T) {
+	config.LoadConfig("")
+	var pol Policies
+	require.NoError(t, LoadRepoPolicies(&pol))
+
+	for _, enabled := range []bool{false, true} {
+		name := "disabled"
+		if enabled {
+			name = "enabled"
+		}
+		t.Run(name, func(t *testing.T) {
+			repo, err := pol.GetRepoPolicy("tyk-sink")
+			require.NoError(t, err)
+			require.NoError(t, repo.SetBranch("master"))
+			repo.Branchvals.Features = slices.DeleteFunc(repo.Branchvals.Features, func(feature string) bool {
+				return feature == "exclude-mcp-api-tests"
+			})
+			if enabled {
+				repo.Branchvals.Features = append(repo.Branchvals.Features, "exclude-mcp-api-tests")
+			}
+			bundle, err := NewBundle(repo.Branchvals.Features)
+			require.NoError(t, err)
+			outputDir := t.TempDir()
+			_, err = bundle.Render(repo, outputDir, nil)
+			require.NoError(t, err)
+
+			var workflow struct {
+				Jobs map[string]struct {
+					Needs []string
+					Steps []struct {
+						Name string
+						With map[string]string
+					}
+				}
+			}
+			require.NoError(t, yaml.Unmarshal([]byte(readRenderedFile(t, outputDir,
+				".github/workflows/release.yml")), &workflow))
+			api, exists := workflow.Jobs["api-tests"]
+			require.True(t, exists)
+			foundAPI := false
+			for _, step := range api.Steps {
+				if step.Name != "Run API tests" {
+					continue
+				}
+				foundAPI = true
+				markers, filtered := step.With["api_markers"]
+				assert.Equal(t, enabled, filtered)
+				if enabled {
+					assert.Equal(t, "(${{ matrix.envfiles.apimarkers }}) and not mcp", markers)
+				}
+			}
+			require.True(t, foundAPI)
+			assert.Contains(t, workflow.Jobs["aggregator-ci-test"].Needs, "api-tests")
+			// The shared qualification workflow does not build or exercise MDCB.
+			assert.NotContains(t, workflow.Jobs, "mcp-qualification")
+			assert.NotContains(t, workflow.Jobs["aggregator-ci-test"].Needs, "mcp-qualification")
+		})
 	}
 }
 

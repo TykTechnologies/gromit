@@ -810,6 +810,7 @@ policy:
               features:
                 - fips
                 - release-test
+                - exclude-mcp-api-tests
 
         midsommar:
           buildenv: 1.22-bullseye

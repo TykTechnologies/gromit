@@ -211,6 +211,9 @@
           {{- if and (eq .flow "releng") (has "mcp-qualification" .dot.Branchvals.Features) }}
           # MCP coverage runs serially against coordinated sources in the mandatory job below.
           api_markers: ({{`${{ matrix.envfiles.apimarkers }}`}}) and not mcp
+          {{- else if has "exclude-mcp-api-tests" .dot.Branchvals.Features }}
+          # MCP tests require a dedicated stack and cannot run in this shared API environment.
+          api_markers: ({{`${{ matrix.envfiles.apimarkers }}`}}) and not mcp
           {{- end }}
       {{ else if eq .test "ui" }}
       - name: Fix private module deps
