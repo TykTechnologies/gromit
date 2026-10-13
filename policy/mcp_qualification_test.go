@@ -98,7 +98,7 @@ func TestMCPQualificationRelease(t *testing.T) {
 					// This revision grants access to the private api-definition module.
 					wantRevision := "aee08ff727a05046f05ab8236c57b2947a037834"
 					if repository == "tyk-sink" {
-						wantRevision = "0a3d17d61706a47d1c91c3819380665711da7ffe"
+						wantRevision = "908962edea3557f278dda483face055b8c0e5516"
 						assert.Equal(t, map[string]string{"topology": "mdcb"}, qualification.With)
 					} else {
 						assert.Empty(t, qualification.With)

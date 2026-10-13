@@ -11,7 +11,7 @@
     needs: dep-guard
     if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
     {{- if eq .Name "tyk-sink" }}
-    uses: TykTechnologies/github-actions/.github/workflows/mcp-qualification.yml@0a3d17d61706a47d1c91c3819380665711da7ffe
+    uses: TykTechnologies/github-actions/.github/workflows/mcp-qualification.yml@908962edea3557f278dda483face055b8c0e5516
     with:
       topology: mdcb
     {{- else }}

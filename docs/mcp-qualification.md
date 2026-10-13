@@ -60,7 +60,7 @@ leaving the parallel API tests filtered.
 
 Sink (`tyk-sink`) master additionally supports `mcp-qualification`. Its generated
 caller selects `topology: mdcb`, forwards `MDCB_LICENSE`, and pins the candidate
-shared workflow at `0a3d17d61706a47d1c91c3819380665711da7ffe`. Existing Gateway,
+shared workflow at `908962edea3557f278dda483face055b8c0e5516`. Existing Gateway,
 Dashboard and Pump callers keep their direct topology and previous immutable
 workflow revision. Release-branch selection is unchanged.
 
