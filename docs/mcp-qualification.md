@@ -4,7 +4,7 @@ The opt-in `mcp-qualification` feature generates a small release workflow
 caller for the public shared workflow in `TykTechnologies/github-actions`.
 It is supported for Gateway (`tyk`), Dashboard (`tyk-analytics`) and Pump
 (`tyk-pump`) with an `api` test job. Other repositories and branches retain
-their existing jobs and test selection.
+their existing jobs; sink's separate test-selection policy is described below.
 
 Production configuration enables the feature only for these three repositories'
 `master` policies. Before merging or deploying this activation, merge
@@ -31,6 +31,29 @@ and compose fixtures remain under Dashboard's `tests/api`. The shared job
 builds all components from coordinated source revisions and runs the four
 serializer/storage combinations. Keeping a caller in all three producer
 repositories ensures the changed producer's own PR head is exercised.
+
+## Sink shared API suite
+
+Sink (`tyk-sink`) master enables `exclude-mcp-api-tests` independently of
+`mcp-qualification`. The MCP tests added in
+[Dashboard #6298](https://github.com/TykTechnologies/tyk-analytics/pull/6298)
+require a dedicated stack and fail in sink's shared API environment, as seen in
+[sink #858](https://github.com/TykTechnologies/tyk-sink/pull/858). This flag appends
+`and not mcp` to the existing API markers, preserving the remaining API matrix
+and its required aggregate dependency. Other repository and branch policies do
+not enable this flag.
+
+The coordinated MCP jobs in Gateway, Dashboard and Pump continue to cover those
+components. They do not build or exercise MDCB, so this exclusion does not
+provide MCP qualification for sink. MDCB-specific MCP coverage needs a separate
+stack that includes sink; enabling the current `mcp-qualification` feature for
+sink remains unsupported.
+
+After deploying the updated gromit policy, regenerate sink's release workflow.
+To roll back the exclusion, remove `exclude-mcp-api-tests` from sink master's
+features and regenerate that workflow.
+
+## Qualification rollout
 
 Rollout order:
 
