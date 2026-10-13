@@ -808,6 +808,7 @@ policy:
           branches:
             master:
               features:
+                - mcp-qualification
                 - fips
                 - release-test
 

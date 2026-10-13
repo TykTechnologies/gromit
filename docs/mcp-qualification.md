@@ -55,3 +55,31 @@ pass. No merge, deployment or repository protection change is implied here.
 Rollback the caller, marker exclusion and aggregate dependency together.
 Removing only the qualification dependency or job loses MCP coverage while
 leaving the parallel API tests filtered.
+
+## MDCB qualification (TT-18691)
+
+Sink (`tyk-sink`) master additionally supports `mcp-qualification`. Its generated
+caller selects `topology: mdcb`, forwards `MDCB_LICENSE`, and pins the candidate
+shared workflow at `0a3d17d61706a47d1c91c3819380665711da7ffe`. Existing Gateway,
+Dashboard and Pump callers keep their direct topology and previous immutable
+workflow revision. Release-branch selection is unchanged.
+
+The sink caller, `and not mcp` selection in its parallel API suite and
+`aggregator-ci-test` dependency are generated together. PR #569 remains
+independent; its branch and standalone exclusion policy are not modified.
+If that policy merges before rollout, replace the standalone exclusion with
+this qualification-backed policy when reconciling master.
+
+Prerequisites are the sink Pump pin containing protocol analytics and signed
+64-bit errors, the Dashboard MDCB runner and compatible fixtures, App read
+access to sink, and Dashboard/MDCB licence secrets. The four MDCB profiles
+cover MongoDB/PostgreSQL × MessagePack/Protobuf, with forwarding to Pump
+disabled. Require API/key/policy propagation and persisted protocol metadata,
+exact signed boundaries and one completion record per request.
+
+Roll out sink/runner prerequisites, publish the shared-workflow commit, then
+deploy gromit and sync the generated sink release workflow. Keep these PRs
+linked; a drift check using deployed gromit cannot validate a proposed policy
+until deployment. Roll back the generated caller, API-suite exclusion and
+required aggregate dependency together, then roll back the policy pin.
+Never remove the replacement qualification while retaining the exclusion.

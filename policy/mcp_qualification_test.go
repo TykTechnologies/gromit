@@ -15,7 +15,7 @@ func TestMCPQualificationRelease(t *testing.T) {
 	var pol Policies
 	require.NoError(t, LoadRepoPolicies(&pol))
 
-	for _, repository := range []string{"tyk", "tyk-analytics", "tyk-pump"} {
+	for _, repository := range []string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink"} {
 		for _, enabled := range []bool{false, true} {
 			name := repository + "/disabled"
 			if enabled {
@@ -50,6 +50,7 @@ func TestMCPQualificationRelease(t *testing.T) {
 						If          string
 						Secrets     any
 						Permissions map[string]string
+						With        map[string]string
 						Steps       []struct {
 							Name string
 							With map[string]string
@@ -74,6 +75,9 @@ func TestMCPQualificationRelease(t *testing.T) {
 				if repository == "tyk-analytics" {
 					assert.Contains(t, dependencies, "ui-tests")
 				}
+				if repository == "tyk-sink" {
+					assert.Contains(t, dependencies, "release-tests")
+				}
 				api, exists := workflow.Jobs["api-tests"]
 				require.True(t, exists)
 				foundAPI := false
@@ -92,14 +96,25 @@ func TestMCPQualificationRelease(t *testing.T) {
 				require.True(t, foundAPI)
 				if enabled {
 					// This revision grants access to the private api-definition module.
-					assert.Equal(t, "TykTechnologies/github-actions/.github/workflows/mcp-qualification.yml@aee08ff727a05046f05ab8236c57b2947a037834", qualification.Uses)
+					wantRevision := "aee08ff727a05046f05ab8236c57b2947a037834"
+					if repository == "tyk-sink" {
+						wantRevision = "0a3d17d61706a47d1c91c3819380665711da7ffe"
+						assert.Equal(t, map[string]string{"topology": "mdcb"}, qualification.With)
+					} else {
+						assert.Empty(t, qualification.With)
+					}
+					assert.Equal(t, "TykTechnologies/github-actions/.github/workflows/mcp-qualification.yml@"+wantRevision, qualification.Uses)
 					assert.Equal(t, "dep-guard", qualification.Needs)
 					assert.Equal(t, "github.event_name == 'pull_request' && github.event.pull_request.draft == false", qualification.If)
-					assert.Equal(t, map[string]any{
+					wantSecrets := map[string]any{
 						"PROBE_APP_ID":          "${{ secrets.PROBE_APP_ID }}",
 						"PROBE_APP_PRIVATE_KEY": "${{ secrets.PROBE_APP_PRIVATE_KEY }}",
 						"DASH_LICENSE":          "${{ secrets.DASH_LICENSE }}",
-					}, qualification.Secrets)
+					}
+					if repository == "tyk-sink" {
+						wantSecrets["MDCB_LICENSE"] = "${{ secrets.MDCB_LICENSE }}"
+					}
+					assert.Equal(t, wantSecrets, qualification.Secrets)
 					assert.Equal(t, map[string]string{"contents": "read"}, qualification.Permissions)
 					assert.Contains(t, dependencies, "mcp-qualification")
 				} else {
@@ -132,7 +147,7 @@ func TestMCPQualificationProductionPolicy(t *testing.T) {
 					require.NoError(t, err)
 					require.NoError(t, repo.SetBranch(branch))
 					wantEnabled := branch == "master" && slices.Contains(
-						[]string{"tyk", "tyk-analytics", "tyk-pump"}, repository)
+						[]string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink"}, repository)
 					assert.Equal(t, wantEnabled, slices.Contains(repo.Branchvals.Features, "mcp-qualification"))
 				})
 			}
@@ -149,7 +164,7 @@ func TestMCPQualificationRejectsUnsupportedPolicy(t *testing.T) {
 		mutate  func(*RepoPolicy)
 		message string
 	}{
-		{"unsupported-repository", func(repo *RepoPolicy) { repo.Name = "tyk-sink" }, "supports only tyk"},
+		{"unsupported-repository", func(repo *RepoPolicy) { repo.Name = "tyk-sync" }, "supports only tyk"},
 		{"missing-api-suite", func(repo *RepoPolicy) { repo.Branchvals.Tests = nil }, "requires the api test job"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
