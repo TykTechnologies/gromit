@@ -83,3 +83,9 @@ linked; a drift check using deployed gromit cannot validate a proposed policy
 until deployment. Roll back the generated caller, API-suite exclusion and
 required aggregate dependency together, then roll back the policy pin.
 Never remove the replacement qualification while retaining the exclusion.
+
+Gateway master disables Protobuf in its built-in RPC analytics purger. The
+MDCB matrix therefore uses the existing data-plane hybrid Pump for both Redis
+serializers. It has only raw RPC output, with no local persistence; MDCB
+persists the records and `forward_analytics_to_pump` remains false. This keeps
+the delivery within the four repositories and requires no Gateway code change.
