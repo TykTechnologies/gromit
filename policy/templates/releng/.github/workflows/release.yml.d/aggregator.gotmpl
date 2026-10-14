@@ -15,6 +15,10 @@
             {{- if $index }}, {{ end -}}
             {{ $test }}-tests
           {{- end -}}
+          {{- /* Preserve sink's existing required release verification. */ -}}
+          {{- if and (eq .Name "tyk-sink") (has "release-test" .Branchvals.Features) -}}
+          , release-tests
+          {{- end -}}
           {{- if has "mcp-qualification" .Branchvals.Features -}}
           , mcp-qualification
           {{- end -}}

@@ -1,7 +1,7 @@
 {{ define "mcp-qualification" }}
 {{- if has "mcp-qualification" .Branchvals.Features }}
-{{- if not (has .Name (list "tyk" "tyk-analytics" "tyk-pump")) }}
-{{- fail "mcp-qualification supports only tyk, tyk-analytics and tyk-pump" }}
+{{- if not (has .Name (list "tyk" "tyk-analytics" "tyk-pump" "tyk-sink")) }}
+{{- fail "mcp-qualification supports only tyk, tyk-analytics, tyk-pump and tyk-sink" }}
 {{- end }}
 {{- if not (has "api" .Branchvals.Tests) }}
 {{- fail "mcp-qualification requires the api test job" }}
@@ -10,11 +10,20 @@
     name: Coordinated MCP qualification
     needs: dep-guard
     if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    {{- if eq .Name "tyk-sink" }}
+    uses: TykTechnologies/github-actions/.github/workflows/mcp-qualification.yml@908962edea3557f278dda483face055b8c0e5516
+    with:
+      topology: mdcb
+    {{- else }}
     uses: TykTechnologies/github-actions/.github/workflows/mcp-qualification.yml@aee08ff727a05046f05ab8236c57b2947a037834
+    {{- end }}
     secrets:
       PROBE_APP_ID: {{`${{ secrets.PROBE_APP_ID }}`}}
       PROBE_APP_PRIVATE_KEY: {{`${{ secrets.PROBE_APP_PRIVATE_KEY }}`}}
       DASH_LICENSE: {{`${{ secrets.DASH_LICENSE }}`}}
+      {{- if eq .Name "tyk-sink" }}
+      MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
+      {{- end }}
     permissions:
       contents: read
 {{- end }}
