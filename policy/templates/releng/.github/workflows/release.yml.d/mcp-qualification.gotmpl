@@ -10,12 +10,10 @@
     name: Coordinated MCP qualification
     needs: dep-guard
     if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    uses: TykTechnologies/github-actions/.github/workflows/mcp-qualification.yml@2d68e0b3629548a0c67ddd31ccca1be196f88350
     {{- if eq .Name "tyk-sink" }}
-    uses: TykTechnologies/github-actions/.github/workflows/mcp-qualification.yml@908962edea3557f278dda483face055b8c0e5516
     with:
       topology: mdcb
-    {{- else }}
-    uses: TykTechnologies/github-actions/.github/workflows/mcp-qualification.yml@aee08ff727a05046f05ab8236c57b2947a037834
     {{- end }}
     secrets:
       PROBE_APP_ID: {{`${{ secrets.PROBE_APP_ID }}`}}

@@ -21,13 +21,23 @@ When enabled, the policy:
   `MDCB_LICENSE`.
 - Includes its result in the required aggregate job dependencies.
 - Excludes MCP from the parallel release API suite only when the mandatory
-  serial qualification job is generated.
+  qualification job is generated.
 
 The reusable workflow lives in `github-actions`; tests, requirements, runner
 and compose fixtures remain under Dashboard's `tests/api`. The shared job
 builds components from coordinated source revisions and runs the four
-MessagePack/Protobuf × MongoDB/PostgreSQL combinations. Each caller exercises
-its component's own PR head.
+MessagePack/Protobuf × MongoDB/PostgreSQL combinations, with four isolated
+module shards each (16 test runners). Tests stay serial within each stack.
+Source revisions resolve once before fan-out; a final evidence aggregate rejects
+missing shards, incomplete or overlapping coverage, inconsistent revisions,
+unexpected skips and failed qualification checks. Each caller exercises its
+component's own PR head.
+
+Roll out Dashboard's backward-compatible shard support and evidence validator
+first, then publish the shared workflow commit before updating this template's
+immutable pin and regenerating Gateway, Dashboard, Pump and Sink callers.
+Rollback restores the previous workflow pins. The regular API suite keeps its
+MCP exclusion and the existing aggregate still requires MCP qualification.
 
 The generated caller, parallel API-suite exclusion and aggregate dependency
 must remain together. Removing the qualification job while retaining the
