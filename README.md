@@ -84,7 +84,7 @@ The [Release](https://github.com/TykTechnologies/gromit/actions?query=workflow%3
 
 | Term | Meaning |
 |------|---------|
-| `buildenv` | The `tykio/golang-cross` image tag used for cross-compilation (e.g., `1.25-bullseye`) |
+| `buildenv` | The `tykio/golang-cross` image tag used for cross-compilation (e.g., `1.25-bullseye`). Only the value for a checkout that has no tag yet; see [The Go version belongs to the repository](#the-go-version-belongs-to-the-repository) |
 | CGO | C-Go interop — binaries that link against C libraries (e.g., gateway, dashboard) |
 | PGO | Pure Go — statically linked binaries with no C dependencies (e.g., pump, sink) |
 | DHI | Docker Hardened Images — commercially supported base images from Docker with FIPS, SBOM, and provenance attestations |
@@ -145,36 +145,29 @@ gh pr create --base master --title "chore: update gromit-generated files"
 
 ## How To
 
-### Update the Go version
+### The Go version belongs to the repository
 
-The Go version is controlled by `buildenv`. It sets the `tykio/golang-cross` image tag.
+gromit does not upgrade Go. The `tykio/golang-cross` image tag is a property of each repository and branch: it is
+written in the files of that checkout, and changing it is a change to those files (for example with
+[go-upgrader](https://github.com/TykTechnologies/go-upgrader)), not to this config.
 
-**For all repos in a group:**
+When `policy gen`, `policy diff` or `policy sync` render a branch into a checkout, they **adopt the tag that the
+checkout already has**, so a pull request that moves a repository to a new Go does not drift from gromit, and a policy
+sync does not move it back. The tag is read from the first of:
 
-```yaml
-cgo-services:
-  buildenv: 1.25-bullseye
-```
+1. `.github/workflows/release.yml`: the first entry of the `golang_cross` matrix;
+2. `ci/gromit.env`: `GO_IMAGE=tykio/golang-cross:<tag>`.
 
-**For a specific branch only:**
+`buildenv` in this config is used only when the checkout has neither: a new repository or branch, or rendering to
+stdout (`policy gen <dir>` with `-`). It does not change the Go version of a repository that already has one, so
+changing it here has no effect on existing repositories. Without a tag in the checkout and without `buildenv`, rendering
+fails and says so.
 
-```yaml
-branches:
-  release-5.12:
-    buildenv: 1.25-bullseye
-```
-
-**Verify the image exists before committing:**
-
-```bash
-docker manifest inspect tykio/golang-cross:1.25-bullseye
-```
-
-Then regenerate and confirm:
+To try it: render into a checkout and see that its tag is kept.
 
 ```bash
-go run . policy gen /tmp/check --repo tyk --branch master
-grep "golang_cross" /tmp/check/.github/workflows/release.yml
+go run . policy gen /path/to/checkout --repo tyk --branch master
+git -C /path/to/checkout diff --stat
 ```
 
 ### Add a new release branch
@@ -183,7 +176,7 @@ Add the branch with its features. Builds are inherited from repo level automatic
 
 ```yaml
 release-5.13:
-  buildenv: 1.25-bullseye
+  buildenv: 1.25-bullseye   # only the value for the first render; after that the checkout's own tag is kept
   features:
     - release-test
     - distroless
