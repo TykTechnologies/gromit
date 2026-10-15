@@ -27,6 +27,7 @@ func TestMCPAPIRelease(t *testing.T) {
 			var workflow struct {
 				Jobs map[string]struct {
 					Needs    any
+					If       string
 					Outputs  map[string]string
 					Strategy struct{ Matrix map[string]any }
 					Steps    []struct {
@@ -61,6 +62,7 @@ func TestMCPAPIRelease(t *testing.T) {
 			}
 			assert.True(t, foundImages)
 			api := workflow.Jobs["api-tests"]
+			assert.Contains(t, api.If, "needs.test-controller-api.result == 'success'", "A failed image resolver must not launch unpinned shards")
 			assert.Equal(t, map[string]any{"include": "${{ fromJson(needs.test-controller-api.outputs.matrix) }}"}, api.Strategy.Matrix)
 			choose, setup, execute, report := -1, -1, -1, -1
 			for i, step := range api.Steps {

@@ -28,7 +28,7 @@
       {{- end }}
     steps:
       - name: Set test parameters
-        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@{{ if $mcpAPI }}1ded3212d7aa6ed0d9dad52abdb9f14795d378ab{{ else }}production{{ end }}
         id: params
         with:
           variation: {{`${{ env.VARIATION }}`}}
@@ -75,7 +75,7 @@
       - name: Resolve coordinated MCP API images
         if: github.event_name == 'pull_request'
         id: mcp_images
-        uses: TykTechnologies/github-actions/.github/actions/tests/resolve-mcp-images@6b715789b1acab061ff60e4493efc3d6f9f381d6
+        uses: TykTechnologies/github-actions/.github/actions/tests/resolve-mcp-images@1ded3212d7aa6ed0d9dad52abdb9f14795d378ab
         with:
           github_token: {{`${{ steps.mcp-token.outputs.token }}`}}
           registry: {{`${{ steps.mcp-ecr.outputs.registry }}`}}
@@ -103,6 +103,8 @@
     {{- else if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
     if: |
       !cancelled() &&
+      {{ if $mcpAPI }}needs.test-controller-api.result == 'success' &&
+      {{ end -}}
       needs.goreleaser.result == 'success'
     {{- end }}
     {{/* Heavy ui/api test jobs run on the org 8x runner (vars.WARP_RUNNER_8X_X64),
@@ -181,7 +183,7 @@
           fetch-depth: 1
 {{- else }}
       - name: Fetch environment from tyk-pro
-        uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@{{ if $mcpAPI }}1ded3212d7aa6ed0d9dad52abdb9f14795d378ab{{ else }}production{{ end }}
         with:
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
           {{- if $mcpAPI }}
@@ -230,7 +232,7 @@
           sparse-checkout: tests/{{ .test }}
 {{- else }}
       - name: Choose test code branch
-        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@{{ if $mcpAPI }}1ded3212d7aa6ed0d9dad52abdb9f14795d378ab{{ else }}production{{ end }}
         with:
           test_folder: {{ .test }}
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
@@ -241,7 +243,7 @@
 
 {{- end }}
       - name: Set up test environment
-        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@{{ if $mcpAPI }}1ded3212d7aa6ed0d9dad52abdb9f14795d378ab{{ else }}production{{ end }}
         timeout-minutes: {{ if $mcpAPI }}8{{ else }}5{{ end }}
         id: env_up
         with:
@@ -290,7 +292,7 @@
           sparse-checkout: tests/{{ .test }}
 {{- else }}
       - name: Choose test code branch
-        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@{{ if $mcpAPI }}1ded3212d7aa6ed0d9dad52abdb9f14795d378ab{{ else }}production{{ end }}
         with:
           test_folder: {{ .test }}
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
@@ -302,7 +304,7 @@
 {{- end }}
       {{ if eq .test "api" }}
       - name: Run API tests
-        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@{{ if $mcpAPI }}1ded3212d7aa6ed0d9dad52abdb9f14795d378ab{{ else }}production{{ end }}
         timeout-minutes: {{ if eq .flow "nightly" }}30{{ else }}25{{ end }}
         id: test_execution
         with:
@@ -340,7 +342,7 @@
       {{- end }} {{/* end of if .test */}}
 
       - name: Generate test reports and collect logs
-        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@{{ if $mcpAPI }}1ded3212d7aa6ed0d9dad52abdb9f14795d378ab{{ else }}production{{ end }}
         if: always() && (steps.test_execution.conclusion != 'skipped'{{ if $mcpAPI }} || matrix.envfiles.suite == 'mcp'{{ end }})
         # Bound this best-effort step: `docker compose logs` inside it can hang on
         # an unresponsive container and otherwise burn the whole job timeout.
