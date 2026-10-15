@@ -72,6 +72,10 @@ This command does not overlay the rendered output into a git tree. You will have
 		if err := rp.SetBranch(polBranch); err != nil {
 			return fmt.Errorf("repopolicy %s: %v", repoName, err)
 		}
+		// the Go version belongs to the repository: see policy.AdoptBuildenv
+		if err := rp.AdoptBuildenv(dir); err != nil {
+			return err
+		}
 		b, err := policy.NewBundle(rp.Branchvals.Features)
 		if err != nil {
 			return fmt.Errorf("bundle: %v", err)
