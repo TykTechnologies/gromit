@@ -39,7 +39,7 @@
           permission-contents: read
           repositories: tyk-analytics
       - name: Require complete MCP API evidence
-        uses: TykTechnologies/github-actions/.github/actions/tests/mcp-evidence@1ded3212d7aa6ed0d9dad52abdb9f14795d378ab
+        uses: TykTechnologies/github-actions/.github/actions/tests/mcp-evidence@c3f38a1a21d8c9507b1902555ccf7b5ebe4d8da0
         with:
           github_token: {{`${{ steps.mcp-token.outputs.token }}`}}
           manifest: {{`${{ needs.test-controller-api.outputs.mcp_manifest }}`}}
