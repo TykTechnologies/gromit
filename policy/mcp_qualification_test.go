@@ -27,7 +27,7 @@ func TestMCPQualificationRelease(t *testing.T) {
 				require.NoError(t, repo.SetBranch("master"))
 				// Exercise both states independently of the production rollout.
 				repo.Branchvals.Features = slices.DeleteFunc(repo.Branchvals.Features, func(feature string) bool {
-					return feature == "mcp-qualification"
+					return feature == "mcp-qualification" || feature == "mcp-api-tests"
 				})
 				if enabled {
 					repo.Branchvals.Features = append(repo.Branchvals.Features, "mcp-qualification")
@@ -148,7 +148,8 @@ func TestMCPQualificationProductionPolicy(t *testing.T) {
 					require.NoError(t, repo.SetBranch(branch))
 					wantEnabled := branch == "master" && slices.Contains(
 						[]string{"tyk", "tyk-analytics", "tyk-pump", "tyk-sink"}, repository)
-					assert.Equal(t, wantEnabled, slices.Contains(repo.Branchvals.Features, "mcp-qualification"))
+					assert.False(t, slices.Contains(repo.Branchvals.Features, "mcp-qualification"))
+					assert.Equal(t, wantEnabled, slices.Contains(repo.Branchvals.Features, "mcp-api-tests"))
 				})
 			}
 		}
@@ -171,6 +172,7 @@ func TestMCPQualificationRejectsUnsupportedPolicy(t *testing.T) {
 			repo, err := pol.GetRepoPolicy("tyk-pump")
 			require.NoError(t, err)
 			require.NoError(t, repo.SetBranch("master"))
+			repo.Branchvals.Features = slices.DeleteFunc(repo.Branchvals.Features, func(feature string) bool { return feature == "mcp-api-tests" })
 			repo.Branchvals.Features = append(repo.Branchvals.Features, "mcp-qualification")
 			test.mutate(&repo)
 			bundle, err := NewBundle(repo.Branchvals.Features)

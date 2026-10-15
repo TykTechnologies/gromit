@@ -1,48 +1,47 @@
 # MCP qualification policy
 
-The opt-in `mcp-qualification` feature generates a release workflow caller for
-the shared workflow in `TykTechnologies/github-actions`. It supports Gateway
-(`tyk`), Dashboard (`tyk-analytics`), Pump (`tyk-pump`) and MDCB (`tyk-sink`)
-repositories with an `api` test job. Other repositories and branches retain
-their existing jobs and test selection.
+Master policies for Gateway, Dashboard, Pump and Sink use `mcp-api-tests`. The
+API controller keeps the existing compatibility rows and adds four MCP module
+shards per MessagePack/Protobuf × MongoDB/PostgreSQL profile. All rows execute
+inside the existing `api-tests` job through the standard environment checkout,
+test checkout, `env-up`, API execution and reporting actions. Sink uses MDCB;
+the other callers use the direct topology.
 
-Enable the feature in `config/config.yaml` only for branches whose selected
-Dashboard revision includes the MCP runner and fixtures. Workflow revisions
-are pinned in `mcp-qualification.gotmpl`.
+Component PR builds publish both their PR-head SHA tag and matching OCI revision
+label. The controller resolves coordinated branch heads once, waits for those
+images, then freezes registry digests and the `tyk-pro` environment revision.
+It uses the exact caller PR head, matching peer branches and the existing
+base-branch fallback. Unavailable images fail rather than using mutable tags.
+The mock source is immutable; its image is published once when absent.
 
-Every managed release workflow subscribes to `ready_for_review`, independent
-of the MCP flag. This lets existing draft-gated build and API jobs start when
-a PR becomes ready.
+Regular API rows use the same resolved Dashboard image and test revision on pull
+requests. Gateway omits its legacy Dashboard resolver/build jobs under this
+policy, avoiding a second build of an already published coordinated image.
+Other policies retain the legacy resolver.
 
-When enabled, the policy:
+MCP rows use the versioned `tyk-pro/mcp.yml` Docker profile and the existing
+datastore/cache overlays. Linux host networking preserves localhost upstream
+fixtures; each row owns its runner, stores, mock, generated configurations and
+RPC identity. The Dashboard-owned driver uses the same fixture data and
+qualification checks as the native runner, without building applications in
+test jobs. Native single-shard entrypoints remain supported for local use.
 
-- Calls the shared workflow at an immutable commit with `PROBE_APP_ID`,
-  `PROBE_APP_PRIVATE_KEY` and `DASH_LICENSE` forwarded. MDCB callers also forward
-  `MDCB_LICENSE`.
-- Includes its result in the required aggregate job dependencies.
-- Excludes MCP from the parallel release API suite only when the mandatory
-  serial qualification job is generated.
+Regular API compatibility rows exclude MCP because the same API matrix supplies
+the complete MCP shard rows. Tests remain serial within each MCP stack.
+Reporting retains sanitized inventories and JUnit with shard-specific names,
+replaces previous shard artifacts on reruns, removes the RPC identity and stops
+only that row's Compose project.
 
-The reusable workflow lives in `github-actions`; tests, requirements, runner
-and compose fixtures remain under Dashboard's `tests/api`. The shared job
-builds components from coordinated source revisions and runs the four
-MessagePack/Protobuf × MongoDB/PostgreSQL combinations. Each caller exercises
-its component's own PR head.
+`aggregator-ci-test` depends on `api-tests` and its controller. Before aggregating
+job statuses it validates all 16 MCP reports against frozen source/image and
+environment revisions, full collection, completed IDs, declared skips and
+routing/persistence checks. No separate `mcp-qualification` job is generated.
+Non-PR release behavior and nightly test selection retain their existing scope.
 
-The generated caller, parallel API-suite exclusion and aggregate dependency
-must remain together. Removing the qualification job while retaining the
-exclusion leaves MCP coverage missing. Drift checks compare generated workflows
-against the deployed Gromit policy.
+The older `mcp-qualification` feature and shared workflow remain compatible for
+branches that still use them. They are not enabled alongside `mcp-api-tests`.
 
-## MDCB qualification
-
-The sink caller selects `topology: mdcb`. Gateway, Dashboard and Pump callers
-use the direct topology. Both topologies require Dashboard fixtures compatible
-with the selected sources and a GitHub App with read access to the component
-repositories. MDCB also requires sink access and its licence secret.
-
-The MDCB profiles verify API, key and policy propagation through RPC, persisted
-protocol metadata, exact signed 64-bit error boundaries and one completion
-record per request. A data-plane hybrid Pump reads both Redis serializers and
-sends raw records over RPC without a local persistence output. MDCB persists
-the records with `forward_analytics_to_pump=false`.
+Roll out Dashboard driver support and the `tyk-pro` profile first, publish the
+shared action revision, then deploy this policy and regenerate callers. Every
+new API action interface uses the same immutable shared-action commit. Rollback
+restores the previous generated workflows and policy flags together.

@@ -264,7 +264,7 @@ policy:
                 - resolve-dashboard
                 - plugin-compiler
                 - plugin-compiler-ng
-                - mcp-qualification
+                - mcp-api-tests
             release-5.3:
               buildenv: 1.24-bullseye
               plugincompiler:
@@ -463,7 +463,7 @@ policy:
               features:
                 - nightly-e2e
                 - fips
-                - mcp-qualification
+                - mcp-api-tests
             release-5.3:
               buildenv: 1.24-bullseye
               cgo: false
@@ -713,7 +713,7 @@ policy:
           branches:
             master:
               features:
-                - mcp-qualification
+                - mcp-api-tests
             release-1.14:
             release-1.14.1:
             release-1.15.0:
@@ -808,7 +808,7 @@ policy:
           branches:
             master:
               features:
-                - mcp-qualification
+                - mcp-api-tests
                 - fips
                 - release-test
 
