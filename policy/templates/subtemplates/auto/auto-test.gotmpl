@@ -1,4 +1,5 @@
 {{ define "auto-test" }}
+{{- $mcpAPI := and (eq .flow "releng") (eq .test "api") (has "mcp-api-tests" .dot.Branchvals.Features) }}
   test-controller-{{ .test }}:
   {{- if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
     needs:
@@ -11,20 +12,74 @@
     if: github.event.pull_request.draft == false
   {{- end }}
     runs-on: {{`${{ vars.DEFAULT_RUNNER }}`}}
+    {{- if $mcpAPI }}
+    timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
+    {{- end }}
     outputs:
       envfiles: {{`${{ steps.params.outputs.envfiles }}`}}
       pump: {{`${{ steps.params.outputs.pump }}`}}
       sink: {{`${{ steps.params.outputs.sink }}`}}
+      {{- if $mcpAPI }}
+      matrix: {{`${{ steps.params.outputs.matrix }}`}}
+      mcp_manifest: {{`${{ steps.mcp_images.outputs.manifest }}`}}
+      {{- end }}
     steps:
       - name: Set test parameters
-        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@production
+        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
         id: params
         with:
           variation: {{`${{ env.VARIATION }}`}}
           base_ref: {{`${{ env.BASE_REF }}`}}
           test_type: {{ .test }}
+          {{- if $mcpAPI }}
+          expand_api_matrix: 'true'
+          include_mcp: {{`${{ github.event_name == 'pull_request' && 'true' || 'false' }}`}}
+          mcp_topology: {{ if eq .dot.Name "tyk-sink" }}mdcb{{ else }}direct{{ end }}
+          {{- end }}
   {{- if has "test-fallback" .dot.Branchvals.Features }}
           fallback_ref: master
+  {{- end }}
+
+  {{- if $mcpAPI }}
+      - name: Generate coordinated source token
+        if: github.event_name == 'pull_request'
+        id: mcp-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349  # v2
+        with:
+          app-id: {{`${{ secrets.PROBE_APP_ID }}`}}
+          private-key: {{`${{ secrets.PROBE_APP_PRIVATE_KEY }}`}}
+          owner: TykTechnologies
+          permission-contents: read
+          repositories: |
+            tyk
+            tyk-analytics
+            tyk-pump
+            tyk-sink
+            tyk-pro
+            tyk-mock-mcp-server
+      - uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c  # v4
+        if: github.event_name == 'pull_request'
+        with:
+          role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
+          role-session-name: mcp-api-resolve
+          aws-region: eu-central-1
+      - name: Login to CI image registry
+        if: github.event_name == 'pull_request'
+        id: mcp-ecr
+        uses: aws-actions/amazon-ecr-login@f2e9fc6c2b355c1890b65e6f6f0e2ac3e6e22f78  # v2
+        with:
+          mask-password: 'true'
+      - name: Resolve coordinated MCP API images
+        if: github.event_name == 'pull_request'
+        id: mcp_images
+        uses: TykTechnologies/github-actions/.github/actions/tests/resolve-mcp-images@6b715789b1acab061ff60e4493efc3d6f9f381d6
+        with:
+          github_token: {{`${{ steps.mcp-token.outputs.token }}`}}
+          registry: {{`${{ steps.mcp-ecr.outputs.registry }}`}}
+          topology: {{ if eq .dot.Name "tyk-sink" }}mdcb{{ else }}direct{{ end }}
   {{- end }}
 
   {{ .test }}-tests:
@@ -75,6 +130,9 @@
     strategy:
       fail-fast: false
       matrix:
+        {{- if $mcpAPI }}
+        include: {{`${{ fromJson(needs.test-controller-api.outputs.matrix) }}`}}
+        {{- else }}
         envfiles: {{`${{ fromJson(needs.test-controller-`}}{{ .test }}{{`.outputs.envfiles) }}`}}
         {{- if ne .dot.Name "tyk-pump" }}
         pump: {{`${{ fromJson(needs.test-controller-`}}{{ .test }}{{`.outputs.pump) }}`}}
@@ -88,6 +146,7 @@
             sink: $ECR/tyk-sink:master
           - pump: $ECR/tyk-pump:master
             sink: tykio/tyk-mdcb-docker:v2.4
+        {{- end }}
         {{- end }}
     steps:
       - name: Generate GitHub App token
@@ -122,9 +181,12 @@
           fetch-depth: 1
 {{- else }}
       - name: Fetch environment from tyk-pro
-        uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@production
+        uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
         with:
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
+          {{- if $mcpAPI }}
+          ref: {{`${{ matrix.envfiles.suite == 'mcp' && fromJSON(needs.test-controller-api.outputs.mcp_manifest || '{}').environment_sha || '' }}`}}
+          {{- end }}
 {{- end }}
 {{- if eq .flow "nightly" }}
       - name: Set image tags
@@ -134,7 +196,7 @@
           DASHBOARD_TAG="{{`${{ github.event.inputs.dashboard_image_tag || matrix.envfiles.gwdash || 'master' }}`}}"
           PUMP_TAG="{{`${{ github.event.inputs.pump_image_tag || matrix.envfiles.gwdash || 'master' }}`}}"
           MDCB_TAG="{{`${{ github.event.inputs.mdcb_image_tag || matrix.envfiles.gwdash || 'master' }}`}}"
-          
+
           if [ "{{`${{ env.IMAGE_SOURCE }}`}}" == "official" ]; then
             echo "tyk_ee_image=tykio/tyk-gateway-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
             echo "tyk_analytics_image=tykio/tyk-dashboard:${DASHBOARD_TAG}" >> $GITHUB_OUTPUT
@@ -150,12 +212,37 @@
             echo "tyk_alfa_image={{`${{ steps.ecr.outputs.registry }}`}}/tyk-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
             echo "tyk_beta_image={{`${{ steps.ecr.outputs.registry }}`}}/tyk-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
           fi
-          
+
           echo "tags={{`${{ steps.ecr.outputs.registry }}`}}/tyk-ee:${GATEWAY_TAG}" >> $GITHUB_OUTPUT
 {{- end }}
+{{- if $mcpAPI }}
+{{- if eq .flow "nightly" }}
+      - name: Checkout {{ .test }} test code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        env:
+          TEST_BRANCH: {{`${{ github.event.inputs.test_branch || matrix.envfiles.gwdash }}`}}
+        with:
+          repository: TykTechnologies/tyk-analytics
+          path: tyk-analytics
+          token: {{`${{ steps.app-token.outputs.token }}`}}
+          ref: {{`${{ env.TEST_BRANCH }}`}}
+          fetch-depth: 1
+          sparse-checkout: tests/{{ .test }}
+{{- else }}
+      - name: Choose test code branch
+        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
+        with:
+          test_folder: {{ .test }}
+          org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
+          {{- if $mcpAPI }}
+          ref: {{`${{ matrix.envfiles.suite == 'mcp' && fromJSON(needs.test-controller-api.outputs.mcp_manifest || '{}').tested_shas.dashboard || '' }}`}}
+          {{- end }}
+{{- end }}
+
+{{- end }}
       - name: Set up test environment
-        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@production
-        timeout-minutes: 5
+        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
+        timeout-minutes: {{ if $mcpAPI }}8{{ else }}5{{ end }}
         id: env_up
         with:
 {{- if eq .flow "nightly" }}
@@ -171,6 +258,13 @@
           github_token: {{`${{ steps.app-token.outputs.token }}`}}
           TYK_DB_LICENSEKEY: {{`${{ secrets.DASH_LICENSE }}`}}
           TYK_MDCB_LICENSE: {{`${{ secrets.MDCB_LICENSE }}`}}
+          {{- if $mcpAPI }}
+          suite: {{`${{ matrix.envfiles.suite }}`}}
+          mcp_manifest: {{`${{ needs.test-controller-api.outputs.mcp_manifest }}`}}
+          mcp_storage: {{`${{ matrix.envfiles.storage || 'mongo' }}`}}
+          mcp_serializer: {{`${{ matrix.envfiles.serializer || 'msgpack' }}`}}
+          mcp_cache: {{`${{ matrix.envfiles.cache }}`}}
+          {{- end }}
 {{- if eq .flow "nightly" }}
         env:
           tyk_ee_image: {{`${{ steps.set_tags.outputs.tyk_ee_image }}`}}
@@ -181,6 +275,7 @@
           tyk_beta_image: {{`${{ steps.set_tags.outputs.tyk_beta_image }}`}}
 {{- end }}
 
+{{- if not $mcpAPI }}
 {{- if eq .flow "nightly" }}
       - name: Checkout {{ .test }} test code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -195,19 +290,31 @@
           sparse-checkout: tests/{{ .test }}
 {{- else }}
       - name: Choose test code branch
-        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@production
+        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
         with:
           test_folder: {{ .test }}
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
+          {{- if $mcpAPI }}
+          ref: {{`${{ matrix.envfiles.suite == 'mcp' && fromJSON(needs.test-controller-api.outputs.mcp_manifest || '{}').tested_shas.dashboard || '' }}`}}
+          {{- end }}
 {{- end }}
-          
+
+{{- end }}
       {{ if eq .test "api" }}
       - name: Run API tests
-        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@production
+        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
         timeout-minutes: {{ if eq .flow "nightly" }}30{{ else }}25{{ end }}
         id: test_execution
         with:
           user_api_secret: {{`${{ steps.env_up.outputs.USER_API_SECRET }}`}}
+          {{- if $mcpAPI }}
+          suite: {{`${{ matrix.envfiles.suite }}`}}
+          api_markers: {{`${{ matrix.envfiles.apimarkers }}`}}
+          mcp_storage: {{`${{ matrix.envfiles.storage || 'mongo' }}`}}
+          mcp_serializer: {{`${{ matrix.envfiles.serializer || 'msgpack' }}`}}
+          shard_count: {{`${{ matrix.envfiles.shard_count || 1 }}`}}
+          shard_index: {{`${{ matrix.envfiles.shard_index || 0 }}`}}
+          {{- end }}
           {{- if and (eq .flow "releng") (has "mcp-qualification" .dot.Branchvals.Features) }}
           # MCP coverage runs serially against coordinated sources in the mandatory job below.
           api_markers: ({{`${{ matrix.envfiles.apimarkers }}`}}) and not mcp
@@ -233,15 +340,22 @@
       {{- end }} {{/* end of if .test */}}
 
       - name: Generate test reports and collect logs
-        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@production
-        if: always() && (steps.test_execution.conclusion != 'skipped')
+        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@{{ if $mcpAPI }}6b715789b1acab061ff60e4493efc3d6f9f381d6{{ else }}production{{ end }}
+        if: always() && (steps.test_execution.conclusion != 'skipped'{{ if $mcpAPI }} || matrix.envfiles.suite == 'mcp'{{ end }})
         # Bound this best-effort step: `docker compose logs` inside it can hang on
         # an unresponsive container and otherwise burn the whole job timeout.
         # continue-on-error keeps a log-collection hang from failing an otherwise
         # green test run (the real result comes from the Execute step above).
         timeout-minutes: 8
-        continue-on-error: true
+        continue-on-error: {{ if $mcpAPI }}{{`${{ matrix.envfiles.suite != 'mcp' }}`}}{{ else }}true{{ end }}
         with:
           report_xml: 'true'
           execution_status: {{`${{ steps.test_execution.outcome }}`}}
+          {{- if $mcpAPI }}
+          suite: {{`${{ matrix.envfiles.suite }}`}}
+          mcp_storage: {{`${{ matrix.envfiles.storage || 'mongo' }}`}}
+          mcp_serializer: {{`${{ matrix.envfiles.serializer || 'msgpack' }}`}}
+          mcp_cache: {{`${{ matrix.envfiles.cache }}`}}
+          shard_index: {{`${{ matrix.envfiles.shard_index || 0 }}`}}
+          {{- end }}
 {{ end }} {{/* End of auto-test */}}

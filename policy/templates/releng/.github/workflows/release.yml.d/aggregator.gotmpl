@@ -19,12 +19,31 @@
           {{- if and (eq .Name "tyk-sink") (has "release-test" .Branchvals.Features) -}}
           , release-tests
           {{- end -}}
+          {{- if has "mcp-api-tests" .Branchvals.Features -}}
+          , test-controller-api
+          {{- end -}}
           {{- if has "mcp-qualification" .Branchvals.Features -}}
           , mcp-qualification
           {{- end -}}
         ]
     if: {{`${{ always() && github.event_name == 'pull_request' }}`}}
     steps:
+      {{- if has "mcp-api-tests" .Branchvals.Features }}
+      - name: Generate API evidence token
+        id: mcp-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349  # v2
+        with:
+          app-id: {{`${{ secrets.PROBE_APP_ID }}`}}
+          private-key: {{`${{ secrets.PROBE_APP_PRIVATE_KEY }}`}}
+          owner: TykTechnologies
+          permission-contents: read
+          repositories: tyk-analytics
+      - name: Require complete MCP API evidence
+        uses: TykTechnologies/github-actions/.github/actions/tests/mcp-evidence@6b715789b1acab061ff60e4493efc3d6f9f381d6
+        with:
+          github_token: {{`${{ steps.mcp-token.outputs.token }}`}}
+          manifest: {{`${{ needs.test-controller-api.outputs.mcp_manifest }}`}}
+      {{- end }}
       - name: Aggregate results
         run: |
           failed=()

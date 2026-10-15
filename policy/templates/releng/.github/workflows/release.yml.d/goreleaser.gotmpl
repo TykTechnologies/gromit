@@ -80,8 +80,10 @@
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
-  {{- if eq .Name "tyk-analytics" }}
+  {{- if or (eq .Name "tyk-analytics") (has "mcp-api-tests" .Branchvals.Features) }}
           ref: {{`${{ github.event.pull_request.head.sha }}`}}
+  {{- end }}
+  {{- if eq .Name "tyk-analytics" }}
           token: {{`${{ steps.app-token.outputs.token }}`}}
           submodules: true
   {{- end }}
@@ -398,9 +400,17 @@
             type=ref,event=branch
             type=ref,event=pr
             type=sha,format=long
+            {{- if has "mcp-api-tests" $r.Branchvals.Features }}
+            type=raw,value=sha-{{`${{ github.event.pull_request.head.sha || github.sha }}`}}
+            {{- end }}
             type=semver,pattern={{`{{major}}`}},prefix=v
             type=semver,pattern={{`{{major}}.{{minor}}`}},prefix=v
             type=semver,pattern={{`{{version}}`}},prefix=v
+
+          {{- if has "mcp-api-tests" $r.Branchvals.Features }}
+          labels: |
+            org.opencontainers.image.revision={{`${{ github.event.pull_request.head.sha || github.sha }}`}}
+          {{- end }}
 
       - name: push {{ $b }} image to CI
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}

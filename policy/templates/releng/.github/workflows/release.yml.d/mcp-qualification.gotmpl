@@ -1,4 +1,15 @@
 {{ define "mcp-qualification" }}
+{{- if has "mcp-api-tests" .Branchvals.Features }}
+{{- if has "mcp-qualification" .Branchvals.Features }}
+{{- fail "mcp-api-tests and mcp-qualification are mutually exclusive" }}
+{{- end }}
+{{- if not (has .Name (list "tyk" "tyk-analytics" "tyk-pump" "tyk-sink")) }}
+{{- fail "mcp-api-tests supports only tyk, tyk-analytics, tyk-pump and tyk-sink" }}
+{{- end }}
+{{- if not (has "api" .Branchvals.Tests) }}
+{{- fail "mcp-api-tests requires the api test job" }}
+{{- end }}
+{{- end }}
 {{- if has "mcp-qualification" .Branchvals.Features }}
 {{- if not (has .Name (list "tyk" "tyk-analytics" "tyk-pump" "tyk-sink")) }}
 {{- fail "mcp-qualification supports only tyk, tyk-analytics, tyk-pump and tyk-sink" }}
