@@ -28,12 +28,11 @@ const releaseYML = `jobs:
 
 func TestAdoptBuildenv(t *testing.T) {
 	for _, tt := range []struct {
-		name    string
-		files   map[string]string
-		config  string
-		dir     func(string) string
-		want    string
-		wantErr string
+		name   string
+		files  map[string]string
+		config string
+		dir    func(string) string
+		want   string
 	}{
 		{
 			name:   "the checkout wins over the config",
@@ -78,10 +77,16 @@ func TestAdoptBuildenv(t *testing.T) {
 			want:   "1.25-bullseye",
 		},
 		{
-			name:    "no tag in the checkout and none in the config",
-			files:   map[string]string{"README.md": "x"},
-			config:  "",
-			wantErr: "no golang-cross tag",
+			name:   "no tag in the checkout and none in the config: rendered as before, with an empty value",
+			files:  map[string]string{"README.md": "x"},
+			config: "",
+			want:   "",
+		},
+		{
+			name:   "CRLF line endings",
+			files:  map[string]string{".github/workflows/release.yml": "matrix:\r\n  golang_cross:\r\n    - 1.27-bullseye\r\n"},
+			config: "1.26-bullseye",
+			want:   "1.27-bullseye",
 		},
 		{
 			name:   "rendering to stdout has no checkout: the config value",
@@ -100,12 +105,7 @@ func TestAdoptBuildenv(t *testing.T) {
 				dir = tt.dir(dir)
 			}
 			rp := RepoPolicy{Name: "tyk", Branch: "master", Branchvals: branchVals{Buildenv: tt.config}}
-			err := rp.AdoptBuildenv(dir)
-			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
-				return
-			}
-			assert.NoError(t, err)
+			assert.NoError(t, rp.AdoptBuildenv(dir))
 			assert.Equal(t, tt.want, rp.Branchvals.Buildenv)
 		})
 	}

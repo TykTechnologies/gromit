@@ -160,8 +160,8 @@ sync does not move it back. The tag is read from the first of:
 
 `buildenv` in this config is used only when the checkout has neither: a new repository or branch, or rendering to
 stdout (`policy gen <dir>` with `-`). It does not change the Go version of a repository that already has one, so
-changing it here has no effect on existing repositories. Without a tag in the checkout and without `buildenv`, rendering
-fails and says so.
+changing it here has no effect on existing repositories. A repository whose templates do not use Go (for example `tyk-pro`)
+needs no tag at all.
 
 To try it: render into a checkout and see that its tag is kept.
 
