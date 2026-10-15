@@ -14,6 +14,11 @@ It uses the exact caller PR head, matching peer branches and the existing
 base-branch fallback. Unavailable images fail rather than using mutable tags.
 The mock source is immutable; its image is published once when absent.
 
+Regular API rows use the same resolved Dashboard image and test revision on pull
+requests. Gateway omits its legacy Dashboard resolver/build jobs under this
+policy, avoiding a second build of an already published coordinated image.
+Other policies retain the legacy resolver.
+
 MCP rows use the versioned `tyk-pro/mcp.yml` Docker profile and the existing
 datastore/cache overlays. Linux host networking preserves localhost upstream
 fixtures; each row owns its runner, stores, mock, generated configurations and
@@ -24,7 +29,8 @@ test jobs. Native single-shard entrypoints remain supported for local use.
 Regular API compatibility rows exclude MCP because the same API matrix supplies
 the complete MCP shard rows. Tests remain serial within each MCP stack.
 Reporting retains sanitized inventories and JUnit with shard-specific names,
-removes the RPC identity and stops only that row's Compose project.
+replaces previous shard artifacts on reruns, removes the RPC identity and stops
+only that row's Compose project.
 
 `aggregator-ci-test` depends on `api-tests` and its controller. Before aggregating
 job statuses it validates all 16 MCP reports against frozen source/image and

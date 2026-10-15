@@ -1,5 +1,6 @@
 {{ define "auto-test" }}
 {{- $mcpAPI := and (eq .flow "releng") (eq .test "api") (has "mcp-api-tests" .dot.Branchvals.Features) }}
+{{- $legacyDashboard := and (eq .dot.Name "tyk") (eq .test "api") (has "resolve-dashboard" .dot.Branchvals.Features) (not $mcpAPI) }}
   test-controller-{{ .test }}:
   {{- if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
     needs:
@@ -28,7 +29,7 @@
       {{- end }}
     steps:
       - name: Set test parameters
-        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@{{ if $mcpAPI }}c3f38a1a21d8c9507b1902555ccf7b5ebe4d8da0{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/test-controller@{{ if $mcpAPI }}ae9b1fdfeb3c8e739ac99e7a99eb6b7d284a7fae{{ else }}production{{ end }}
         id: params
         with:
           variation: {{`${{ env.VARIATION }}`}}
@@ -75,7 +76,7 @@
       - name: Resolve coordinated MCP API images
         if: github.event_name == 'pull_request'
         id: mcp_images
-        uses: TykTechnologies/github-actions/.github/actions/tests/resolve-mcp-images@c3f38a1a21d8c9507b1902555ccf7b5ebe4d8da0
+        uses: TykTechnologies/github-actions/.github/actions/tests/resolve-mcp-images@ae9b1fdfeb3c8e739ac99e7a99eb6b7d284a7fae
         with:
           github_token: {{`${{ steps.mcp-token.outputs.token }}`}}
           registry: {{`${{ steps.mcp-ecr.outputs.registry }}`}}
@@ -88,11 +89,11 @@
     {{- if and (has "releng" .dot.Branchvals.Features) (ne .flow "nightly") }}
       - goreleaser
     {{- end }}
-    {{- if and (eq .dot.Name "tyk") (eq .test "api") (has "resolve-dashboard" .dot.Branchvals.Features) }}
+    {{- if $legacyDashboard }}
       - resolve-dashboard-image
       - build-dashboard-image
     {{- end }}
-    {{- if and (eq .dot.Name "tyk") (eq .test "api") (has "resolve-dashboard" .dot.Branchvals.Features) }}
+    {{- if $legacyDashboard }}
     # build-dashboard-image may be skipped, so use !cancelled() to run regardless
     if: |
       !cancelled() &&
@@ -183,7 +184,7 @@
           fetch-depth: 1
 {{- else }}
       - name: Fetch environment from tyk-pro
-        uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@{{ if $mcpAPI }}c3f38a1a21d8c9507b1902555ccf7b5ebe4d8da0{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/checkout-tyk-pro@{{ if $mcpAPI }}ae9b1fdfeb3c8e739ac99e7a99eb6b7d284a7fae{{ else }}production{{ end }}
         with:
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
           {{- if $mcpAPI }}
@@ -232,18 +233,18 @@
           sparse-checkout: tests/{{ .test }}
 {{- else }}
       - name: Choose test code branch
-        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@{{ if $mcpAPI }}c3f38a1a21d8c9507b1902555ccf7b5ebe4d8da0{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@{{ if $mcpAPI }}ae9b1fdfeb3c8e739ac99e7a99eb6b7d284a7fae{{ else }}production{{ end }}
         with:
           test_folder: {{ .test }}
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
           {{- if $mcpAPI }}
-          ref: {{`${{ matrix.envfiles.suite == 'mcp' && fromJSON(needs.test-controller-api.outputs.mcp_manifest || '{}').tested_shas.dashboard || '' }}`}}
+          ref: {{`${{ fromJSON(needs.test-controller-api.outputs.mcp_manifest || '{}').tested_shas.dashboard || '' }}`}}
           {{- end }}
 {{- end }}
 
 {{- end }}
       - name: Set up test environment
-        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@{{ if $mcpAPI }}c3f38a1a21d8c9507b1902555ccf7b5ebe4d8da0{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/env-up@{{ if $mcpAPI }}ae9b1fdfeb3c8e739ac99e7a99eb6b7d284a7fae{{ else }}production{{ end }}
         timeout-minutes: {{ if $mcpAPI }}8{{ else }}5{{ end }}
         id: env_up
         with:
@@ -254,7 +255,9 @@
           base_ref: {{`${{ env.BASE_REF }}`}}
           tags: {{`${{ needs.goreleaser.outputs.ee_tags || needs.goreleaser.outputs.std_tags || format('{0}/tyk-ee:master', steps.ecr.outputs.registry) }}`}}
 {{- end }}
-          {{- if and (eq .dot.Name "tyk") (eq .test "api") (has "resolve-dashboard" .dot.Branchvals.Features) }}
+          {{- if $mcpAPI }}
+          dashboard_image: {{`${{ fromJSON(needs.test-controller-api.outputs.mcp_manifest || '{}').images.dashboard || '' }}`}}
+          {{- else if $legacyDashboard }}
           dashboard_image: {{`${{ needs.resolve-dashboard-image.outputs.dashboard_image }}`}}
           {{- end }}
           github_token: {{`${{ steps.app-token.outputs.token }}`}}
@@ -292,19 +295,19 @@
           sparse-checkout: tests/{{ .test }}
 {{- else }}
       - name: Choose test code branch
-        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@{{ if $mcpAPI }}c3f38a1a21d8c9507b1902555ccf7b5ebe4d8da0{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/choose-test-branch@{{ if $mcpAPI }}ae9b1fdfeb3c8e739ac99e7a99eb6b7d284a7fae{{ else }}production{{ end }}
         with:
           test_folder: {{ .test }}
           org_gh_token: {{`${{ steps.app-token.outputs.token }}`}}
           {{- if $mcpAPI }}
-          ref: {{`${{ matrix.envfiles.suite == 'mcp' && fromJSON(needs.test-controller-api.outputs.mcp_manifest || '{}').tested_shas.dashboard || '' }}`}}
+          ref: {{`${{ fromJSON(needs.test-controller-api.outputs.mcp_manifest || '{}').tested_shas.dashboard || '' }}`}}
           {{- end }}
 {{- end }}
 
 {{- end }}
       {{ if eq .test "api" }}
       - name: Run API tests
-        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@{{ if $mcpAPI }}c3f38a1a21d8c9507b1902555ccf7b5ebe4d8da0{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/api-tests@{{ if $mcpAPI }}ae9b1fdfeb3c8e739ac99e7a99eb6b7d284a7fae{{ else }}production{{ end }}
         timeout-minutes: {{ if eq .flow "nightly" }}30{{ else }}25{{ end }}
         id: test_execution
         with:
@@ -342,7 +345,7 @@
       {{- end }} {{/* end of if .test */}}
 
       - name: Generate test reports and collect logs
-        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@{{ if $mcpAPI }}c3f38a1a21d8c9507b1902555ccf7b5ebe4d8da0{{ else }}production{{ end }}
+        uses: TykTechnologies/github-actions/.github/actions/tests/reporting@{{ if $mcpAPI }}ae9b1fdfeb3c8e739ac99e7a99eb6b7d284a7fae{{ else }}production{{ end }}
         if: always() && (steps.test_execution.conclusion != 'skipped'{{ if $mcpAPI }} || matrix.envfiles.suite == 'mcp'{{ end }})
         # Bound this best-effort step: `docker compose logs` inside it can hang on
         # an unresponsive container and otherwise burn the whole job timeout.

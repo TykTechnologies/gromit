@@ -42,6 +42,10 @@ func TestMCPAPIRelease(t *testing.T) {
 			require.NoError(t, yaml.Unmarshal([]byte(readRenderedFile(t, dir, ".github/workflows/release.yml")), &workflow))
 			_, separate := workflow.Jobs["mcp-qualification"]
 			assert.False(t, separate, "MCP must execute inside the regular API matrix")
+			_, duplicateBuild := workflow.Jobs["build-dashboard-image"]
+			assert.False(t, duplicateBuild, "The coordinated controller already resolves the published Dashboard image")
+			_, duplicateResolver := workflow.Jobs["resolve-dashboard-image"]
+			assert.False(t, duplicateResolver)
 			controller := workflow.Jobs["test-controller-api"]
 			assert.Equal(t, "${{ steps.params.outputs.matrix }}", controller.Outputs["matrix"])
 			assert.Equal(t, "${{ steps.mcp_images.outputs.manifest }}", controller.Outputs["mcp_manifest"])
@@ -70,9 +74,11 @@ func TestMCPAPIRelease(t *testing.T) {
 				switch step.Name {
 				case "Choose test code branch":
 					choose = i
+					assert.Equal(t, "${{ fromJSON(needs.test-controller-api.outputs.mcp_manifest || '{}').tested_shas.dashboard || '' }}", step.With["ref"])
 				case "Set up test environment":
 					setup = i
 					assert.Equal(t, "${{ matrix.envfiles.suite }}", step.With["suite"])
+					assert.Equal(t, "${{ fromJSON(needs.test-controller-api.outputs.mcp_manifest || '{}').images.dashboard || '' }}", step.With["dashboard_image"])
 				case "Run API tests":
 					execute = i
 					assert.Equal(t, "${{ matrix.envfiles.apimarkers }}", step.With["api_markers"])
@@ -96,6 +102,31 @@ func TestMCPAPIRelease(t *testing.T) {
 			assert.Equal(t, "Aggregate results", aggregate.Steps[2].Name)
 		})
 	}
+}
+
+func TestMCPAPIPreservesLegacyDashboardResolver(t *testing.T) {
+	config.LoadConfig("")
+	var pol Policies
+	require.NoError(t, LoadRepoPolicies(&pol))
+	repo, err := pol.GetRepoPolicy("tyk")
+	require.NoError(t, err)
+	require.NoError(t, repo.SetBranch("master"))
+	var features []string
+	for _, feature := range repo.Branchvals.Features {
+		if feature != "mcp-api-tests" {
+			features = append(features, feature)
+		}
+	}
+	repo.Branchvals.Features = features
+	bundle, err := NewBundle(features)
+	require.NoError(t, err)
+	dir := t.TempDir()
+	_, err = bundle.Render(repo, dir, nil)
+	require.NoError(t, err)
+	workflow := readRenderedFile(t, dir, ".github/workflows/release.yml")
+	assert.Contains(t, workflow, "  resolve-dashboard-image:")
+	assert.Contains(t, workflow, "  build-dashboard-image:")
+	assert.Contains(t, workflow, "dashboard_image: ${{ needs.resolve-dashboard-image.outputs.dashboard_image }}")
 }
 
 func TestMCPAPIRejectsUnsupportedPolicy(t *testing.T) {
