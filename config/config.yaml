@@ -38,9 +38,10 @@ policy:
       features:
         - releng
         - zizmor
-      # The build environment used for this repo. Right now, this value
-      # is used for selecting the appropriate golang-cross image
-      # used for building the binary, packages and docker images.
+      # The build environment of a NEW repo or branch, i.e. the golang-cross
+      # image used for building the binary, packages and docker images.
+      # It is not how Go is upgraded: a checkout that already has a tag
+      # (release.yml, ci/gromit.env) keeps its own, see policy/goversion.go.
       buildenv: 1.26-bullseye
       # baseimage what the container images are based on. It needs to be a
       # debian compatible distro as the Dockerfile assumes apt-get

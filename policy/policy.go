@@ -373,6 +373,10 @@ func (rp *RepoPolicy) ProcessBranch(pushOpts *PushOptions) error {
 	if err != nil {
 		return err
 	}
+	// the Go version belongs to the repository, not to gromit: see AdoptBuildenv
+	if err := rp.AdoptBuildenv(pushOpts.OpDir); err != nil {
+		return err
+	}
 	b, err := NewBundle(rp.Branchvals.Features)
 	if err != nil {
 		return fmt.Errorf("bundle %v: %v", rp.Branchvals.Features, err)
