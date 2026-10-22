@@ -383,6 +383,12 @@ policy:
                 - ee
                 - resolve-dashboard
                 - plugin-compiler-ng
+            release-5.16:
+              features:
+                - fips
+                - ee
+                - resolve-dashboard
+                - plugin-compiler-ng
         tyk-analytics:
           pcrepo: tyk-dashboard-unstable
           dhrepo: tykio/tyk-dashboard
@@ -514,6 +520,11 @@ policy:
                 - nightly-e2e
                 - fips
             release-5.15.0:
+              cgo: false
+              features:
+                - nightly-e2e
+                - fips
+            release-5.16:
               cgo: false
               features:
                 - nightly-e2e
@@ -885,7 +896,7 @@ policy:
 tracks:
   # gateway covers Gateway and Dashboard, which share the 5.x train
   gateway:
-    current_feature: "5.15"
+    current_feature: "5.16"
     current_lts: "5.13"
     lts_minus_1: "5.8"
 
