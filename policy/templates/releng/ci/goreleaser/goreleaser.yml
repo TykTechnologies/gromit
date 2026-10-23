@@ -14,22 +14,6 @@ before:
     - ./ci/copy-framework-files.sh
 {{- end}}
 
-{{- if eq .Name "ai-studio"}}
-{{- if not (has "ai-studio-frontend-build" .Branchvals.Features) }}
-before:
-  hooks:
-    - |
-      apt-get update && \
-      apt-get install -y nodejs npm && \
-      which node || echo "node not found" && \
-      which npm || echo "npm not found" && \
-      echo "PATH=$PATH" && \
-      cd ui/admin-frontend && \
-      npm install --ignore-scripts && \
-      npm run build
-{{- end}}
-{{- end}}
-
 {{- template "builds" . }}
 
 # This disables archives
