@@ -266,7 +266,6 @@ policy:
                 - plugin-compiler
                 - plugin-compiler-ng
                 - mcp-qualification
-                - build-vmstat
             release-5.3:
               buildenv: 1.24-bullseye
               plugincompiler:
@@ -472,8 +471,6 @@ policy:
                 - nightly-e2e
                 - fips
                 - mcp-qualification
-                - pr-modcache-only
-                - build-vmstat
             release-5.3:
               buildenv: 1.24-bullseye
               cgo: false

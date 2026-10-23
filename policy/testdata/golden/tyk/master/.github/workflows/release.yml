@@ -174,12 +174,6 @@ jobs:
           git config --global --add safe.directory /go/src/github.com/TykTechnologies/tyk
           goreleaser release --timeout 120m --clean -f ${{ matrix.goreleaser }} ${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker' }}' | tee /tmp/build.sh
           chmod +x /tmp/build.sh
-          # Measurement only: shows whether the build saturates the runner CPU.
-          nproc
-          free -g
-          vmstat 10 > /tmp/vmstat.log &
-          VMSTAT_PID=$!
-          trap 'kill $VMSTAT_PID 2>/dev/null || true; echo "::group::vmstat (10s samples)"; cat /tmp/vmstat.log; echo "::endgroup::"' EXIT
           docker run --rm --privileged -e GITHUB_TOKEN=${{ github.token }} \
           -e GOPRIVATE=github.com/TykTechnologies                                \
           -e DEBVERS='${{ matrix.debvers }}'                               \
