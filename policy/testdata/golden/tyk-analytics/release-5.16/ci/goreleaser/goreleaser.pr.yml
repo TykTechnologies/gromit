@@ -90,6 +90,9 @@ nfpms:
       postremove: "ci/install/post_remove.sh"
     bindir: "/opt/tyk-dashboard"
     deb:
+      # zstd packs faster than the default gzip; the debian:trixie-slim base
+      # image that installs these (ci/Dockerfile.*) has dpkg 1.22.22 (>= 1.21.18).
+      compression: zstd
       signature:
         key_file: tyk.io.signing.key
         type: origin
@@ -139,6 +142,9 @@ nfpms:
       postremove: "ci/install/post_remove.sh"
     bindir: "/opt/tyk-dashboard"
     deb:
+      # zstd packs faster than the default gzip; the debian:trixie-slim base
+      # image that installs these (ci/Dockerfile.*) has dpkg 1.22.22 (>= 1.21.18).
+      compression: zstd
       signature:
         key_file: tyk.io.signing.key
         type: origin

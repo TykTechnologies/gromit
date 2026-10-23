@@ -247,6 +247,20 @@ jobs:
       # so re-hashing here would save under a key the next run never looks up,
       # causing a perpetual re-save + cache eviction. Skip if we already had an
       # exact hit (nothing new to store).
+      #
+      # Prune before saving: a partial restore (restore-keys) is saved under a
+      # new key on every go.sum change, so without this the cache only grows.
+      # Go bumps the mtime of entries it uses, so anything untouched for 2+
+      # days is not part of the working set. The build container runs as root,
+      # so the files are root-owned and deleting them needs sudo.
+      - name: Prune Go build cache
+        if: ${{ github.event_name != 'pull_request' && steps.go-cache.outputs.cache-hit != 'true' }}
+        run: |
+          SUDO=""
+          if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; fi
+          echo "before:"; $SUDO du -sh ~/.cache/go-build ~/go/pkg/mod || true
+          $SUDO find ~/.cache/go-build -type f -mtime +2 -delete
+          echo "after:"; $SUDO du -sh ~/.cache/go-build ~/go/pkg/mod || true
       - name: Save Go build cache
         uses: WarpBuilds/cache/save@f643a1ba29942d56621d07fc2d4284c7219868ad # v1
         if: ${{ github.event_name != 'pull_request' && steps.go-cache.outputs.cache-hit != 'true' }}
