@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/TykTechnologies/gromit/config"
 )
 
 func write(t *testing.T, dir, name, body string) {
@@ -120,4 +123,35 @@ func TestAdoptBuildenvTwice(t *testing.T) {
 	assert.NoError(t, rp.AdoptBuildenv(dir))
 	assert.NoError(t, rp.AdoptBuildenv(dir))
 	assert.Equal(t, "1.27-bullseye", rp.Branchvals.Buildenv)
+}
+
+// Every file gromit renders the golang-cross tag into carries the tag of the checkout: nothing in the
+// policy (the config, a plugin compiler setting) sets a Go version of its own.
+func TestAdoptedBuildenvReachesEveryRenderedFile(t *testing.T) {
+	checkout := t.TempDir()
+	write(t, checkout, ".github/workflows/release.yml", releaseYML)
+
+	var pol Policies
+	config.LoadConfig("")
+	require.NoError(t, LoadRepoPolicies(&pol))
+	repo, err := pol.GetRepoPolicy("tyk")
+	require.NoError(t, err)
+	require.NoError(t, repo.SetBranch("release-5.3"))
+	require.NoError(t, repo.AdoptBuildenv(checkout))
+	require.Equal(t, "1.27-bullseye", repo.Branchvals.Buildenv)
+
+	bundle, err := NewBundle([]string{"plugin-compiler", "plugin-compiler-ng"})
+	require.NoError(t, err)
+	out := t.TempDir()
+	_, err = bundle.Render(repo, out, nil)
+	require.NoError(t, err)
+
+	for file, want := range map[string]string{
+		".github/workflows/plugin-compiler-build.yml":     "GOLANG_CROSS: 1.27-bullseye",
+		".github/workflows/plugin-compiler-ng-build.yml":  "GOLANG_CROSS: 1.27-bullseye",
+		"ci/images/plugin-compiler/Dockerfile":            "tykio/golang-cross:1.27-bullseye",
+		"ci/images/plugin-compiler-ng/Dockerfile.release": "tykio/golang-cross:1.27-bullseye",
+	} {
+		assert.Contains(t, readRenderedFile(t, out, file), want, file)
+	}
 }

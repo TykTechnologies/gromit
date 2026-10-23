@@ -2,9 +2,6 @@
   goreleaser:
     needs:
       - dep-guard
-{{- if has "ai-studio-frontend-build" .Branchvals.Features }}
-      - ai-studio-frontend-build
-{{- end }}
     if: |
       !cancelled() &&
       (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') &&
@@ -132,20 +129,6 @@
           echo "UI assets built successfully from source"
 {{- end }}
 
-{{- if has "ai-studio-frontend-build" .Branchvals.Features }}
-      - name: Download frontend build artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
-        with:
-          name: frontend-build
-          path: ui/admin-frontend/build
-
-      - name: Verify frontend artifacts
-        run: |
-          echo "Checking frontend build artifacts..."
-          ls -la ui/admin-frontend/build || echo "Build directory not found"
-          find ui/admin-frontend/build -type f | head -20 || echo "No files found"
-{{- end }}
-
       - name: Set some outputs for later
         id: set_outputs
         shell: bash
@@ -236,7 +219,7 @@
               echo "::error::Go version validation failed!"
               echo "Used version: $GO_VERSION (in tykio/golang-cross:{{`${{ matrix.golang_cross }}`}})"
               echo "Latest patch: $LATEST_PATCH"
-              echo "Please update the buildenv Go version to the latest patch version."
+              echo "Please rebuild or update the tykio/golang-cross image so that it carries the latest patch of Go $MINOR_VERSION."
               exit 1
             else
               echo "Go version is up to date: $GO_VERSION"
@@ -342,29 +325,6 @@
           echo "Assets copied successfully for tag {{`${TAG_NAME}`}}"
 {{- end }}
 
-{{- if has "ai-studio-frontend-build" .Branchvals.Features }}
-      - name: Verify GoReleaser output
-        id: verify_dist
-        run: |
-          echo "Checking if dist directory was created..."
-          if [ ! -d "dist" ]; then
-            echo "ERROR: dist directory not found!"
-            echo "GoReleaser failed to create dist directory"
-            echo "Listing workspace contents:"
-            ls -la
-            exit 1
-          fi
-          echo "Dist directory exists, checking contents:"
-          ls -la dist/
-          echo "Package files:"
-          find dist -type f -name "*.deb" -o -name "*.rpm" | head -20
-          if [ -z "$(find dist -type f -name "*.deb" -o -name "*.rpm")" ]; then
-            echo "ERROR: No packages found in dist directory!"
-            exit 1
-          fi
-          echo "dist_ready=true" >> $GITHUB_OUTPUT
-{{- end }}
-
 {{- $needsScout := false }}
 {{- if ne $r.Name "tyk" }}
 {{- range $b, $bv := $r.GetDockerBuilds }}
@@ -406,7 +366,7 @@
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
-          context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
+          context: "dist"
           platforms: {{`${{ github.event_name == 'pull_request' && 'linux/amd64' || '`}}{{ $bv.GetDockerPlatforms | join "," }}{{`' }}`}}
           {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
@@ -498,7 +458,7 @@
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' && startsWith(github.ref, 'refs/tags') }}`}}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
-          context: {{ if has "ai-studio-frontend-build" $r.Branchvals.Features }}"."{{ else }}"dist"{{ end }}
+          context: "dist"
           platforms: {{ $bv.GetDockerPlatforms | join "," }}
           {{- if has "distroless" $r.Branchvals.Features }}
           file: ci/Dockerfile.distroless
