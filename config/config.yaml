@@ -471,6 +471,7 @@ policy:
                 - nightly-e2e
                 - fips
                 - mcp-qualification
+                - pr-no-cache-export
             release-5.3:
               buildenv: 1.24-bullseye
               cgo: false
