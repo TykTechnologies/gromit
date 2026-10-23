@@ -197,6 +197,9 @@
       # churned. master/tags keep the cache warm for PRs to restore from.
       - uses: WarpBuilds/cache/restore@f643a1ba29942d56621d07fc2d4284c7219868ad  # v1
         id: go-cache
+{{- if has "pr-modcache-only" .Branchvals.Features }}
+        if: {{`${{ github.event_name != 'pull_request' }}`}}
+{{- end }}
         with:
           path: |
             ~/.cache/go-build
@@ -209,6 +212,33 @@
           # entry rendered into tyk, and "-go-tyk-" would match "-go-tyk-pump-".
           restore-keys: |
             {{`${{ runner.os }}-go-`}}{{ .Name }}-goreleaser-
+{{- if has "pr-modcache-only" .Branchvals.Features }}
+
+      # Feature pr-modcache-only: PRs restore only the module cache, not the
+      # multi-GB build cache. The cache version includes `path`, so this cannot
+      # be a subset restore of the entry above: it is a separate, smaller entry
+      # (key prefix -gomod-) that master/tags save below. A PR therefore
+      # compiles cold; roll back by removing the feature from the branch.
+      - name: Restore Go module cache (PR)
+        uses: WarpBuilds/cache/restore@f643a1ba29942d56621d07fc2d4284c7219868ad  # v1
+        if: {{`${{ github.event_name == 'pull_request' }}`}}
+        with:
+          path: ~/go/pkg/mod
+          key: {{`${{ runner.os }}-gomod-`}}{{ .Name }}{{`-goreleaser-${{ hashFiles('go.sum') }}`}}
+          restore-keys: |
+            {{`${{ runner.os }}-gomod-`}}{{ .Name }}-goreleaser-
+
+      # Off-PR: only look the module entry up (no download) so the save step
+      # below knows whether it still has to be written.
+      - name: Check Go module cache entry
+        uses: WarpBuilds/cache/restore@f643a1ba29942d56621d07fc2d4284c7219868ad  # v1
+        id: go-mod-cache
+        if: {{`${{ github.event_name != 'pull_request' }}`}}
+        with:
+          lookup-only: true
+          path: ~/go/pkg/mod
+          key: {{`${{ runner.os }}-gomod-`}}{{ .Name }}{{`-goreleaser-${{ hashFiles('go.sum') }}`}}
+{{- end }}
 
       - name: Validate Go version
         run: |
@@ -278,6 +308,14 @@
           goreleaser release --timeout 120m --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker' }}`}}' | tee /tmp/build.sh
 {{- end }}
           chmod +x /tmp/build.sh
+{{- if has "build-vmstat" .Branchvals.Features }}
+          # Measurement only: shows whether the build saturates the runner CPU.
+          nproc
+          free -g
+          vmstat 10 > /tmp/vmstat.log &
+          VMSTAT_PID=$!
+          trap 'kill $VMSTAT_PID 2>/dev/null || true; echo "::group::vmstat (10s samples)"; cat /tmp/vmstat.log; echo "::endgroup::"' EXIT
+{{- end }}
           docker run --rm --privileged -e GITHUB_TOKEN={{`${{ github.token }}`}} \
 {{- if eq .Name "tyk-analytics" }}
           -e GOMAXPROCS=4                                                        \
@@ -311,6 +349,21 @@
       # so re-hashing here would save under a key the next run never looks up,
       # causing a perpetual re-save + cache eviction. Skip if we already had an
       # exact hit (nothing new to store).
+      #
+      # Prune before saving: a partial restore (restore-keys) is saved under a
+      # new key on every go.sum change, so without this the cache only grows.
+      # Go bumps the mtime of entries it uses, so anything untouched for 2+
+      # days is not part of the working set. The build container runs as root,
+      # so the files are root-owned and deleting them needs sudo.
+      - name: Prune Go build cache
+        if: {{`${{ github.event_name != 'pull_request' && steps.go-cache.outputs.cache-hit != 'true' }}`}}
+        run: |
+          SUDO=""
+          if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; fi
+          echo "before:"; $SUDO du -sh ~/.cache/go-build ~/go/pkg/mod || true
+          $SUDO find ~/.cache/go-build -type f -mtime +2 -delete
+          echo "after:"; $SUDO du -sh ~/.cache/go-build ~/go/pkg/mod || true
+
       - name: Save Go build cache
         uses: WarpBuilds/cache/save@f643a1ba29942d56621d07fc2d4284c7219868ad  # v1
         if: {{`${{ github.event_name != 'pull_request' && steps.go-cache.outputs.cache-hit != 'true' }}`}}
@@ -319,6 +372,16 @@
             ~/.cache/go-build
             ~/go/pkg/mod
           key: {{`${{ steps.go-cache.outputs.cache-primary-key }}`}}
+{{- if has "pr-modcache-only" .Branchvals.Features }}
+
+      # Module cache entry that PRs restore (see "Restore Go module cache (PR)").
+      - name: Save Go module cache
+        uses: WarpBuilds/cache/save@f643a1ba29942d56621d07fc2d4284c7219868ad  # v1
+        if: {{`${{ github.event_name != 'pull_request' && steps.go-mod-cache.outputs.cache-hit != 'true' }}`}}
+        with:
+          path: ~/go/pkg/mod
+          key: {{`${{ steps.go-mod-cache.outputs.cache-primary-key }}`}}
+{{- end }}
 
 {{- if eq .Name "tyk-analytics" }}
 
