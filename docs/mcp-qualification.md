@@ -22,6 +22,8 @@ When enabled, the policy:
 - Includes its result in the required aggregate job dependencies.
 - Excludes MCP from the parallel release API suite only when the mandatory
   serial qualification job is generated.
+- Excludes MCP from the nightly API suite, because MCP tests need the
+  dedicated stack and cannot run on the shared nightly environment.
 
 The reusable workflow lives in `github-actions`; tests, requirements, runner
 and compose fixtures remain under Dashboard's `tests/api`. The shared job

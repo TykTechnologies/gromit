@@ -326,6 +326,8 @@ jobs:
         id: test_execution
         with:
           user_api_secret: ${{ steps.env_up.outputs.USER_API_SECRET }}
+          # MCP tests need the dedicated serial stack from mcp-qualification and cannot run on this shared stack.
+          api_markers: (${{ matrix.envfiles.apimarkers }}) and not mcp
       - name: Generate test reports and collect logs
         uses: TykTechnologies/github-actions/.github/actions/tests/reporting@production
         if: always() && (steps.test_execution.conclusion != 'skipped')
