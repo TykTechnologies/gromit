@@ -311,6 +311,7 @@
       # so re-hashing here would save under a key the next run never looks up,
       # causing a perpetual re-save + cache eviction. Skip if we already had an
       # exact hit (nothing new to store).
+{{- if has "go-cache-prune" .Branchvals.Features }}
       #
       # Prune before saving: a partial restore (restore-keys) is saved under a
       # new key on every go.sum change, so without this the cache only grows.
@@ -325,7 +326,7 @@
           echo "before:"; $SUDO du -sh ~/.cache/go-build ~/go/pkg/mod || true
           $SUDO find ~/.cache/go-build -type f -mtime +2 -delete
           echo "after:"; $SUDO du -sh ~/.cache/go-build ~/go/pkg/mod || true
-
+{{- end }}
       - name: Save Go build cache
         uses: WarpBuilds/cache/save@f643a1ba29942d56621d07fc2d4284c7219868ad  # v1
         if: {{`${{ github.event_name != 'pull_request' && steps.go-cache.outputs.cache-hit != 'true' }}`}}

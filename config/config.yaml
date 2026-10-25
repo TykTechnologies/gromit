@@ -469,6 +469,7 @@ policy:
               cgo: false
               features:
                 - nightly-e2e
+                - go-cache-prune
                 - fips
                 - mcp-qualification
             release-5.3:
