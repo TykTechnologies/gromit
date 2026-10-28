@@ -74,7 +74,6 @@ type build struct {
 type buildMap map[string]*build
 
 type pluginCompilerConfig struct {
-	GoImage               string
 	DepGuardRef           string
 	DepGuardIf            string
 	DockerBuildIf         string

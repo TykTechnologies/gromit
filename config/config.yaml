@@ -269,7 +269,6 @@ policy:
             release-5.3:
               buildenv: 1.24-bullseye
               plugincompiler:
-                goimage: 1.23-bullseye
                 depguardref: 2b35ab5dd4cfff21ced9d12446e9e27d10bf5785
                 depguardif: ${{ github.event_name == 'pull_request' }}
                 dockerbuildif: ${{ !github.event.pull_request.draft && always() && (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') }}
@@ -594,62 +593,6 @@ policy:
                 - fips
                 - release-test
 
-        ai-studio:
-          packagename: tyk-ai-studio
-          exposeports: "8080"
-          binary: tyk-ai-studio
-          cgo: true
-          upgradefromver: 1.0.1
-          configfile: tyk-ai-studio.conf
-          versionpackage: main
-          features:
-            - ai-studio-frontend-build
-            - default-distros
-          builds:
-            microgateway:
-              dir: microgateway
-              main: ./cmd/microgateway
-              binary: tyk-ai-microgateway
-              versionpackage: main
-              description: >-
-                Tyk AI Microgateway
-              imagetitle: Tyk AI Microgateway
-              buildpackagename: tyk-ai-microgateway
-              pcrepo: tyk-ai-microgateway
-              dhrepo: tykio/tyk-ai-microgateway
-              cirepo: ai-studio
-              archs:
-                - go: amd64
-                  deb: amd64
-                  docker: linux/amd64
-                - go: arm64
-                  deb: aarch64
-                  docker: linux/arm64
-                - go: s390x
-                  deb: s390x
-                  docker: linux/s390x
-            std:
-              description: >-
-                Tyk AI Studio
-              imagetitle: Tyk AI Studio
-              buildpackagename: tyk-ai-studio
-              pcrepo: tyk-ai-studio
-              upgraderepo: tyk-ai-studio
-              dhrepo: tykio/tyk-ai-studio
-              cirepo: ai-studio
-              archs:
-                - go: amd64
-                  deb: amd64
-                  docker: linux/amd64
-                - go: arm64
-                  deb: aarch64
-                  docker: linux/arm64
-                - go: s390x
-                  deb: s390x
-                  docker: linux/s390x
-          branches:
-            main:
-
     pgo-services:
       features:
         - releng
@@ -824,36 +767,6 @@ policy:
                 - mcp-qualification
                 - fips
                 - release-test
-
-        midsommar:
-          buildenv: 1.22-bullseye
-          exposeports: 80
-          packagename: midsommar
-          binary: midsommar
-          cgo: false
-          upgradefromver: 0.0.1
-          configfile: midsommar.conf
-          versionpackage: github.com/TykTechnologies/midsommar/main
-          builds:
-            std:
-              buildpackagename: midsommar
-              description: >-
-                Tyk AI Portal
-              pcrepo: midsommar
-              dhrepo: tykio/midsommar
-              cirepo: midsommar
-              archs:
-                - go: amd64
-                  deb: amd64
-                  docker: linux/amd64
-                - go: arm64
-                  deb: aarch64
-                  docker: linux/arm64
-                - go: s390x
-                  deb: s390x
-                  docker: linux/s390x
-          branches:
-            main:
 
     # image-services are pure Go services that build their own container
     # images from per-service Dockerfiles and ship no packages, so they do
