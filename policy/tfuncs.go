@@ -64,13 +64,6 @@ func getBuildField(v *build, field string) string {
 	return f.String()
 }
 
-func (pc pluginCompilerConfig) GetGoImage(buildenv string) string {
-	if pc.GoImage != "" {
-		return pc.GoImage
-	}
-	return buildenv
-}
-
 func (pc pluginCompilerConfig) PullRequestTypesInline() bool {
 	return pc.PullRequestTypesStyle == "inline"
 }

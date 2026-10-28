@@ -22,7 +22,7 @@ on:
       - "v*"
 
 env:
-  GOLANG_CROSS: {{ $pc.GetGoImage .Branchvals.Buildenv }}
+  GOLANG_CROSS: {{ .Branchvals.Buildenv }}
   NG_BASE_SOURCE: {{ $ng.BaseSourceImageRefValue }}
   NG_GLIBC_TARGET: "{{ $ng.GlibcTargetValue }}"
   NG_CROSS: "{{ $ng.CrossValue }}"
