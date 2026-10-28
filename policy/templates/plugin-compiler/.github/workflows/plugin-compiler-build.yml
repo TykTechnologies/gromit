@@ -20,7 +20,7 @@ on:
       - "v*"
 
 env:
-  GOLANG_CROSS: {{ $pc.GetGoImage .Branchvals.Buildenv }}
+  GOLANG_CROSS: {{ .Branchvals.Buildenv }}
 
 concurrency:
   group: ${{`{{ github.workflow }}-${{ github.ref }}`}}

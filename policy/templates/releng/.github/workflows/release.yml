@@ -45,10 +45,6 @@ jobs:
     permissions:
       contents: read
 
-{{- if has "ai-studio-frontend-build" .Branchvals.Features }}
-{{- template "ai-studio-frontend-build" . }}
-{{- end }}
-
 {{- template "goreleaser" . }}
 
 {{- if and (eq .Name "tyk") (has "resolve-dashboard" .Branchvals.Features) }}
