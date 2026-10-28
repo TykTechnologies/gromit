@@ -468,6 +468,7 @@ policy:
               cgo: false
               features:
                 - nightly-e2e
+                - go-cache-prune
                 - fips
                 - mcp-qualification
                 - pr-no-cache-export
