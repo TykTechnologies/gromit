@@ -395,7 +395,12 @@
           {{- end }}
           outputs: type=image,push=true,compression=gzip,force-compression=true,oci-mediatypes=true
           cache-from: type=gha
+{{- if has "pr-no-cache-export" $r.Branchvals.Features }}
+          {{/* PR builds almost never hit this cache (the .deb layer changes on every build) and exporting it costs about 100 s per job, so only master and tags export it. */ -}}
+          cache-to: {{`${{ github.event_name != 'pull_request' && 'type=gha,mode=max' || '' }}`}}
+{{- else }}
           cache-to: type=gha,mode=max
+{{- end }}
           tags: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.tags }}`}}
           labels: {{printf "%s_%s%s" `${{ steps.ci_metadata` $b `.outputs.labels }}`}}
           build-args: |

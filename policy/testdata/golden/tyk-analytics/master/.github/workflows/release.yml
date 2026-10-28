@@ -323,7 +323,7 @@ jobs:
           provenance: mode=max
           outputs: type=image,push=true,compression=gzip,force-compression=true,oci-mediatypes=true
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,mode=max' || '' }}
           tags: ${{ steps.ci_metadata_fips.outputs.tags }}
           labels: ${{ steps.ci_metadata_fips.outputs.labels }}
           build-args: |
@@ -485,7 +485,7 @@ jobs:
           provenance: mode=max
           outputs: type=image,push=true,compression=gzip,force-compression=true,oci-mediatypes=true
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,mode=max' || '' }}
           tags: ${{ steps.ci_metadata_std.outputs.tags }}
           labels: ${{ steps.ci_metadata_std.outputs.labels }}
           build-args: |
