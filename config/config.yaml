@@ -266,6 +266,7 @@ policy:
                 - plugin-compiler
                 - plugin-compiler-ng
                 - mcp-qualification
+                - docs-preview
             release-5.3:
               buildenv: 1.24-bullseye
               plugincompiler:
@@ -471,6 +472,7 @@ policy:
                 - fips
                 - mcp-qualification
                 - pr-no-cache-export
+                - docs-preview
             release-5.3:
               buildenv: 1.24-bullseye
               cgo: false
@@ -592,6 +594,7 @@ policy:
               features:
                 - fips
                 - release-test
+                - docs-preview
 
     pgo-services:
       features:
@@ -670,6 +673,7 @@ policy:
             master:
               features:
                 - mcp-qualification
+                - docs-preview
             release-1.14:
             release-1.14.1:
             release-1.15.0:
@@ -767,6 +771,7 @@ policy:
                 - mcp-qualification
                 - fips
                 - release-test
+                - docs-preview
 
     # image-services are pure Go services that build their own container
     # images from per-service Dockerfiles and ship no packages, so they do
