@@ -734,7 +734,7 @@ policy:
           packagename: tyk-sink
           upgradefromver: 1.8.2
           configfile: tyk_sink.conf
-          versionpackage: github.com/TykTechnologies/tyk-sink/main
+          versionpackage: github.com/TykTechnologies/tyk-sink/internal/build
           tests: [api]
           builds: 
             std:

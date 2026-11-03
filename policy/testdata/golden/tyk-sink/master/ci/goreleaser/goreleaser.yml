@@ -13,10 +13,10 @@ builds:
       - NOP=nop # ignore this, it is jsut to avoid a complex conditional in the templates
       - GOFIPS140=v1.0.0
     ldflags:
-      - -X github.com/TykTechnologies/tyk-sink/main.Version={{.Version}}
-      - -X github.com/TykTechnologies/tyk-sink/main.Commit={{.FullCommit}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuildDate={{.Date}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuiltBy=goreleaser
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Version={{.Version}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Commit={{.FullCommit}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuildDate={{.Date}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuiltBy=goreleaser
     goos:
       - linux
     goarch:
@@ -29,10 +29,10 @@ builds:
       - NOP=nop # ignore this, it is jsut to avoid a complex conditional in the templates
       - GOFIPS140=v1.0.0
     ldflags:
-      - -X github.com/TykTechnologies/tyk-sink/main.Version={{.Version}}
-      - -X github.com/TykTechnologies/tyk-sink/main.Commit={{.FullCommit}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuildDate={{.Date}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuiltBy=goreleaser
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Version={{.Version}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Commit={{.FullCommit}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuildDate={{.Date}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuiltBy=goreleaser
     goos:
       - linux
     goarch:
@@ -45,10 +45,10 @@ builds:
       - NOP=nop # ignore this, it is jsut to avoid a complex conditional in the templates
       - GOFIPS140=v1.0.0
     ldflags:
-      - -X github.com/TykTechnologies/tyk-sink/main.Version={{.Version}}
-      - -X github.com/TykTechnologies/tyk-sink/main.Commit={{.FullCommit}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuildDate={{.Date}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuiltBy=goreleaser
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Version={{.Version}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Commit={{.FullCommit}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuildDate={{.Date}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuiltBy=goreleaser
     goos:
       - linux
     goarch:
@@ -58,10 +58,10 @@ builds:
     env:
       - NOP=nop # ignore this, it is jsut to avoid a complex conditional in the templates
     ldflags:
-      - -X github.com/TykTechnologies/tyk-sink/main.Version={{.Version}}
-      - -X github.com/TykTechnologies/tyk-sink/main.Commit={{.FullCommit}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuildDate={{.Date}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuiltBy=goreleaser
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Version={{.Version}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Commit={{.FullCommit}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuildDate={{.Date}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuiltBy=goreleaser
     goos:
       - linux
     goarch:
@@ -71,10 +71,10 @@ builds:
     env:
       - NOP=nop # ignore this, it is jsut to avoid a complex conditional in the templates
     ldflags:
-      - -X github.com/TykTechnologies/tyk-sink/main.Version={{.Version}}
-      - -X github.com/TykTechnologies/tyk-sink/main.Commit={{.FullCommit}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuildDate={{.Date}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuiltBy=goreleaser
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Version={{.Version}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Commit={{.FullCommit}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuildDate={{.Date}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuiltBy=goreleaser
     goos:
       - linux
     goarch:
@@ -84,10 +84,10 @@ builds:
     env:
       - NOP=nop # ignore this, it is jsut to avoid a complex conditional in the templates
     ldflags:
-      - -X github.com/TykTechnologies/tyk-sink/main.Version={{.Version}}
-      - -X github.com/TykTechnologies/tyk-sink/main.Commit={{.FullCommit}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuildDate={{.Date}}
-      - -X github.com/TykTechnologies/tyk-sink/main.BuiltBy=goreleaser
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Version={{.Version}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.Commit={{.FullCommit}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuildDate={{.Date}}
+      - -X github.com/TykTechnologies/tyk-sink/internal/build.BuiltBy=goreleaser
     goos:
       - linux
     goarch:
