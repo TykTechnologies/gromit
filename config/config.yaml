@@ -925,8 +925,10 @@ pkgs:
   tyk-sync-unstable:
     notbackup: true
     agecutoff: 2160h # 90d
-  # Gateway EE/FIPS (every tag, RCs included) and AI Studio Enterprise packages.
-  # AI Studio Enterprise releases live only here, so back them up before pruning.
+  # Gateway EE/FIPS (every tag, RCs included), MDCB FIPS and AI Studio
+  # Enterprise packages. AI Studio Enterprise releases live only here and
+  # customers install them from it, so only pre-releases are pruned.
   tyk-ee-unstable:
     notbackup: false
-    agecutoff: 2160h # 90d, same as the other unstable repos; see the PR before enabling deletion
+    prereleaseonly: true
+    agecutoff: 720h # 30d

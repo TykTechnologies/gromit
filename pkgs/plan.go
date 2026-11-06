@@ -144,6 +144,10 @@ func BuildPlan(repoName string, cfg pkgConfig, tracks Tracks, items []pc.Package
 			p.Retained++
 			continue
 		}
+		if cfg.PrereleaseOnly && semver.Prerelease(v) == "" {
+			p.Retained++
+			continue
+		}
 		prune := false
 		if cutoff != "" {
 			if bySeries {

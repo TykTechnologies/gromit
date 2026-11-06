@@ -53,6 +53,9 @@ type pkgConfig struct {
 	// (TT-17825). It fails safe: omitted means the deletion step
 	// refuses to delete from this repo, dry runs stay allowed.
 	AllowDelete bool `mapstructure:"allow_delete"`
+	// PrereleaseOnly limits pruning to pre-release versions (RCs and
+	// the like), for repos where releases are also published.
+	PrereleaseOnly bool `mapstructure:"prereleaseonly"`
 }
 
 func (c pkgConfig) HubImages() []string {
