@@ -925,3 +925,8 @@ pkgs:
   tyk-sync-unstable:
     notbackup: true
     agecutoff: 2160h # 90d
+  # Gateway EE/FIPS (every tag, RCs included) and AI Studio Enterprise packages.
+  # AI Studio Enterprise releases live only here, so back them up before pruning.
+  tyk-ee-unstable:
+    notbackup: false
+    agecutoff: 1h # TEMPORARY: inventory run, lists every package
