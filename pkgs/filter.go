@@ -17,10 +17,12 @@ type Filter struct {
 	Version     string
 	Age         time.Duration
 	DownloadAge time.Duration
-	total       int
-	filtered    int
-	mu          sync.Mutex
-	vtrans      *strings.Replacer
+	// PrereleaseOnly keeps every release, whatever the other cutoffs say
+	PrereleaseOnly bool
+	total          int
+	filtered       int
+	mu             sync.Mutex
+	vtrans         *strings.Replacer
 }
 
 //nolint:copylocks
@@ -53,10 +55,11 @@ func (r Repos) MakeFilter(repoName string) (*Filter, error) {
 		return nil, fmt.Errorf("%s cannot be parsed as semver", repo.VersionCutoff)
 	}
 	return &Filter{
-		Version:    v,
-		Age:        repo.AgeCutoff,
-		Exceptions: util.NewSetFromSlices(repo.Exceptions),
-		vtrans:     strings.NewReplacer("~", "-"),
+		Version:        v,
+		Age:            repo.AgeCutoff,
+		Exceptions:     util.NewSetFromSlices(repo.Exceptions),
+		PrereleaseOnly: repo.PrereleaseOnly,
+		vtrans:         strings.NewReplacer("~", "-"),
 	}, nil
 }
 
@@ -71,12 +74,17 @@ func (r Repos) ShouldBackup(repoName string) bool {
 
 // Satisfies behaviour depends on the order of the conditionals:
 // 1. Is it a version that should not be deleted?
-// 2. Is it older than the versioncutoff?
-// 3. Was the package uploaded before the agecutoff?
+// 2. Is it a release in a prereleaseonly repo?
+// 3. Is it older than the versioncutoff?
+// 4. Was the package uploaded before the agecutoff?
 func (f *Filter) Satisfies(item pc.PackageDetail, now time.Time) bool {
 	v := "v" + f.vtrans.Replace(item.Version)
 	if f.Exceptions.Has(v) {
 		log.Trace().Msgf("v%s is protected", item.Version)
+		return false
+	}
+	if f.PrereleaseOnly && semver.Prerelease(v) == "" {
+		log.Trace().Msgf("v%s is a release in a prerelease-only repo", item.Version)
 		return false
 	}
 	if f.Version != "" && semver.IsValid(v) {

@@ -3,6 +3,7 @@ package pkgs
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -94,6 +95,37 @@ func TestBuildPlanStatic(t *testing.T) {
 	assert.Equal(t, 2, plan.Pruned)
 	assert.Equal(t, 3, plan.Retained)
 	assert.Equal(t, map[string]int{"v1.8.2": 1}, plan.Protected)
+}
+
+// TestBuildPlanPrereleaseOnly proves a prereleaseonly repo keeps every
+// release, however old, and prunes only old pre-releases
+func TestBuildPlanPrereleaseOnly(t *testing.T) {
+	cfg := pkgConfig{
+		AgeCutoff:      30 * 24 * time.Hour,
+		PrereleaseOnly: true,
+	}
+	items := []pc.PackageDetail{
+		pkg("5.13.2~rc5", 60*24*time.Hour),       // old pre-release: pruned
+		pkg("2.3.0-unstable.1", 60*24*time.Hour), // old pre-release: pruned
+		pkg("5.15.0~rc10", 24*time.Hour),         // fresh pre-release: retained
+		pkg("2.0.0", 240*24*time.Hour),           // old release: retained
+		pkg("5.8.10", 24*time.Hour),              // fresh release: retained
+	}
+	plan, err := BuildPlan("tyk-ee-unstable", cfg, testTracks, items, planNow, planGrace)
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, plan.Pruned)
+	assert.Equal(t, 3, plan.Retained)
+	for _, pp := range plan.Packages {
+		assert.Contains(t, []string{"5.13.2~rc5", "2.3.0-unstable.1"}, pp.Version)
+	}
+}
+
+func TestFilterPrereleaseOnly(t *testing.T) {
+	f := &Filter{Age: 30 * 24 * time.Hour, PrereleaseOnly: true, vtrans: strings.NewReplacer("~", "-")}
+	assert.True(t, f.Satisfies(pkg("5.13.2~rc5", 60*24*time.Hour), planNow))
+	assert.False(t, f.Satisfies(pkg("5.15.0~rc10", 24*time.Hour), planNow))
+	assert.False(t, f.Satisfies(pkg("2.0.0", 240*24*time.Hour), planNow))
 }
 
 func TestFillPrunedBytes(t *testing.T) {
