@@ -929,4 +929,4 @@ pkgs:
   # AI Studio Enterprise releases live only here, so back them up before pruning.
   tyk-ee-unstable:
     notbackup: false
-    agecutoff: 1h # TEMPORARY: inventory run, lists every package
+    agecutoff: 2160h # 90d, same as the other unstable repos; see the PR before enabling deletion
