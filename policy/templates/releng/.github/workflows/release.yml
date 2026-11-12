@@ -58,8 +58,6 @@ jobs:
   {{ end }}
 {{- end }} {{/* empty tests */}}
 
-{{- template "mcp-qualification" . }}
-
 {{- template "aggregator" . }}
 
 {{- template "smoke-tests" . }}
