@@ -19,9 +19,6 @@
           {{- if and (eq .Name "tyk-sink") (has "release-test" .Branchvals.Features) -}}
           , release-tests
           {{- end -}}
-          {{- if has "mcp-qualification" .Branchvals.Features -}}
-          , mcp-qualification
-          {{- end -}}
         ]
     if: {{`${{ always() && github.event_name == 'pull_request' }}`}}
     steps:

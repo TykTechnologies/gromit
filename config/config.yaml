@@ -265,7 +265,6 @@ policy:
                 - resolve-dashboard
                 - plugin-compiler
                 - plugin-compiler-ng
-                - mcp-qualification
                 - docs-preview
             release-5.3:
               buildenv: 1.24-bullseye
@@ -470,7 +469,6 @@ policy:
               features:
                 - nightly-e2e
                 - fips
-                - mcp-qualification
                 - pr-no-cache-export
                 - docs-preview
             release-5.3:
@@ -672,7 +670,6 @@ policy:
           branches:
             master:
               features:
-                - mcp-qualification
                 - docs-preview
             release-1.14:
             release-1.14.1:
@@ -768,7 +765,6 @@ policy:
           branches:
             master:
               features:
-                - mcp-qualification
                 - fips
                 - release-test
                 - docs-preview
