@@ -150,10 +150,12 @@ written in the files of that checkout, and changing it is a change to those file
 
 When `policy gen`, `policy diff` or `policy sync` render a branch into a checkout, they **adopt the tag that the
 checkout already has**, so a pull request that moves a repository to a new Go does not drift from gromit, and a policy
-sync does not move it back. The tag is read from the first of:
+sync does not move it back. The tag is read from `.github/workflows/release.yml`: the first entry of the
+`golang_cross` matrix.
 
-1. `.github/workflows/release.yml`: the first entry of the `golang_cross` matrix;
-2. `ci/gromit.env`: `GO_IMAGE=tykio/golang-cross:<tag>`.
+Repositories in the `image-services` group (`ara`) build their own images: their Go image is in a file of their own
+(`ci/go-image.env`), which gromit neither renders nor reads. `ci/gromit.env` (the `image-vars` feature) carries only
+the runtime `BASE_IMAGE`.
 
 `buildenv` in this config is used only when the checkout has neither: a new repository or branch, or rendering to
 stdout (`policy gen <dir>` with `-`). It does not change the Go version of a repository that already has one, so

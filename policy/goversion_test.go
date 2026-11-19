@@ -56,16 +56,10 @@ func TestAdoptBuildenv(t *testing.T) {
 			want:   "1.28-bookworm",
 		},
 		{
-			name:   "gromit.env when there is no release.yml",
-			files:  map[string]string{"ci/gromit.env": "FOO=bar\nGO_IMAGE=tykio/golang-cross:1.27-bookworm\n"},
-			config: "1.26-bookworm",
-			want:   "1.27-bookworm",
-		},
-		{
-			name:   "release.yml wins over gromit.env",
-			files:  map[string]string{".github/workflows/release.yml": releaseYML, "ci/gromit.env": "GO_IMAGE=tykio/golang-cross:1.20-bullseye\n"},
+			name:   "gromit.env is not a source of the tag: it carries no Go image",
+			files:  map[string]string{"ci/gromit.env": "GO_IMAGE=tykio/golang-cross:1.27-bookworm\n"},
 			config: "",
-			want:   "1.27-bullseye",
+			want:   "",
 		},
 		{
 			name:   "a checkout without a tag takes the config value: a new repository",

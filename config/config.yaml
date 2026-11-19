@@ -599,9 +599,9 @@ policy:
         - releng
         - distroless
         - zizmor
-      # Anchored so image-services tracks the same Go version and
-      # distroless base without restating them.
-      buildenv: &pgo-buildenv 1.26-bookworm
+      # The distroless base is anchored so image-services tracks it
+      # without restating it.
+      buildenv: 1.26-bookworm
       baseimage: debian:trixie-slim
       distrolessbaseimage: &pgo-distroless static-debian13:nonroot
       repos:
@@ -771,12 +771,12 @@ policy:
 
     # image-services are pure Go services that build their own container
     # images from per-service Dockerfiles and ship no packages, so they do
-    # not get releng. gromit only owns the build and runtime images they
-    # use, rendered into ci/gromit.env for the repo's own CD to consume.
+    # not get releng. gromit only owns the runtime image they use, rendered
+    # into ci/gromit.env for the repo's own CD to consume. The Go build image
+    # belongs to the repository (ci/go-image.env), so there is no buildenv.
     image-services:
       features:
         - image-vars
-      buildenv: *pgo-buildenv
       distrolessbaseimage: *pgo-distroless
       repos:
         ara:
