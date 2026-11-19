@@ -593,6 +593,9 @@ policy:
                 - fips
                 - release-test
                 - docs-preview
+                # Scan the build folder and the CI image for secrets before
+                # the public push; report only until secret-scan-enforce.
+                - secret-scan
 
     pgo-services:
       features:

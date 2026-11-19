@@ -231,6 +231,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},prefix=v
             type=semver,pattern={{version}},prefix=v
       - name: push fips image to CI
+        id: ci_push_fips
         if: ${{ matrix.golang_cross == '1.26-bookworm' }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
@@ -290,6 +291,13 @@ jobs:
             verify_manifest manifest.json
           fi
           echo "Success: All layers are uniformly compressed using gzip."
+      - name: Scan fips image for secrets
+        if: ${{ matrix.golang_cross == '1.26-bookworm' }}
+        uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
+        with:
+          path: dist
+          image: ${{ steps.ecr.outputs.registry }}/portal-fips@${{ steps.ci_push_fips.outputs.digest }}
+          enforce: "false"
       - name: Docker metadata for fips tag push
         id: tag_metadata_fips
         if: startsWith(github.ref, 'refs/tags')
@@ -393,6 +401,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},prefix=v
             type=semver,pattern={{version}},prefix=v
       - name: push std image to CI
+        id: ci_push_std
         if: ${{ matrix.golang_cross == '1.26-bookworm' }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
@@ -450,6 +459,13 @@ jobs:
             verify_manifest manifest.json
           fi
           echo "Success: All layers are uniformly compressed using gzip."
+      - name: Scan std image for secrets
+        if: ${{ matrix.golang_cross == '1.26-bookworm' }}
+        uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
+        with:
+          path: dist
+          image: ${{ steps.ecr.outputs.registry }}/portal@${{ steps.ci_push_std.outputs.digest }}
+          enforce: "false"
       - name: Docker metadata for std tag push
         id: tag_metadata_std
         if: startsWith(github.ref, 'refs/tags')

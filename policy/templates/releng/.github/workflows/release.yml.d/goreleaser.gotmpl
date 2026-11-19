@@ -363,6 +363,9 @@
             type=semver,pattern={{`{{version}}`}},prefix=v
 
       - name: push {{ $b }} image to CI
+{{- if has "secret-scan" $r.Branchvals.Features }}
+        id: ci_push_{{ $b }}
+{{- end }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
@@ -437,6 +440,17 @@
             verify_manifest manifest.json
           fi
           echo "Success: All layers are uniformly compressed using gzip."
+{{- if has "secret-scan" $r.Branchvals.Features }}
+
+      {{/* Scans the build folder and the exact image just pushed to the private CI registry, every platform, before anything is pushed to a public registry. With secret-scan-enforce a finding fails the job, so the prod push below does not run. */ -}}
+      - name: Scan {{ $b }} image for secrets
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
+        uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
+        with:
+          path: dist
+          image: {{printf "%s/%s@%s" `${{ steps.ecr.outputs.registry }}` $bv.CIRepo (printf "%s_%s%s" `${{ steps.ci_push` $b `.outputs.digest }}`)}}
+          enforce: {{ if has "secret-scan-enforce" $r.Branchvals.Features }}"true"{{ else }}"false"{{ end }}
+{{- end }}
 
       - name: Docker metadata for {{ $b }} tag push
         id: tag_metadata_{{ $b }}
