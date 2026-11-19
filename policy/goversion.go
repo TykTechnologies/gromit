@@ -16,10 +16,11 @@ import (
 // The tag is read from the files gromit itself renders it into, first match wins:
 //
 //	.github/workflows/release.yml   the first entry of the golang_cross matrix
-//	ci/gromit.env                   GO_IMAGE=tykio/golang-cross:<tag>
+//
+// ci/gromit.env (the image-vars feature) carries no Go image: repositories like ara keep it in a file of their
+// own, which gromit neither renders nor reads.
 var (
 	releaseTagRe = regexp.MustCompile(`(?m)^[ \t]*golang_cross:[ \t]*\r?\n[ \t]*-[ \t]*['"]?([0-9]+\.[0-9]+-[a-z0-9]+)`)
-	envTagRe     = regexp.MustCompile(`(?m)^GO_IMAGE=tykio/golang-cross:([0-9]+\.[0-9]+-[a-z0-9]+)[ \t]*$`)
 
 	// where the tag lives in a checkout, and how to find it there
 	goTagSources = []struct {
@@ -27,7 +28,6 @@ var (
 		re   *regexp.Regexp
 	}{
 		{filepath.Join(".github", "workflows", "release.yml"), releaseTagRe},
-		{filepath.Join("ci", "gromit.env"), envTagRe},
 	}
 )
 
