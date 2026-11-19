@@ -19,8 +19,13 @@
         id: params
 
   upgrade-tests:
-    {{- if eq .Name "tyk-analytics" }}
-    if: github.event_name != 'pull_request'
+    # dep-guard is skipped outside pull requests; without an explicit status
+    # check the implicit success() would skip this job on push and tag runs.
+    if: |
+      !cancelled() &&
+      needs.test-controller-distros.result == 'success'
+    {{- if eq .Name "tyk-analytics" }} &&
+      github.event_name != 'pull_request'
     {{- end }}
     needs:
       - test-controller-distros
