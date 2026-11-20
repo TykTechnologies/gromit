@@ -190,6 +190,11 @@ jobs:
           -v /tmp/build.sh:/tmp/build.sh                                         \
           -w /go/src/github.com/TykTechnologies/portal                      \
           tykio/golang-cross:${{ matrix.golang_cross }} /tmp/build.sh
+      - name: Scan dist for secrets
+        uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
+        with:
+          path: dist
+          enforce: "false"
       # Only master/tags populate the go cache; PRs are read-only (see the
       # restore step above) so they don't pay the multi-GB upload every run.
       # Save under the restore step's primary key (computed from the committed
@@ -295,7 +300,6 @@ jobs:
         if: ${{ matrix.golang_cross == '1.26-bookworm' }}
         uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
         with:
-          path: dist
           image: ${{ steps.ecr.outputs.registry }}/portal-fips@${{ steps.ci_push_fips.outputs.digest }}
           enforce: "false"
       - name: Docker metadata for fips tag push
@@ -463,7 +467,6 @@ jobs:
         if: ${{ matrix.golang_cross == '1.26-bookworm' }}
         uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
         with:
-          path: dist
           image: ${{ steps.ecr.outputs.registry }}/portal@${{ steps.ci_push_std.outputs.digest }}
           enforce: "false"
       - name: Docker metadata for std tag push

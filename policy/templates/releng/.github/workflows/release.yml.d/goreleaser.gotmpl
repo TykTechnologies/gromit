@@ -286,6 +286,15 @@
           -v /tmp/build.sh:/tmp/build.sh                                         \
           -w /go/src/github.com/TykTechnologies/{{ .Name }}                      \
           tykio/golang-cross:{{`${{ matrix.golang_cross }}`}} /tmp/build.sh
+{{- if has "secret-scan" .Branchvals.Features }}
+
+      {{/* Scans the build folder once, before any image is built from it. On tags the Build step above has already published the packages (goreleaser publishers), so secret-scan-enforce stops the image pushes but not those packages. */ -}}
+      - name: Scan dist for secrets
+        uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
+        with:
+          path: dist
+          enforce: {{ if has "secret-scan-enforce" .Branchvals.Features }}"true"{{ else }}"false"{{ end }}
+{{- end }}
 
       # Only master/tags populate the go cache; PRs are read-only (see the
       # restore step above) so they don't pay the multi-GB upload every run.
@@ -442,12 +451,11 @@
           echo "Success: All layers are uniformly compressed using gzip."
 {{- if has "secret-scan" $r.Branchvals.Features }}
 
-      {{/* Scans the build folder and the exact image just pushed to the private CI registry, every platform, before anything is pushed to a public registry. With secret-scan-enforce a finding fails the job, so the prod push below does not run. */ -}}
+      {{/* Scans the exact image just pushed to the private CI registry, every platform, before it is pushed to Docker Hub or Cloudsmith. With secret-scan-enforce a finding fails the job, so the prod push below does not run. */ -}}
       - name: Scan {{ $b }} image for secrets
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
         uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
         with:
-          path: dist
           image: {{printf "%s/%s@%s" `${{ steps.ecr.outputs.registry }}` $bv.CIRepo (printf "%s_%s%s" `${{ steps.ci_push` $b `.outputs.digest }}`)}}
           enforce: {{ if has "secret-scan-enforce" $r.Branchvals.Features }}"true"{{ else }}"false"{{ end }}
 {{- end }}
