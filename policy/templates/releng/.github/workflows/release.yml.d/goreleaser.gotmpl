@@ -286,6 +286,15 @@
           -v /tmp/build.sh:/tmp/build.sh                                         \
           -w /go/src/github.com/TykTechnologies/{{ .Name }}                      \
           tykio/golang-cross:{{`${{ matrix.golang_cross }}`}} /tmp/build.sh
+{{- if has "secret-scan" .Branchvals.Features }}
+
+      {{/* Scans the build folder once, before any image is built from it. On tags the Build step above has already published the packages (goreleaser publishers), so secret-scan-enforce stops the image pushes but not those packages. */ -}}
+      - name: Scan dist for secrets
+        uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
+        with:
+          path: dist
+          enforce: {{ if has "secret-scan-enforce" .Branchvals.Features }}"true"{{ else }}"false"{{ end }}
+{{- end }}
 
       # Only master/tags populate the go cache; PRs are read-only (see the
       # restore step above) so they don't pay the multi-GB upload every run.
@@ -363,6 +372,9 @@
             type=semver,pattern={{`{{version}}`}},prefix=v
 
       - name: push {{ $b }} image to CI
+{{- if has "secret-scan" $r.Branchvals.Features }}
+        id: ci_push_{{ $b }}
+{{- end }}
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
@@ -437,6 +449,16 @@
             verify_manifest manifest.json
           fi
           echo "Success: All layers are uniformly compressed using gzip."
+{{- if has "secret-scan" $r.Branchvals.Features }}
+
+      {{/* Scans the exact image just pushed to the private CI registry, every platform, before it is pushed to Docker Hub or Cloudsmith. With secret-scan-enforce a finding fails the job, so the prod push below does not run. */ -}}
+      - name: Scan {{ $b }} image for secrets
+        if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
+        uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
+        with:
+          image: {{printf "%s/%s@%s" `${{ steps.ecr.outputs.registry }}` $bv.CIRepo (printf "%s_%s%s" `${{ steps.ci_push` $b `.outputs.digest }}`)}}
+          enforce: {{ if has "secret-scan-enforce" $r.Branchvals.Features }}"true"{{ else }}"false"{{ end }}
+{{- end }}
 
       - name: Docker metadata for {{ $b }} tag push
         id: tag_metadata_{{ $b }}
