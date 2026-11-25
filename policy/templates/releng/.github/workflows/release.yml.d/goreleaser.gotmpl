@@ -290,6 +290,11 @@
 
       {{/* Scans the build folder once, before any image is built from it. On tags the Build step skips goreleaser's publishers, and the step after this one uploads the packages, so secret-scan-enforce stops the package upload as well as the image pushes. */ -}}
       - name: Scan dist for secrets
+{{- if not (has "secret-scan-enforce" .Branchvals.Features) }}
+        {{/* The action fails on a scanner error even with enforce off: report-only must not block the release. */ -}}
+        continue-on-error: true
+{{- end }}
+        timeout-minutes: 20
         uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
         with:
           path: dist
@@ -484,6 +489,10 @@
       {{/* Scans the exact image just pushed to the private CI registry, every platform, before it is pushed to Docker Hub or Cloudsmith. With secret-scan-enforce a finding fails the job, so the prod push below does not run. */ -}}
       - name: Scan {{ $b }} image for secrets
         if: {{`${{ matrix.golang_cross == '` }}{{$r.Branchvals.Buildenv}}{{`' }}`}}
+{{- if not (has "secret-scan-enforce" $r.Branchvals.Features) }}
+        continue-on-error: true
+{{- end }}
+        timeout-minutes: 20
         uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
         with:
           image: {{printf "%s/%s@%s" `${{ steps.ecr.outputs.registry }}` $bv.CIRepo (printf "%s_%s%s" `${{ steps.ci_push` $b `.outputs.digest }}`)}}
