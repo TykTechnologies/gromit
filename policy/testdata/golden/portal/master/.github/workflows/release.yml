@@ -191,6 +191,8 @@ jobs:
           -w /go/src/github.com/TykTechnologies/portal                      \
           tykio/golang-cross:${{ matrix.golang_cross }} /tmp/build.sh
       - name: Scan dist for secrets
+        continue-on-error: true
+        timeout-minutes: 20
         uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
         with:
           path: dist
@@ -325,6 +327,8 @@ jobs:
           echo "Success: All layers are uniformly compressed using gzip."
       - name: Scan fips image for secrets
         if: ${{ matrix.golang_cross == '1.26-bookworm' }}
+        continue-on-error: true
+        timeout-minutes: 20
         uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
         with:
           image: ${{ steps.ecr.outputs.registry }}/portal-fips@${{ steps.ci_push_fips.outputs.digest }}
@@ -492,6 +496,8 @@ jobs:
           echo "Success: All layers are uniformly compressed using gzip."
       - name: Scan std image for secrets
         if: ${{ matrix.golang_cross == '1.26-bookworm' }}
+        continue-on-error: true
+        timeout-minutes: 20
         uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
         with:
           image: ${{ steps.ecr.outputs.registry }}/portal@${{ steps.ci_push_std.outputs.digest }}
