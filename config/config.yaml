@@ -260,6 +260,7 @@ policy:
           branches:
             master:
               features:
+                - secret-scan
                 - fips
                 - ee
                 - resolve-dashboard
@@ -467,6 +468,7 @@ policy:
             master:
               cgo: false
               features:
+                - secret-scan
                 - nightly-e2e
                 - fips
                 - pr-no-cache-export
@@ -673,6 +675,7 @@ policy:
           branches:
             master:
               features:
+                - secret-scan
                 - docs-preview
             release-1.14:
             release-1.14.1:
@@ -709,7 +712,9 @@ policy:
                   deb: s390x
                   docker: linux/s390x
           branches:
-            master: {}
+            master:
+              features:
+                - secret-scan
         tyk-sink:
           exposeports: 80
           binary: tyk-sink
@@ -768,6 +773,7 @@ policy:
           branches:
             master:
               features:
+                - secret-scan
                 - fips
                 - release-test
                 - docs-preview
