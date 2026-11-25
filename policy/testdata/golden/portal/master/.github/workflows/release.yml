@@ -169,7 +169,7 @@ jobs:
           ci/bin/unlock-agent.sh
           git config --global url."https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/".insteadOf "https://github.com/"
           git config --global --add safe.directory /go/src/github.com/TykTechnologies/portal
-          goreleaser release --timeout 120m --clean -f ${{ matrix.goreleaser }} ${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker' }}' | tee /tmp/build.sh
+          goreleaser release --timeout 120m --clean -f ${{ matrix.goreleaser }} ${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker,publish' }}' | tee /tmp/build.sh
           chmod +x /tmp/build.sh
           docker run --rm --privileged -e GITHUB_TOKEN=${{ github.token }} \
           -e GOPRIVATE=github.com/TykTechnologies                                \
@@ -195,6 +195,33 @@ jobs:
         with:
           path: dist
           enforce: "false"
+      - name: Publish packages
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}
+        run: |
+          cat > /tmp/publish.sh <<'EOF'
+          #!/bin/sh
+          set -eu
+          : > /tmp/packages
+          jq -r '.[] | select(.type == "Linux Package" and .extra.ID == "fips") | "tyk/portal-unstable " + .path' dist/artifacts.json >> /tmp/packages
+          jq -r '.[] | select(.type == "Linux Package" and .extra.ID == "std") | "tyk/portal-unstable " + .path' dist/artifacts.json >> /tmp/packages
+          if [ ! -s /tmp/packages ]; then
+            echo "No packages to publish in dist/artifacts.json" >&2
+            exit 1
+          fi
+          cat /tmp/packages
+          xargs -P 4 -n 2 sh -c 'packagecloud publish --debvers "$DEBVERS" --rpmvers "$RPMVERS" "$0" "$1"' < /tmp/packages
+          EOF
+          chmod +x /tmp/publish.sh
+          docker run --rm \
+          -e DEBVERS='${{ matrix.debvers }}' \
+          -e RPMVERS='${{ matrix.rpmvers }}' \
+          -e PACKAGECLOUD_TOKEN \
+          -v ${{github.workspace}}:/go/src/github.com/TykTechnologies/portal \
+          -v /tmp/publish.sh:/tmp/publish.sh \
+          -w /go/src/github.com/TykTechnologies/portal \
+          tykio/golang-cross:${{ matrix.golang_cross }} /tmp/publish.sh
       # Only master/tags populate the go cache; PRs are read-only (see the
       # restore step above) so they don't pay the multi-GB upload every run.
       # Save under the restore step's primary key (computed from the committed

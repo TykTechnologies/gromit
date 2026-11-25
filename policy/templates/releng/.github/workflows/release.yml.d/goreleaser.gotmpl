@@ -256,9 +256,9 @@
           git config --global --add safe.directory /go/src/github.com/TykTechnologies/{{ .Name }}
 {{- if eq .Name "tyk-analytics" }}
           {{/* On PRs only the std amd64 .deb (goreleaser.pr.yml) is needed for the test image; tune parallelism to the runner. */ -}}
-          goreleaser release --timeout 120m --clean --parallelism 2 -f {{`${{ github.event_name == 'pull_request' && 'ci/goreleaser/goreleaser.pr.yml' || matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker' }}`}}' | tee /tmp/build.sh
+          goreleaser release --timeout 120m --clean --parallelism 2 -f {{`${{ github.event_name == 'pull_request' && 'ci/goreleaser/goreleaser.pr.yml' || matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker`}}{{ if has "secret-scan" .Branchvals.Features }},publish{{ end }}{{`' }}`}}' | tee /tmp/build.sh
 {{- else }}
-          goreleaser release --timeout 120m --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker' }}`}}' | tee /tmp/build.sh
+          goreleaser release --timeout 120m --clean -f {{`${{ matrix.goreleaser }}`}} {{`${{ !startsWith(github.ref, 'refs/tags/') && ' --snapshot --skip=sign,docker' || '--skip=docker`}}{{ if has "secret-scan" .Branchvals.Features }},publish{{ end }}{{`' }}`}}' | tee /tmp/build.sh
 {{- end }}
           chmod +x /tmp/build.sh
           docker run --rm --privileged -e GITHUB_TOKEN={{`${{ github.token }}`}} \
@@ -288,12 +288,42 @@
           tykio/golang-cross:{{`${{ matrix.golang_cross }}`}} /tmp/build.sh
 {{- if has "secret-scan" .Branchvals.Features }}
 
-      {{/* Scans the build folder once, before any image is built from it. On tags the Build step above has already published the packages (goreleaser publishers), so secret-scan-enforce stops the image pushes but not those packages. */ -}}
+      {{/* Scans the build folder once, before any image is built from it. On tags the Build step skips goreleaser's publishers, and the step after this one uploads the packages, so secret-scan-enforce stops the package upload as well as the image pushes. */ -}}
       - name: Scan dist for secrets
         uses: TykTechnologies/github-actions/.github/actions/secret-scan@production
         with:
           path: dist
           enforce: {{ if has "secret-scan-enforce" .Branchvals.Features }}"true"{{ else }}"false"{{ end }}
+
+      {{/* Same uploads as the goreleaser publishers: every Linux package of each build, from dist/artifacts.json. Fails if there is nothing to upload, so a tag never silently ships without packages. */ -}}
+      - name: Publish packages
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          PACKAGECLOUD_TOKEN: {{`${{ secrets.PACKAGECLOUD_TOKEN }}`}}
+        run: |
+          cat > /tmp/publish.sh <<'EOF'
+          #!/bin/sh
+          set -eu
+          : > /tmp/packages
+{{- range $b, $bv := .Branchvals.Builds }}
+          jq -r '.[] | select(.type == "Linux Package" and .extra.ID == "{{ $b }}") | "tyk/{{ $bv.PCRepo }} " + .path' dist/artifacts.json >> /tmp/packages
+{{- end }}
+          if [ ! -s /tmp/packages ]; then
+            echo "No packages to publish in dist/artifacts.json" >&2
+            exit 1
+          fi
+          cat /tmp/packages
+          xargs -P 4 -n 2 sh -c 'packagecloud publish --debvers "$DEBVERS" --rpmvers "$RPMVERS" "$0" "$1"' < /tmp/packages
+          EOF
+          chmod +x /tmp/publish.sh
+          docker run --rm \
+          -e DEBVERS='{{`${{ matrix.debvers }}`}}' \
+          -e RPMVERS='{{`${{ matrix.rpmvers }}`}}' \
+          -e PACKAGECLOUD_TOKEN \
+          -v {{`${{github.workspace}}`}}:/go/src/github.com/TykTechnologies/{{ .Name }} \
+          -v /tmp/publish.sh:/tmp/publish.sh \
+          -w /go/src/github.com/TykTechnologies/{{ .Name }} \
+          tykio/golang-cross:{{`${{ matrix.golang_cross }}`}} /tmp/publish.sh
 {{- end }}
 
       # Only master/tags populate the go cache; PRs are read-only (see the
