@@ -92,23 +92,23 @@
     steps:
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547  # v1
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc  # v3.4.0
         with:
           app-id: {{`${{ secrets.PROBE_APP_ID }}`}}
           private-key: {{`${{ secrets.PROBE_APP_PRIVATE_KEY }}`}}
           owner: TykTechnologies
 
-      - uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c  # v4
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd  # v6.3.0
         with:
           role-to-assume: arn:aws:iam::754489498669:role/ecr_rw_tyk
           role-session-name: cipush
           aws-region: eu-central-1
       - id: ecr
-        uses: aws-actions/amazon-ecr-login@f2e9fc6c2b355c1890b65e6f6f0e2ac3e6e22f78  # v2
+        uses: aws-actions/amazon-ecr-login@7290e214a610b32bc0eef81748948b6d466a8783  # v2.2.0
         with:
           mask-password: 'true'
       - name: Setup tmate session only in debug mode
-        uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101  # v3
+        uses: mxschmitt/action-tmate@35b54afac29c97fb54faba5b513f8fbd1882f113  # v3.24
         if: runner.debug == '1'
         with:
           detached: true
@@ -116,7 +116,7 @@
           # Only {{`${{ github.actor }}`}} has access
           # See https://github.com/mxschmitt/action-tmate#use-registered-public-ssh-keys
 {{- if eq .dot.Name "tyk-pro" }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           path: auto
           fetch-depth: 1
@@ -183,7 +183,7 @@
 
 {{- if eq .flow "nightly" }}
       - name: Checkout {{ .test }} test code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         env:
           TEST_BRANCH: {{`${{ github.event.inputs.test_branch || matrix.envfiles.gwdash }}`}}
         with:
