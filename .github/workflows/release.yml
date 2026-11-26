@@ -67,32 +67,32 @@ jobs:
     steps:
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0 # zizmor: ignore[github-app] owner-wide token, scoping tracked separately
         with:
           app-id: ${{ secrets.PROBE_APP_ID }}
           private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
           owner: TykTechnologies
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Set up Go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff  # v5
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5  # v7.1.0
         with:
-          go-version: "1.22"
+          go-version-file: go.mod
 
-      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130  # v3
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1  # v4.4.0
 
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
 
       - run: make test
 
-      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550  # v4.8.0
         if: startsWith(github.ref, 'refs/tags/')
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a  # v6
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de  # v7.3.0
         with:
           version: "~> v2"
           args: release --clean ${{ !startsWith(github.ref, 'refs/tags/') && '--snapshot' || '' }}
@@ -110,7 +110,7 @@ jobs:
           path=$(jq -rc --arg a "$goarch" '.[] | select((.type=="Binary") and (.goos=="linux") and (.goarch==$a)) | .path' dist/artifacts.json)
           echo "path=${path}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: gromit-linux
           path: ${{ steps.binary.outputs.path }}
@@ -141,14 +141,14 @@ jobs:
       - name: Generate GitHub App token
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.repo == 'all' || inputs.repo == matrix.repo }}
         id: app-token
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0 # zizmor: ignore[github-app] owner-wide token, scoping tracked separately
         with:
           app-id: ${{ secrets.PROBE_APP_ID }}
           private-key: ${{ secrets.PROBE_APP_PRIVATE_KEY }}
           owner: TykTechnologies
       - name: checkout ${{matrix.repo}}/${{matrix.branch}}
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.repo == 'all' || inputs.repo == matrix.repo }}
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: ${{ matrix.owner }}/${{ matrix.repo }}
           ref: ${{ matrix.branch }}
@@ -156,7 +156,7 @@ jobs:
           path: ${{ matrix.repo }}
           fetch-depth: 1
 
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.repo == 'all' || inputs.repo == matrix.repo }}
         id: download
         with:
