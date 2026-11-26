@@ -178,7 +178,7 @@ policy:
           # pass so be careful with names
           tests: [api]
           plugincompiler:
-            depguardref: d3fa20888fa2878e877e22bb7702141217290e7c
+            depguardref: 41803d4504a9a26a13be08d154ffc0e3938dc913
             depguardif: github.event_name == 'pull_request'
             dockerbuildif: |-
               !cancelled() &&
@@ -269,7 +269,7 @@ policy:
             release-5.3:
               buildenv: 1.24-bullseye
               plugincompiler:
-                depguardref: 2b35ab5dd4cfff21ced9d12446e9e27d10bf5785
+                depguardref: 41803d4504a9a26a13be08d154ffc0e3938dc913
                 depguardif: ${{ github.event_name == 'pull_request' }}
                 dockerbuildif: ${{ !github.event.pull_request.draft && always() && (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') }}
                 checkoutdepth: 1
@@ -281,7 +281,7 @@ policy:
                     description: Plugin compiler for the Tyk API Gateway
             release-5.8:
               plugincompiler:
-                depguardref: 2b35ab5dd4cfff21ced9d12446e9e27d10bf5785
+                depguardref: 41803d4504a9a26a13be08d154ffc0e3938dc913
                 depguardif: ${{ github.event_name == 'pull_request' }}
                 dockerbuildif: ${{ always() && !github.event.pull_request.draft && (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') }}
                 checkoutdepth: 1
@@ -308,7 +308,7 @@ policy:
                 - resolve-dashboard
             release-5.8.15:
               plugincompiler:
-                depguardref: 2b35ab5dd4cfff21ced9d12446e9e27d10bf5785
+                depguardref: 41803d4504a9a26a13be08d154ffc0e3938dc913
                 depguardif: ${{ github.event_name == 'pull_request' }}
                 dockerbuildif: ${{ always() && !github.event.pull_request.draft && (needs.dep-guard.result == 'success' || needs.dep-guard.result == 'skipped') }}
                 checkoutdepth: 1
