@@ -42,6 +42,7 @@ jobs:
     uses: TykTechnologies/github-actions/.github/workflows/dependency-guard.yml@{{ $pc.DepGuardRef }}  # main
     permissions:
       contents: read
+      pull-requests: read  # dep-guard reads the PR's current labels, so a re-run sees deps-reviewed
 
   docker-build:
     needs: [dep-guard]
