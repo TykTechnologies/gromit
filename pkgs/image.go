@@ -122,6 +122,7 @@ type hubTagEntry struct {
 	Digest        string     `json:"digest"`
 	TagLastPushed string     `json:"tag_last_pushed"`
 	LastUpdated   string     `json:"last_updated"`
+	LastUpdater   string     `json:"last_updater_username"`
 	Images        []hubImage `json:"images"`
 }
 
