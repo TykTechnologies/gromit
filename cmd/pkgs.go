@@ -409,6 +409,40 @@ Read-only: nothing is copied or deleted.`,
 	},
 }
 
+var imagesRecentCmd = &cobra.Command{
+	Use:   "recent",
+	Args:  cobra.NoArgs,
+	Short: "List the images pushed to a Hub org recently, for the secret sweep",
+	Long: `Lists every image pushed to the org's public repositories within
+--since, across all of them, not only those in the gromit config. Tags
+that point at the same digest are grouped, so each image appears once.
+Prints JSON: "images" (each entry's ref is what to scan) and "failed"
+(repositories whose tags could not be listed).
+
+Read-only.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		org, _ := cmd.Flags().GetString("org")
+		since, _ := cmd.Flags().GetDuration("since")
+		concurrency, _ := cmd.Flags().GetInt("concurrency")
+		if since <= 0 {
+			return fmt.Errorf("--since must be positive")
+		}
+		rps, _ := cmd.Flags().GetFloat64("rps")
+		burst, _ := cmd.Flags().GetInt("burst")
+		hub := pkgs.NewHubClient("", rps, burst)
+		res, err := hub.RecentImages(org, time.Now().Add(-since), concurrency)
+		if err != nil {
+			return err
+		}
+		out, err := json.MarshalIndent(res, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), string(out))
+		return nil
+	},
+}
+
 var imagesMirrorCmd = &cobra.Command{
 	Use:   "mirror",
 	Short: "Copy the prune-eligible Hub images from a plan to the S3 archive",
@@ -518,6 +552,7 @@ func init() {
 	imagesCmd.AddCommand(imagesPlanCmd)
 	imagesCmd.AddCommand(imagesMirrorCmd)
 	imagesCmd.AddCommand(imagesCheckCmd)
+	imagesCmd.AddCommand(imagesRecentCmd)
 	pkgsCmd.AddCommand(imagesCmd)
 	imagesPlanCmd.Flags().Bool("json", false, "Emit the plan as JSON, including the prune-eligible tag list")
 	imagesPlanCmd.Flags().Int("grace-days", 30, "Days until the plan's not_before deadline")
@@ -528,6 +563,10 @@ func init() {
 	imagesMirrorCmd.Flags().String("bucket", "tyk-artifact-archive", "S3 bucket to archive to")
 	imagesMirrorCmd.Flags().Bool("verify", false, "Read every archived object back and check its digest")
 	imagesMirrorCmd.Flags().Int("concurrency", 2, "Hub images to mirror in parallel")
+
+	imagesRecentCmd.Flags().String("org", "tykio", "Docker Hub org to list")
+	imagesRecentCmd.Flags().Duration("since", 26*time.Hour, "How far back to look; longer than the schedule's interval, so a late run leaves no gap")
+	imagesRecentCmd.Flags().Int("concurrency", 8, "Concurrent digest lookups for tags the list endpoint omitted")
 
 	imagesCheckCmd.Flags().String("digest", "", "Image digest the archive must contain")
 	imagesCheckCmd.MarkFlagRequired("digest")
