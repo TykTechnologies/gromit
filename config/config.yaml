@@ -470,6 +470,7 @@ policy:
               features:
                 - secret-scan
                 - nightly-e2e
+                - go-cache-prune
                 - fips
                 - pr-no-cache-export
                 - docs-preview
